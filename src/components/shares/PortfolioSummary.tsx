@@ -7,7 +7,7 @@ import { Wallet, SendHorizontal } from 'lucide-react';
 interface PortfolioSummaryProps {
   ethValue: string;
   usdValue: string;
-  ethBalance: string; // Added explicit ETH balance prop
+  ethBalance: string;
   onDepositClick: () => void;
   onSendClick: () => void;
 }
@@ -23,7 +23,7 @@ export const PortfolioSummary = ({
     <Card className="animate-scale-in bg-background/95 backdrop-blur-sm">
       <CardContent className="p-6">
         <div className="mb-4">
-          <h2 className="text-xl font-semibold text-muted-foreground">Your ETH Balance</h2>
+          <h2 className="text-xl font-semibold text-primary">Your ETH Balance</h2>
         </div>
         
         <div className="flex flex-col space-y-1 mb-6">
@@ -32,7 +32,9 @@ export const PortfolioSummary = ({
               {ethBalance} ETH
             </div>
           </div>
-          <div className="text-lg text-muted-foreground">${(parseFloat(ethBalance) * 3521.89).toFixed(2)} USD</div>
+          <div className="text-lg text-muted-foreground">
+            ${(parseFloat(ethBalance) * 3521.89).toFixed(2)} USD
+          </div>
         </div>
         
         <div className="flex space-x-4">

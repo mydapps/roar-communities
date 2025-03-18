@@ -123,16 +123,22 @@ const MySharesPage = () => {
       />
       
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>Portfolio Value: {totalValue.toFixed(4)} ETH (${totalValueUsd.toFixed(2)})</span>
-            <Button variant="outline" size="sm" onClick={handleRefresh} className="rounded-full hover:bg-primary/10">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
-            </Button>
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardTitle className="text-xl font-bold">
+            My Community Shares
           </CardTitle>
+          <Button variant="outline" size="sm" onClick={handleRefresh} className="rounded-full hover:bg-primary/10">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-4">
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-sm text-muted-foreground">
+              Portfolio Value: <span className="font-semibold text-foreground">{totalValue.toFixed(4)} ETH</span> 
+              <span className="text-xs ml-1 text-muted-foreground">(${totalValueUsd.toFixed(2)})</span>
+            </div>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {portfolioData.map((community) => (
               <CommunityShareCard 
@@ -150,7 +156,7 @@ const MySharesPage = () => {
         </CardContent>
       </Card>
 
-      {/* Use Drawer on mobile and Sheet on desktop */}
+      {/* Use the appropriate component based on device type */}
       {isMobile ? (
         <>
           <DepositSheet 
@@ -176,13 +182,12 @@ const MySharesPage = () => {
       ) : (
         <>
           <Sheet open={depositOpen} onOpenChange={setDepositOpen}>
-            <SheetContent side="right" className="sm:max-w-md">
+            <SheetContent side="right" className="sm:max-w-md overflow-y-auto">
               <SheetHeader>
                 <SheetTitle>Deposit ETH</SheetTitle>
                 <SheetDescription>Add ETH to your wallet</SheetDescription>
               </SheetHeader>
               <div className="py-6">
-                {/* Copy the content from DepositSheet component here */}
                 <div className="space-y-6">
                   <div className="flex flex-col space-y-4">
                     <h3 className="font-medium">Choose Network</h3>
@@ -228,7 +233,7 @@ const MySharesPage = () => {
           </Sheet>
 
           <Sheet open={sendOpen} onOpenChange={setSendOpen}>
-            <SheetContent side="right" className="sm:max-w-md">
+            <SheetContent side="right" className="sm:max-w-md overflow-y-auto">
               <SheetHeader>
                 <SheetTitle>{!selectedCommunity ? 'Send ETH' : `Send ${selectedCommunity?.name} Shares`}</SheetTitle>
                 <SheetDescription>
@@ -237,12 +242,18 @@ const MySharesPage = () => {
                     : `Send your ${selectedCommunity?.name} shares to another user`}
                 </SheetDescription>
               </SheetHeader>
-              {/* Content would be similar to the SendSheet component */}
+              {/* Since we use the same SendSheet component, but with Sheet wrapping it on desktop, we need to render its content here */}
+              <div className="py-4">
+                {/* This is simplified - you'll need to implement the actual form here similar to what's in SendSheet */}
+                <div className="p-4 text-center">
+                  <p className="text-muted-foreground">Enter recipient address and amount to send.</p>
+                </div>
+              </div>
             </SheetContent>
           </Sheet>
 
           <Sheet open={tradeOpen} onOpenChange={setTradeOpen}>
-            <SheetContent side="right" className="sm:max-w-md">
+            <SheetContent side="right" className="sm:max-w-md overflow-y-auto">
               <SheetHeader>
                 <SheetTitle>{tradeAction === 'buy' ? 'Buy Shares' : 'Sell Shares'}</SheetTitle>
                 <SheetDescription>
@@ -251,7 +262,18 @@ const MySharesPage = () => {
                     : `Sell your ${selectedCommunity?.name} shares`}
                 </SheetDescription>
               </SheetHeader>
-              {/* Content would be similar to the TradeSheet component */}
+              <div className="py-4">
+                {/* This is simplified - you'll need to implement the actual form here similar to what's in TradeSheet */}
+                {tradeAction === 'buy' && (
+                  <div className="mb-4 p-3 rounded-md bg-muted/50">
+                    <div className="text-sm text-muted-foreground">Your ETH Balance</div>
+                    <div className="font-medium text-lg">{userEthBalance} ETH</div>
+                  </div>
+                )}
+                <div className="p-4 text-center">
+                  <p className="text-muted-foreground">Enter the number of shares you want to {tradeAction}.</p>
+                </div>
+              </div>
             </SheetContent>
           </Sheet>
         </>
