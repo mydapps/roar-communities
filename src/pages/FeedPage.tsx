@@ -7,6 +7,7 @@ import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { MessageCircle, Heart, RefreshCw, Share2, TrendingUp } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Post } from '@/components/feed/Post';
 
 // Custom Lion icon for the Roar button
 const LionIcon = () => (
