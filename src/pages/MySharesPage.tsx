@@ -38,7 +38,8 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
-  SheetDescription
+  SheetDescription,
+  SheetFooter
 } from "@/components/ui/sheet";
 
 // Dummy data for sample portfolio
@@ -112,20 +113,35 @@ const MySharesPage = () => {
     });
   };
 
+  const resetState = () => {
+    // Reset all state to prevent UI getting stuck
+    setDepositOpen(false);
+    setSendOpen(false);
+    setTradeOpen(false);
+    setDrawerOpen(false);
+  };
+
   return (
     <div className="space-y-6 animate-fade-in pb-20 md:pb-10">
       <PortfolioSummary 
         ethValue={totalValue.toFixed(4)} 
         usdValue={(totalValueUsd).toFixed(2)}
         ethBalance={userEthBalance}
-        onDepositClick={() => setDepositOpen(true)}
-        onSendClick={() => setSendOpen(true)}
+        onDepositClick={() => {
+          resetState();
+          setDepositOpen(true);
+        }}
+        onSendClick={() => {
+          resetState();
+          setSelectedCommunity(null);
+          setSendOpen(true);
+        }}
       />
       
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-xl font-bold">
-            My Community Shares
+            My Portfolio
           </CardTitle>
           <Button variant="outline" size="sm" onClick={handleRefresh} className="rounded-full hover:bg-primary/10">
             <RefreshCw className="h-4 w-4 mr-2" />
@@ -144,9 +160,16 @@ const MySharesPage = () => {
               <CommunityShareCard 
                 key={community.name}
                 community={community}
-                onBuyClick={() => handleTradeClick(community, 'buy')}
-                onSellClick={() => handleTradeClick(community, 'sell')}
+                onBuyClick={() => {
+                  resetState();
+                  handleTradeClick(community, 'buy');
+                }}
+                onSellClick={() => {
+                  resetState(); 
+                  handleTradeClick(community, 'sell');
+                }}
                 onSendClick={() => {
+                  resetState();
                   setSelectedCommunity(community);
                   setSendOpen(true);
                 }}
@@ -156,38 +179,15 @@ const MySharesPage = () => {
         </CardContent>
       </Card>
 
-      {/* Use the appropriate component based on device type */}
       {isMobile ? (
         <>
-          <DepositSheet 
-            open={depositOpen}
-            onOpenChange={setDepositOpen}
-          />
-
-          <SendSheet 
-            open={sendOpen}
-            onOpenChange={setSendOpen}
-            community={selectedCommunity}
-            isEthSend={!selectedCommunity}
-          />
-
-          <TradeSheet 
-            open={tradeOpen}
-            onOpenChange={setTradeOpen}
-            community={selectedCommunity}
-            action={tradeAction}
-            userEthBalance={userEthBalance}
-          />
-        </>
-      ) : (
-        <>
-          <Sheet open={depositOpen} onOpenChange={setDepositOpen}>
-            <SheetContent side="right" className="sm:max-w-md overflow-y-auto">
-              <SheetHeader>
-                <SheetTitle>Deposit ETH</SheetTitle>
-                <SheetDescription>Add ETH to your wallet</SheetDescription>
-              </SheetHeader>
-              <div className="py-6">
+          <Drawer open={depositOpen} onOpenChange={setDepositOpen}>
+            <DrawerContent className="max-h-[85vh] overflow-y-auto">
+              <DrawerHeader>
+                <DrawerTitle>Deposit ETH</DrawerTitle>
+                <DrawerDescription>Add ETH to your wallet</DrawerDescription>
+              </DrawerHeader>
+              <div className="py-6 px-4">
                 <div className="space-y-6">
                   <div className="flex flex-col space-y-4">
                     <h3 className="font-medium">Choose Network</h3>
@@ -229,6 +229,128 @@ const MySharesPage = () => {
                   </div>
                 </div>
               </div>
+              <DrawerFooter>
+                <Button onClick={() => setDepositOpen(false)}>Close</Button>
+              </DrawerFooter>
+            </DrawerContent>
+          </Drawer>
+
+          <Drawer open={sendOpen} onOpenChange={setSendOpen}>
+            <DrawerContent className="max-h-[85vh] overflow-y-auto">
+              <DrawerHeader>
+                <DrawerTitle>{!selectedCommunity ? 'Send ETH' : `Send ${selectedCommunity?.name} Shares`}</DrawerTitle>
+                <DrawerDescription>
+                  {!selectedCommunity 
+                    ? 'Send ETH to another wallet address' 
+                    : `Send your ${selectedCommunity?.name} shares to another user`}
+                </DrawerDescription>
+              </DrawerHeader>
+              
+              {/* We're leveraging the SendSheet's form here directly */}
+              <div className="px-4 py-4 flex-1 overflow-y-auto">
+                <SendSheet 
+                  open={true}
+                  onOpenChange={() => {}}
+                  community={selectedCommunity}
+                  isEthSend={!selectedCommunity}
+                  isEmbedded={true}
+                />
+              </div>
+              
+              <DrawerFooter>
+                <Button variant="outline" onClick={() => setSendOpen(false)}>
+                  Cancel
+                </Button>
+              </DrawerFooter>
+            </DrawerContent>
+          </Drawer>
+
+          <Drawer open={tradeOpen} onOpenChange={setTradeOpen}>
+            <DrawerContent className="max-h-[85vh] overflow-y-auto">
+              <DrawerHeader>
+                <DrawerTitle>{tradeAction === 'buy' ? 'Buy Shares' : 'Sell Shares'}</DrawerTitle>
+                <DrawerDescription>
+                  {tradeAction === 'buy' 
+                    ? `Purchase shares of ${selectedCommunity?.name}` 
+                    : `Sell your ${selectedCommunity?.name} shares`}
+                </DrawerDescription>
+              </DrawerHeader>
+              
+              {/* We're leveraging the TradeSheet's form here directly */}
+              <div className="px-4 py-4 flex-1 overflow-y-auto">
+                <TradeSheet 
+                  open={true}
+                  onOpenChange={() => {}}
+                  community={selectedCommunity}
+                  action={tradeAction}
+                  userEthBalance={userEthBalance}
+                  isEmbedded={true}
+                />
+              </div>
+              
+              <DrawerFooter>
+                <Button variant="outline" onClick={() => setTradeOpen(false)}>
+                  Cancel
+                </Button>
+              </DrawerFooter>
+            </DrawerContent>
+          </Drawer>
+        </>
+      ) : (
+        <>
+          <Sheet open={depositOpen} onOpenChange={setDepositOpen}>
+            <SheetContent side="right" className="sm:max-w-md overflow-y-auto">
+              <SheetHeader>
+                <SheetTitle>Deposit ETH</SheetTitle>
+                <SheetDescription>Add ETH to your wallet</SheetDescription>
+              </SheetHeader>
+              <div className="py-6 pr-6 overflow-y-auto">
+                <div className="space-y-6">
+                  <div className="flex flex-col space-y-4">
+                    <h3 className="font-medium">Choose Network</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <Button variant="outline" className="h-auto flex flex-col p-4 justify-start items-center space-y-2">
+                        <div className="rounded-full bg-primary/10 p-2">
+                          <img src="https://cryptologos.cc/logos/base-base-logo.png" className="h-8 w-8" alt="Base" />
+                        </div>
+                        <span>Base</span>
+                      </Button>
+                      <Button variant="outline" className="h-auto flex flex-col p-4 justify-start items-center space-y-2">
+                        <div className="rounded-full bg-primary/10 p-2">
+                          <img src="https://cryptologos.cc/logos/ethereum-eth-logo.png" className="h-8 w-8" alt="Ethereum" />
+                        </div>
+                        <span>Ethereum</span>
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <h3 className="font-medium">Your Wallet Address</h3>
+                    <div className="flex flex-col items-center space-y-4">
+                      <div className="bg-white p-4 rounded-lg">
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=0x1234567890abcdef1234567890abcdef12345678" className="h-48 w-48" alt="QR Code" />
+                      </div>
+                      <div className="flex items-center space-x-2 bg-muted/50 p-2 rounded-lg w-full">
+                        <code className="text-xs flex-1 text-center">0x1234...5678</code>
+                        <Button variant="ghost" size="sm" onClick={() => {
+                          navigator.clipboard.writeText("0x1234567890abcdef1234567890abcdef12345678");
+                          toast({
+                            title: "Copied to clipboard",
+                            description: "Your wallet address has been copied",
+                          });
+                        }}>
+                          Copy
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <SheetFooter>
+                <Button variant="outline" onClick={() => setDepositOpen(false)}>
+                  Close
+                </Button>
+              </SheetFooter>
             </SheetContent>
           </Sheet>
 
@@ -242,12 +364,14 @@ const MySharesPage = () => {
                     : `Send your ${selectedCommunity?.name} shares to another user`}
                 </SheetDescription>
               </SheetHeader>
-              {/* Since we use the same SendSheet component, but with Sheet wrapping it on desktop, we need to render its content here */}
-              <div className="py-4">
-                {/* This is simplified - you'll need to implement the actual form here similar to what's in SendSheet */}
-                <div className="p-4 text-center">
-                  <p className="text-muted-foreground">Enter recipient address and amount to send.</p>
-                </div>
+              <div className="py-4 pr-6 overflow-y-auto">
+                <SendSheet 
+                  open={true}
+                  onOpenChange={() => {}}
+                  community={selectedCommunity}
+                  isEthSend={!selectedCommunity}
+                  isEmbedded={true}
+                />
               </div>
             </SheetContent>
           </Sheet>
@@ -262,17 +386,15 @@ const MySharesPage = () => {
                     : `Sell your ${selectedCommunity?.name} shares`}
                 </SheetDescription>
               </SheetHeader>
-              <div className="py-4">
-                {/* This is simplified - you'll need to implement the actual form here similar to what's in TradeSheet */}
-                {tradeAction === 'buy' && (
-                  <div className="mb-4 p-3 rounded-md bg-muted/50">
-                    <div className="text-sm text-muted-foreground">Your ETH Balance</div>
-                    <div className="font-medium text-lg">{userEthBalance} ETH</div>
-                  </div>
-                )}
-                <div className="p-4 text-center">
-                  <p className="text-muted-foreground">Enter the number of shares you want to {tradeAction}.</p>
-                </div>
+              <div className="py-4 pr-6 overflow-y-auto">
+                <TradeSheet 
+                  open={true}
+                  onOpenChange={() => {}}
+                  community={selectedCommunity}
+                  action={tradeAction}
+                  userEthBalance={userEthBalance}
+                  isEmbedded={true}
+                />
               </div>
             </SheetContent>
           </Sheet>
