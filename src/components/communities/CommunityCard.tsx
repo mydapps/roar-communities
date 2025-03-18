@@ -1,12 +1,12 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { Link } from 'react-router-dom';
 import { ArrowUp, ArrowDown, Users, TrendingUp } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { TradeSheet } from '@/components/shares/TradeSheet';
 
 export interface CommunityCardProps {
   name: string;
@@ -34,6 +34,15 @@ const CommunityCard = ({
   // Fallback for community initials if image fails to load
   const initials = name.split(' ').map(word => word[0]).join('').toUpperCase();
   
+  // ETH to USD conversion (simplified for this example)
+  const ethToUsd = 3500; // 1 ETH = $3500 USD
+  const priceInUsd = pricePerShare * ethToUsd;
+  const rewardPoolUsd = rewardPool * ethToUsd;
+  const marketCapUsd = marketCap * ethToUsd;
+  
+  // State for trade sheet
+  const [tradeSheetOpen, setTradeSheetOpen] = useState(false);
+
   return (
     <Card className="overflow-hidden hover:shadow-md transition-all duration-300 animate-scale-in relative">
       {/* Price change indicator strip at top */}
@@ -75,9 +84,14 @@ const CommunityCard = ({
                 {Math.abs(priceChange).toFixed(1)}%
               </Badge>
             )}
-            <span className="text-xs text-muted-foreground">
-              {pricePerShare.toFixed(3)} ETH
-            </span>
+            <div className="flex flex-col">
+              <span className="text-xs font-semibold">
+                {pricePerShare.toFixed(3)} ETH
+              </span>
+              <span className="text-xs text-muted-foreground">
+                ${priceInUsd.toFixed(2)}
+              </span>
+            </div>
           </div>
         </div>
       </CardHeader>
@@ -95,20 +109,28 @@ const CommunityCard = ({
           </div>
           <div>
             <div className="text-xs text-muted-foreground mb-1">Market Cap</div>
-            <div className="flex items-center">
-              <TrendingUp className="h-4 w-4 mr-1.5 text-muted-foreground" />
-              <span className="font-medium">{marketCap.toFixed(1)} ETH</span>
+            <div className="flex flex-col">
+              <div className="flex items-center">
+                <TrendingUp className="h-4 w-4 mr-1.5 text-muted-foreground" />
+                <span className="font-medium">{marketCap.toFixed(1)} ETH</span>
+              </div>
+              <span className="text-xs text-muted-foreground">${marketCapUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
             </div>
           </div>
         </div>
         
-        {/* Reward Pool - made more prominent */}
-        <div className="bg-primary/5 rounded-lg p-3 mb-4">
-          <div className="flex justify-between items-center text-xs mb-2">
-            <span className="font-medium text-primary">Reward Pool</span>
-            <span className="font-bold text-sm">{rewardPool.toFixed(2)} ETH</span>
+        {/* Reward Pool - made more prominent with a glowing card */}
+        <div className="bg-primary/5 rounded-lg p-3 mb-4 border border-primary/20 shadow-sm relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 animate-pulse"></div>
+          <div className="relative z-10">
+            <div className="flex justify-between items-center mb-1">
+              <span className="font-medium text-primary">Reward Pool</span>
+              <div className="text-right">
+                <div className="font-bold text-lg">{rewardPool.toFixed(2)} ETH</div>
+                <div className="text-xs text-muted-foreground">${rewardPoolUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+              </div>
+            </div>
           </div>
-          <Progress value={Math.min(rewardPool * 10, 100)} className="h-2.5" />
         </div>
       </CardContent>
       
@@ -118,13 +140,37 @@ const CommunityCard = ({
             View Details
           </Link>
         </Button>
-        <Button 
-          size="sm"
-          variant={isMember ? "default" : "outline"}
-        >
-          {isMember ? "Buy Shares" : "Join"}
-        </Button>
+        {isMember ? (
+          <Button 
+            size="sm"
+            variant="default"
+            onClick={() => setTradeSheetOpen(true)}
+          >
+            Buy Shares
+          </Button>
+        ) : (
+          <Button 
+            size="sm"
+            variant="default"
+            className="bg-purple-600 hover:bg-purple-700 text-white shadow-md hover:shadow-lg"
+            onClick={() => setTradeSheetOpen(true)}
+          >
+            Join
+          </Button>
+        )}
       </CardFooter>
+      
+      {/* Trade Sheet for both Join and Buy */}
+      <TradeSheet
+        open={tradeSheetOpen}
+        onOpenChange={setTradeSheetOpen}
+        community={{
+          name: name,
+          currentPrice: pricePerShare
+        }}
+        action={isMember ? "buy" : "buy"} // Both actions open buy flow
+        userEthBalance="0.536"
+      />
     </Card>
   );
 };

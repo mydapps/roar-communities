@@ -110,7 +110,7 @@ const CommunitiesPage = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in max-w-full">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Communities</h1>
         <Dialog>
@@ -162,13 +162,15 @@ const CommunitiesPage = () => {
       </div>
 
       <Tabs defaultValue="all" className="w-full">
-        <TabsList className="w-full justify-start mb-6">
-          <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="my">My Communities</TabsTrigger>
-          <TabsTrigger value="trending">Trending</TabsTrigger>
-          <TabsTrigger value="newest">Newest</TabsTrigger>
-          <TabsTrigger value="highest-reward">Highest Reward</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto pb-2">
+          <TabsList className="inline-flex w-auto justify-start mb-6">
+            <TabsTrigger value="all">All</TabsTrigger>
+            <TabsTrigger value="my">My Communities</TabsTrigger>
+            <TabsTrigger value="trending">Trending</TabsTrigger>
+            <TabsTrigger value="newest">Newest</TabsTrigger>
+            <TabsTrigger value="highest-reward">Highest Reward</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="all" className="space-y-4 animate-fade-in">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
