@@ -95,7 +95,7 @@ export const Post = ({
   const [mirrorSheetOpen, setMirrorSheetOpen] = useState(false);
   const [selectedCommunity, setSelectedCommunity] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [ipfsDialogOpen, setIpfsDialogOpen] = useState(false);
+  const [ipfsSheetOpen, setIpfsSheetOpen] = useState(false);
   
   const { toast } = useToast();
   
@@ -118,11 +118,13 @@ export const Post = ({
       setLocalRoarCount(prev => prev - 1);
     } else {
       setLocalRoarCount(prev => prev + 1);
-      // Trigger roar animation
+      // Trigger roar animation with longer duration for dopamine hit
       setRoarAnimation(true);
       setRoarTextAnimation(true);
-      setTimeout(() => setRoarAnimation(false), 700);
-      setTimeout(() => setRoarTextAnimation(false), 1000);
+      
+      // Use longer durations for more satisfying animations
+      setTimeout(() => setRoarAnimation(false), 1200);
+      setTimeout(() => setRoarTextAnimation(false), 1500);
     }
     setRoared(!roared);
   };
@@ -220,47 +222,59 @@ export const Post = ({
             </div>
           </div>
           
-          <Dialog open={ipfsDialogOpen} onOpenChange={setIpfsDialogOpen}>
-            <DialogTrigger asChild>
+          <Sheet open={ipfsSheetOpen} onOpenChange={setIpfsSheetOpen}>
+            <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="rounded-full h-8 w-8">
                 <ShieldCheck className="h-4 w-4" />
               </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
+            </SheetTrigger>
+            <SheetContent side="bottom" className="h-[85vh] rounded-t-xl p-0">
+              <SheetHeader className="p-4 border-b">
+                <SheetTitle className="flex items-center gap-2">
                   <ShieldCheck className="h-5 w-5 text-primary" />
                   Freedom of Expression
-                </DialogTitle>
-                <DialogDescription>
+                </SheetTitle>
+                <SheetDescription>
                   This post is stored on IPFS, a decentralized storage network. 
                   This ensures that your content remains censorship-resistant and 
                   permanently available.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="flex flex-col space-y-4 py-4">
-                <div className="flex items-center gap-2">
-                  <code className="bg-muted text-sm p-2 rounded flex-1 overflow-x-auto font-mono">{ipfsHash}</code>
-                  <Button 
-                    variant="outline" 
-                    size="icon" 
-                    className="shrink-0"
-                    onClick={copyIpfsHash}
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
+                </SheetDescription>
+              </SheetHeader>
+              
+              <div className="flex flex-col space-y-4 p-4">
+                <div className="bg-muted/50 p-4 rounded-lg border">
+                  <h3 className="text-sm font-medium mb-2">Post IPFS Hash</h3>
+                  <div className="flex items-center gap-2">
+                    <code className="bg-background text-sm p-2 rounded flex-1 overflow-x-auto font-mono text-xs">{ipfsHash}</code>
+                    <Button 
+                      variant="outline" 
+                      size="icon" 
+                      className="shrink-0"
+                      onClick={copyIpfsHash}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  This is the unique identifier for this content on IPFS. You can use this hash to verify 
-                  the content or share it with others.
-                </p>
+                
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium">What is IPFS?</h3>
+                  <p className="text-sm text-muted-foreground">
+                    The InterPlanetary File System (IPFS) is a protocol designed to create a permanent and 
+                    decentralized method of storing and sharing files. Unlike traditional servers, content on 
+                    IPFS is identified by its content, not its location.
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    This means once your content is published, it cannot be censored or removed by any 
+                    central authority, preserving your freedom of expression.
+                  </p>
+                </div>
               </div>
-              <DialogFooter className="sm:justify-between">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setIpfsDialogOpen(false)}>
-                  Close
-                </Button>
+              
+              <SheetFooter className="flex-row justify-between gap-2 p-4 border-t">
+                <SheetClose asChild>
+                  <Button variant="outline">Close</Button>
+                </SheetClose>
                 <Button 
                   onClick={verifyOnIpfs}
                   className="gap-1.5"
@@ -268,9 +282,9 @@ export const Post = ({
                   <ExternalLink className="h-4 w-4" />
                   Verify on IPFS
                 </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+              </SheetFooter>
+            </SheetContent>
+          </Sheet>
         </div>
       </CardHeader>
       <CardContent className="pb-3">
@@ -340,14 +354,14 @@ export const Post = ({
           >
             <div className={`relative ${roarAnimation ? "animate-roar" : ""}`}>
               <span 
-                className={`text-lg transition-all ${roared ? "text-amber-500" : "opacity-60"} group-hover:opacity-100`} 
+                className={`text-lg transition-all ${roared ? "text-amber-500" : "opacity-40"} group-hover:opacity-100`} 
                 role="img" 
                 aria-label="lion"
               >
                 🦁
               </span>
               {roarTextAnimation && (
-                <div className="absolute -top-3 -right-6 animate-roar-text pointer-events-none">
+                <div className="absolute -top-5 -right-8 animate-roar-text pointer-events-none">
                   <span className="text-xs font-bold text-amber-500">ROAR!</span>
                 </div>
               )}

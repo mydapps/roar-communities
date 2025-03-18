@@ -120,16 +120,18 @@ export default {
 				},
 				'roar': {
           '0%': { transform: 'scale(1)' },
-          '15%': { transform: 'scale(1.4)' },
-          '30%': { transform: 'scale(1.2)' },
-          '45%': { transform: 'scale(1.4)' },
-          '60%': { transform: 'scale(1.2)' },
+          '15%': { transform: 'scale(1.5)' },
+          '30%': { transform: 'scale(1.3)' },
+          '45%': { transform: 'scale(1.5)' },
+          '60%': { transform: 'scale(1.3)' },
+          '75%': { transform: 'scale(1.2)' },
           '100%': { transform: 'scale(1)' }
         },
         'roar-text': {
           '0%': { opacity: '0', transform: 'scale(0.5) translateY(0) translateX(0)' },
-          '30%': { opacity: '1', transform: 'scale(1.2) translateY(-15px) translateX(15px)' },
-          '100%': { opacity: '0', transform: 'scale(0.8) translateY(-30px) translateX(30px)' }
+          '30%': { opacity: '1', transform: 'scale(1.5) translateY(-20px) translateX(15px)' },
+          '70%': { opacity: '1', transform: 'scale(1.2) translateY(-25px) translateX(25px)' },
+          '100%': { opacity: '0', transform: 'scale(0.8) translateY(-35px) translateX(35px)' }
         },
         'slide-up-full': {
           '0%': { transform: 'translateY(100%)' },
@@ -150,8 +152,8 @@ export default {
 				'pulse': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
 				'float': 'float 3s ease-in-out infinite',
 				'shimmer': 'shimmer 2s linear infinite',
-				'roar': 'roar 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)',
-        'roar-text': 'roar-text 1s ease-out'
+				'roar': 'roar 1.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        'roar-text': 'roar-text 1.5s ease-out'
 			},
 			fontFamily: {
 				sans: ['Inter', 'sans-serif'],
