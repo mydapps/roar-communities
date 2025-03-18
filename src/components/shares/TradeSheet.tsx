@@ -188,48 +188,28 @@ export const TradeSheet = ({
   if (isEmbedded) {
     return (
       <>
-        {renderTradeForm()}
-
-        {/* Preview drawer for embedded view */}
-        <Drawer open={previewOpen} onOpenChange={setPreviewOpen}>
-          <DrawerContent>
-            <DrawerHeader>
-              <DrawerTitle>Confirm Transaction</DrawerTitle>
-              <DrawerDescription>Review the details before confirming</DrawerDescription>
-            </DrawerHeader>
+        {!previewOpen ? renderTradeForm() : (
+          <div className="space-y-6">
+            {renderPreviewContent()}
             
-            <div className="px-4 py-4">
-              {renderPreviewContent()}
-            </div>
-            
-            <DrawerFooter>
-              <div className="w-full bg-muted rounded-full p-1 relative">
-                <div className="flex items-center">
-                  <Button 
-                    className="w-full py-6 rounded-full relative group cursor-grab active:cursor-grabbing"
-                    variant="default"
-                    onClick={handleConfirmTransaction}
-                  >
-                    <div className="absolute inset-0 flex items-center justify-center opacity-100 group-hover:opacity-0 transition-opacity">
-                      <div className="flex items-center">
-                        <span>Slide to confirm</span>
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </div>
-                    </div>
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="flex items-center">
-                        <span>Click to confirm</span>
-                      </div>
-                    </div>
-                  </Button>
-                </div>
-              </div>
-              <Button variant="outline" onClick={() => setPreviewOpen(false)}>
-                Cancel
+            <div className="mt-8 space-y-4">
+              <Button 
+                className="w-full py-3"
+                variant="default"
+                onClick={handleConfirmTransaction}
+              >
+                Confirm Transaction
               </Button>
-            </DrawerFooter>
-          </DrawerContent>
-        </Drawer>
+              <Button 
+                className="w-full" 
+                variant="outline" 
+                onClick={() => setPreviewOpen(false)}
+              >
+                Back
+              </Button>
+            </div>
+          </div>
+        )}
         
         {/* Success overlay */}
         {showSuccess && (
@@ -264,62 +244,50 @@ export const TradeSheet = ({
           <DrawerContent className="max-h-[85vh]">
             <DrawerHeader>
               <DrawerTitle>
-                {action === 'buy' ? 'Buy Shares' : 'Sell Shares'}
+                {previewOpen ? 'Confirm Transaction' : (action === 'buy' ? 'Buy Shares' : 'Sell Shares')}
               </DrawerTitle>
               <DrawerDescription>
-                {action === 'buy' 
-                  ? `Purchase shares of ${community?.name}` 
-                  : `Sell your ${community?.name} shares`}
+                {previewOpen ? 'Review the details before confirming' : 
+                  (action === 'buy' 
+                    ? `Purchase shares of ${community?.name}` 
+                    : `Sell your ${community?.name} shares`)}
               </DrawerDescription>
             </DrawerHeader>
             
             <div className="px-4 py-4 overflow-y-auto">
-              {renderTradeForm()}
-            </div>
-          </DrawerContent>
-        </Drawer>
-        
-        <Drawer open={previewOpen} onOpenChange={setPreviewOpen}>
-          <DrawerContent>
-            <DrawerHeader>
-              <DrawerTitle>Confirm Transaction</DrawerTitle>
-              <DrawerDescription>Review the details before confirming</DrawerDescription>
-            </DrawerHeader>
-            
-            <div className="px-4 py-4">
-              {renderPreviewContent()}
-              
-              <div className="px-4 text-center text-sm text-muted-foreground mt-4">
-                <p>Swipe to confirm the transaction</p>
-              </div>
-            </div>
-            
-            <DrawerFooter>
-              <div className="w-full bg-muted rounded-full p-1 relative">
-                <div className="flex items-center">
-                  <Button 
-                    className="w-full py-6 rounded-full relative group cursor-grab active:cursor-grabbing"
-                    variant="default"
-                    onClick={handleConfirmTransaction}
-                  >
-                    <div className="absolute inset-0 flex items-center justify-center opacity-100 group-hover:opacity-0 transition-opacity">
-                      <div className="flex items-center">
-                        <span>Slide to confirm</span>
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </div>
+              {!previewOpen ? renderTradeForm() : (
+                <>
+                  {renderPreviewContent()}
+                  
+                  <div className="w-full bg-muted rounded-full p-1 relative mt-8">
+                    <div className="flex items-center">
+                      <Button 
+                        className="w-full py-6 rounded-full relative group cursor-grab active:cursor-grabbing"
+                        variant="default"
+                        onClick={handleConfirmTransaction}
+                      >
+                        <div className="absolute inset-0 flex items-center justify-center opacity-100 group-hover:opacity-0 transition-opacity">
+                          <div className="flex items-center">
+                            <span>Slide to confirm</span>
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                          </div>
+                        </div>
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex items-center">
+                            <span>Click to confirm</span>
+                          </div>
+                        </div>
+                      </Button>
                     </div>
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="flex items-center">
-                        <span>Click to confirm</span>
-                      </div>
-                    </div>
-                  </Button>
-                </div>
-              </div>
-              <Button variant="outline" onClick={() => setPreviewOpen(false)}>
-                Cancel
-              </Button>
-            </DrawerFooter>
+                  </div>
+                  <div className="mt-4">
+                    <Button variant="outline" className="w-full" onClick={() => setPreviewOpen(false)}>
+                      Back
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
           </DrawerContent>
         </Drawer>
         
@@ -343,7 +311,7 @@ export const TradeSheet = ({
     );
   }
   
-  // For desktop - improved to handle preview in the same sheet
+  // For desktop - improved to ensure everything stays in the same sheet
   return (
     <>
       <Sheet open={open && !showSuccess} onOpenChange={(open) => {
@@ -353,31 +321,21 @@ export const TradeSheet = ({
         onOpenChange(open);
       }}>
         <SheetContent side="right" className="sm:max-w-md overflow-y-auto">
-          {!previewOpen ? (
-            <>
-              <SheetHeader>
-                <SheetTitle>
-                  {action === 'buy' ? 'Buy Shares' : 'Sell Shares'}
-                </SheetTitle>
-                <SheetDescription>
-                  {action === 'buy' 
-                    ? `Purchase shares of ${community?.name}` 
-                    : `Sell your ${community?.name} shares`}
-                </SheetDescription>
-              </SheetHeader>
-              
-              <div className="py-4 overflow-y-auto">
-                {renderTradeForm()}
-              </div>
-            </>
-          ) : (
-            <>
-              <SheetHeader>
-                <SheetTitle>Confirm Transaction</SheetTitle>
-                <SheetDescription>Review the details before confirming</SheetDescription>
-              </SheetHeader>
-              
-              <div className="py-4">
+          <SheetHeader>
+            <SheetTitle>
+              {previewOpen ? 'Confirm Transaction' : (action === 'buy' ? 'Buy Shares' : 'Sell Shares')}
+            </SheetTitle>
+            <SheetDescription>
+              {previewOpen ? 'Review the details before confirming' : 
+                (action === 'buy' 
+                  ? `Purchase shares of ${community?.name}` 
+                  : `Sell your ${community?.name} shares`)}
+            </SheetDescription>
+          </SheetHeader>
+          
+          <div className="py-4 overflow-y-auto">
+            {!previewOpen ? renderTradeForm() : (
+              <>
                 {renderPreviewContent()}
                 
                 <div className="mt-8 space-y-4">
@@ -393,12 +351,12 @@ export const TradeSheet = ({
                     variant="outline" 
                     onClick={() => setPreviewOpen(false)}
                   >
-                    Cancel
+                    Back
                   </Button>
                 </div>
-              </div>
-            </>
-          )}
+              </>
+            )}
+          </div>
         </SheetContent>
       </Sheet>
       

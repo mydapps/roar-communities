@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   Sheet,
@@ -177,48 +176,28 @@ export const SendSheet = ({
   if (isEmbedded) {
     return (
       <>
-        {renderSendForm()}
-
-        {/* Preview drawer for embedded view */}
-        <Drawer open={previewOpen} onOpenChange={setPreviewOpen}>
-          <DrawerContent>
-            <DrawerHeader>
-              <DrawerTitle>Confirm Transfer</DrawerTitle>
-              <DrawerDescription>Review the details before confirming</DrawerDescription>
-            </DrawerHeader>
+        {!previewOpen ? renderSendForm() : (
+          <div className="space-y-6">
+            {renderPreviewContent()}
             
-            <div className="px-4 py-4">
-              {renderPreviewContent()}
-            </div>
-            
-            <DrawerFooter>
-              <div className="w-full bg-muted rounded-full p-1 relative">
-                <div className="flex items-center">
-                  <Button 
-                    className="w-full py-6 rounded-full relative group cursor-grab active:cursor-grabbing"
-                    variant="default"
-                    onClick={handleConfirmTransaction}
-                  >
-                    <div className="absolute inset-0 flex items-center justify-center opacity-100 group-hover:opacity-0 transition-opacity">
-                      <div className="flex items-center">
-                        <span>Slide to confirm</span>
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </div>
-                    </div>
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="flex items-center">
-                        <span>Click to confirm</span>
-                      </div>
-                    </div>
-                  </Button>
-                </div>
-              </div>
-              <Button variant="outline" onClick={() => setPreviewOpen(false)}>
+            <div className="mt-8 space-y-4">
+              <Button 
+                className="w-full py-3"
+                variant="default"
+                onClick={handleConfirmTransaction}
+              >
+                Confirm Transfer
+              </Button>
+              <Button 
+                className="w-full" 
+                variant="outline" 
+                onClick={() => setPreviewOpen(false)}
+              >
                 Cancel
               </Button>
-            </DrawerFooter>
-          </DrawerContent>
-        </Drawer>
+            </div>
+          </div>
+        )}
         
         {/* Success overlay */}
         {showSuccess && (
@@ -240,7 +219,7 @@ export const SendSheet = ({
     );
   }
 
-  // For standalone component, use the appropriate container based on device
+  // For mobile, use Drawer components
   if (isMobile) {
     return (
       <>
@@ -253,58 +232,50 @@ export const SendSheet = ({
           <DrawerContent className="max-h-[85vh]">
             <DrawerHeader>
               <DrawerTitle>
-                {isEthSend ? 'Send ETH' : `Send ${community?.name} Shares`}
+                {previewOpen ? 'Confirm Transfer' : (isEthSend ? 'Send ETH' : `Send ${community?.name} Shares`)}
               </DrawerTitle>
               <DrawerDescription>
-                {isEthSend 
-                  ? 'Send ETH to another wallet address' 
-                  : `Send your ${community?.name} shares to another user`}
+                {previewOpen ? 'Review the details before confirming' : 
+                  (isEthSend 
+                    ? 'Send ETH to another wallet address' 
+                    : `Send your ${community?.name} shares to another user`)}
               </DrawerDescription>
             </DrawerHeader>
             
             <div className="py-4 px-4 overflow-y-auto">
-              {renderSendForm()}
-            </div>
-          </DrawerContent>
-        </Drawer>
-        
-        <Drawer open={previewOpen} onOpenChange={setPreviewOpen}>
-          <DrawerContent>
-            <DrawerHeader>
-              <DrawerTitle>Confirm Transfer</DrawerTitle>
-              <DrawerDescription>Review the details before confirming</DrawerDescription>
-            </DrawerHeader>
-            
-            <div className="px-4 py-4">
-              {renderPreviewContent()}
-            </div>
-            
-            <DrawerFooter>
-              <div className="w-full bg-muted rounded-full p-1 relative">
-                <div className="flex items-center">
-                  <Button 
-                    className="w-full py-6 rounded-full relative group cursor-grab active:cursor-grabbing"
-                    variant="default"
-                    onClick={handleConfirmTransaction}
-                  >
-                    <div className="absolute inset-0 flex items-center justify-center opacity-100 group-hover:opacity-0 transition-opacity">
-                      <div className="flex items-center">
-                        <span>Slide to confirm</span>
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </div>
+              {!previewOpen ? renderSendForm() : (
+                <>
+                  {renderPreviewContent()}
+                  
+                  <div className="w-full bg-muted rounded-full p-1 relative mt-8">
+                    <div className="flex items-center">
+                      <Button 
+                        className="w-full py-6 rounded-full relative group cursor-grab active:cursor-grabbing"
+                        variant="default"
+                        onClick={handleConfirmTransaction}
+                      >
+                        <div className="absolute inset-0 flex items-center justify-center opacity-100 group-hover:opacity-0 transition-opacity">
+                          <div className="flex items-center">
+                            <span>Slide to confirm</span>
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                          </div>
+                        </div>
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex items-center">
+                            <span>Click to confirm</span>
+                          </div>
+                        </div>
+                      </Button>
                     </div>
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="flex items-center">
-                        <span>Click to confirm</span>
-                      </div>
-                    </div>
-                  </Button>
-                </div>
-              </div>
-              <Button variant="outline" onClick={() => setPreviewOpen(false)}>
-                Cancel
-              </Button>
-            </DrawerFooter>
+                  </div>
+                  <div className="mt-4">
+                    <Button variant="outline" className="w-full" onClick={() => setPreviewOpen(false)}>
+                      Cancel
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
           </DrawerContent>
         </Drawer>
         
@@ -327,7 +298,7 @@ export const SendSheet = ({
       </>
     );
   } else {
-    // Desktop view with Sheet - improved to handle preview state
+    // Desktop view with Sheet - keep everything in the same sheet
     return (
       <>
         <Sheet open={open && !showSuccess} onOpenChange={(open) => {
@@ -337,31 +308,21 @@ export const SendSheet = ({
           onOpenChange(open);
         }}>
           <SheetContent side="right" className="sm:max-w-md overflow-y-auto">
-            {!previewOpen ? (
-              <>
-                <SheetHeader>
-                  <SheetTitle>
-                    {isEthSend ? 'Send ETH' : `Send ${community?.name} Shares`}
-                  </SheetTitle>
-                  <SheetDescription>
-                    {isEthSend 
-                      ? 'Send ETH to another wallet address' 
-                      : `Send your ${community?.name} shares to another user`}
-                  </SheetDescription>
-                </SheetHeader>
-                
-                <div className="py-4 overflow-y-auto">
-                  {renderSendForm()}
-                </div>
-              </>
-            ) : (
-              <>
-                <SheetHeader>
-                  <SheetTitle>Confirm Transfer</SheetTitle>
-                  <SheetDescription>Review the details before confirming</SheetDescription>
-                </SheetHeader>
-                
-                <div className="py-4">
+            <SheetHeader>
+              <SheetTitle>
+                {previewOpen ? 'Confirm Transfer' : (isEthSend ? 'Send ETH' : `Send ${community?.name} Shares`)}
+              </SheetTitle>
+              <SheetDescription>
+                {previewOpen ? 'Review the details before confirming' : 
+                  (isEthSend 
+                    ? 'Send ETH to another wallet address' 
+                    : `Send your ${community?.name} shares to another user`)}
+              </SheetDescription>
+            </SheetHeader>
+            
+            <div className="py-4 overflow-y-auto">
+              {!previewOpen ? renderSendForm() : (
+                <>
                   {renderPreviewContent()}
                   
                   <div className="mt-8 space-y-4">
@@ -377,12 +338,12 @@ export const SendSheet = ({
                       variant="outline" 
                       onClick={() => setPreviewOpen(false)}
                     >
-                      Cancel
+                      Back
                     </Button>
                   </div>
-                </div>
-              </>
-            )}
+                </>
+              )}
+            </div>
           </SheetContent>
         </Sheet>
         
