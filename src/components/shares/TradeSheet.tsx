@@ -76,9 +76,9 @@ export const TradeSheet = ({
     // Show success animation for 2 seconds then close
     setTimeout(() => {
       setShowSuccess(false);
-      if (!isEmbedded) {
-        onOpenChange(false);
-      }
+      
+      // Always close the modal after success, regardless of embedded status
+      onOpenChange(false);
       
       // Reset form
       form.reset();

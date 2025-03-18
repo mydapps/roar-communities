@@ -227,18 +227,12 @@ const MySharesPage = () => {
               <div className="px-4 py-4 flex-1 overflow-y-auto">
                 <SendSheet 
                   open={true}
-                  onOpenChange={() => {}}
+                  onOpenChange={() => setSendOpen(false)}
                   community={selectedCommunity}
                   isEthSend={!selectedCommunity}
                   isEmbedded={true}
                 />
               </div>
-              
-              <DrawerFooter>
-                <Button variant="outline" onClick={() => setSendOpen(false)}>
-                  Cancel
-                </Button>
-              </DrawerFooter>
             </DrawerContent>
           </Drawer>
 
@@ -257,7 +251,7 @@ const MySharesPage = () => {
               <div className="px-4 py-4 flex-1 overflow-y-auto">
                 <TradeSheet 
                   open={true}
-                  onOpenChange={() => {}}
+                  onOpenChange={() => setTradeOpen(false)}
                   community={selectedCommunity}
                   action={tradeAction}
                   userEthBalance={userEthBalance}
@@ -278,51 +272,21 @@ const MySharesPage = () => {
           />
 
           {/* Send ETH/Shares Sheet for Desktop */}
-          <Sheet open={sendOpen} onOpenChange={setSendOpen}>
-            <SheetContent side="right" className="sm:max-w-md overflow-y-auto">
-              <SheetHeader>
-                <SheetTitle>{!selectedCommunity ? 'Send ETH' : `Send ${selectedCommunity?.name} Shares`}</SheetTitle>
-                <SheetDescription>
-                  {!selectedCommunity 
-                    ? 'Send ETH to another wallet address' 
-                    : `Send your ${selectedCommunity?.name} shares to another user`}
-                </SheetDescription>
-              </SheetHeader>
-              <div className="py-4 pr-6 overflow-y-auto">
-                <SendSheet 
-                  open={true}
-                  onOpenChange={() => {}}
-                  community={selectedCommunity}
-                  isEthSend={!selectedCommunity}
-                  isEmbedded={true}
-                />
-              </div>
-            </SheetContent>
-          </Sheet>
+          <SendSheet 
+            open={sendOpen} 
+            onOpenChange={setSendOpen} 
+            community={selectedCommunity}
+            isEthSend={!selectedCommunity}
+          />
 
           {/* Trade (Buy/Sell) Sheet for Desktop */}
-          <Sheet open={tradeOpen} onOpenChange={setTradeOpen}>
-            <SheetContent side="right" className="sm:max-w-md overflow-y-auto">
-              <SheetHeader>
-                <SheetTitle>{tradeAction === 'buy' ? 'Buy Shares' : 'Sell Shares'}</SheetTitle>
-                <SheetDescription>
-                  {tradeAction === 'buy' 
-                    ? `Purchase shares of ${selectedCommunity?.name}` 
-                    : `Sell your ${selectedCommunity?.name} shares`}
-                </SheetDescription>
-              </SheetHeader>
-              <div className="py-4 pr-6 overflow-y-auto">
-                <TradeSheet 
-                  open={true}
-                  onOpenChange={() => {}}
-                  community={selectedCommunity}
-                  action={tradeAction}
-                  userEthBalance={userEthBalance}
-                  isEmbedded={true}
-                />
-              </div>
-            </SheetContent>
-          </Sheet>
+          <TradeSheet 
+            open={tradeOpen} 
+            onOpenChange={setTradeOpen} 
+            community={selectedCommunity}
+            action={tradeAction}
+            userEthBalance={userEthBalance}
+          />
         </>
       )}
 

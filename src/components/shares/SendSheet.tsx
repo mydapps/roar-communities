@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { 
   Sheet,
@@ -62,9 +63,9 @@ export const SendSheet = ({
     // Show success animation for 2 seconds then close
     setTimeout(() => {
       setShowSuccess(false);
-      if (!isEmbedded) {
-        onOpenChange(false);
-      }
+      
+      // Always close the modal after success, regardless of embedded status
+      onOpenChange(false);
       
       // Reset form
       form.reset();
@@ -193,7 +194,7 @@ export const SendSheet = ({
                 variant="outline" 
                 onClick={() => setPreviewOpen(false)}
               >
-                Cancel
+                Back
               </Button>
             </div>
           </div>
@@ -270,7 +271,7 @@ export const SendSheet = ({
                   </div>
                   <div className="mt-4">
                     <Button variant="outline" className="w-full" onClick={() => setPreviewOpen(false)}>
-                      Cancel
+                      Back
                     </Button>
                   </div>
                 </>
