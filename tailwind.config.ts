@@ -1,4 +1,3 @@
-
 import type { Config } from "tailwindcss";
 
 export default {
@@ -118,20 +117,40 @@ export default {
 					'0%': { backgroundPosition: '-200% 0' },
 					'100%': { backgroundPosition: '200% 0' }
 				},
-				'roar': {
-          '0%': { transform: 'scale(1)' },
-          '15%': { transform: 'scale(1.5)' },
-          '30%': { transform: 'scale(1.3)' },
-          '45%': { transform: 'scale(1.5)' },
-          '60%': { transform: 'scale(1.3)' },
-          '75%': { transform: 'scale(1.2)' },
-          '100%': { transform: 'scale(1)' }
+				'roar-icon': {
+          '0%': { transform: 'scale(1) rotate(0deg)' },
+          '10%': { transform: 'scale(1.2) rotate(-5deg)' },
+          '20%': { transform: 'scale(1.4) rotate(5deg)' },
+          '30%': { transform: 'scale(1.6) rotate(-3deg)' },
+          '40%': { transform: 'scale(1.4) rotate(3deg)' },
+          '50%': { transform: 'scale(1.5) rotate(-2deg)' },
+          '60%': { transform: 'scale(1.3) rotate(2deg)' },
+          '70%': { transform: 'scale(1.2) rotate(-1deg)' },
+          '80%': { transform: 'scale(1.1) rotate(1deg)' },
+          '100%': { transform: 'scale(1) rotate(0deg)' }
+        },
+        'roar-waves': {
+          '0%': { opacity: '0', transform: 'scale(1)' },
+          '10%': { opacity: '0.3', transform: 'scale(1.1)' },
+          '50%': { opacity: '0.5', transform: 'scale(1.4)' },
+          '90%': { opacity: '0.1', transform: 'scale(1.6)' },
+          '100%': { opacity: '0', transform: 'scale(1.8)' }
         },
         'roar-text': {
-          '0%': { opacity: '0', transform: 'scale(0.5) translateY(0) translateX(0)' },
-          '30%': { opacity: '1', transform: 'scale(1.5) translateY(-20px) translateX(15px)' },
-          '70%': { opacity: '1', transform: 'scale(1.2) translateY(-25px) translateX(25px)' },
-          '100%': { opacity: '0', transform: 'scale(0.8) translateY(-35px) translateX(35px)' }
+          '0%': { opacity: '0', transform: 'translate(0, 0) scale(0.5)' },
+          '15%': { opacity: '1', transform: 'translate(10px, -15px) scale(0.9)' },
+          '30%': { opacity: '1', transform: 'translate(15px, -25px) scale(1.1)' },
+          '45%': { opacity: '1', transform: 'translate(20px, -30px) scale(1.2)' },
+          '60%': { opacity: '1', transform: 'translate(25px, -35px) scale(1.1)' },
+          '75%': { opacity: '0.8', transform: 'translate(30px, -40px) scale(1)' },
+          '90%': { opacity: '0.5', transform: 'translate(35px, -45px) scale(0.9)' },
+          '100%': { opacity: '0', transform: 'translate(40px, -50px) scale(0.8)' }
+        },
+        'shake-subtle': {
+          '0%, 100%': { transform: 'translateX(0)' },
+          '25%': { transform: 'translateX(-1px)' },
+          '50%': { transform: 'translateX(1px)' },
+          '75%': { transform: 'translateX(-1px)' }
         },
         'slide-up-full': {
           '0%': { transform: 'translateY(100%)' },
@@ -152,8 +171,10 @@ export default {
 				'pulse': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
 				'float': 'float 3s ease-in-out infinite',
 				'shimmer': 'shimmer 2s linear infinite',
-				'roar': 'roar 1.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
-        'roar-text': 'roar-text 1.5s ease-out'
+				'roar-icon': 'roar-icon 1.8s cubic-bezier(0.22, 1, 0.36, 1)',
+        'roar-waves': 'roar-waves 1.5s ease-out',
+        'roar-text': 'roar-text 2s ease-out',
+        'shake-subtle': 'shake-subtle 0.5s ease-in-out'
 			},
 			fontFamily: {
 				sans: ['Inter', 'sans-serif'],

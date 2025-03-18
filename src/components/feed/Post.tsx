@@ -90,6 +90,7 @@ export const Post = ({
   const [comments, setComments] = useState<{user: string, text: string, timeAgo: string}[]>([]);
   const [shareMenuOpen, setShareMenuOpen] = useState(false);
   const [roarAnimation, setRoarAnimation] = useState(false);
+  const [roarWavesAnimation, setRoarWavesAnimation] = useState(false);
   const [roarTextAnimation, setRoarTextAnimation] = useState(false);
   const [activeDotIndex, setActiveDotIndex] = useState(0);
   const [mirrorSheetOpen, setMirrorSheetOpen] = useState(false);
@@ -118,13 +119,23 @@ export const Post = ({
       setLocalRoarCount(prev => prev - 1);
     } else {
       setLocalRoarCount(prev => prev + 1);
-      // Trigger roar animation with longer duration for dopamine hit
-      setRoarAnimation(true);
-      setRoarTextAnimation(true);
+      
+      // Trigger a sequence of animations for a more satisfying effect
+      setRoarWavesAnimation(true);
+      setTimeout(() => setRoarAnimation(true), 50);
+      setTimeout(() => setRoarTextAnimation(true), 100);
       
       // Use longer durations for more satisfying animations
-      setTimeout(() => setRoarAnimation(false), 1200);
-      setTimeout(() => setRoarTextAnimation(false), 1500);
+      setTimeout(() => setRoarWavesAnimation(false), 1500);
+      setTimeout(() => setRoarAnimation(false), 1800);
+      setTimeout(() => setRoarTextAnimation(false), 2000);
+      
+      // Show a toast for even more dopamine
+      toast({
+        title: "Roar sent!",
+        description: "Your roar has been sent to the community",
+        duration: 1500
+      });
     }
     setRoared(!roared);
   };
@@ -349,24 +360,42 @@ export const Post = ({
           <Button 
             variant={roared ? "roar-active" : "roar"}
             size="sm"
-            className="flex gap-1.5 items-center group"
+            className={`flex items-center gap-1.5 relative ${roared ? 'hover:animate-shake-subtle' : ''}`}
             onClick={handleRoar}
           >
-            <div className={`relative ${roarAnimation ? "animate-roar" : ""}`}>
+            {/* Animated ripple waves when roaring */}
+            {roarWavesAnimation && (
+              <div className="absolute inset-0 rounded-md border-2 border-amber-500/30 animate-roar-waves pointer-events-none"></div>
+            )}
+            
+            {/* Lion emoji with animation container */}
+            <div className={`relative flex items-center justify-center ${roarAnimation ? "animate-roar-icon" : ""}`}>
               <span 
-                className={`text-lg transition-all ${roared ? "text-amber-500" : "opacity-40"} group-hover:opacity-100`} 
+                className={`text-xl transition-all ${roared ? "text-amber-500" : "text-foreground/30"} 
+                  ${!roared ? "hover:text-amber-500/70" : ""} group-hover:scale-110`} 
                 role="img" 
                 aria-label="lion"
               >
                 🦁
               </span>
+              
+              {/* Animated "ROAR!" text that flies out */}
               {roarTextAnimation && (
-                <div className="absolute -top-5 -right-8 animate-roar-text pointer-events-none">
-                  <span className="text-xs font-bold text-amber-500">ROAR!</span>
-                </div>
+                <>
+                  <div className="absolute top-0 right-0 animate-roar-text pointer-events-none z-10">
+                    <span className="font-bold whitespace-nowrap bg-gradient-to-br from-amber-500 to-amber-600 text-transparent bg-clip-text text-sm">ROAR!</span>
+                  </div>
+                  <div className="absolute top-2 right-2 animate-roar-text pointer-events-none z-10" style={{ animationDelay: '0.1s' }}>
+                    <span className="font-bold whitespace-nowrap text-amber-500/60 text-xs">ROAR!</span>
+                  </div>
+                </>
               )}
             </div>
-            <span className={roared ? "text-amber-500 font-medium" : ""}>{localRoarCount}</span>
+            
+            {/* Roar count with emphasis on active state */}
+            <span className={`font-medium transition-all duration-300 ${roared ? "text-amber-500 scale-110" : "text-foreground/50"}`}>
+              {localRoarCount}
+            </span>
           </Button>
           
           <Button 
