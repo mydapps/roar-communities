@@ -2,24 +2,16 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
-import { MessageCircle, Heart, RefreshCw, Share2, TrendingUp } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { Post } from '@/components/feed/Post';
-
-// Custom Lion icon for the Roar button
-const LionIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-5 w-5">
-    <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    <path d="M8 15C8.5 13.5 10 12 12 12C14 12 15.5 13.5 16 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-    <path d="M8.5 9C8.5 9.82843 7.82843 10.5 7 10.5C6.17157 10.5 5.5 9.82843 5.5 9C5.5 8.17157 6.17157 7.5 7 7.5C7.82843 7.5 8.5 8.17157 8.5 9Z" fill="currentColor"/>
-    <path d="M18.5 9C18.5 9.82843 17.8284 10.5 17 10.5C16.1716 10.5 15.5 9.82843 15.5 9C15.5 8.17157 16.1716 7.5 17 7.5C17.8284 7.5 18.5 8.17157 18.5 9Z" fill="currentColor"/>
-  </svg>
-);
+import CreatePostCard from '@/components/feed/CreatePostCard';
 
 const FeedPage = () => {
+  const [userPosts, setUserPosts] = useState<any[]>([]);
+
+  const handlePostCreated = (newPost: any) => {
+    setUserPosts([newPost, ...userPosts]);
+  };
+
   return (
     <div className="space-y-6">
       <Tabs defaultValue="following" className="w-full">
@@ -33,21 +25,55 @@ const FeedPage = () => {
         </div>
   
         <TabsContent value="following" className="space-y-6 animate-fade-in">
-          <CreatePostCard />
-          <PostsList />
-        </TabsContent>
-  
-        <TabsContent value="global" className="space-y-6 animate-fade-in">
-          <div className="text-center p-8">
-            <p className="text-muted-foreground">Global feed shows posts from all communities</p>
+          <CreatePostCard onPostCreated={handlePostCreated} />
+          <div className="space-y-6">
+            {/* User created posts at the top */}
+            {userPosts.map((post, index) => (
+              <Post 
+                key={`user-post-${index}`}
+                username={post.username}
+                community={post.community}
+                timeAgo={post.timeAgo}
+                content={post.content}
+                roarCount={post.roarCount}
+                commentCount={post.commentCount}
+                shareCount={post.shareCount}
+                images={post.images}
+                video={post.video}
+              />
+            ))}
+            
+            {/* Default posts */}
             <PostsList />
           </div>
         </TabsContent>
   
-        <TabsContent value="trending" className="space-y-6 animate-fade-in">
-          <div className="text-center p-8">
-            <p className="text-muted-foreground">Trending posts across all communities</p>
+        <TabsContent value="global" className="space-y-6 animate-fade-in">
+          <div className="space-y-6">
+            <p className="text-muted-foreground">Global feed shows posts from all communities</p>
+            <CreatePostCard onPostCreated={handlePostCreated} />
             <PostsList />
+            {userPosts.map((post, index) => (
+              <Post 
+                key={`user-post-global-${index}`}
+                username={post.username}
+                community={post.community}
+                timeAgo={post.timeAgo}
+                content={post.content}
+                roarCount={post.roarCount}
+                commentCount={post.commentCount}
+                shareCount={post.shareCount}
+                images={post.images}
+                video={post.video}
+              />
+            ))}
+          </div>
+        </TabsContent>
+  
+        <TabsContent value="trending" className="space-y-6 animate-fade-in">
+          <div className="space-y-6">
+            <p className="text-muted-foreground">Trending posts across all communities</p>
+            <PostsList trendingOnly={true} />
           </div>
         </TabsContent>
       </Tabs>
@@ -55,68 +81,89 @@ const FeedPage = () => {
   );
 };
 
-const CreatePostCard = () => {
-  return (
-    <Card className="border border-border/40 shadow-sm animate-scale-in">
-      <CardContent className="pt-6">
-        <div className="flex gap-4">
-          <Avatar>
-            <AvatarImage src="https://github.com/shadcn.png" />
-            <AvatarFallback>CN</AvatarFallback>
-          </Avatar>
-          <div className="flex-1">
-            <textarea 
-              className="w-full rounded-lg border border-border/60 bg-muted/40 p-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none min-h-[100px]" 
-              placeholder="What's happening in your communities?"
-            />
-            <div className="mt-3 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm">
-                  Add Image
-                </Button>
-                <Button variant="outline" size="sm">
-                  Link Community
-                </Button>
-              </div>
-              <Button>Post</Button>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
+const PostsList = ({ trendingOnly = false }: { trendingOnly?: boolean }) => {
+  // Sample posts with different types of media
+  const posts = [
+    {
+      username: "alice.eth",
+      community: "Ethereum Devs",
+      timeAgo: "2h",
+      content: "Just deployed my first smart contract on Ethereum. The gas fees were surprisingly reasonable!",
+      roarCount: 24,
+      commentCount: 5,
+      shareCount: 2,
+    },
+    {
+      username: "bob.lens",
+      community: "DeFi Explorers",
+      timeAgo: "5h",
+      content: "Check out this new UI for our DeFi platform. What do you think?",
+      roarCount: 42,
+      commentCount: 12,
+      shareCount: 7,
+      images: [
+        "https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=800",
+        "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=800",
+      ]
+    },
+    {
+      username: "charlie.sol",
+      community: "Solana Builders",
+      timeAgo: "1d",
+      content: "The throughput on Solana is amazing for our new DApp. We're handling thousands of transactions per second with minimal costs.",
+      roarCount: 67,
+      commentCount: 23,
+      shareCount: 15,
+      video: "https://assets.mixkit.co/videos/preview/mixkit-software-developer-working-on-code-screen-close-up-27013-large.mp4"
+    },
+    {
+      username: "diana.dev",
+      community: "Web3 Gaming",
+      timeAgo: "6h",
+      content: "Just finished designing these assets for our blockchain game. What do you think of the color scheme?",
+      roarCount: 83,
+      commentCount: 31,
+      shareCount: 19,
+      images: [
+        "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800",
+        "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=800",
+        "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800",
+      ]
+    },
+    {
+      username: "eric.nft",
+      community: "NFT Creators",
+      timeAgo: "3d",
+      content: "My latest NFT collection is going live tomorrow! Here's a sneak peek at some of the art.",
+      roarCount: 103,
+      commentCount: 42,
+      shareCount: 29,
+      images: [
+        "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=800",
+      ]
+    },
+  ];
 
-const PostsList = () => {
+  const postsToShow = trendingOnly
+    ? posts.sort((a, b) => b.roarCount - a.roarCount).slice(0, 3)
+    : posts;
+
   return (
     <div className="space-y-6">
-      <Post 
-        username="alice.eth"
-        community="Ethereum Devs"
-        timeAgo="2h"
-        content="Just deployed my first smart contract on Ethereum. The gas fees were surprisingly reasonable!"
-        roarCount={24}
-        commentCount={5}
-        shareCount={2}
-      />
-      <Post 
-        username="bob.lens"
-        community="DeFi Explorers"
-        timeAgo="5h"
-        content="Anyone trying out the new DEX? The UI is clean and the liquidity seems good so far. I'm impressed with the low slippage."
-        roarCount={42}
-        commentCount={12}
-        shareCount={7}
-      />
-      <Post 
-        username="charlie.sol"
-        community="Solana Builders"
-        timeAgo="1d"
-        content="The throughput on Solana is amazing for our new DApp. We're handling thousands of transactions per second with minimal costs."
-        roarCount={67}
-        commentCount={23}
-        shareCount={15}
-      />
+      {postsToShow.map((post, index) => (
+        <Post 
+          key={`sample-post-${index}`}
+          username={post.username}
+          community={post.community}
+          timeAgo={post.timeAgo}
+          content={post.content}
+          roarCount={post.roarCount}
+          commentCount={post.commentCount}
+          shareCount={post.shareCount}
+          images={post.images}
+          video={post.video}
+        />
+      ))}
     </div>
   );
 };

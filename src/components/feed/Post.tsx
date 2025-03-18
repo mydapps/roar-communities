@@ -25,6 +25,8 @@ export interface PostProps {
   roarCount: number;
   commentCount: number;
   shareCount: number;
+  images?: string[];
+  video?: string;
 }
 
 export const Post = ({ 
@@ -34,7 +36,9 @@ export const Post = ({
   content, 
   roarCount, 
   commentCount, 
-  shareCount 
+  shareCount,
+  images,
+  video
 }: PostProps) => {
   const [roared, setRoared] = useState(false);
   const [localRoarCount, setLocalRoarCount] = useState(roarCount);
@@ -77,6 +81,30 @@ export const Post = ({
       </CardHeader>
       <CardContent className="pb-3">
         <p className="text-sm mt-2">{content}</p>
+        
+        {/* Display media content */}
+        {images && images.length > 0 && (
+          <div className={`grid gap-2 mt-3 ${images.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            {images.map((img, index) => (
+              <img 
+                key={index} 
+                src={img} 
+                alt={`Post attachment ${index + 1}`} 
+                className="rounded-md w-full h-auto object-cover max-h-[300px]" 
+              />
+            ))}
+          </div>
+        )}
+        
+        {video && (
+          <div className="mt-3">
+            <video 
+              src={video} 
+              controls 
+              className="rounded-md w-full max-h-[300px]"
+            />
+          </div>
+        )}
       </CardContent>
       <Separator />
       <CardFooter className="py-3">
@@ -84,11 +112,11 @@ export const Post = ({
           <Button 
             variant={roared ? "default" : "ghost"} 
             size="sm"
-            className={roared ? "animate-roar" : ""}
+            className={`flex gap-1 items-center ${roared ? "animate-roar" : ""}`}
             onClick={handleRoar}
           >
-            <LionIcon />
-            <span className="ml-1">{localRoarCount}</span>
+            <span className="text-lg" role="img" aria-label="lion">🦁</span>
+            <span>{localRoarCount}</span>
           </Button>
           <Button variant="ghost" size="sm">
             <MessageCircle className="h-4 w-4 mr-1" />
