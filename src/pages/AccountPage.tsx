@@ -1,0 +1,283 @@
+
+import React, { useState } from 'react';
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardFooter, 
+  CardHeader, 
+  CardTitle 
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import { Copy, Download, Key, LogOut, Moon, Sun, Upload } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { toast } from 'sonner';
+
+const AccountPage = () => {
+  const [darkMode, setDarkMode] = useState(false);
+  
+  const handleCopyAddress = () => {
+    navigator.clipboard.writeText('0x1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s');
+    toast.success("Address copied to clipboard!");
+  };
+  
+  const handleDarkModeToggle = () => {
+    setDarkMode(!darkMode);
+    toast.success(`${darkMode ? 'Light' : 'Dark'} mode enabled`);
+  };
+
+  return (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold">Account Settings</h1>
+      
+      <Tabs defaultValue="profile" className="space-y-6">
+        <TabsList className="w-full max-w-md">
+          <TabsTrigger value="profile" className="flex-1">Profile</TabsTrigger>
+          <TabsTrigger value="wallet" className="flex-1">Wallet</TabsTrigger>
+          <TabsTrigger value="preferences" className="flex-1">Preferences</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="profile" className="space-y-6 animate-fade-in">
+          <Card>
+            <CardHeader>
+              <CardTitle>Profile Information</CardTitle>
+              <CardDescription>
+                Update your profile details and public information
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex flex-col items-center justify-center sm:flex-row sm:justify-start gap-6">
+                <Avatar className="h-24 w-24">
+                  <AvatarImage src="https://github.com/shadcn.png" />
+                  <AvatarFallback>CN</AvatarFallback>
+                </Avatar>
+                
+                <div className="flex flex-col items-center sm:items-start gap-2">
+                  <h3 className="text-lg font-medium">Profile Picture</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Your profile picture will be visible to community members
+                  </p>
+                  <div className="flex gap-2 mt-2">
+                    <Button size="sm" variant="outline">
+                      <Upload className="h-4 w-4 mr-2" />
+                      Change
+                    </Button>
+                    <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700">
+                      Remove
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              
+              <Separator />
+              
+              <div className="grid gap-5">
+                <div className="grid gap-2.5">
+                  <Label htmlFor="username">Username</Label>
+                  <Input id="username" placeholder="your.eth" />
+                  <p className="text-sm text-muted-foreground">
+                    This is your public username. It can be your ENS name or any unique identifier.
+                  </p>
+                </div>
+                
+                <div className="grid gap-2.5">
+                  <Label htmlFor="bio">Bio</Label>
+                  <textarea 
+                    id="bio" 
+                    className="min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm"
+                    placeholder="Tell communities a bit about yourself..."
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Write a short bio to introduce yourself to the community.
+                  </p>
+                </div>
+                
+                <div className="grid gap-2.5">
+                  <Label htmlFor="email">Email (Optional)</Label>
+                  <Input 
+                    id="email" 
+                    type="email" 
+                    placeholder="your@email.com" 
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Your email will only be used for important notifications and won't be shared publicly.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter className="flex justify-end">
+              <Button>Save Changes</Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="wallet" className="space-y-6 animate-fade-in">
+          <Card>
+            <CardHeader>
+              <CardTitle>Wallet Information</CardTitle>
+              <CardDescription>
+                View your wallet details and export your keys
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-2.5">
+                <Label>Your Wallet Address</Label>
+                <div className="flex items-center space-x-2">
+                  <div className="bg-muted/50 rounded-md px-3 py-2 text-sm font-mono flex-1 truncate">
+                    0x1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s
+                  </div>
+                  <Button variant="outline" size="icon" onClick={handleCopyAddress}>
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  This is your public wallet address that receives rewards and transaction fees.
+                </p>
+              </div>
+              
+              <Separator />
+              
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">Security Operations</h3>
+                <div className="flex flex-col space-y-3">
+                  <Button variant="outline" className="justify-start">
+                    <Key className="h-4 w-4 mr-2" />
+                    Export Private Key
+                  </Button>
+                  <Button variant="outline" className="justify-start">
+                    <Download className="h-4 w-4 mr-2" />
+                    Download Keystore File
+                  </Button>
+                  <Button variant="outline" className="justify-start">
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Disconnect Wallet
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Warning: Never share your private key or keystore file with anyone. Keep them secure and backed up.
+                </p>
+              </div>
+              
+              <Separator />
+              
+              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-md p-4">
+                <h3 className="text-base font-medium text-yellow-700 mb-2">Security Reminder</h3>
+                <p className="text-sm text-yellow-700">
+                  Always verify the URL is dapps.co before entering sensitive information. We will never ask for your private key in emails or messages.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="preferences" className="space-y-6 animate-fade-in">
+          <Card>
+            <CardHeader>
+              <CardTitle>Appearance</CardTitle>
+              <CardDescription>
+                Customize how dapps.co looks and feels
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="dark-mode">Dark Mode</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Toggle between light and dark theme
+                  </p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Sun className="h-4 w-4 text-muted-foreground" />
+                  <Switch 
+                    id="dark-mode" 
+                    checked={darkMode} 
+                    onCheckedChange={handleDarkModeToggle} 
+                  />
+                  <Moon className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </div>
+              
+              <Separator />
+              
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="compact-mode">Compact Mode</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Reduce spacing for a denser interface
+                  </p>
+                </div>
+                <Switch id="compact-mode" />
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Notifications</CardTitle>
+              <CardDescription>
+                Configure notification settings
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="roar-notifications">Roars on your posts</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Get notified when someone roars your post
+                  </p>
+                </div>
+                <Switch id="roar-notifications" defaultChecked />
+              </div>
+              
+              <Separator />
+              
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="comment-notifications">Comments</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Get notified about new comments on your posts
+                  </p>
+                </div>
+                <Switch id="comment-notifications" defaultChecked />
+              </div>
+              
+              <Separator />
+              
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="reward-notifications">Reward Distributions</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Get notified about reward distributions
+                  </p>
+                </div>
+                <Switch id="reward-notifications" defaultChecked />
+              </div>
+              
+              <Separator />
+              
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="price-notifications">Price Movements</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Get notified about significant price changes in your communities
+                  </p>
+                </div>
+                <Switch id="price-notifications" />
+              </div>
+            </CardContent>
+            <CardFooter className="flex justify-end">
+              <Button>Save Preferences</Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+};
+
+export default AccountPage;
