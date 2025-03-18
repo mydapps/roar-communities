@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Card, 
   CardContent, 
@@ -14,8 +14,10 @@ import {
   ArrowDown, 
   TrendingUp, 
   PieChart, 
-  DollarSign, 
-  RefreshCw
+  Wallet,
+  Copy,
+  RefreshCw,
+  SendHorizontal
 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -27,6 +29,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { PortfolioSummary } from '@/components/shares/PortfolioSummary';
+import { DepositSheet } from '@/components/shares/DepositSheet';
+import { SendSheet } from '@/components/shares/SendSheet';
+import { TradeSheet } from '@/components/shares/TradeSheet';
+import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 // Dummy data for sample portfolio
 const portfolioData = [
@@ -66,43 +74,44 @@ const portfolioData = [
 
 // Calculate total portfolio value
 const totalValue = portfolioData.reduce((sum, item) => sum + item.value, 0);
+const ethToUsd = 3521.89; // Mock ETH/USD exchange rate
+const totalValueUsd = totalValue * ethToUsd;
 
 const MySharesPage = () => {
+  const [depositOpen, setDepositOpen] = useState(false);
+  const [sendOpen, setSendOpen] = useState(false);
+  const [selectedCommunity, setSelectedCommunity] = useState(null);
+  const [tradeAction, setTradeAction] = useState<'buy' | 'sell' | null>(null);
+  const [tradeOpen, setTradeOpen] = useState(false);
+  const { toast } = useToast();
+
+  const handleTradeClick = (community: any, action: 'buy' | 'sell') => {
+    setSelectedCommunity(community);
+    setTradeAction(action);
+    setTradeOpen(true);
+  };
+
+  const handleRefresh = () => {
+    toast({
+      title: "Refreshing",
+      description: "Fetching latest portfolio data...",
+    });
+  };
+
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">My Portfolio</h1>
+    <div className="space-y-6 animate-fade-in">
+      <PortfolioSummary 
+        ethValue={totalValue.toFixed(4)} 
+        usdValue={(totalValueUsd).toFixed(2)}
+        onDepositClick={() => setDepositOpen(true)}
+        onSendClick={() => setSendOpen(true)}
+      />
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <PortfolioCard 
-          title="Total Value" 
-          value={`${totalValue.toFixed(2)} ETH`}
-          icon={<PieChart className="h-5 w-5" />}
-          description="Combined value of all your community shares"
-          className="animate-scale-in"
-        />
-        <PortfolioCard 
-          title="24h Change" 
-          value="+0.32 ETH"
-          percentage="+3.8%"
-          isPositive={true}
-          icon={<TrendingUp className="h-5 w-5" />}
-          description="Change in portfolio value over last 24 hours"
-          className="animate-scale-in [animation-delay:100ms]"
-        />
-        <PortfolioCard 
-          title="Rewards Earned" 
-          value="1.45 ETH"
-          icon={<DollarSign className="h-5 w-5" />}
-          description="Total rewards earned from communities"
-          className="animate-scale-in [animation-delay:200ms]"
-        />
-      </div>
-      
-      <Card className="animate-fade-in">
+      <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>Communities</span>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={handleRefresh}>
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh
             </Button>
@@ -119,41 +128,52 @@ const MySharesPage = () => {
             </TabsList>
             
             <TabsContent value="table">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Community</TableHead>
-                    <TableHead className="text-right">Shares</TableHead>
-                    <TableHead className="text-right">Value (ETH)</TableHead>
-                    <TableHead className="text-right">Avg. Buy Price</TableHead>
-                    <TableHead className="text-right">Current Price</TableHead>
-                    <TableHead className="text-right">Change</TableHead>
-                    <TableHead></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {portfolioData.map((community) => (
-                    <TableRow key={community.name}>
-                      <TableCell className="font-medium">{community.name}</TableCell>
-                      <TableCell className="text-right">{community.shares}</TableCell>
-                      <TableCell className="text-right">{community.value.toFixed(2)}</TableCell>
-                      <TableCell className="text-right">{community.avgBuyPrice.toFixed(3)}</TableCell>
-                      <TableCell className="text-right">{community.currentPrice.toFixed(3)}</TableCell>
-                      <TableCell className="text-right">
-                        <span className={community.change >= 0 ? "text-green-600" : "text-red-600"}>
-                          {community.change >= 0 ? "+" : ""}{community.change.toFixed(2)}%
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2 justify-end">
-                          <Button size="sm" variant="outline">Buy</Button>
-                          <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700">Sell</Button>
-                        </div>
-                      </TableCell>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Community</TableHead>
+                      <TableHead className="text-right">Shares</TableHead>
+                      <TableHead className="text-right">Value (ETH)</TableHead>
+                      <TableHead className="text-right">Avg. Buy Price</TableHead>
+                      <TableHead className="text-right">Current Price</TableHead>
+                      <TableHead className="text-right">Change</TableHead>
+                      <TableHead></TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {portfolioData.map((community) => (
+                      <TableRow key={community.name} className={cn(
+                        "transition-colors hover:bg-accent/30"
+                      )}>
+                        <TableCell className="font-medium">{community.name}</TableCell>
+                        <TableCell className="text-right">{community.shares}</TableCell>
+                        <TableCell className="text-right">{community.value.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">{community.avgBuyPrice.toFixed(3)}</TableCell>
+                        <TableCell className="text-right">{community.currentPrice.toFixed(3)}</TableCell>
+                        <TableCell className="text-right">
+                          <span className={community.change >= 0 ? "text-green-600" : "text-red-600"}>
+                            {community.change >= 0 ? "+" : ""}{community.change.toFixed(2)}%
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2 justify-end">
+                            <Button size="sm" variant="outline" onClick={() => handleTradeClick(community, 'buy')}>Buy</Button>
+                            <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700" 
+                              onClick={() => handleTradeClick(community, 'sell')}>Sell</Button>
+                            <Button size="sm" variant="outline" onClick={() => {
+                              setSelectedCommunity(community);
+                              setSendOpen(true);
+                            }}>
+                              <SendHorizontal className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </TabsContent>
             
             <TabsContent value="cards">
@@ -161,12 +181,13 @@ const MySharesPage = () => {
                 {portfolioData.map((community) => (
                   <CommunityShareCard 
                     key={community.name}
-                    name={community.name}
-                    shares={community.shares}
-                    value={community.value}
-                    avgBuyPrice={community.avgBuyPrice}
-                    currentPrice={community.currentPrice}
-                    change={community.change}
+                    community={community}
+                    onBuyClick={() => handleTradeClick(community, 'buy')}
+                    onSellClick={() => handleTradeClick(community, 'sell')}
+                    onSendClick={() => {
+                      setSelectedCommunity(community);
+                      setSendOpen(true);
+                    }}
                   />
                 ))}
               </div>
@@ -174,67 +195,51 @@ const MySharesPage = () => {
           </Tabs>
         </CardContent>
       </Card>
+
+      <DepositSheet 
+        open={depositOpen}
+        onOpenChange={setDepositOpen}
+      />
+
+      <SendSheet 
+        open={sendOpen}
+        onOpenChange={setSendOpen}
+        community={selectedCommunity}
+        isEthSend={!selectedCommunity}
+      />
+
+      <TradeSheet 
+        open={tradeOpen}
+        onOpenChange={setTradeOpen}
+        community={selectedCommunity}
+        action={tradeAction}
+      />
     </div>
   );
 };
 
-interface PortfolioCardProps {
-  title: string;
-  value: string;
-  icon: React.ReactNode;
-  description: string;
-  percentage?: string;
-  isPositive?: boolean;
-  className?: string;
-}
-
-const PortfolioCard = ({ 
-  title, 
-  value, 
-  icon, 
-  description, 
-  percentage, 
-  isPositive = true,
-  className
-}: PortfolioCardProps) => {
-  return (
-    <Card className={className}>
-      <CardContent className="pt-6">
-        <div className="flex justify-between items-start mb-2">
-          <div className="rounded-full bg-primary/10 p-2 text-primary">
-            {icon}
-          </div>
-          {percentage && (
-            <Badge className={isPositive ? "bg-green-500/10 text-green-600" : "bg-red-500/10 text-red-600"}>
-              {isPositive ? <ArrowUp className="h-3 w-3 mr-1" /> : <ArrowDown className="h-3 w-3 mr-1" />}
-              {percentage}
-            </Badge>
-          )}
-        </div>
-        <div className="text-2xl font-bold mt-2">{value}</div>
-        <p className="text-sm text-muted-foreground mt-1">{description}</p>
-      </CardContent>
-    </Card>
-  );
-};
-
 interface CommunityShareCardProps {
-  name: string;
-  shares: number;
-  value: number;
-  avgBuyPrice: number;
-  currentPrice: number;
-  change: number;
+  community: {
+    name: string;
+    shares: number;
+    value: number;
+    avgBuyPrice: number;
+    currentPrice: number;
+    change: number;
+  };
+  onBuyClick: () => void;
+  onSellClick: () => void;
+  onSendClick: () => void;
 }
 
 const CommunityShareCard = ({ 
-  name, 
-  shares, 
-  value, 
-  avgBuyPrice, 
-  currentPrice, 
-  change 
+  community,
+  onBuyClick,
+  onSellClick,
+  onSendClick
 }: CommunityShareCardProps) => {
+  const { name, shares, value, avgBuyPrice, currentPrice, change } = community;
+  
   return (
     <Card className="hover:shadow-md transition-all duration-300">
       <CardHeader className="pb-2">
@@ -267,8 +272,11 @@ const CommunityShareCard = ({
         </div>
         
         <div className="flex justify-between space-x-2 mt-4">
-          <Button variant="outline" className="flex-1">Buy More</Button>
-          <Button variant="outline" className="flex-1 text-red-600 hover:text-red-700">Sell</Button>
+          <Button variant="outline" className="flex-1" onClick={onBuyClick}>Buy More</Button>
+          <Button variant="outline" className="flex-1 text-red-600 hover:text-red-700" onClick={onSellClick}>Sell</Button>
+          <Button variant="outline" className="flex-grow-0" onClick={onSendClick}>
+            <SendHorizontal className="h-4 w-4" />
+          </Button>
         </div>
       </CardContent>
     </Card>

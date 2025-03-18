@@ -11,7 +11,7 @@ const MobileBottomNav = () => {
         <NavItem to="/feed" icon={<Home className="h-5 w-5" />} label="Feed" />
         <NavItem to="/search" icon={<Search className="h-5 w-5" />} label="Search" />
         <NavItem to="/communities" icon={<Users className="h-5 w-5" />} label="Communities" />
-        <NavItem to="/my-shares" icon={<Wallet className="h-5 w-5" />} label="Shares" />
+        <NavItem to="/my-shares" icon={<Wallet className="h-5 w-5" />} label="Wallet" />
       </div>
     </div>
   );
