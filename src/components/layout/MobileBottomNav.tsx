@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 const MobileBottomNav = () => {
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t md:hidden">
-      <div className="flex justify-around items-center py-2">
+      <div className="flex justify-around items-center py-3 px-2">
         <NavItem to="/feed" icon={<Home className="h-5 w-5" />} label="Feed" />
         <NavItem to="/search" icon={<Search className="h-5 w-5" />} label="Search" />
         <NavItem to="/communities" icon={<Users className="h-5 w-5" />} label="Communities" />
@@ -29,15 +29,24 @@ const NavItem = ({ to, icon, label }: NavItemProps) => {
       to={to}
       className={({ isActive }) =>
         cn(
-          "flex flex-col items-center justify-center rounded-md p-2 text-xs",
+          "flex flex-col items-center justify-center rounded-md p-2 text-xs transition-all",
           isActive
-            ? "text-primary"
+            ? "text-primary scale-110 font-medium"
             : "text-muted-foreground hover:text-foreground"
         )
       }
     >
-      {icon}
-      <span className="mt-1">{label}</span>
+      {({ isActive }) => (
+        <>
+          <div className={cn(
+            "relative mb-1 flex items-center justify-center",
+            isActive ? "after:absolute after:-bottom-1.5 after:h-1 after:w-1 after:rounded-full after:bg-primary" : ""
+          )}>
+            {icon}
+          </div>
+          <span className="mt-1">{label}</span>
+        </>
+      )}
     </NavLink>
   );
 };
