@@ -4,7 +4,19 @@ import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { MessageCircle, RefreshCw, Share2, TrendingUp, Copy, Heart, X } from 'lucide-react';
+import { 
+  MessageCircle, 
+  RefreshCw, 
+  Share2, 
+  TrendingUp, 
+  Copy, 
+  Heart, 
+  X, 
+  Search,
+  ChevronDown,
+  Command,
+  CheckCircle2
+} from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { 
   Carousel,
@@ -16,6 +28,27 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import useEmblaCarousel from 'embla-carousel-react';
+import { 
+  Sheet, 
+  SheetContent, 
+  SheetDescription, 
+  SheetHeader, 
+  SheetTitle, 
+  SheetTrigger,
+  SheetClose,
+  SheetFooter
+} from "@/components/ui/sheet";
+import { 
+  Command as CommandPrimitive,
+  CommandInput, 
+  CommandList, 
+  CommandEmpty, 
+  CommandGroup, 
+  CommandItem
+} from "@/components/ui/command";
+import { Toggle } from "@/components/ui/toggle";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Input } from "@/components/ui/input";
 
 export interface PostProps {
   username: string;
@@ -47,7 +80,12 @@ export const Post = ({
   const [comments, setComments] = useState<{user: string, text: string, timeAgo: string}[]>([]);
   const [shareMenuOpen, setShareMenuOpen] = useState(false);
   const [roarAnimation, setRoarAnimation] = useState(false);
+  const [roarTextAnimation, setRoarTextAnimation] = useState(false);
   const [activeDotIndex, setActiveDotIndex] = useState(0);
+  const [mirrorSheetOpen, setMirrorSheetOpen] = useState(false);
+  const [selectedCommunity, setSelectedCommunity] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  
   const { toast } = useToast();
   
   const [emblaRef, emblaApi] = useEmblaCarousel();
@@ -68,7 +106,9 @@ export const Post = ({
       setLocalRoarCount(prev => prev + 1);
       // Trigger roar animation
       setRoarAnimation(true);
+      setRoarTextAnimation(true);
       setTimeout(() => setRoarAnimation(false), 700);
+      setTimeout(() => setRoarTextAnimation(false), 1000);
     }
     setRoared(!roared);
   };
@@ -98,16 +138,38 @@ export const Post = ({
     }
   };
 
-  // Share menu - reimagined as a sliding drawer
   const handleShare = (platform: string) => {
     // Close the share menu
     setShareMenuOpen(false);
+  };
+
+  const handleMirror = () => {
+    if (selectedCommunity) {
+      setMirrorSheetOpen(false);
+      setSelectedCommunity(null);
+    }
   };
 
   const formatUsername = (name: string) => {
     // Remove any extensions like .eth, .lens, etc. and add @
     return '@' + name.split('.')[0];
   };
+
+  // Sample communities for the mirror functionality
+  const communities = [
+    { name: "Ethereum Devs", members: 12400 },
+    { name: "DeFi Explorers", members: 8300 },
+    { name: "NFT Creators", members: 15600 },
+    { name: "Web3 Gaming", members: 9800 },
+    { name: "DAO Governance", members: 5400 },
+    { name: "Solana Builders", members: 7200 },
+    { name: "ZK Research", members: 3100 },
+    { name: "Layer 2 Solutions", members: 6700 }
+  ];
+
+  const filteredCommunities = communities.filter(
+    community => community.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <Card className="border border-border/40 shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden animate-scale-in">
@@ -196,15 +258,15 @@ export const Post = ({
       <CardFooter className="py-3">
         <div className="flex justify-between w-full">
           <Button 
-            variant="ghost" 
+            variant={roared ? "roar-active" : "roar"}
             size="sm"
-            className={`flex gap-1.5 items-center group ${roared ? "text-amber-500" : ""} transition-all duration-200`}
+            className="flex gap-1.5 items-center group"
             onClick={handleRoar}
           >
             <div className={`relative ${roarAnimation ? "animate-roar" : ""}`}>
-              <span className={`text-lg transition-transform ${roared ? "text-amber-500" : ""} group-hover:scale-110`} role="img" aria-label="lion">🦁</span>
-              {roarAnimation && (
-                <div className="absolute -top-3 -right-8 animate-fade-out">
+              <span className={`text-lg transition-all ${roared ? "opacity-100" : "opacity-70"} group-hover:opacity-100`} role="img" aria-label="lion">🦁</span>
+              {roarTextAnimation && (
+                <div className="absolute -top-3 -right-6 animate-roar-text pointer-events-none">
                   <span className="text-xs font-bold text-amber-500">ROAR!</span>
                 </div>
               )}
@@ -222,14 +284,134 @@ export const Post = ({
             <span>{comments.length || commentCount}</span>
           </Button>
           
-          <Button 
-            variant="ghost" 
-            size="sm"
-            className="flex gap-1.5 items-center transition-all duration-200"
-          >
-            <RefreshCw className="h-4 w-4" />
-            <span>{shareCount}</span>
-          </Button>
+          <Sheet open={mirrorSheetOpen} onOpenChange={setMirrorSheetOpen}>
+            <SheetTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                className="flex gap-1.5 items-center transition-all duration-200"
+              >
+                <RefreshCw className="h-4 w-4" />
+                <span>{shareCount}</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="bottom" className="h-[85vh] rounded-t-xl p-0">
+              <SheetHeader className="p-4 border-b">
+                <SheetTitle>Mirror this post</SheetTitle>
+                <SheetDescription>
+                  Share this post with a community
+                </SheetDescription>
+              </SheetHeader>
+              
+              <div className="p-4 border-b">
+                <div className="flex items-start gap-3 mb-2">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={`https://api.dicebear.com/7.x/personas/svg?seed=${username}`} />
+                    <AvatarFallback>{username[0].toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-1">
+                      <span className="font-medium">{formatUsername(username)}</span>
+                      <span className="text-muted-foreground text-sm mx-1">·</span>
+                      <span className="text-muted-foreground text-sm">{timeAgo}</span>
+                    </div>
+                    <p className="text-sm mt-1">{content}</p>
+                  </div>
+                </div>
+                
+                {(images?.length || video) && (
+                  <div className="ml-12 mt-2">
+                    {images && images.length > 0 && (
+                      <img 
+                        src={images[0]} 
+                        alt="First image" 
+                        className="rounded-md h-20 w-auto object-cover"
+                      />
+                    )}
+                    {video && (
+                      <video 
+                        src={video} 
+                        className="rounded-md h-20 w-auto object-cover"
+                      />
+                    )}
+                    {images && images.length > 1 && (
+                      <span className="text-xs text-muted-foreground mt-1 block">
+                        +{images.length - 1} more {images.length === 2 ? 'image' : 'images'}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+              
+              <div className="p-4">
+                <h3 className="mb-4 text-sm font-medium">Select a community to mirror to</h3>
+                <div className="space-y-4">
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="search"
+                        placeholder="Search communities..."
+                        className="pl-9"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="max-h-[30vh] overflow-y-auto">
+                    {filteredCommunities.length > 0 ? (
+                      <div className="space-y-2">
+                        {filteredCommunities.map((community) => (
+                          <div 
+                            key={community.name}
+                            className={`flex items-center justify-between p-3 rounded-md transition-colors ${
+                              selectedCommunity === community.name 
+                                ? 'bg-primary/10 border border-primary/30' 
+                                : 'hover:bg-muted/50 border border-transparent'
+                            }`}
+                            onClick={() => setSelectedCommunity(community.name)}
+                          >
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-8 w-8">
+                                <AvatarFallback>
+                                  {community.name.substring(0, 2)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="text-sm font-medium">{community.name}</p>
+                                <p className="text-xs text-muted-foreground">{community.members.toLocaleString()} members</p>
+                              </div>
+                            </div>
+                            {selectedCommunity === community.name && (
+                              <CheckCircle2 className="h-5 w-5 text-primary" />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-8 text-center">
+                        <p className="text-muted-foreground">No communities found</p>
+                        <p className="text-xs text-muted-foreground mt-1">Try a different search term</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              <SheetFooter className="flex-row justify-end gap-2 p-4 border-t">
+                <SheetClose asChild>
+                  <Button variant="outline">Cancel</Button>
+                </SheetClose>
+                <Button 
+                  onClick={handleMirror} 
+                  disabled={!selectedCommunity}
+                >
+                  Mirror Post
+                </Button>
+              </SheetFooter>
+            </SheetContent>
+          </Sheet>
           
           <div className="relative">
             <Button 
@@ -245,7 +427,7 @@ export const Post = ({
             {shareMenuOpen && (
               <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-end justify-center animate-fade-in" onClick={() => setShareMenuOpen(false)}>
                 <div 
-                  className="bg-card w-full max-w-md rounded-t-xl shadow-xl animate-slide-up border-t border-x border-border"
+                  className="bg-card w-full max-w-md rounded-t-xl shadow-xl animate-slide-up-full border-t border-x border-border"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="p-4 flex items-center justify-between border-b">

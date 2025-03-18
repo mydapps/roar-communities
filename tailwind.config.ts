@@ -127,9 +127,9 @@ export default {
           '100%': { transform: 'scale(1)' }
         },
         'roar-text': {
-          '0%': { opacity: '0', transform: 'scale(0.5) translateY(0)' },
-          '30%': { opacity: '1', transform: 'scale(1.2) translateY(-15px)' },
-          '100%': { opacity: '0', transform: 'scale(0.8) translateY(-30px)' }
+          '0%': { opacity: '0', transform: 'scale(0.5) translateY(0) translateX(0)' },
+          '30%': { opacity: '1', transform: 'scale(1.2) translateY(-15px) translateX(15px)' },
+          '100%': { opacity: '0', transform: 'scale(0.8) translateY(-30px) translateX(30px)' }
         },
         'slide-up-full': {
           '0%': { transform: 'translateY(100%)' },
