@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { ImageIcon, VideoIcon, LinkIcon, XIcon, SendIcon, SearchIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Separator } from '@/components/ui/separator';
 
 // Available communities for linking
 const COMMUNITIES = [
@@ -153,7 +153,7 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
                 onChange={(e) => setContent(e.target.value)}
                 onFocus={handleFocus}
                 className="w-full rounded-lg border border-border/60 bg-muted/40 p-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none min-h-[80px] transition-all duration-200" 
-                placeholder={selectedCommunity ? `What's happening in ${selectedCommunity}?` : "What's happening in your communities?"}
+                placeholder={selectedCommunity ? `Share your thoughts with ${selectedCommunity}...` : "What's on your mind?"}
               />
             </div>
             
@@ -198,136 +198,137 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
               </div>
             )}
             
-            {/* Action buttons - only show when expanded or has content */}
+            {/* Action buttons - reorganized layout */}
             {(isExpanded || content || selectedImages.length > 0 || selectedVideo) && (
-              <div className="mt-3 flex items-center justify-between animate-fade-in">
-                <div className="flex items-center gap-2">
-                  <Tabs defaultValue="media" className="w-auto">
-                    <TabsList className="h-9">
-                      <TabsTrigger value="media" className="text-xs px-2 py-1 h-8">
-                        <ImageIcon className="h-4 w-4 mr-1" />
-                        <span>Media</span>
-                      </TabsTrigger>
-                      <TabsTrigger value="community" className="text-xs px-2 py-1 h-8">
-                        <LinkIcon className="h-4 w-4 mr-1" />
-                        <span>Community</span>
-                      </TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="media" className="mt-0 pt-2">
-                      <div className="flex items-center gap-1.5">
-                        <Label htmlFor="image-upload" className="cursor-pointer">
-                          <Button variant="outline" size="sm" className="cursor-pointer gap-1.5" type="button" asChild>
-                            <span>
-                              <ImageIcon className="h-4 w-4" />
-                              <span>Images</span>
-                            </span>
-                          </Button>
-                          <Input
-                            id="image-upload"
-                            type="file"
-                            accept="image/*"
-                            multiple
-                            className="hidden"
-                            onChange={handleImageSelect}
-                            disabled={selectedImages.length >= 4 || !!selectedVideo}
-                          />
-                        </Label>
-                        
-                        <Label htmlFor="video-upload" className="cursor-pointer">
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="cursor-pointer gap-1.5" 
-                            type="button"
-                            disabled={selectedImages.length > 0}
-                            asChild
-                          >
-                            <span>
-                              <VideoIcon className="h-4 w-4" />
-                              <span>Video</span>
-                            </span>
-                          </Button>
-                          <Input
-                            id="video-upload"
-                            type="file"
-                            accept="video/*"
-                            className="hidden"
-                            onChange={handleVideoSelect}
-                            disabled={selectedImages.length > 0 || !!selectedVideo}
-                          />
-                        </Label>
-                      </div>
-                    </TabsContent>
-                    <TabsContent value="community" className="mt-0 pt-2">
-                      <Dialog open={showCommunityDialog} onOpenChange={setShowCommunityDialog}>
-                        <DialogTrigger asChild>
-                          <Button 
-                            variant={selectedCommunity ? "default" : "outline"} 
-                            size="sm" 
-                            className="gap-1.5"
-                          >
-                            <LinkIcon className="h-4 w-4" />
-                            <span>{selectedCommunity ? selectedCommunity : "Link Community"}</span>
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-md">
-                          <DialogHeader>
-                            <DialogTitle>Link a Community</DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-4 py-2">
-                            <div className="space-y-2">
-                              <div className="relative">
-                                <SearchIcon className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                  id="community-search"
-                                  placeholder="Search communities..."
-                                  value={communitySearch}
-                                  onChange={(e) => setCommunitySearch(e.target.value)}
-                                  className="pl-8"
-                                />
-                              </div>
-                            </div>
-                            <div className="max-h-60 overflow-y-auto space-y-1 rounded-md border p-1">
-                              {filteredCommunities.length === 0 ? (
-                                <div className="py-6 text-center text-muted-foreground">
-                                  No communities found
-                                </div>
-                              ) : (
-                                filteredCommunities.map((community) => (
-                                  <Button
-                                    key={community}
-                                    variant="ghost"
-                                    className="w-full justify-start text-left"
-                                    onClick={() => handleCommunitySelect(community)}
-                                  >
-                                    <Badge variant="outline" className="mr-2 bg-muted/50">{community[0]}</Badge>
-                                    {community}
-                                  </Button>
-                                ))
-                              )}
+              <div className="mt-3 animate-fade-in">
+                {/* Media buttons */}
+                <div className="flex justify-between items-center mb-3">
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="image-upload" className="cursor-pointer">
+                      <Button variant="outline" size="sm" className="cursor-pointer gap-1.5" type="button" asChild>
+                        <span>
+                          <ImageIcon className="h-4 w-4" />
+                          <span>Images</span>
+                        </span>
+                      </Button>
+                      <Input
+                        id="image-upload"
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={handleImageSelect}
+                        disabled={selectedImages.length >= 4 || !!selectedVideo}
+                      />
+                    </Label>
+                    
+                    <Label htmlFor="video-upload" className="cursor-pointer">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="cursor-pointer gap-1.5" 
+                        type="button"
+                        disabled={selectedImages.length > 0}
+                        asChild
+                      >
+                        <span>
+                          <VideoIcon className="h-4 w-4" />
+                          <span>Video</span>
+                        </span>
+                      </Button>
+                      <Input
+                        id="video-upload"
+                        type="file"
+                        accept="video/*"
+                        className="hidden"
+                        onChange={handleVideoSelect}
+                        disabled={selectedImages.length > 0 || !!selectedVideo}
+                      />
+                    </Label>
+                  </div>
+                </div>
+
+                <Separator className="my-3" />
+                
+                {/* Post button and community selection */}
+                <div className="flex items-center justify-between">
+                  {/* Community button */}
+                  {!selectedCommunity ? (
+                    <Dialog open={showCommunityDialog} onOpenChange={setShowCommunityDialog}>
+                      <DialogTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="gap-1.5"
+                        >
+                          <LinkIcon className="h-4 w-4" />
+                          <span>Link Community</span>
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>Link a Community</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4 py-2">
+                          <div className="space-y-2">
+                            <div className="relative">
+                              <SearchIcon className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                              <Input
+                                id="community-search"
+                                placeholder="Search communities..."
+                                value={communitySearch}
+                                onChange={(e) => setCommunitySearch(e.target.value)}
+                                className="pl-8"
+                              />
                             </div>
                           </div>
-                        </DialogContent>
-                      </Dialog>
-                    </TabsContent>
-                  </Tabs>
-                </div>
-                <Button 
-                  onClick={handleSubmit} 
-                  disabled={isSubmitting || !content.trim()}
-                  className="gap-1.5"
-                >
-                  {isSubmitting ? (
-                    <span className="flex items-center gap-1.5">
-                      <span className="animate-pulse">Posting...</span>
-                    </span>
+                          <div className="max-h-60 overflow-y-auto space-y-1 rounded-md border p-1">
+                            {filteredCommunities.length === 0 ? (
+                              <div className="py-6 text-center text-muted-foreground">
+                                No communities found
+                              </div>
+                            ) : (
+                              filteredCommunities.map((community) => (
+                                <Button
+                                  key={community}
+                                  variant="ghost"
+                                  className="w-full justify-start text-left"
+                                  onClick={() => handleCommunitySelect(community)}
+                                >
+                                  <Badge variant="outline" className="mr-2 bg-muted/50">{community[0]}</Badge>
+                                  {community}
+                                </Button>
+                              ))
+                            )}
+                          </div>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   ) : (
-                    <span className="flex items-center gap-1.5">
-                      <SendIcon className="h-4 w-4" />
-                      <span>Post</span>
-                    </span>
+                    <Badge className="h-8 flex items-center gap-1 px-3 bg-secondary/30">
+                      <LinkIcon className="h-3.5 w-3.5" />
+                      <span>{selectedCommunity}</span>
+                    </Badge>
                   )}
-                </Button>
+                  
+                  {/* Post button */}
+                  <Button 
+                    onClick={handleSubmit} 
+                    disabled={isSubmitting || !content.trim()}
+                    className="gap-1.5"
+                  >
+                    {isSubmitting ? (
+                      <span className="flex items-center gap-1.5">
+                        <span className="animate-pulse">Posting...</span>
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1.5">
+                        <SendIcon className="h-4 w-4" />
+                        <span>Post</span>
+                      </span>
+                    )}
+                  </Button>
+                </div>
               </div>
             )}
           </div>
