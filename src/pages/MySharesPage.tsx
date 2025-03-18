@@ -89,6 +89,25 @@ const totalValueUsd = totalValue * ethToUsd;
 // Mock user ETH balance
 const userEthBalance = "3.75";
 
+// Define the community data type
+interface CommunityData {
+  name: string;
+  image: string;
+  shares: number;
+  value: number;
+  avgBuyPrice: number;
+  currentPrice: number;
+  change: number;
+}
+
+// Define the CommunityShareCardProps interface
+interface CommunityShareCardProps {
+  community: CommunityData;
+  onBuyClick: () => void;
+  onSellClick: () => void;
+  onSendClick: () => void;
+}
+
 const MySharesPage = () => {
   const [depositOpen, setDepositOpen] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
