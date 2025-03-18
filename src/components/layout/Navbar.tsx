@@ -2,7 +2,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Bell, Menu, Search, User } from 'lucide-react';
+import { Bell, Menu, Search, User, Share2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   DropdownMenu, 
@@ -12,25 +12,30 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface NavbarProps {
   onMenuClick: () => void;
 }
 
 const Navbar = ({ onMenuClick }: NavbarProps) => {
+  const isMobile = useIsMobile();
+  
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-xl">
       <div className="container flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-            onClick={onMenuClick}
-          >
-            <Menu className="h-5 w-5" />
-            <span className="sr-only">Toggle menu</span>
-          </Button>
+          {!isMobile && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden"
+              onClick={onMenuClick}
+            >
+              <Menu className="h-5 w-5" />
+              <span className="sr-only">Toggle menu</span>
+            </Button>
+          )}
           <Link to="/" className="flex items-center gap-2">
             <span className="font-display text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
               dapps.co
@@ -50,6 +55,14 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
         </div>
 
         <div className="flex items-center gap-2">
+          {isMobile && (
+            <Button variant="ghost" size="icon" asChild>
+              <Link to="/referrals">
+                <Share2 className="h-5 w-5" />
+              </Link>
+            </Button>
+          )}
+          
           <Button variant="ghost" size="icon" className="relative">
             <Bell className="h-5 w-5" />
             <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[10px] font-medium text-primary-foreground flex items-center justify-center">

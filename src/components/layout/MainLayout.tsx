@@ -2,22 +2,42 @@
 import React from 'react';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
-import { Outlet } from 'react-router-dom';
+import MobileBottomNav from './MobileBottomNav';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { PullToRefresh } from '@/components/ui/pull-to-refresh';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const MainLayout = () => {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isMobile = useIsMobile();
+  
+  const handleRefresh = async () => {
+    // Simulate a refresh delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Force a refresh of the current route
+    navigate(0);
+  };
   
   return (
     <div className="min-h-screen flex flex-col bg-background overflow-hidden">
       <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <main className="flex-1 overflow-y-auto transition-all duration-300 ease-in-out">
-          <div className="container py-6 px-4 sm:px-6 max-w-5xl mx-auto animate-fade-in">
-            <Outlet />
-          </div>
-        </main>
+        <PullToRefresh 
+          onRefresh={handleRefresh}
+          className="flex-1 overflow-y-auto transition-all duration-300 ease-in-out"
+        >
+          <main className={isMobile ? "pb-16" : ""}>
+            <div className="container py-6 px-4 sm:px-6 max-w-5xl mx-auto animate-fade-in">
+              <Outlet />
+            </div>
+          </main>
+        </PullToRefresh>
       </div>
+      <MobileBottomNav />
     </div>
   );
 };

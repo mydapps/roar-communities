@@ -21,6 +21,10 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
         roar: "text-foreground/40 hover:text-amber-500 hover:bg-transparent transition-all duration-300",
         "roar-active": "text-amber-500 hover:bg-transparent transition-all duration-300",
+        linkedin: "bg-[#0077B5] text-white hover:bg-[#0077B5]/90",
+        telegram: "bg-[#26A5E4] text-white hover:bg-[#26A5E4]/90",
+        twitter: "bg-[#1DA1F2] text-white hover:bg-[#1DA1F2]/90",
+        facebook: "bg-[#1877F2] text-white hover:bg-[#1877F2]/90",
       },
       size: {
         default: "h-10 px-4 py-2",
