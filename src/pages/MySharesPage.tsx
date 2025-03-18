@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { PortfolioSummary } from '@/components/shares/PortfolioSummary';
 import { DepositSheet } from '@/components/shares/DepositSheet';
@@ -32,6 +33,13 @@ import {
   DrawerDescription,
   DrawerFooter
 } from "@/components/ui/drawer";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription
+} from "@/components/ui/sheet";
 
 // Dummy data for sample portfolio
 const portfolioData = [
@@ -89,6 +97,7 @@ const MySharesPage = () => {
   const [tradeOpen, setTradeOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   const handleTradeClick = (community: any, action: 'buy' | 'sell') => {
     setSelectedCommunity(community);
@@ -108,6 +117,7 @@ const MySharesPage = () => {
       <PortfolioSummary 
         ethValue={totalValue.toFixed(4)} 
         usdValue={(totalValueUsd).toFixed(2)}
+        ethBalance={userEthBalance}
         onDepositClick={() => setDepositOpen(true)}
         onSendClick={() => setSendOpen(true)}
       />
@@ -115,7 +125,7 @@ const MySharesPage = () => {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>Communities</span>
+            <span>Portfolio Value: {totalValue.toFixed(4)} ETH (${totalValueUsd.toFixed(2)})</span>
             <Button variant="outline" size="sm" onClick={handleRefresh} className="rounded-full hover:bg-primary/10">
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh
@@ -140,26 +150,114 @@ const MySharesPage = () => {
         </CardContent>
       </Card>
 
-      <DepositSheet 
-        open={depositOpen}
-        onOpenChange={setDepositOpen}
-      />
+      {/* Use Drawer on mobile and Sheet on desktop */}
+      {isMobile ? (
+        <>
+          <DepositSheet 
+            open={depositOpen}
+            onOpenChange={setDepositOpen}
+          />
 
-      <SendSheet 
-        open={sendOpen}
-        onOpenChange={setSendOpen}
-        community={selectedCommunity}
-        isEthSend={!selectedCommunity}
-      />
+          <SendSheet 
+            open={sendOpen}
+            onOpenChange={setSendOpen}
+            community={selectedCommunity}
+            isEthSend={!selectedCommunity}
+          />
 
-      <TradeSheet 
-        open={tradeOpen}
-        onOpenChange={setTradeOpen}
-        community={selectedCommunity}
-        action={tradeAction}
-        userEthBalance={userEthBalance}
-      />
+          <TradeSheet 
+            open={tradeOpen}
+            onOpenChange={setTradeOpen}
+            community={selectedCommunity}
+            action={tradeAction}
+            userEthBalance={userEthBalance}
+          />
+        </>
+      ) : (
+        <>
+          <Sheet open={depositOpen} onOpenChange={setDepositOpen}>
+            <SheetContent side="right" className="sm:max-w-md">
+              <SheetHeader>
+                <SheetTitle>Deposit ETH</SheetTitle>
+                <SheetDescription>Add ETH to your wallet</SheetDescription>
+              </SheetHeader>
+              <div className="py-6">
+                {/* Copy the content from DepositSheet component here */}
+                <div className="space-y-6">
+                  <div className="flex flex-col space-y-4">
+                    <h3 className="font-medium">Choose Network</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <Button variant="outline" className="h-auto flex flex-col p-4 justify-start items-center space-y-2">
+                        <div className="rounded-full bg-primary/10 p-2">
+                          <img src="https://cryptologos.cc/logos/base-base-logo.png" className="h-8 w-8" alt="Base" />
+                        </div>
+                        <span>Base</span>
+                      </Button>
+                      <Button variant="outline" className="h-auto flex flex-col p-4 justify-start items-center space-y-2">
+                        <div className="rounded-full bg-primary/10 p-2">
+                          <img src="https://cryptologos.cc/logos/ethereum-eth-logo.png" className="h-8 w-8" alt="Ethereum" />
+                        </div>
+                        <span>Ethereum</span>
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <h3 className="font-medium">Your Wallet Address</h3>
+                    <div className="flex flex-col items-center space-y-4">
+                      <div className="bg-white p-4 rounded-lg">
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=0x1234567890abcdef1234567890abcdef12345678" className="h-48 w-48" alt="QR Code" />
+                      </div>
+                      <div className="flex items-center space-x-2 bg-muted/50 p-2 rounded-lg w-full">
+                        <code className="text-xs flex-1 text-center">0x1234...5678</code>
+                        <Button variant="ghost" size="sm" onClick={() => {
+                          navigator.clipboard.writeText("0x1234567890abcdef1234567890abcdef12345678");
+                          toast({
+                            title: "Copied to clipboard",
+                            description: "Your wallet address has been copied",
+                          });
+                        }}>
+                          Copy
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
 
+          <Sheet open={sendOpen} onOpenChange={setSendOpen}>
+            <SheetContent side="right" className="sm:max-w-md">
+              <SheetHeader>
+                <SheetTitle>{!selectedCommunity ? 'Send ETH' : `Send ${selectedCommunity?.name} Shares`}</SheetTitle>
+                <SheetDescription>
+                  {!selectedCommunity 
+                    ? 'Send ETH to another wallet address' 
+                    : `Send your ${selectedCommunity?.name} shares to another user`}
+                </SheetDescription>
+              </SheetHeader>
+              {/* Content would be similar to the SendSheet component */}
+            </SheetContent>
+          </Sheet>
+
+          <Sheet open={tradeOpen} onOpenChange={setTradeOpen}>
+            <SheetContent side="right" className="sm:max-w-md">
+              <SheetHeader>
+                <SheetTitle>{tradeAction === 'buy' ? 'Buy Shares' : 'Sell Shares'}</SheetTitle>
+                <SheetDescription>
+                  {tradeAction === 'buy' 
+                    ? `Purchase shares of ${selectedCommunity?.name}` 
+                    : `Sell your ${selectedCommunity?.name} shares`}
+                </SheetDescription>
+              </SheetHeader>
+              {/* Content would be similar to the TradeSheet component */}
+            </SheetContent>
+          </Sheet>
+        </>
+      )}
+
+      {/* Community details drawer */}
       <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
         <DrawerContent className="max-h-[85vh]">
           <DrawerHeader>
@@ -225,7 +323,6 @@ interface CommunityShareCardProps {
     image: string;
     shares: number;
     value: number;
-    avgBuyPrice: number;
     currentPrice: number;
     change: number;
   };

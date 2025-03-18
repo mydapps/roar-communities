@@ -24,7 +24,7 @@ const MainLayout = () => {
   return (
     <div className="min-h-screen flex flex-col bg-background overflow-hidden">
       <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden pt-16"> {/* Added pt-16 to account for fixed navbar */}
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         <PullToRefresh 
           onRefresh={handleRefresh}

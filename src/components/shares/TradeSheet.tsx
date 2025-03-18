@@ -23,7 +23,7 @@ interface TradeSheetProps {
   onOpenChange: (open: boolean) => void;
   community?: any;
   action: 'buy' | 'sell' | null;
-  userEthBalance?: string; // Added user ETH balance prop
+  userEthBalance?: string;
 }
 
 export const TradeSheet = ({
@@ -31,7 +31,7 @@ export const TradeSheet = ({
   onOpenChange,
   community,
   action,
-  userEthBalance = "0.000" // Default value
+  userEthBalance = "0.000"
 }: TradeSheetProps) => {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -51,7 +51,11 @@ export const TradeSheet = ({
   // Calculate preview values
   const sharePrice = community?.currentPrice || 0;
   const amount = form.watch('amount');
-  const totalEth = (amount * sharePrice).toFixed(6);
+  
+  // Calculate total value with simulated bonding curve
+  // Higher amounts = slightly higher average price
+  const priceMultiplier = 1 + (amount / 1000); // Simple bonding curve simulation
+  const totalEth = (amount * sharePrice * priceMultiplier).toFixed(6);
   const fee = (0.0003).toFixed(6);
   const total = action === 'buy' 
     ? (parseFloat(totalEth) + parseFloat(fee)).toFixed(6)
@@ -87,25 +91,25 @@ export const TradeSheet = ({
 
   return (
     <>
-      <Dialog open={open && !showSuccess} onOpenChange={(open) => {
+      <Drawer open={open && !showSuccess} onOpenChange={(open) => {
         if (!open) {
           setPreviewOpen(false);
         }
         onOpenChange(open);
       }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>
+        <DrawerContent className="max-h-[85vh]">
+          <DrawerHeader>
+            <DrawerTitle>
               {action === 'buy' ? 'Buy Shares' : 'Sell Shares'}
-            </DialogTitle>
-            <DialogDescription>
+            </DrawerTitle>
+            <DrawerDescription>
               {action === 'buy' 
                 ? `Purchase shares of ${community?.name}` 
                 : `Sell your ${community?.name} shares`}
-            </DialogDescription>
-          </DialogHeader>
+            </DrawerDescription>
+          </DrawerHeader>
           
-          <div className="py-4">
+          <div className="px-4 py-4 overflow-y-auto">
             {action === 'buy' && (
               <div className="mb-4 p-3 rounded-md bg-muted/50">
                 <div className="text-sm text-muted-foreground">Your ETH Balance</div>
@@ -160,8 +164,8 @@ export const TradeSheet = ({
               </form>
             </Form>
           </div>
-        </DialogContent>
-      </Dialog>
+        </DrawerContent>
+      </Drawer>
       
       <Drawer open={previewOpen} onOpenChange={setPreviewOpen}>
         <DrawerContent>
