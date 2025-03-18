@@ -18,7 +18,7 @@ export const PortfolioSummary = ({
   onSendClick
 }: PortfolioSummaryProps) => {
   return (
-    <Card className="animate-scale-in sticky top-0 z-10 bg-background/95 backdrop-blur-sm">
+    <Card className="animate-scale-in bg-background/95 backdrop-blur-sm">
       <CardContent className="p-6">
         <div className="mb-6">
           <h1 className="text-2xl font-bold mb-1">My Portfolio</h1>
@@ -26,7 +26,14 @@ export const PortfolioSummary = ({
         </div>
         
         <div className="flex flex-col space-y-1 mb-6">
-          <div className="text-3xl font-bold">{ethValue} ETH</div>
+          <div className="flex items-baseline">
+            <div className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+              {ethValue} ETH
+            </div>
+            <div className="ml-2 text-sm text-muted-foreground">
+              Portfolio Value
+            </div>
+          </div>
           <div className="text-lg text-muted-foreground">${usdValue} USD</div>
         </div>
         

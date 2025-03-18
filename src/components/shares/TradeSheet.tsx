@@ -1,13 +1,13 @@
 
 import React, { useState } from 'react';
 import { 
-  Sheet, 
-  SheetContent, 
-  SheetHeader, 
-  SheetTitle, 
-  SheetDescription,
-  SheetFooter
-} from '@/components/ui/sheet';
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -23,13 +23,15 @@ interface TradeSheetProps {
   onOpenChange: (open: boolean) => void;
   community?: any;
   action: 'buy' | 'sell' | null;
+  userEthBalance?: string; // Added user ETH balance prop
 }
 
 export const TradeSheet = ({
   open,
   onOpenChange,
   community,
-  action
+  action,
+  userEthBalance = "0.000" // Default value
 }: TradeSheetProps) => {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -85,29 +87,31 @@ export const TradeSheet = ({
 
   return (
     <>
-      <Sheet open={open && !showSuccess} onOpenChange={(open) => {
+      <Dialog open={open && !showSuccess} onOpenChange={(open) => {
         if (!open) {
           setPreviewOpen(false);
         }
         onOpenChange(open);
       }}>
-        <SheetContent className="sm:max-w-md">
-          <SheetHeader>
-            <SheetTitle>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
               {action === 'buy' ? 'Buy Shares' : 'Sell Shares'}
-            </SheetTitle>
-            <SheetDescription>
+            </DialogTitle>
+            <DialogDescription>
               {action === 'buy' 
                 ? `Purchase shares of ${community?.name}` 
                 : `Sell your ${community?.name} shares`}
-            </SheetDescription>
-          </SheetHeader>
+            </DialogDescription>
+          </DialogHeader>
           
-          <div className="py-6">
-            <div className="mb-6 space-y-1">
-              <div className="text-sm text-muted-foreground">Current Price</div>
-              <div className="font-medium">{community?.currentPrice.toFixed(6)} ETH per share</div>
-            </div>
+          <div className="py-4">
+            {action === 'buy' && (
+              <div className="mb-4 p-3 rounded-md bg-muted/50">
+                <div className="text-sm text-muted-foreground">Your ETH Balance</div>
+                <div className="font-medium text-lg">{userEthBalance} ETH</div>
+              </div>
+            )}
             
             <Form {...form}>
               <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
@@ -132,17 +136,12 @@ export const TradeSheet = ({
                 
                 <div className="space-y-4 bg-muted/30 p-4 rounded-md">
                   <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Share Price</span>
-                    <span className="text-sm">{community?.currentPrice.toFixed(6)} ETH</span>
-                  </div>
-                  
-                  <div className="flex justify-between">
                     <span className="text-sm text-muted-foreground">Quantity</span>
                     <span className="text-sm">{amount} shares</span>
                   </div>
                   
                   <div className="flex justify-between border-t pt-2">
-                    <span className="text-sm font-medium">Subtotal</span>
+                    <span className="text-sm font-medium">Total Price</span>
                     <span className="text-sm font-medium">{totalEth} ETH</span>
                   </div>
                   
@@ -161,8 +160,8 @@ export const TradeSheet = ({
               </form>
             </Form>
           </div>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
       
       <Drawer open={previewOpen} onOpenChange={setPreviewOpen}>
         <DrawerContent>
@@ -186,8 +185,8 @@ export const TradeSheet = ({
               </div>
               
               <div className="flex justify-between items-center py-2 border-b">
-                <span className="text-muted-foreground">Price Per Share</span>
-                <span className="font-medium">{community?.currentPrice.toFixed(6)} ETH</span>
+                <span className="text-muted-foreground">Total Price</span>
+                <span className="font-medium">{totalEth} ETH</span>
               </div>
               
               <div className="flex justify-between items-center py-2 border-b">

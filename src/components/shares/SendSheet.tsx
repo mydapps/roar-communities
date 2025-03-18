@@ -1,13 +1,13 @@
 
 import React, { useState } from 'react';
 import { 
-  Sheet, 
-  SheetContent, 
-  SheetHeader, 
-  SheetTitle, 
-  SheetDescription,
-  SheetFooter
-} from '@/components/ui/sheet';
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -76,25 +76,25 @@ export const SendSheet = ({
 
   return (
     <>
-      <Sheet open={open && !showSuccess} onOpenChange={(open) => {
+      <Dialog open={open && !showSuccess} onOpenChange={(open) => {
         if (!open) {
           setPreviewOpen(false);
         }
         onOpenChange(open);
       }}>
-        <SheetContent className="sm:max-w-md">
-          <SheetHeader>
-            <SheetTitle>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
               {isEthSend ? 'Send ETH' : `Send ${community?.name} Shares`}
-            </SheetTitle>
-            <SheetDescription>
+            </DialogTitle>
+            <DialogDescription>
               {isEthSend 
                 ? 'Send ETH to another wallet address' 
                 : `Send your ${community?.name} shares to another user`}
-            </SheetDescription>
-          </SheetHeader>
+            </DialogDescription>
+          </DialogHeader>
           
-          <div className="py-6">
+          <div className="py-4">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
                 <FormField
@@ -149,8 +149,8 @@ export const SendSheet = ({
               </form>
             </Form>
           </div>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
       
       <Drawer open={previewOpen} onOpenChange={setPreviewOpen}>
         <DrawerContent>

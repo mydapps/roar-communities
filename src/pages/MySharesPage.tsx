@@ -78,6 +78,9 @@ const totalValue = portfolioData.reduce((sum, item) => sum + item.value, 0);
 const ethToUsd = 3521.89; // Mock ETH/USD exchange rate
 const totalValueUsd = totalValue * ethToUsd;
 
+// Mock user ETH balance
+const userEthBalance = "3.75";
+
 const MySharesPage = () => {
   const [depositOpen, setDepositOpen] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
@@ -154,6 +157,7 @@ const MySharesPage = () => {
         onOpenChange={setTradeOpen}
         community={selectedCommunity}
         action={tradeAction}
+        userEthBalance={userEthBalance}
       />
 
       <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
