@@ -343,7 +343,7 @@ export const TradeSheet = ({
     );
   }
   
-  // For desktop
+  // For desktop - improved to handle preview in the same sheet
   return (
     <>
       <Sheet open={open && !showSuccess} onOpenChange={(open) => {
@@ -353,50 +353,52 @@ export const TradeSheet = ({
         onOpenChange(open);
       }}>
         <SheetContent side="right" className="sm:max-w-md overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>
-              {action === 'buy' ? 'Buy Shares' : 'Sell Shares'}
-            </SheetTitle>
-            <SheetDescription>
-              {action === 'buy' 
-                ? `Purchase shares of ${community?.name}` 
-                : `Sell your ${community?.name} shares`}
-            </SheetDescription>
-          </SheetHeader>
-          
-          <div className="py-4 overflow-y-auto">
-            {renderTradeForm()}
-          </div>
-        </SheetContent>
-      </Sheet>
-      
-      <Sheet open={previewOpen} onOpenChange={setPreviewOpen}>
-        <SheetContent side="right" className="sm:max-w-md overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>Confirm Transaction</SheetTitle>
-            <SheetDescription>Review the details before confirming</SheetDescription>
-          </SheetHeader>
-          
-          <div className="py-4">
-            {renderPreviewContent()}
-            
-            <div className="mt-8 space-y-4">
-              <Button 
-                className="w-full py-3"
-                variant="default"
-                onClick={handleConfirmTransaction}
-              >
-                Confirm Transaction
-              </Button>
-              <Button 
-                className="w-full" 
-                variant="outline" 
-                onClick={() => setPreviewOpen(false)}
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
+          {!previewOpen ? (
+            <>
+              <SheetHeader>
+                <SheetTitle>
+                  {action === 'buy' ? 'Buy Shares' : 'Sell Shares'}
+                </SheetTitle>
+                <SheetDescription>
+                  {action === 'buy' 
+                    ? `Purchase shares of ${community?.name}` 
+                    : `Sell your ${community?.name} shares`}
+                </SheetDescription>
+              </SheetHeader>
+              
+              <div className="py-4 overflow-y-auto">
+                {renderTradeForm()}
+              </div>
+            </>
+          ) : (
+            <>
+              <SheetHeader>
+                <SheetTitle>Confirm Transaction</SheetTitle>
+                <SheetDescription>Review the details before confirming</SheetDescription>
+              </SheetHeader>
+              
+              <div className="py-4">
+                {renderPreviewContent()}
+                
+                <div className="mt-8 space-y-4">
+                  <Button 
+                    className="w-full py-3"
+                    variant="default"
+                    onClick={handleConfirmTransaction}
+                  >
+                    Confirm Transaction
+                  </Button>
+                  <Button 
+                    className="w-full" 
+                    variant="outline" 
+                    onClick={() => setPreviewOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
         </SheetContent>
       </Sheet>
       

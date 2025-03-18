@@ -307,10 +307,27 @@ export const SendSheet = ({
             </DrawerFooter>
           </DrawerContent>
         </Drawer>
+        
+        {/* Success overlay */}
+        {showSuccess && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 animate-fade-in">
+            <div className="text-center space-y-4 animate-scale-in">
+              <div className="mx-auto rounded-full bg-green-500/20 p-6 w-24 h-24 flex items-center justify-center">
+                <Check className="h-12 w-12 text-green-500 animate-pulse" />
+              </div>
+              <h2 className="text-2xl font-bold">Success!</h2>
+              <p className="text-muted-foreground">
+                {isEthSend 
+                  ? `You've sent ${form.getValues('amount')} ETH` 
+                  : `You've sent ${form.getValues('amount')} shares of ${community?.name}`}
+              </p>
+            </div>
+          </div>
+        )}
       </>
     );
   } else {
-    // Desktop view with Sheet
+    // Desktop view with Sheet - improved to handle preview state
     return (
       <>
         <Sheet open={open && !showSuccess} onOpenChange={(open) => {
@@ -320,70 +337,72 @@ export const SendSheet = ({
           onOpenChange(open);
         }}>
           <SheetContent side="right" className="sm:max-w-md overflow-y-auto">
-            <SheetHeader>
-              <SheetTitle>
-                {isEthSend ? 'Send ETH' : `Send ${community?.name} Shares`}
-              </SheetTitle>
-              <SheetDescription>
-                {isEthSend 
-                  ? 'Send ETH to another wallet address' 
-                  : `Send your ${community?.name} shares to another user`}
-              </SheetDescription>
-            </SheetHeader>
-            
-            <div className="py-4 overflow-y-auto">
-              {renderSendForm()}
-            </div>
+            {!previewOpen ? (
+              <>
+                <SheetHeader>
+                  <SheetTitle>
+                    {isEthSend ? 'Send ETH' : `Send ${community?.name} Shares`}
+                  </SheetTitle>
+                  <SheetDescription>
+                    {isEthSend 
+                      ? 'Send ETH to another wallet address' 
+                      : `Send your ${community?.name} shares to another user`}
+                  </SheetDescription>
+                </SheetHeader>
+                
+                <div className="py-4 overflow-y-auto">
+                  {renderSendForm()}
+                </div>
+              </>
+            ) : (
+              <>
+                <SheetHeader>
+                  <SheetTitle>Confirm Transfer</SheetTitle>
+                  <SheetDescription>Review the details before confirming</SheetDescription>
+                </SheetHeader>
+                
+                <div className="py-4">
+                  {renderPreviewContent()}
+                  
+                  <div className="mt-8 space-y-4">
+                    <Button 
+                      className="w-full py-3"
+                      variant="default"
+                      onClick={handleConfirmTransaction}
+                    >
+                      Confirm Transfer
+                    </Button>
+                    <Button 
+                      className="w-full" 
+                      variant="outline" 
+                      onClick={() => setPreviewOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
           </SheetContent>
         </Sheet>
         
-        <Sheet open={previewOpen} onOpenChange={setPreviewOpen}>
-          <SheetContent side="right" className="sm:max-w-md overflow-y-auto">
-            <SheetHeader>
-              <SheetTitle>Confirm Transfer</SheetTitle>
-              <SheetDescription>Review the details before confirming</SheetDescription>
-            </SheetHeader>
-            
-            <div className="py-4">
-              {renderPreviewContent()}
-              
-              <div className="mt-8 space-y-4">
-                <Button 
-                  className="w-full py-3"
-                  variant="default"
-                  onClick={handleConfirmTransaction}
-                >
-                  Confirm Transfer
-                </Button>
-                <Button 
-                  className="w-full" 
-                  variant="outline" 
-                  onClick={() => setPreviewOpen(false)}
-                >
-                  Cancel
-                </Button>
+        {/* Success overlay */}
+        {showSuccess && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 animate-fade-in">
+            <div className="text-center space-y-4 animate-scale-in">
+              <div className="mx-auto rounded-full bg-green-500/20 p-6 w-24 h-24 flex items-center justify-center">
+                <Check className="h-12 w-12 text-green-500 animate-pulse" />
               </div>
+              <h2 className="text-2xl font-bold">Success!</h2>
+              <p className="text-muted-foreground">
+                {isEthSend 
+                  ? `You've sent ${form.getValues('amount')} ETH` 
+                  : `You've sent ${form.getValues('amount')} shares of ${community?.name}`}
+              </p>
             </div>
-          </SheetContent>
-        </Sheet>
+          </div>
+        )}
       </>
     );
   }
-  
-  // Success overlay for both desktop and mobile
-  return showSuccess ? (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 animate-fade-in">
-      <div className="text-center space-y-4 animate-scale-in">
-        <div className="mx-auto rounded-full bg-green-500/20 p-6 w-24 h-24 flex items-center justify-center">
-          <Check className="h-12 w-12 text-green-500 animate-pulse" />
-        </div>
-        <h2 className="text-2xl font-bold">Success!</h2>
-        <p className="text-muted-foreground">
-          {isEthSend 
-            ? `You've sent ${form.getValues('amount')} ETH` 
-            : `You've sent ${form.getValues('amount')} shares of ${community?.name}`}
-        </p>
-      </div>
-    </div>
-  ) : null;
 };
