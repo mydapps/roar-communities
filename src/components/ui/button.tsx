@@ -19,8 +19,8 @@ const buttonVariants = cva(
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
-        roar: "text-foreground/70 hover:text-amber-500 hover:bg-transparent",
-        "roar-active": "text-amber-500 hover:bg-transparent",
+        roar: "text-foreground/40 hover:text-amber-500 hover:bg-transparent transition-colors duration-200",
+        "roar-active": "text-amber-500 hover:bg-transparent transition-colors duration-200",
       },
       size: {
         default: "h-10 px-4 py-2",

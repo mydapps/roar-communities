@@ -6,10 +6,12 @@ import { Post } from '@/components/feed/Post';
 import CreatePostCard from '@/components/feed/CreatePostCard';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Sparkles, Flame, Clock, Globe } from 'lucide-react';
+import { Sparkles, Flame, Clock, Globe, ShieldCheck } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const FeedPage = () => {
   const [userPosts, setUserPosts] = useState<any[]>([]);
+  const isMobile = useIsMobile();
 
   const handlePostCreated = (newPost: any) => {
     setUserPosts([newPost, ...userPosts]);
@@ -18,14 +20,14 @@ const FeedPage = () => {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="following" className="w-full">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold">Feed</h1>
             <Badge variant="outline" className="bg-secondary/30">
               <Sparkles className="h-3 w-3 mr-1" /> Live
             </Badge>
           </div>
-          <TabsList className="bg-muted/80 backdrop-blur-sm">
+          <TabsList className="bg-muted/80 backdrop-blur-sm w-full md:w-auto">
             <TabsTrigger value="following" className="flex items-center gap-1">
               <Clock className="h-3.5 w-3.5" />
               <span>Following</span>
@@ -46,7 +48,7 @@ const FeedPage = () => {
             <CardContent className="pt-6">
               <h2 className="text-xl font-semibold mb-3 flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-primary" />
-                What's happening in your communities
+                What's on your mind?
               </h2>
               <CreatePostCard onPostCreated={handlePostCreated} />
             </CardContent>

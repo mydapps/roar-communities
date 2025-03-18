@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,14 +8,15 @@ import {
   MessageCircle, 
   RefreshCw, 
   Share2, 
-  TrendingUp, 
+  ShieldCheck, 
   Copy, 
   Heart, 
   X, 
   Search,
   ChevronDown,
   Command,
-  CheckCircle2
+  CheckCircle2,
+  ExternalLink
 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { 
@@ -46,6 +47,15 @@ import {
   CommandGroup, 
   CommandItem
 } from "@/components/ui/command";
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter
+} from "@/components/ui/dialog";
 import { Toggle } from "@/components/ui/toggle";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
@@ -85,13 +95,17 @@ export const Post = ({
   const [mirrorSheetOpen, setMirrorSheetOpen] = useState(false);
   const [selectedCommunity, setSelectedCommunity] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [ipfsDialogOpen, setIpfsDialogOpen] = useState(false);
   
   const { toast } = useToast();
   
   const [emblaRef, emblaApi] = useEmblaCarousel();
 
+  // Generate a mock IPFS hash for the demo
+  const ipfsHash = `Qm${Array.from({length: 44}, () => Math.floor(Math.random() * 16).toString(16)).join('')}`;
+
   // Set up a listener for carousel slides
-  React.useEffect(() => {
+  useEffect(() => {
     if (emblaApi) {
       emblaApi.on('select', () => {
         setActiveDotIndex(emblaApi.selectedScrollSnap());
@@ -150,6 +164,18 @@ export const Post = ({
     }
   };
 
+  const copyIpfsHash = () => {
+    navigator.clipboard.writeText(ipfsHash);
+    toast({
+      title: "Copied to clipboard",
+      description: "IPFS hash has been copied to clipboard",
+    });
+  };
+
+  const verifyOnIpfs = () => {
+    window.open(`https://ipfs.io/ipfs/${ipfsHash}`, '_blank');
+  };
+
   const formatUsername = (name: string) => {
     // Remove any extensions like .eth, .lens, etc. and add @
     return '@' + name.split('.')[0];
@@ -193,9 +219,58 @@ export const Post = ({
               )}
             </div>
           </div>
-          <Button variant="ghost" size="icon" className="rounded-full h-8 w-8">
-            <TrendingUp className="h-4 w-4" />
-          </Button>
+          
+          <Dialog open={ipfsDialogOpen} onOpenChange={setIpfsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="icon" className="rounded-full h-8 w-8">
+                <ShieldCheck className="h-4 w-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <ShieldCheck className="h-5 w-5 text-primary" />
+                  Freedom of Expression
+                </DialogTitle>
+                <DialogDescription>
+                  This post is stored on IPFS, a decentralized storage network. 
+                  This ensures that your content remains censorship-resistant and 
+                  permanently available.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex flex-col space-y-4 py-4">
+                <div className="flex items-center gap-2">
+                  <code className="bg-muted text-sm p-2 rounded flex-1 overflow-x-auto font-mono">{ipfsHash}</code>
+                  <Button 
+                    variant="outline" 
+                    size="icon" 
+                    className="shrink-0"
+                    onClick={copyIpfsHash}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  This is the unique identifier for this content on IPFS. You can use this hash to verify 
+                  the content or share it with others.
+                </p>
+              </div>
+              <DialogFooter className="sm:justify-between">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIpfsDialogOpen(false)}>
+                  Close
+                </Button>
+                <Button 
+                  onClick={verifyOnIpfs}
+                  className="gap-1.5"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Verify on IPFS
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </CardHeader>
       <CardContent className="pb-3">
@@ -264,7 +339,13 @@ export const Post = ({
             onClick={handleRoar}
           >
             <div className={`relative ${roarAnimation ? "animate-roar" : ""}`}>
-              <span className={`text-lg transition-all ${roared ? "opacity-100" : "opacity-70"} group-hover:opacity-100`} role="img" aria-label="lion">🦁</span>
+              <span 
+                className={`text-lg transition-all ${roared ? "text-amber-500" : "opacity-60"} group-hover:opacity-100`} 
+                role="img" 
+                aria-label="lion"
+              >
+                🦁
+              </span>
               {roarTextAnimation && (
                 <div className="absolute -top-3 -right-6 animate-roar-text pointer-events-none">
                   <span className="text-xs font-bold text-amber-500">ROAR!</span>
@@ -425,9 +506,10 @@ export const Post = ({
             </Button>
             
             {shareMenuOpen && (
-              <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-end justify-center animate-fade-in" onClick={() => setShareMenuOpen(false)}>
+              <div className="fixed inset-0 z-50 flex items-end justify-center animate-fade-in" onClick={() => setShareMenuOpen(false)}>
+                <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" />
                 <div 
-                  className="bg-card w-full max-w-md rounded-t-xl shadow-xl animate-slide-up-full border-t border-x border-border"
+                  className="relative z-10 bg-card w-full max-w-md rounded-t-xl shadow-xl animate-slide-up-full border-t border-x border-border"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="p-4 flex items-center justify-between border-b">
@@ -483,7 +565,7 @@ export const Post = ({
         <div className="px-6 pb-4">
           <Separator className="mb-3" />
           
-          {/* Comment list - moved to top */}
+          {/* Comment list */}
           <div className="space-y-3 max-h-60 overflow-y-auto mb-4">
             {comments.map((comment, i) => (
               <div key={i} className="flex gap-2 animate-fade-in">
@@ -502,7 +584,7 @@ export const Post = ({
             ))}
           </div>
           
-          {/* Comment input - moved to bottom */}
+          {/* Comment input */}
           <div className="flex gap-2">
             <Avatar className="h-8 w-8">
               <AvatarImage src="https://api.dicebear.com/7.x/personas/svg?seed=you" />
