@@ -7,9 +7,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
-import { ImageIcon, LinkIcon, XIcon, SendIcon, SearchIcon } from 'lucide-react';
+import { ImageIcon, VideoIcon, LinkIcon, XIcon, SendIcon, SearchIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 // Available communities for linking
 const COMMUNITIES = [
@@ -30,9 +30,9 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
   const [selectedCommunity, setSelectedCommunity] = useState('');
   const [showCommunityDialog, setShowCommunityDialog] = useState(false);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const { toast } = useToast();
 
   // Filter communities based on search input
   const [communitySearch, setCommunitySearch] = useState('');
@@ -43,13 +43,6 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
   const handleCommunitySelect = (community: string) => {
     setSelectedCommunity(community);
     setShowCommunityDialog(false);
-    
-    // Provide dopamine hit
-    toast({
-      title: "Community linked!",
-      description: `Your post will be shared with ${community}`,
-      duration: 2000,
-    });
   };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -69,13 +62,19 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
       }
       
       setSelectedImages(newImages);
+      // Clear any video if images are selected
+      setSelectedVideo(null);
+    }
+  };
+
+  const handleVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      // For demo purposes, we'll use a placeholder video URL
+      const placeholderVideo = "https://assets.mixkit.co/videos/preview/mixkit-software-developer-working-on-code-screen-close-up-27013-large.mp4";
       
-      // Provide dopamine hit for adding images
-      toast({
-        title: "Images added!",
-        description: "Your post will look amazing!",
-        duration: 2000,
-      });
+      setSelectedVideo(placeholderVideo);
+      // Clear any images if video is selected
+      setSelectedImages([]);
     }
   };
 
@@ -83,13 +82,12 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
     setSelectedImages(prev => prev.filter((_, i) => i !== index));
   };
 
+  const removeVideo = () => {
+    setSelectedVideo(null);
+  };
+
   const handleSubmit = () => {
     if (!content.trim()) {
-      toast({
-        title: "Empty post",
-        description: "Please add some content to your post",
-        variant: "destructive"
-      });
       return;
     }
     
@@ -104,7 +102,8 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
       roarCount: 0,
       commentCount: 0,
       shareCount: 0,
-      images: selectedImages.length > 0 ? selectedImages : undefined
+      images: selectedImages.length > 0 ? selectedImages : undefined,
+      video: selectedVideo || undefined
     };
     
     // Simulate network delay
@@ -115,15 +114,9 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
       setContent('');
       setSelectedCommunity('');
       setSelectedImages([]);
+      setSelectedVideo(null);
       setIsSubmitting(false);
       setIsExpanded(false);
-      
-      // Provide satisfying dopamine hit
-      toast({
-        title: "Post shared!",
-        description: "Your post is now live in the feed",
-        duration: 3000,
-      });
     }, 500);
   };
 
@@ -140,29 +133,31 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
             <AvatarFallback>YO</AvatarFallback>
           </Avatar>
           <div className="flex-1">
-            <Textarea 
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              onFocus={handleFocus}
-              className="w-full rounded-lg border border-border/60 bg-muted/40 p-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none min-h-[80px] transition-all duration-200" 
-              placeholder="What's happening in your communities?"
-            />
+            <div className="relative">
+              {selectedCommunity && (
+                <div className="absolute -top-6 left-0 flex items-center gap-1 animate-fade-in">
+                  <Badge variant="outline" className="bg-secondary/30 text-xs">
+                    Posting in {selectedCommunity}
+                  </Badge>
+                  <Button 
+                    variant="ghost" 
+                    className="h-5 w-5 p-0 text-muted-foreground hover:text-foreground rounded-full"
+                    onClick={() => setSelectedCommunity('')}
+                  >
+                    <XIcon className="h-3 w-3" />
+                  </Button>
+                </div>
+              )}
+              <Textarea 
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                onFocus={handleFocus}
+                className="w-full rounded-lg border border-border/60 bg-muted/40 p-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none min-h-[80px] transition-all duration-200" 
+                placeholder={selectedCommunity ? `What's happening in ${selectedCommunity}?` : "What's happening in your communities?"}
+              />
+            </div>
             
-            {/* Display selected community badge */}
-            {selectedCommunity && (
-              <div className="mt-2 inline-flex items-center gap-1 px-2 py-1 bg-muted rounded text-sm animate-fade-in">
-                <span>{selectedCommunity}</span>
-                <Button 
-                  variant="ghost" 
-                  className="h-5 w-5 p-0 text-muted-foreground hover:text-foreground"
-                  onClick={() => setSelectedCommunity('')}
-                >
-                  <XIcon className="h-3 w-3" />
-                </Button>
-              </div>
-            )}
-            
-            {/* Display selected images */}
+            {/* Display selected media */}
             {selectedImages.length > 0 && (
               <div className="mt-3 grid grid-cols-2 gap-2 animate-fade-in">
                 {selectedImages.map((img, idx) => (
@@ -184,75 +179,138 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
                 ))}
               </div>
             )}
+
+            {selectedVideo && (
+              <div className="mt-3 relative group animate-fade-in">
+                <video 
+                  src={selectedVideo} 
+                  className="w-full h-32 object-cover rounded-md" 
+                  controls
+                />
+                <Button
+                  variant="destructive"
+                  size="icon"
+                  className="h-6 w-6 absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={removeVideo}
+                >
+                  <XIcon className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
             
             {/* Action buttons - only show when expanded or has content */}
-            {(isExpanded || content || selectedImages.length > 0) && (
+            {(isExpanded || content || selectedImages.length > 0 || selectedVideo) && (
               <div className="mt-3 flex items-center justify-between animate-fade-in">
                 <div className="flex items-center gap-2">
-                  <Label htmlFor="image-upload" className="cursor-pointer">
-                    <Button variant="outline" size="sm" className="cursor-pointer gap-1.5" type="button" asChild>
-                      <span>
-                        <ImageIcon className="h-4 w-4" />
-                        <span>Add Image</span>
-                      </span>
-                    </Button>
-                    <Input
-                      id="image-upload"
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      className="hidden"
-                      onChange={handleImageSelect}
-                      disabled={selectedImages.length >= 4}
-                    />
-                  </Label>
-                  
-                  <Dialog open={showCommunityDialog} onOpenChange={setShowCommunityDialog}>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" size="sm" className="gap-1.5">
-                        <LinkIcon className="h-4 w-4" />
-                        <span>Link Community</span>
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-md">
-                      <DialogHeader>
-                        <DialogTitle>Link a Community</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4 py-2">
-                        <div className="space-y-2">
-                          <div className="relative">
-                            <SearchIcon className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input
-                              id="community-search"
-                              placeholder="Search communities..."
-                              value={communitySearch}
-                              onChange={(e) => setCommunitySearch(e.target.value)}
-                              className="pl-8"
-                            />
-                          </div>
-                        </div>
-                        <div className="max-h-60 overflow-y-auto space-y-1 rounded-md border p-1">
-                          {filteredCommunities.length === 0 ? (
-                            <div className="py-6 text-center text-muted-foreground">
-                              No communities found
-                            </div>
-                          ) : (
-                            filteredCommunities.map((community) => (
-                              <Button
-                                key={community}
-                                variant="ghost"
-                                className="w-full justify-start text-left"
-                                onClick={() => handleCommunitySelect(community)}
-                              >
-                                <Badge variant="outline" className="mr-2 bg-muted/50">{community[0]}</Badge>
-                                {community}
-                              </Button>
-                            ))
-                          )}
-                        </div>
+                  <Tabs defaultValue="media" className="w-auto">
+                    <TabsList className="h-9">
+                      <TabsTrigger value="media" className="text-xs px-2 py-1 h-8">
+                        <ImageIcon className="h-4 w-4 mr-1" />
+                        <span>Media</span>
+                      </TabsTrigger>
+                      <TabsTrigger value="community" className="text-xs px-2 py-1 h-8">
+                        <LinkIcon className="h-4 w-4 mr-1" />
+                        <span>Community</span>
+                      </TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="media" className="mt-0 pt-2">
+                      <div className="flex items-center gap-1.5">
+                        <Label htmlFor="image-upload" className="cursor-pointer">
+                          <Button variant="outline" size="sm" className="cursor-pointer gap-1.5" type="button" asChild>
+                            <span>
+                              <ImageIcon className="h-4 w-4" />
+                              <span>Images</span>
+                            </span>
+                          </Button>
+                          <Input
+                            id="image-upload"
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            className="hidden"
+                            onChange={handleImageSelect}
+                            disabled={selectedImages.length >= 4 || !!selectedVideo}
+                          />
+                        </Label>
+                        
+                        <Label htmlFor="video-upload" className="cursor-pointer">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="cursor-pointer gap-1.5" 
+                            type="button"
+                            disabled={selectedImages.length > 0}
+                            asChild
+                          >
+                            <span>
+                              <VideoIcon className="h-4 w-4" />
+                              <span>Video</span>
+                            </span>
+                          </Button>
+                          <Input
+                            id="video-upload"
+                            type="file"
+                            accept="video/*"
+                            className="hidden"
+                            onChange={handleVideoSelect}
+                            disabled={selectedImages.length > 0 || !!selectedVideo}
+                          />
+                        </Label>
                       </div>
-                    </DialogContent>
-                  </Dialog>
+                    </TabsContent>
+                    <TabsContent value="community" className="mt-0 pt-2">
+                      <Dialog open={showCommunityDialog} onOpenChange={setShowCommunityDialog}>
+                        <DialogTrigger asChild>
+                          <Button 
+                            variant={selectedCommunity ? "default" : "outline"} 
+                            size="sm" 
+                            className="gap-1.5"
+                          >
+                            <LinkIcon className="h-4 w-4" />
+                            <span>{selectedCommunity ? selectedCommunity : "Link Community"}</span>
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-md">
+                          <DialogHeader>
+                            <DialogTitle>Link a Community</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-4 py-2">
+                            <div className="space-y-2">
+                              <div className="relative">
+                                <SearchIcon className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                  id="community-search"
+                                  placeholder="Search communities..."
+                                  value={communitySearch}
+                                  onChange={(e) => setCommunitySearch(e.target.value)}
+                                  className="pl-8"
+                                />
+                              </div>
+                            </div>
+                            <div className="max-h-60 overflow-y-auto space-y-1 rounded-md border p-1">
+                              {filteredCommunities.length === 0 ? (
+                                <div className="py-6 text-center text-muted-foreground">
+                                  No communities found
+                                </div>
+                              ) : (
+                                filteredCommunities.map((community) => (
+                                  <Button
+                                    key={community}
+                                    variant="ghost"
+                                    className="w-full justify-start text-left"
+                                    onClick={() => handleCommunitySelect(community)}
+                                  >
+                                    <Badge variant="outline" className="mr-2 bg-muted/50">{community[0]}</Badge>
+                                    {community}
+                                  </Button>
+                                ))
+                              )}
+                            </div>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    </TabsContent>
+                  </Tabs>
                 </div>
                 <Button 
                   onClick={handleSubmit} 
