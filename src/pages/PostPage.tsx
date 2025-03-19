@@ -230,6 +230,7 @@ const PostPage = () => {
   const [roarTextAnimation, setRoarTextAnimation] = useState(false);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
+  // Show all replies by default
   const [expandedReplies, setExpandedReplies] = useState<Record<string, boolean>>({});
 
   // Cache of meow states to prevent re-renders
@@ -247,6 +248,20 @@ const PostPage = () => {
       if (foundPost) {
         setPost(foundPost);
         setRoarCount(foundPost.roarCount);
+        
+        // Pre-expand all replies by default
+        const initialExpandState: Record<string, boolean> = {};
+        const expandAllReplies = (comments: CommentType[]) => {
+          comments.forEach(comment => {
+            initialExpandState[comment.id] = true;
+            if (comment.replies) {
+              expandAllReplies(comment.replies);
+            }
+          });
+        };
+        
+        expandAllReplies(MOCK_COMMENTS);
+        setExpandedReplies(initialExpandState);
         setComments(MOCK_COMMENTS);
       }
       setLoading(false);
@@ -300,7 +315,7 @@ const PostPage = () => {
   };
 
   // Function to add a reply to a specific comment
-  const handleAddReply = (commentId: string) => {
+  const handleAddReply = (commentId: string, replyText: string) => {
     if (!replyText.trim()) return;
     
     setSubmittingComment(true);
@@ -338,8 +353,6 @@ const PostPage = () => {
       };
       
       setComments(updateComments);
-      setReplyText('');
-      setReplyingTo(null);
       setSubmittingComment(false);
       
       toast({
@@ -408,25 +421,25 @@ const PostPage = () => {
 
   // Recursive component to render comments with replies
   const CommentWithReplies = ({ comment }: { comment: CommentType }) => {
+    const [localReplyText, setLocalReplyText] = useState('');
     const [isReplying, setIsReplying] = useState(false);
     const [meowAnimating, setMeowAnimating] = useState(false);
     const [meowWavesAnimation, setMeowWavesAnimation] = useState(false);
     const [meowTextAnimating, setMeowTextAnimating] = useState(false);
-    const [localReplyText, setLocalReplyText] = useState('');
+    
     const isExpanded = expandedReplies[comment.id] || false;
     const isMeowed = meowedComments[comment.id] || false;
     
-    const handleReplyClick = () => {
+    const handleReplyClick = (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
       setIsReplying(!isReplying);
-      if (!isReplying) {
-        setReplyingTo(comment.id);
-        setLocalReplyText('');
-      } else {
-        setReplyingTo(null);
-      }
     };
     
-    const handleMeowClick = () => {
+    const handleMeowClick = (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
       handleMeowComment(comment.id);
       
       // Enhanced meow animation sequence
@@ -439,15 +452,25 @@ const PostPage = () => {
       setTimeout(() => setMeowTextAnimating(false), 1500);
     };
 
-    const handleSubmitReply = () => {
-      if (replyingTo === comment.id) {
-        setReplyText(localReplyText);
-        handleAddReply(comment.id);
-        setIsReplying(false);
-      }
+    const handleSubmitReply = (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      handleAddReply(comment.id, localReplyText);
+      setLocalReplyText('');
+      setIsReplying(false);
+    };
+    
+    const handleCancelReply = (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsReplying(false);
+      setLocalReplyText('');
     };
 
-    const toggleReplies = () => {
+    const toggleReplies = (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
       setExpandedReplies(prev => ({
         ...prev,
         [comment.id]: !prev[comment.id]
@@ -541,7 +564,7 @@ const PostPage = () => {
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    onClick={handleReplyClick}
+                    onClick={handleCancelReply}
                     className="h-8 text-xs"
                   >
                     Cancel

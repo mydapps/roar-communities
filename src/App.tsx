@@ -19,7 +19,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<MainLayout />}>
-          <Route index element={<Navigate to="/feed" replace />} />
+          <Route index element={<FeedPage />} />
           <Route path="feed" element={<FeedPage />} />
           <Route path="communities" element={<CommunitiesPage />} />
           <Route path="c/:id" element={<CommunityPage />} />
