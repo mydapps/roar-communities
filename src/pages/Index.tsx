@@ -18,12 +18,12 @@ const Index = () => {
   // Check if we're on an invite route
   const isInviteRoute = location.pathname.includes('/invite/');
   
-  // Animation headlines
+  // Animation headlines - updated to appeal to different audiences with distinct stories
   const headlines = [
-    "Own your social experience",
-    "Create content that earns",
-    "Join thriving communities",
-    "Invest in what you love"
+    "For creators: Own your audience",
+    "For investors: Profit from discovery",
+    "For community builders: Scale impact",
+    "For enthusiasts: Support what you love"
   ];
 
   useEffect(() => {
@@ -80,22 +80,22 @@ const Index = () => {
               }`}
             >
               {isInviteRoute && (
-                <div className="max-w-xl mx-auto mb-8 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                  <p className="text-lg text-amber-600 dark:text-amber-400">
+                <div className="max-w-xl mx-auto mb-8 p-4 rounded-lg bg-[#31bcc3]/10 border border-[#31bcc3]/20">
+                  <p className="text-lg text-[#31bcc3] dark:text-[#31bcc3]">
                     You've been invited by <span className="font-bold">@bravegoldfish</span>! Sign up to skip the queue and get your first share (up to $100) for free.
                   </p>
                 </div>
               )}
               
               <h1 className="text-4xl md:text-7xl font-bold tracking-tight max-w-3xl mx-auto leading-tight">
-                <span className="block h-[2.5em] md:h-[1.5em] overflow-hidden">
-                  <span className="bg-gradient-to-r from-amber-500 to-amber-600 bg-clip-text text-transparent">
+                <span className="block h-[3em] md:h-[2em] overflow-hidden mb-2">
+                  <span className="bg-gradient-to-r from-[#31bcc3] to-[#31bcc3]/80 bg-clip-text text-transparent">
                     {displayText}
                     <span className="animate-pulse">|</span>
                   </span>
                 </span>
                 <span className="text-foreground">
-                  with <span className="bg-gradient-to-r from-amber-500 to-amber-600 bg-clip-text text-transparent">Dapps.co</span>
+                  with <span className="bg-gradient-to-r from-[#31bcc3] to-[#31bcc3]/80 bg-clip-text text-transparent">Dapps.co</span>
                 </span>
               </h1>
               
@@ -107,7 +107,7 @@ const Index = () => {
                 <Button 
                   size="lg" 
                   onClick={handleGetStarted}
-                  className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-lg group px-10 py-6 text-lg"
+                  className="bg-gradient-to-r from-[#31bcc3] to-[#31bcc3]/90 hover:from-[#31bcc3]/90 hover:to-[#31bcc3] text-white shadow-lg group px-10 py-6 text-lg"
                 >
                   <span>Login / Sign Up</span>
                   <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
@@ -127,8 +127,8 @@ const Index = () => {
                   animatedElements.includes('feature-1') ? 'animate-slide-up' : 'opacity-0'
                 }`}
               >
-                <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center mb-5">
-                  <Users className="h-8 w-8 text-amber-500" />
+                <div className="w-16 h-16 rounded-full bg-[#31bcc3]/10 flex items-center justify-center mb-5">
+                  <Users className="h-8 w-8 text-[#31bcc3]" />
                 </div>
                 <h3 className="text-xl font-bold mb-3">Truly Belong</h3>
                 <p className="text-muted-foreground">
@@ -142,8 +142,8 @@ const Index = () => {
                   animatedElements.includes('feature-2') ? 'animate-slide-up' : 'opacity-0'
                 }`}
               >
-                <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center mb-5">
-                  <Zap className="h-8 w-8 text-amber-500" />
+                <div className="w-16 h-16 rounded-full bg-[#31bcc3]/10 flex items-center justify-center mb-5">
+                  <Zap className="h-8 w-8 text-[#31bcc3]" />
                 </div>
                 <h3 className="text-xl font-bold mb-3">Earn While Creating</h3>
                 <p className="text-muted-foreground">
@@ -157,8 +157,8 @@ const Index = () => {
                   animatedElements.includes('feature-3') ? 'animate-slide-up' : 'opacity-0'
                 }`}
               >
-                <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center mb-5">
-                  <Trophy className="h-8 w-8 text-amber-500" />
+                <div className="w-16 h-16 rounded-full bg-[#31bcc3]/10 flex items-center justify-center mb-5">
+                  <Trophy className="h-8 w-8 text-[#31bcc3]" />
                 </div>
                 <h3 className="text-xl font-bold mb-3">Grow Your Influence</h3>
                 <p className="text-muted-foreground">
@@ -193,9 +193,9 @@ const Index = () => {
               <Button 
                 size="lg" 
                 onClick={handleGetStarted}
-                className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-lg group px-10 py-6 text-lg"
+                className="bg-gradient-to-r from-[#31bcc3] to-[#31bcc3]/90 hover:from-[#31bcc3]/90 hover:to-[#31bcc3] text-white shadow-lg group px-10 py-6 text-lg"
               >
-                <span>Get Started Now</span>
+                <span>Login / Sign Up</span>
                 <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
               </Button>
             </div>
