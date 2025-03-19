@@ -53,6 +53,7 @@ export const MentionInput = forwardRef<HTMLTextAreaElement, MentionInputProps>(
     const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([]);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const popoverTargetRef = useRef<HTMLDivElement>(null);
+    const [ignoreNextCheck, setIgnoreNextCheck] = useState(false);
 
     // Combine the forwarded ref with our internal ref
     const combinedRef = (node: HTMLTextAreaElement) => {
@@ -67,7 +68,10 @@ export const MentionInput = forwardRef<HTMLTextAreaElement, MentionInputProps>(
     useEffect(() => {
       // Check if we need to show suggestions
       const checkForMentionTriggers = () => {
-        if (!textareaRef.current) return;
+        if (!textareaRef.current || ignoreNextCheck) {
+          setIgnoreNextCheck(false);
+          return;
+        }
         
         const curPos = textareaRef.current.selectionStart;
         const textBeforeCursor = value.substring(0, curPos);
@@ -89,7 +93,9 @@ export const MentionInput = forwardRef<HTMLTextAreaElement, MentionInputProps>(
             // Space found, stop suggesting
             setIsSuggesting(false);
           } else {
-            setIsSuggesting(true);
+            // Only show suggestions if there's some text to search for
+            const shouldShowSuggestions = searchText.length > 0;
+            setIsSuggesting(shouldShowSuggestions);
             setSuggestionType('user');
             setSearchTerm(searchText);
             setCursorPosition(curPos);
@@ -106,7 +112,9 @@ export const MentionInput = forwardRef<HTMLTextAreaElement, MentionInputProps>(
             // Space or slash found, stop suggesting
             setIsSuggesting(false);
           } else {
-            setIsSuggesting(true);
+            // Only show suggestions if there's some text to search for
+            const shouldShowSuggestions = searchText.length > 0;
+            setIsSuggesting(shouldShowSuggestions);
             setSuggestionType('community');
             setSearchTerm(searchText);
             setCursorPosition(curPos);
@@ -122,7 +130,7 @@ export const MentionInput = forwardRef<HTMLTextAreaElement, MentionInputProps>(
       };
       
       checkForMentionTriggers();
-    }, [value, textareaRef.current?.selectionStart]);
+    }, [value, textareaRef.current?.selectionStart, ignoreNextCheck]);
 
     const handleSelectSuggestion = (suggestion: string) => {
       if (!textareaRef.current) return;
@@ -178,12 +186,23 @@ export const MentionInput = forwardRef<HTMLTextAreaElement, MentionInputProps>(
       }
       
       setIsSuggesting(false);
+      setIgnoreNextCheck(true);
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (isSuggesting && e.key === 'Escape') {
-        setIsSuggesting(false);
+      if (isSuggesting) {
+        if (e.key === 'Escape') {
+          setIsSuggesting(false);
+          e.preventDefault();
+        } else if (e.key === 'Tab' && filteredSuggestions.length > 0) {
+          handleSelectSuggestion(filteredSuggestions[0]);
+          e.preventDefault();
+        }
       }
+    };
+
+    const closeSuggestions = () => {
+      setIsSuggesting(false);
     };
 
     return (
@@ -196,12 +215,16 @@ export const MentionInput = forwardRef<HTMLTextAreaElement, MentionInputProps>(
             placeholder={placeholder}
             onKeyDown={handleKeyDown}
             onFocus={onFocus}
+            onBlur={() => {
+              // Delay closing to allow clicking on suggestions
+              setTimeout(closeSuggestions, 200);
+            }}
             className={`${className} resize-none`}
             style={{ minHeight, maxHeight }}
           />
         </div>
         
-        <Popover open={isSuggesting} onOpenChange={setIsSuggesting}>
+        <Popover open={isSuggesting && filteredSuggestions.length > 0} onOpenChange={setIsSuggesting}>
           <PopoverTrigger asChild>
             <div className="absolute top-0 left-0 h-0 w-0 overflow-hidden" />
           </PopoverTrigger>
