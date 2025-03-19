@@ -31,9 +31,7 @@ const OnboardingStories = ({ open, onOpenChange }: OnboardingStoriesProps) => {
       title: "Welcome to Dapps.co!",
       description: "Join a community network where you truly belong. Create, connect, and own your social experience on a censorship-resistant platform built for real communities.",
       image: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&q=80",
-      icon: <div className="flex items-center justify-center w-full h-full">
-              <img src="https://dapps.co/icon-128x128.png" alt="Dapps.co Logo" className="w-full h-full object-contain" />
-            </div>,
+      icon: <img src="https://dapps.co/icon-128x128.png" alt="Dapps.co Logo" className="w-14 h-14 object-cover" />,
       backgroundColor: "from-blue-900/95 to-blue-950/95"
     },
     {
@@ -187,19 +185,17 @@ const OnboardingStories = ({ open, onOpenChange }: OnboardingStoriesProps) => {
           </button>
         </div>
 
-        <div className="absolute inset-0 flex flex-col justify-between p-6 text-white z-10">
-          <div className="mt-8 flex justify-center">
-            <div className={`p-3 rounded-full ${isLastStory ? 'bg-amber-500/20 animate-pulse' : 'bg-white/10'}`}>
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-white z-10 px-6">
+          <div className="flex flex-col items-center max-w-sm mx-auto">
+            <div className={`mb-8 ${isLastStory ? 'bg-amber-500/20 animate-pulse rounded-full p-3' : ''}`}>
               {currentStory.icon}
             </div>
-          </div>
-          
-          <div className="mt-auto mb-6">
-            <h2 className={`text-2xl font-bold mb-3 text-center ${isLastStory ? 'text-amber-400' : 'text-white'}`}>
+            
+            <h2 className={`text-2xl font-bold mb-4 text-center ${isLastStory ? 'text-amber-400' : 'text-white'}`}>
               {currentStory.title}
             </h2>
             
-            <p className="text-white/90 text-center mb-6">
+            <p className="text-white/90 text-center mb-8">
               {currentStory.description}
             </p>
 
