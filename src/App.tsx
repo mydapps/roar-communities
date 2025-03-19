@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import MainLayout from '@/layouts/MainLayout';
+import MainLayout from '@/components/layout/MainLayout';
 import HomePage from '@/pages/HomePage';
 import FeedPage from '@/pages/FeedPage';
 import CommunitiesPage from '@/pages/CommunitiesPage';
