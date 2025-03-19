@@ -4,6 +4,8 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Users, Zap, Trophy } from 'lucide-react';
 import OnboardingStories from '@/components/onboarding/OnboardingStories';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const Index = () => {
   const navigate = useNavigate();
@@ -14,6 +16,7 @@ const Index = () => {
   const [currentTextIndex, setCurrentTextIndex] = useState(0);
   const [displayText, setDisplayText] = useState('');
   const [isTyping, setIsTyping] = useState(true);
+  const [avatars, setAvatars] = useState<string[]>([]);
 
   // Check if we're on an invite route
   const isInviteRoute = location.pathname.includes('/invite/');
@@ -23,8 +26,31 @@ const Index = () => {
     "For creators: Own your audience",
     "For investors: Profit from discovery",
     "For community builders: Scale impact",
-    "For enthusiasts: Support what you love"
+    "For enthusiasts: Support what you love",
+    "For innovators: Turn social into wealth",
+    "For believers: Build lasting connections"
   ];
+
+  // Generate random avatar usernames
+  useEffect(() => {
+    const usernames = [
+      'alice', 'bob', 'charlie', 'dave', 'emma', 
+      'frank', 'grace', 'hannah', 'isaac', 'julia',
+      'kevin', 'lisa', 'mike', 'nina', 'oscar'
+    ];
+    
+    // Shuffle the array
+    const shuffled = [...usernames].sort(() => 0.5 - Math.random());
+    setAvatars(shuffled.slice(0, 5));
+
+    // Rotate avatars every few seconds
+    const interval = setInterval(() => {
+      const shuffled = [...usernames].sort(() => 0.5 - Math.random());
+      setAvatars(shuffled.slice(0, 5));
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     // Stagger animations for elements
@@ -88,7 +114,7 @@ const Index = () => {
               )}
               
               <h1 className="text-4xl md:text-7xl font-bold tracking-tight max-w-3xl mx-auto leading-tight">
-                <span className="block h-[3em] md:h-[2em] overflow-hidden mb-2">
+                <span className="block h-[3.5em] md:h-[2.5em] overflow-hidden mb-2">
                   <span className="bg-gradient-to-r from-[#31bcc3] to-[#31bcc3]/80 bg-clip-text text-transparent">
                     {displayText}
                     <span className="animate-pulse">|</span>
@@ -180,10 +206,18 @@ const Index = () => {
               Join thousands already building their social equity
             </h2>
             <div className="flex flex-wrap justify-center gap-4 py-6">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="w-12 h-12 rounded-full bg-muted animate-pulse" style={{
-                  animationDelay: `${i * 0.2}s`
-                }} />
+              {avatars.map((username, i) => (
+                <Avatar key={username} className="w-12 h-12 shadow-md transition-all duration-500 hover:scale-110">
+                  <AvatarImage 
+                    src={`https://s.dapps.co/avatar/${username}.svg`} 
+                    alt="User avatar" 
+                    className="animate-fade-in"
+                    style={{ animationDelay: `${i * 0.2}s` }}
+                  />
+                  <AvatarFallback>
+                    <Skeleton className="w-full h-full rounded-full" />
+                  </AvatarFallback>
+                </Avatar>
               ))}
             </div>
             <p className="text-xl text-muted-foreground">
