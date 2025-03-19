@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { 
   CopyIcon, 
   Share2, 
-  Heart, 
+  Gift, 
   Sparkles, 
   Users, 
   Rocket, 
@@ -40,6 +40,15 @@ const ReferralPage = () => {
   const [isClaimingRewards, setIsClaimingRewards] = useState(false);
   
   const referralUrl = 'dapps.co/invite/abc';
+  
+  // Reward state
+  const [totalEarned, setTotalEarned] = useState(1.25);
+  const [availableRewards, setAvailableRewards] = useState(0.18);
+  const [progressEarned, setProgressEarned] = useState(0);
+  const [progressAvailable, setProgressAvailable] = useState(0);
+  
+  const totalReferrals = 8;
+  const activeReferrals = 5;
   
   const handleCopy = () => {
     navigator.clipboard.writeText(referralUrl);
@@ -86,8 +95,20 @@ const ReferralPage = () => {
   const handleClaimRewards = () => {
     setIsClaimingRewards(true);
     
+    // Animate reward claiming
+    const claimAnimation = setInterval(() => {
+      setProgressAvailable((prev) => {
+        const newValue = Math.max(0, prev - 3);
+        return newValue;
+      });
+      
+      setTotalEarned((prev) => prev + 0.005);
+    }, 50);
+    
     // Simulate API call with timeout
     setTimeout(() => {
+      clearInterval(claimAnimation);
+      
       // Success animation
       confetti({
         particleCount: 150,
@@ -99,17 +120,10 @@ const ReferralPage = () => {
       toast.success("Rewards claimed successfully!");
       setIsClaimingRewards(false);
       setRewardsClaimable(false);
+      setAvailableRewards(0);
+      setProgressAvailable(0);
     }, 1500);
   };
-  
-  const totalEarned = 1.25;
-  const availableRewards = 0.18;
-  const totalReferrals = 8;
-  const activeReferrals = 5;
-  
-  // Progress values for animations
-  const [progressEarned, setProgressEarned] = useState(0);
-  const [progressAvailable, setProgressAvailable] = useState(0);
   
   // Animate progress bars on mount
   useEffect(() => {
@@ -209,7 +223,7 @@ const ReferralPage = () => {
                 animate={{ x: 0, opacity: 1 }}
                 transition={{ delay: 0.1 }}
               >
-                <Heart className="h-6 w-6 text-primary animate-pulse" />
+                <Gift className="h-6 w-6 text-primary animate-pulse" />
                 <CardTitle>Your Invite Link</CardTitle>
               </motion.div>
               <motion.div
@@ -222,7 +236,7 @@ const ReferralPage = () => {
                     className="font-semibold"
                     animate={{ color: ['#4F46E5', '#10B981', '#4F46E5'] }}
                     transition={{ duration: 5, repeat: Infinity }}
-                  >75,000+ waitlist</motion.span> and get a <span className="font-semibold text-primary">free community share</span>!
+                  >75,000+ waitlist</motion.span> and get a <span className="font-semibold text-primary">free share in a community</span>!
                 </CardDescription>
               </motion.div>
             </CardHeader>
@@ -346,7 +360,7 @@ const ReferralPage = () => {
                       Total Earned
                     </span>
                     <motion.span 
-                      className="font-bold text-primary"
+                      className="font-bold text-primary text-lg"
                       initial={{ scale: 0.8 }}
                       animate={{ scale: 1 }}
                       transition={{ delay: 0.4 }}
@@ -354,12 +368,32 @@ const ReferralPage = () => {
                       {totalEarned.toFixed(2)} ETH
                     </motion.span>
                   </div>
+                  
                   <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: "100%" }}
-                    transition={{ delay: 0.5, duration: 0.5 }}
+                    className="bg-primary/10 p-4 rounded-xl relative overflow-hidden"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.4 }}
                   >
-                    <Progress value={progressEarned} className="h-2" />
+                    <motion.div
+                      className="absolute inset-0 bg-gradient-to-r from-primary/20 to-primary/5"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${progressEarned}%` }}
+                      transition={{ delay: 0.5, duration: 1 }}
+                    />
+                    <div className="relative flex items-center justify-center py-2">
+                      <motion.div
+                        initial={{ scale: 0.8, opacity: 0 }}
+                        animate={{ 
+                          scale: [0.8, 1.1, 1],
+                          opacity: 1
+                        }}
+                        transition={{ delay: 0.6, duration: 0.5 }}
+                        className="text-xl font-bold text-primary"
+                      >
+                        Great earning potential!
+                      </motion.div>
+                    </div>
                   </motion.div>
                 </motion.div>
                 
@@ -375,21 +409,49 @@ const ReferralPage = () => {
                       Available Rewards
                     </span>
                     <motion.span 
-                      className="font-bold text-amber-500"
+                      className="font-bold text-amber-500 text-lg"
                       initial={{ scale: 0.8 }}
-                      animate={{ scale: 1.1, scale: 1 }}
-                      transition={{ delay: 0.5 }}
+                      animate={rewardsClaimable ? { 
+                        scale: [1, 1.1, 1],
+                        transition: { 
+                          repeat: Infinity,
+                          repeatType: "reverse",
+                          duration: 1.5
+                        }
+                      } : { scale: 1 }}
                     >
                       {availableRewards.toFixed(2)} ETH
                     </motion.span>
                   </div>
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: "100%" }}
-                    transition={{ delay: 0.6, duration: 0.5 }}
-                  >
-                    <Progress value={progressAvailable} className="h-2 bg-amber-100" indicatorClassName="bg-amber-500" />
-                  </motion.div>
+                  
+                  {availableRewards > 0 && (
+                    <motion.div
+                      className="bg-amber-500/10 p-4 rounded-xl relative overflow-hidden"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.5 }}
+                    >
+                      <motion.div
+                        className="absolute inset-0 bg-gradient-to-r from-amber-500/20 to-amber-500/5"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${progressAvailable}%` }}
+                        transition={{ delay: 0.6, duration: 0.5 }}
+                      />
+                      <div className="relative flex items-center justify-center py-2">
+                        <motion.div
+                          initial={{ scale: 0.8, opacity: 0 }}
+                          animate={{ 
+                            scale: [0.8, 1.1, 1],
+                            opacity: 1
+                          }}
+                          transition={{ delay: 0.7, duration: 0.5 }}
+                          className="text-lg font-medium text-amber-600"
+                        >
+                          Ready to claim!
+                        </motion.div>
+                      </div>
+                    </motion.div>
+                  )}
                 </motion.div>
 
                 <motion.div
@@ -512,7 +574,7 @@ const ReferralPage = () => {
                     className="rounded-full bg-primary/10 w-12 h-12 flex items-center justify-center mb-4"
                     whileHover={{ rotate: 10 }}
                   >
-                    <Heart className="h-6 w-6 text-primary" />
+                    <Gift className="h-6 w-6 text-primary" />
                   </motion.div>
                   <h3 className="font-medium text-lg mb-2 text-primary">For Your Friends</h3>
                   <p className="text-muted-foreground">
@@ -557,7 +619,7 @@ const ReferralPage = () => {
                   </motion.div>
                   <h3 className="font-medium text-lg mb-2 text-primary">Free Share</h3>
                   <p className="text-muted-foreground">
-                    Your friends receive a <span className="font-medium text-foreground">free share in a community</span> of their choice when they join.
+                    Your friends receive a <span className="font-medium text-foreground">free share in a community</span> when they join.
                   </p>
                 </motion.div>
                 <motion.div 

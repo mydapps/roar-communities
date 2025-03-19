@@ -2,7 +2,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Bell, Menu, Search, User, Heart, Sparkles } from 'lucide-react';
+import { Bell, Menu, Search, User, Gift, Sparkles } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   DropdownMenu, 
@@ -58,10 +58,7 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
           {isMobile && (
             <Button variant="ghost" size="icon" asChild className="relative">
               <Link to="/referral">
-                <Heart className="h-5 w-5 text-primary animate-pulse" />
-                <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[10px] font-medium text-primary-foreground flex items-center justify-center">
-                  <Sparkles className="h-3 w-3" />
-                </span>
+                <Gift className="h-5 w-5 text-primary animate-pulse" />
               </Link>
             </Button>
           )}
@@ -98,7 +95,7 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link to="/referral" className="cursor-pointer flex items-center gap-2">
-                  <Heart className="h-4 w-4 text-primary" />
+                  <Gift className="h-4 w-4 text-primary" />
                   <span className="text-primary font-medium">Share the Love</span>
                 </Link>
               </DropdownMenuItem>
