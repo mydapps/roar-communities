@@ -1,282 +1,233 @@
+
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Gift, TrendingUp, MessageCircle, DollarSign, Award, PartyPopper, Sparkle } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Gift, Zap, Users, ArrowUpRight, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import confetti from 'canvas-confetti';
+import { useNavigate } from 'react-router-dom';
+
+interface OnboardingStoriesProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
 
 interface Story {
   id: number;
   title: string;
-  content: React.ReactNode;
+  description: string;
+  image: string;
   icon: React.ReactNode;
-  color: string;
-  gradient: string;
-  image?: string;
+  backgroundColor: string;
 }
 
-const OnboardingStories = ({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) => {
-  const [currentStory, setCurrentStory] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(100);
+const OnboardingStories = ({ open, onOpenChange }: OnboardingStoriesProps) => {
+  const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
+  const [progress, setProgress] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const intervalRef = useRef<number | null>(null);
   const navigate = useNavigate();
-  const storyContainerRef = useRef<HTMLDivElement>(null);
-  
+
   const stories: Story[] = [
     {
       id: 1,
-      title: "Welcome to ROAR",
-      content: (
-        <div className="space-y-3">
-          <p className="text-lg">ROAR is a revolutionary social platform for Web3 communities.</p>
-          <p>You can invest in communities, earn rewards, and connect with like-minded people.</p>
-          <p className="mt-4 font-medium">Swipe or tap right to learn more →</p>
-        </div>
-      ),
-      icon: <Gift className="h-10 w-10" />,
-      color: "text-purple-500",
-      gradient: "from-purple-500/20 to-blue-500/20",
-      image: "https://images.unsplash.com/photo-1649972904349-6e44c42644a7?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80"
+      title: "Welcome to ROAR!",
+      description: "You're about to join thousands of trailblazers reshaping the future of social investing.",
+      image: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&q=80",
+      icon: <Zap className="h-8 w-8 text-amber-400" />,
+      backgroundColor: "from-blue-900/95 to-blue-950/95"
     },
     {
       id: 2,
-      title: "Invest in Communities",
-      content: (
-        <div className="space-y-3">
-          <p className="text-lg">Each community has its own token curve.</p>
-          <p>Buy shares early in promising communities and watch your investment grow as more members join.</p>
-          <p className="text-sm mt-4 italic">Communities use bonded curves, making early shares more valuable as the community grows.</p>
-        </div>
-      ),
-      icon: <TrendingUp className="h-10 w-10" />,
-      color: "text-green-500",
-      gradient: "from-green-500/20 to-teal-500/20",
-      image: "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80"
+      title: "Own a Piece of What You Love",
+      description: "Here, every community you join gives you real ownership. Your engagement has actual value - not just likes.",
+      image: "https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&q=80",
+      icon: <Trophy className="h-8 w-8 text-amber-400" />,
+      backgroundColor: "from-emerald-900/95 to-emerald-950/95"
     },
     {
       id: 3,
-      title: "Earn Rewards in ETH",
-      content: (
-        <div className="space-y-3">
-          <p className="text-lg">Post quality content in communities to earn ETH rewards.</p>
-          <p>Community members vote on the best content, and creators earn real cryptocurrency rewards.</p>
-          <p className="text-sm mt-4 italic">Create a community to earn up to 5% on all trades happening within it.</p>
-        </div>
-      ),
-      icon: <DollarSign className="h-10 w-10" />,
-      color: "text-amber-500",
-      gradient: "from-amber-500/20 to-orange-500/20",
-      image: "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80"
+      title: "Connect with Real Communities",
+      description: "Join communities built around shared passions, not algorithms. Here, every voice matters and creates real value.",
+      image: "https://images.unsplash.com/photo-1605810230434-7631ac76ec81?auto=format&fit=crop&q=80",
+      icon: <Users className="h-8 w-8 text-amber-400" />,
+      backgroundColor: "from-purple-900/95 to-purple-950/95"
     },
     {
       id: 4,
-      title: "Your Free Share Awaits! 🎉",
-      content: (
-        <div className="space-y-3 relative">
-          <p className="text-lg">Congratulations! You've earned your first share!</p>
-          <div className="bg-gradient-to-r from-amber-500/20 to-purple-500/20 rounded-lg p-4 mt-4 animate-pulse border border-amber-500/30">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <Sparkle className="h-5 w-5 text-amber-500" />
-                <span className="font-medium">DeFi Explorers</span>
-              </div>
-              <span className="text-amber-500 font-bold">0.067 shares</span>
-            </div>
-            <div className="text-sm text-muted-foreground mt-1">Worth approximately $20</div>
-          </div>
-          
-          <div className="mt-6 animate-fade-in">
-            <div className="bg-gradient-to-r from-amber-500/10 to-purple-500/10 p-4 rounded-lg mb-4 border border-amber-500/20">
-              <div className="flex items-center gap-2 mb-1">
-                <PartyPopper className="h-4 w-4 text-amber-500" />
-                <span className="font-medium text-amber-500">You're off to a great start!</span>
-              </div>
-              <p className="text-sm">Start exploring the platform to earn more shares and rewards!</p>
-            </div>
-          </div>
-          
-          <Button 
-            className="w-full mt-6 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-medium py-6 group relative overflow-hidden"
-            onClick={() => {
-              triggerConfetti();
-              setTimeout(() => navigate('/feed'), 1500);
-            }}
-          >
-            <span className="absolute inset-0 w-full h-full bg-amber-400/20 animate-pulse"></span>
-            <span className="relative flex items-center gap-2">
-              <Gift className="h-5 w-5 animate-pulse" /> 
-              Claim Free Share
-            </span>
-          </Button>
-        </div>
-      ),
-      icon: <Award className="h-10 w-10" />,
-      color: "text-amber-500",
-      gradient: "from-amber-500/20 to-purple-500/20",
-      image: "https://images.unsplash.com/photo-1640340434855-6084b1f4901c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80"
+      title: "Claim Your FREE Share Now!",
+      description: "As an early adopter, you've earned a free share in our founding community. This isn't just a digital badge - it's real equity that could grow in value.",
+      image: "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&q=80",
+      icon: <Gift className="h-10 w-10 text-amber-400 animate-pulse" />,
+      backgroundColor: "from-amber-900/95 to-amber-950/95"
     }
   ];
 
-  const triggerConfetti = () => {
-    confetti({
-      particleCount: 150,
-      spread: 80,
-      origin: { y: 0.6 },
-      colors: ['#F59E0B', '#8B5CF6', '#EC4899']
-    });
-  };
+  const isLastStory = currentStoryIndex === stories.length - 1;
 
   const handleNext = () => {
-    if (currentStory < stories.length - 1) {
-      setCurrentStory(currentStory + 1);
-      setTimeLeft(100);
+    if (currentStoryIndex < stories.length - 1) {
+      setCurrentStoryIndex(prev => prev + 1);
+      setProgress(0);
+    } else {
+      // On last story, don't auto close
+      setPaused(true);
     }
   };
 
   const handlePrev = () => {
-    if (currentStory > 0) {
-      setCurrentStory(currentStory - 1);
-      setTimeLeft(100);
+    if (currentStoryIndex > 0) {
+      setCurrentStoryIndex(prev => prev - 1);
+      setProgress(0);
     }
   };
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setIsPaused(true);
+  const handleClose = () => {
+    clearInterval(intervalRef.current!);
+    setCurrentStoryIndex(0);
+    setProgress(0);
+    onOpenChange(false);
   };
 
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    setIsPaused(false);
+  const handleClaimShare = () => {
+    handleClose();
+    navigate('/feed');
+  };
+
+  const handleTouchStart = () => {
+    setPaused(true);
+  };
+
+  const handleTouchEnd = () => {
+    if (!isLastStory) {
+      setPaused(false);
+    }
   };
 
   useEffect(() => {
-    let touchStartX = 0;
-    
-    const handleTouchStart = (e: TouchEvent) => {
-      touchStartX = e.touches[0].clientX;
-      setIsPaused(true);
-    };
-    
-    const handleTouchEnd = (e: TouchEvent) => {
-      const touchEndX = e.changedTouches[0].clientX;
-      const diff = touchStartX - touchEndX;
-      
-      if (diff > 50) { // Swipe left
-        handleNext();
-      } else if (diff < -50) { // Swipe right
-        handlePrev();
+    if (open && !paused && !isLastStory) {
+      intervalRef.current = window.setInterval(() => {
+        setProgress(prev => {
+          if (prev >= 100) {
+            handleNext();
+            return 0;
+          }
+          return prev + 0.5;
+        });
+      }, 30);
+    } else if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
       }
-      
-      setIsPaused(false);
     };
-    
-    const container = storyContainerRef.current;
-    if (container) {
-      container.addEventListener('touchstart', handleTouchStart);
-      container.addEventListener('touchend', handleTouchEnd);
-      
-      return () => {
-        container.removeEventListener('touchstart', handleTouchStart);
-        container.removeEventListener('touchend', handleTouchEnd);
-      };
-    }
-  }, [currentStory]);
+  }, [open, currentStoryIndex, paused, isLastStory]);
 
-  useEffect(() => {
-    if (!open || isPaused || currentStory === stories.length - 1) return;
-    
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 0) {
-          handleNext();
-          return 100;
-        }
-        return prev - 1;
-      });
-    }, 50); // 5 seconds per story (100 * 50ms)
-    
-    return () => clearInterval(timer);
-  }, [open, isPaused, currentStory]);
+  if (!open) return null;
+  
+  const currentStory = stories[currentStoryIndex];
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent 
-        className="sm:max-w-md p-0 overflow-hidden border-none w-full max-h-screen h-[100dvh] bg-transparent shadow-none" 
-        onInteractOutside={(e) => e.preventDefault()}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-fade-in">
+      <div 
+        className="relative w-full max-w-md h-[85vh] overflow-hidden rounded-xl shadow-2xl"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onMouseDown={handleTouchStart}
+        onMouseUp={handleTouchEnd}
       >
-        <DialogTitle className="sr-only">Onboarding Stories</DialogTitle>
-        <div 
-          ref={storyContainerRef}
-          className="flex flex-col h-full w-full rounded-none sm:rounded-xl overflow-hidden bg-gray-900 shadow-lg"
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
-        >
-          <div className="flex gap-1 p-2 bg-gray-900/90 backdrop-blur-sm z-10">
-            {stories.map((_, index) => (
-              <div key={index} className="h-1 flex-1 rounded-full bg-gray-700 overflow-hidden">
-                <div 
-                  className={cn(
-                    "h-full bg-white transition-all", 
-                    index === currentStory ? "transition-all duration-50" : "",
-                    index < currentStory ? "w-full" : index > currentStory ? "w-0" : ""
-                  )}
-                  style={index === currentStory ? { width: `${timeLeft}%` } : undefined}
-                />
-              </div>
-            ))}
-          </div>
-          
-          <div className="absolute inset-0 z-0">
-            {stories[currentStory].image && (
-              <div className="absolute inset-0 bg-black/40 z-10" />
-            )}
-            {stories[currentStory].image && (
-              <img 
-                src={stories[currentStory].image} 
-                alt="" 
-                className="object-cover w-full h-full opacity-60"
+        {/* Background image with gradient overlay */}
+        <div className="absolute inset-0 bg-black">
+          <img 
+            src={currentStory.image} 
+            alt={currentStory.title} 
+            className="w-full h-full object-cover opacity-70"
+          />
+          <div className={`absolute inset-0 bg-gradient-to-b ${currentStory.backgroundColor}`} />
+        </div>
+
+        {/* Progress bar */}
+        <div className="absolute top-0 left-0 right-0 flex space-x-1 p-2 z-10">
+          {stories.map((story, idx) => (
+            <div 
+              key={story.id} 
+              className="h-1 flex-1 rounded-full bg-white/30 overflow-hidden"
+            >
+              <div 
+                className={`h-full bg-white transition-all duration-100 rounded-full ${
+                  idx < currentStoryIndex ? 'w-full' : 
+                  idx === currentStoryIndex ? '' : 'w-0'
+                }`}
+                style={{ 
+                  width: idx === currentStoryIndex ? `${progress}%` : idx < currentStoryIndex ? '100%' : '0%'
+                }}
               />
-            )}
-          </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Controls */}
+        <div className="absolute top-2 right-2 z-10">
+          <button 
+            onClick={handleClose}
+            className="p-2 rounded-full bg-black/20 text-white hover:bg-black/40 transition"
+            aria-label="Close stories"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="absolute inset-x-0 top-1/2 flex justify-between items-center px-4 z-10">
+          <button
+            onClick={handlePrev}
+            className={`p-1 rounded-full bg-black/20 text-white hover:bg-black/40 transition ${
+              currentStoryIndex === 0 ? 'invisible' : ''
+            }`}
+            aria-label="Previous story"
+          >
+            <ChevronLeft className="h-6 w-6" />
+          </button>
           
-          <div className="flex-1 overflow-y-auto p-4 z-10 flex items-center justify-center relative">
-            <div className="rounded-xl p-6 bg-black/40 backdrop-blur-md text-white max-w-md w-full">
-              <div className="mb-6">
-                <div className={`inline-block p-3 rounded-full mb-4 ${stories[currentStory].color} bg-white/10`}>
-                  {stories[currentStory].icon}
-                </div>
-                <h3 className="text-2xl font-bold">{stories[currentStory].title}</h3>
-              </div>
-              
-              <div className="prose prose-sm prose-invert flex-1">
-                {stories[currentStory].content}
-              </div>
+          <button
+            onClick={handleNext}
+            className={`p-1 rounded-full bg-black/20 text-white hover:bg-black/40 transition ${
+              isLastStory ? 'invisible' : ''
+            }`}
+            aria-label="Next story"
+          >
+            <ChevronRight className="h-6 w-6" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="absolute bottom-0 inset-x-0 p-6 text-white z-10">
+          <div className="mb-6 flex justify-center">
+            <div className={`p-4 rounded-full ${isLastStory ? 'bg-amber-500 animate-pulse' : 'bg-white/10'}`}>
+              {currentStory.icon}
             </div>
           </div>
           
-          <div className="absolute top-1/2 left-0 right-0 -translate-y-1/2 flex justify-between px-2 sm:px-4 opacity-70 z-20">
+          <h2 className={`text-2xl font-bold mb-3 text-center ${isLastStory ? 'text-amber-400' : 'text-white'}`}>
+            {currentStory.title}
+          </h2>
+          
+          <p className="text-white/90 text-center mb-6">
+            {currentStory.description}
+          </p>
+
+          {isLastStory && (
             <Button 
-              variant="secondary" 
-              size="icon" 
-              onClick={handlePrev} 
-              disabled={currentStory === 0}
-              className="rounded-full bg-black/50 backdrop-blur-sm shadow-lg text-white"
+              onClick={handleClaimShare} 
+              className="w-full py-6 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 rounded-xl text-lg font-semibold group animate-slide-up"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <span>Claim Free Share</span>
+              <ArrowUpRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
             </Button>
-            <Button 
-              variant="secondary" 
-              size="icon" 
-              onClick={handleNext}
-              disabled={currentStory === stories.length - 1}
-              className="rounded-full bg-black/50 backdrop-blur-sm shadow-lg text-white"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
+          )}
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 };
 
