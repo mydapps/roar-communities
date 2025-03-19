@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Gift, TrendingUp, MessageCircle, DollarSign, Award } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Gift, TrendingUp, MessageCircle, DollarSign, Award, PartyPopper, Sparkle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import confetti from 'canvas-confetti';
 
@@ -72,40 +71,59 @@ const OnboardingStories = ({ open, onOpenChange }: { open: boolean; onOpenChange
     },
     {
       id: 4,
-      title: "Your First Reward",
+      title: "Your Free Share Awaits! 🎉",
       content: (
         <div className="space-y-3 relative">
-          <p className="text-lg">Congratulations! You've earned your first shares!</p>
-          <div className="bg-gradient-to-r from-amber-500/10 to-amber-500/20 rounded-lg p-4 mt-4 animate-pulse">
+          <p className="text-lg">Congratulations! You've earned your first share!</p>
+          <div className="bg-gradient-to-r from-amber-500/20 to-purple-500/20 rounded-lg p-4 mt-4 animate-pulse border border-amber-500/30">
             <div className="flex justify-between items-center">
-              <span className="font-medium">DeFi Explorers</span>
+              <div className="flex items-center gap-2">
+                <Sparkle className="h-5 w-5 text-amber-500" />
+                <span className="font-medium">DeFi Explorers</span>
+              </div>
               <span className="text-amber-500 font-bold">0.067 shares</span>
             </div>
-            <div className="text-xs text-muted-foreground mt-1">Worth approximately $20</div>
+            <div className="text-sm text-muted-foreground mt-1">Worth approximately $20</div>
           </div>
+          
+          <div className="mt-6 animate-fade-in">
+            <div className="bg-gradient-to-r from-amber-500/10 to-purple-500/10 p-4 rounded-lg mb-4 border border-amber-500/20">
+              <div className="flex items-center gap-2 mb-1">
+                <PartyPopper className="h-4 w-4 text-amber-500" />
+                <span className="font-medium text-amber-500">You're off to a great start!</span>
+              </div>
+              <p className="text-sm">Start exploring the platform to earn more shares and rewards!</p>
+            </div>
+          </div>
+          
           <Button 
-            className="w-full mt-8 bg-amber-500 hover:bg-amber-600 text-white" 
+            className="w-full mt-6 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-medium py-6 group relative overflow-hidden"
             onClick={() => {
               triggerConfetti();
               setTimeout(() => navigate('/feed'), 1500);
             }}
           >
-            Start Exploring
+            <span className="absolute inset-0 w-full h-full bg-amber-400/20 animate-pulse"></span>
+            <span className="relative flex items-center gap-2">
+              <Gift className="h-5 w-5 animate-pulse" /> 
+              Claim Free Share
+            </span>
           </Button>
         </div>
       ),
       icon: <Award className="h-10 w-10" />,
-      color: "text-blue-500",
-      gradient: "from-blue-500/20 to-indigo-500/20",
-      image: "https://images.unsplash.com/photo-1518770660439-4636190af475?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80"
+      color: "text-amber-500",
+      gradient: "from-amber-500/20 to-purple-500/20",
+      image: "https://images.unsplash.com/photo-1640340434855-6084b1f4901c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80"
     }
   ];
 
   const triggerConfetti = () => {
     confetti({
-      particleCount: 100,
-      spread: 70,
-      origin: { y: 0.6 }
+      particleCount: 150,
+      spread: 80,
+      origin: { y: 0.6 },
+      colors: ['#F59E0B', '#8B5CF6', '#EC4899']
     });
   };
 
@@ -114,7 +132,6 @@ const OnboardingStories = ({ open, onOpenChange }: { open: boolean; onOpenChange
       setCurrentStory(currentStory + 1);
       setTimeLeft(100);
     }
-    // Note: We no longer auto-navigate on the last story
   };
 
   const handlePrev = () => {
@@ -132,7 +149,6 @@ const OnboardingStories = ({ open, onOpenChange }: { open: boolean; onOpenChange
     setIsPaused(false);
   };
 
-  // Handle touch/swipe on mobile
   useEffect(() => {
     let touchStartX = 0;
     
@@ -166,7 +182,6 @@ const OnboardingStories = ({ open, onOpenChange }: { open: boolean; onOpenChange
     }
   }, [currentStory]);
 
-  // Progress timer - stop auto-progression on last story
   useEffect(() => {
     if (!open || isPaused || currentStory === stories.length - 1) return;
     
@@ -189,13 +204,13 @@ const OnboardingStories = ({ open, onOpenChange }: { open: boolean; onOpenChange
         className="sm:max-w-md p-0 overflow-hidden border-none w-full max-h-screen h-[100dvh] bg-transparent shadow-none" 
         onInteractOutside={(e) => e.preventDefault()}
       >
+        <DialogTitle className="sr-only">Onboarding Stories</DialogTitle>
         <div 
           ref={storyContainerRef}
           className="flex flex-col h-full w-full rounded-none sm:rounded-xl overflow-hidden bg-gray-900 shadow-lg"
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
-          {/* Progress bars */}
           <div className="flex gap-1 p-2 bg-gray-900/90 backdrop-blur-sm z-10">
             {stories.map((_, index) => (
               <div key={index} className="h-1 flex-1 rounded-full bg-gray-700 overflow-hidden">
@@ -211,7 +226,6 @@ const OnboardingStories = ({ open, onOpenChange }: { open: boolean; onOpenChange
             ))}
           </div>
           
-          {/* Story background image */}
           <div className="absolute inset-0 z-0">
             {stories[currentStory].image && (
               <div className="absolute inset-0 bg-black/40 z-10" />
@@ -225,7 +239,6 @@ const OnboardingStories = ({ open, onOpenChange }: { open: boolean; onOpenChange
             )}
           </div>
           
-          {/* Story content */}
           <div className="flex-1 overflow-y-auto p-4 z-10 flex items-center justify-center relative">
             <div className="rounded-xl p-6 bg-black/40 backdrop-blur-md text-white max-w-md w-full">
               <div className="mb-6">
@@ -241,7 +254,6 @@ const OnboardingStories = ({ open, onOpenChange }: { open: boolean; onOpenChange
             </div>
           </div>
           
-          {/* Navigation controls - visible on larger screens */}
           <div className="absolute top-1/2 left-0 right-0 -translate-y-1/2 flex justify-between px-2 sm:px-4 opacity-70 z-20">
             <Button 
               variant="secondary" 
