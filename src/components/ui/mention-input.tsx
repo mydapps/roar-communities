@@ -46,14 +46,58 @@ interface MentionInputProps {
 
 export const MentionInput = forwardRef<HTMLTextAreaElement, MentionInputProps>(
   ({ placeholder, value, onChange, className, onFocus, minHeight = '80px', maxHeight = '300px' }, ref) => {
-    const [isSuggesting, setIsSuggesting] = useState(false);
     const [suggestionType, setSuggestionType] = useState<SuggestionType | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [cursorPosition, setCursorPosition] = useState(0);
     const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const popoverTargetRef = useRef<HTMLDivElement>(null);
-    const [suppressSuggestions, setSuppressSuggestions] = useState(false);
+    const lastKeyPressRef = useRef<string | null>(null);
+    
+    // Function to calculate the position where the popover should appear
+    const calculatePopoverPosition = () => {
+      if (!textareaRef.current) return { top: 0, left: 0 };
+      
+      const textarea = textareaRef.current;
+      const cursorPos = textarea.selectionStart;
+      
+      // Create a mirror div to calculate position
+      const mirror = document.createElement('div');
+      mirror.style.position = 'absolute';
+      mirror.style.top = '0';
+      mirror.style.left = '0';
+      mirror.style.visibility = 'hidden';
+      mirror.style.whiteSpace = 'pre-wrap';
+      mirror.style.wordWrap = 'break-word';
+      mirror.style.width = window.getComputedStyle(textarea).width;
+      mirror.style.padding = window.getComputedStyle(textarea).padding;
+      mirror.style.font = window.getComputedStyle(textarea).font;
+      
+      // Copy the text up to the cursor
+      const textBeforeCursor = value.substring(0, cursorPos);
+      mirror.textContent = textBeforeCursor;
+      
+      // Create a span to mark the cursor position
+      const span = document.createElement('span');
+      span.id = 'mirror-cursor-position';
+      mirror.appendChild(span);
+      
+      // Append to body, get position, then remove
+      document.body.appendChild(mirror);
+      const spanPosition = document.getElementById('mirror-cursor-position')?.getBoundingClientRect();
+      document.body.removeChild(mirror);
+      
+      if (!spanPosition) return { top: 0, left: 0 };
+      
+      const textareaPosition = textarea.getBoundingClientRect();
+      
+      // Calculate relative position
+      return {
+        top: spanPosition.top - textareaPosition.top + 20, // 20px below the cursor
+        left: Math.min(spanPosition.left - textareaPosition.left, textareaPosition.width - 250), // Prevent overflow
+      };
+    };
 
     // Combine the forwarded ref with our internal ref
     const combinedRef = (node: HTMLTextAreaElement) => {
@@ -65,73 +109,88 @@ export const MentionInput = forwardRef<HTMLTextAreaElement, MentionInputProps>(
       textareaRef.current = node;
     };
 
-    // Function to check if we need to show suggestions
-    const checkForMentionTriggers = () => {
-      if (!textareaRef.current || suppressSuggestions) return;
+    // Function to check for mention triggers
+    const checkForMentionTriggers = (text: string, cursorPos: number) => {
+      if (!textareaRef.current) return;
       
-      const curPos = textareaRef.current.selectionStart;
-      const textBeforeCursor = value.substring(0, curPos);
+      // Get text before cursor
+      const textBeforeCursor = text.substring(0, cursorPos);
       
-      // Check for @mention
+      // Match for @ mentions
       const atMatch = /@(\w*)$/.exec(textBeforeCursor);
-      const hasAtTrigger = atMatch !== null;
       
-      // Check for /c/ for community
+      // Match for /c/ community mentions  
       const communityMatch = /\/c\/(\w*)$/.exec(textBeforeCursor);
-      const hasCommunityTrigger = communityMatch !== null;
       
-      if (hasAtTrigger && (!hasCommunityTrigger || atMatch.index > communityMatch?.index || 0)) {
-        // Handle @mention
+      if (atMatch) {
+        // Handle @ mentions
         const searchText = atMatch[1];
-        if (searchText.length >= 1) {
-          setIsSuggesting(true);
-          setSuggestionType('user');
-          setSearchTerm(searchText);
-          setCursorPosition(curPos);
-          
-          const filtered = USERS.filter(user => 
+        setSuggestionType('user');
+        setSearchTerm(searchText);
+        setCursorPosition(cursorPos);
+        
+        const filtered = searchText === '' ? 
+          USERS.slice(0, 5) : 
+          USERS.filter(user => 
             user.toLowerCase().includes(searchText.toLowerCase())
-          );
-          setFilteredSuggestions(filtered.length > 0 ? filtered : []);
-        } else {
-          // Show all users if just @ is typed
-          setIsSuggesting(true);
-          setSuggestionType('user');
-          setSearchTerm('');
-          setCursorPosition(curPos);
-          setFilteredSuggestions(USERS);
-        }
-      } else if (hasCommunityTrigger) {
-        // Handle /c/ for community
-        const searchText = communityMatch[1];
-        if (searchText.length >= 1) {
-          setIsSuggesting(true);
-          setSuggestionType('community');
-          setSearchTerm(searchText);
-          setCursorPosition(curPos);
+          ).slice(0, 5);
           
-          const filtered = COMMUNITIES.filter(community => 
+        setFilteredSuggestions(filtered);
+        setShowSuggestions(filtered.length > 0);
+      } else if (communityMatch) {
+        // Handle /c/ community mentions
+        const searchText = communityMatch[1];
+        setSuggestionType('community');
+        setSearchTerm(searchText);
+        setCursorPosition(cursorPos);
+        
+        const filtered = searchText === '' ? 
+          COMMUNITIES.slice(0, 5) : 
+          COMMUNITIES.filter(community => 
             community.toLowerCase().includes(searchText.toLowerCase())
-          );
-          setFilteredSuggestions(filtered.length > 0 ? filtered : []);
-        } else {
-          // Show all communities if just /c/ is typed
-          setIsSuggesting(true);
-          setSuggestionType('community');
-          setSearchTerm('');
-          setCursorPosition(curPos);
-          setFilteredSuggestions(COMMUNITIES);
-        }
+          ).slice(0, 5);
+          
+        setFilteredSuggestions(filtered);
+        setShowSuggestions(filtered.length > 0);
       } else {
-        setIsSuggesting(false);
+        // No triggers found
+        setShowSuggestions(false);
       }
     };
-    
-    // Check for mention triggers when content or cursor position changes
-    useEffect(() => {
-      checkForMentionTriggers();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [value, textareaRef.current?.selectionStart]);
+
+    // Handle input changes
+    const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      const newValue = e.target.value;
+      const cursorPos = e.target.selectionStart;
+      
+      onChange(newValue);
+      checkForMentionTriggers(newValue, cursorPos);
+    };
+
+    // Handle cursor position changes
+    const handleSelect = (e: React.SyntheticEvent<HTMLTextAreaElement>) => {
+      const cursorPos = (e.target as HTMLTextAreaElement).selectionStart;
+      checkForMentionTriggers(value, cursorPos);
+    };
+
+    // Handle key presses for navigation through suggestions
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      lastKeyPressRef.current = e.key;
+      
+      if (!showSuggestions || filteredSuggestions.length === 0) return;
+      
+      // Tab or Enter to select the first suggestion
+      if ((e.key === 'Tab' || e.key === 'Enter') && showSuggestions) {
+        e.preventDefault();
+        handleSelectSuggestion(filteredSuggestions[0]);
+      }
+      
+      // Escape to close suggestions
+      else if (e.key === 'Escape') {
+        e.preventDefault();
+        setShowSuggestions(false);
+      }
+    };
 
     // Handle when user selects a suggestion
     const handleSelectSuggestion = (suggestion: string) => {
@@ -161,13 +220,7 @@ export const MentionInput = forwardRef<HTMLTextAreaElement, MentionInputProps>(
       }
       
       onChange(newText);
-      
-      // Temporarily suppress suggestions to prevent the popup from immediately reappearing
-      setSuppressSuggestions(true);
-      setTimeout(() => setSuppressSuggestions(false), 100);
-      
-      // Close suggestions
-      setIsSuggesting(false);
+      setShowSuggestions(false);
       
       // Set cursor position after the inserted suggestion and space
       setTimeout(() => {
@@ -183,26 +236,15 @@ export const MentionInput = forwardRef<HTMLTextAreaElement, MentionInputProps>(
       }, 10);
     };
 
-    // Handle key events for keyboard navigation
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (isSuggesting && filteredSuggestions.length > 0) {
-        if (e.key === 'Tab' || e.key === 'Enter') {
-          // Select the first suggestion with Tab or Enter
-          e.preventDefault();
-          handleSelectSuggestion(filteredSuggestions[0]);
-        } else if (e.key === 'Escape') {
-          // Close suggestions with Escape
-          e.preventDefault();
-          setIsSuggesting(false);
-        } else if (e.key === 'ArrowDown' && filteredSuggestions.length > 1) {
-          // Move selection down (would need additional state for selection index)
-          e.preventDefault();
-        } else if (e.key === 'ArrowUp' && filteredSuggestions.length > 1) {
-          // Move selection up (would need additional state for selection index)
-          e.preventDefault();
-        }
+    // Calculate popover position when suggestions change
+    const [popoverPosition, setPopoverPosition] = useState({ top: 0, left: 0 });
+    
+    useEffect(() => {
+      if (showSuggestions) {
+        const position = calculatePopoverPosition();
+        setPopoverPosition(position);
       }
-    };
+    }, [showSuggestions, searchTerm, value]);
 
     return (
       <div className="relative w-full">
@@ -210,55 +252,47 @@ export const MentionInput = forwardRef<HTMLTextAreaElement, MentionInputProps>(
           <Textarea
             ref={combinedRef}
             value={value}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder={placeholder}
+            onChange={handleChange}
+            onSelect={handleSelect}
             onKeyDown={handleKeyDown}
-            onFocus={() => {
-              onFocus?.();
-              checkForMentionTriggers();
-            }}
+            placeholder={placeholder}
+            onFocus={onFocus}
             className={`${className} resize-none`}
             style={{ minHeight, maxHeight }}
           />
+          
+          {showSuggestions && (
+            <div 
+              className="absolute z-50"
+              style={{ top: `${popoverPosition.top}px`, left: `${popoverPosition.left}px` }}
+            >
+              <div className="w-60 bg-popover text-popover-foreground rounded-md border shadow-md overflow-hidden">
+                <div className="p-1">
+                  <div className="text-xs text-muted-foreground px-2 py-1.5">
+                    {suggestionType === 'user' ? 'Suggested Users' : 'Suggested Communities'}
+                    <span className="text-xs ml-1 text-muted-foreground opacity-60">(Tab to select)</span>
+                  </div>
+                  <div className="max-h-[200px] overflow-y-auto">
+                    {filteredSuggestions.map((suggestion) => (
+                      <div
+                        key={suggestion}
+                        className="flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground cursor-pointer rounded-sm"
+                        onClick={() => handleSelectSuggestion(suggestion)}
+                      >
+                        {suggestionType === 'user' ? (
+                          <AtSign className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                        ) : (
+                          <Hash className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                        )}
+                        <span className="flex-1 truncate">{suggestion}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-        
-        <Popover 
-          open={isSuggesting && filteredSuggestions.length > 0} 
-          onOpenChange={(open) => {
-            if (!open) setIsSuggesting(false);
-          }}
-        >
-          <PopoverTrigger asChild>
-            <div className="absolute top-0 left-0 h-0 w-0 overflow-hidden" />
-          </PopoverTrigger>
-          <PopoverContent 
-            className="w-72 p-0 shadow-lg" 
-            align="start" 
-            sideOffset={5}
-            alignOffset={-5}
-          >
-            <Command>
-              <CommandList className="max-h-[300px]">
-                <CommandGroup heading={suggestionType === 'user' ? `Users matching "${searchTerm || ''}"` : `Communities matching "${searchTerm || ''}"`}>
-                  {filteredSuggestions.map((suggestion) => (
-                    <CommandItem
-                      key={suggestion}
-                      onSelect={() => handleSelectSuggestion(suggestion)}
-                      className="flex items-center gap-2 cursor-pointer hover:bg-accent"
-                    >
-                      {suggestionType === 'user' ? (
-                        <AtSign className="h-4 w-4 text-primary flex-shrink-0" />
-                      ) : (
-                        <Hash className="h-4 w-4 text-primary flex-shrink-0" />
-                      )}
-                      <span className="flex-1 truncate">{suggestion}</span>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
       </div>
     );
   }
