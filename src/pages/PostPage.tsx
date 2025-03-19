@@ -213,6 +213,8 @@ const PostPage = () => {
   const [roared, setRoared] = useState(false);
   const [roarCount, setRoarCount] = useState(0);
   const [roarAnimation, setRoarAnimation] = useState(false);
+  const [roarWavesAnimation, setRoarWavesAnimation] = useState(false);
+  const [roarTextAnimation, setRoarTextAnimation] = useState(false);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
   
@@ -353,14 +355,20 @@ const PostPage = () => {
   const handleRoar = () => {
     if (roared) {
       setRoarCount(prev => prev - 1);
+      setRoared(false);
     } else {
       setRoarCount(prev => prev + 1);
+      setRoared(true);
       
-      // Animation sequence
-      setRoarAnimation(true);
-      setTimeout(() => setRoarAnimation(false), 1000);
+      // Animation sequence matching feed page
+      setRoarWavesAnimation(true);
+      setTimeout(() => setRoarAnimation(true), 50);
+      setTimeout(() => setRoarTextAnimation(true), 100);
+      
+      setTimeout(() => setRoarWavesAnimation(false), 1500);
+      setTimeout(() => setRoarAnimation(false), 1800);
+      setTimeout(() => setRoarTextAnimation(false), 2000);
     }
-    setRoared(!roared);
     
     toast({
       title: roared ? "Roar removed" : "Post roared!",
@@ -376,6 +384,7 @@ const PostPage = () => {
   const CommentWithReplies = ({ comment }: { comment: CommentType }) => {
     const [isReplying, setIsReplying] = useState(false);
     const [meowAnimating, setMeowAnimating] = useState(false);
+    const [meowWavesAnimation, setMeowWavesAnimation] = useState(false);
     
     const handleReplyClick = () => {
       setIsReplying(!isReplying);
@@ -389,37 +398,51 @@ const PostPage = () => {
     
     const handleMeowClick = () => {
       handleMeowComment(comment.id);
+      
+      // Enhanced meow animation sequence
+      setMeowWavesAnimation(true);
       setMeowAnimating(true);
-      setTimeout(() => setMeowAnimating(false), 1000);
+      
+      setTimeout(() => setMeowWavesAnimation(false), 1000);
+      setTimeout(() => setMeowAnimating(false), 1200);
     };
     
-    const indentClass = `ml-${Math.min(comment.level * 4, 12)}`;
+    // Use better indent styling for nested comments
+    const indentClass = comment.level > 1 ? `ml-${Math.min(comment.level * 3, 9)}` : '';
     
     return (
-      <div className={`${comment.level > 1 ? indentClass : ''} animate-fade-in`}>
-        <div className={`flex gap-3 mb-3 ${comment.level > 1 ? 'border-l-2 border-muted pl-3' : ''}`}>
-          <Avatar className="h-10 w-10 shrink-0">
+      <div className={`${indentClass} animate-fade-in`}>
+        <div className={`flex gap-3 mb-4 ${comment.level > 1 ? 'border-l-2 border-primary/20 pl-3' : ''}`}>
+          <Avatar className="h-10 w-10 shrink-0 border border-muted/60">
             <AvatarImage src={`https://api.dicebear.com/7.x/personas/svg?seed=${comment.username}`} />
             <AvatarFallback>{comment.username[0].toUpperCase()}</AvatarFallback>
           </Avatar>
           <div className="flex-1">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="font-medium">
+            <div className="flex flex-wrap items-center gap-1.5 mb-1">
+              <span className="font-medium text-foreground">
                 {comment.username === 'you' ? 'you' : formatUsername(comment.username)}
               </span>
-              <span className="text-muted-foreground text-sm">·</span>
-              <span className="text-muted-foreground text-sm">{comment.timeAgo}</span>
+              <span className="text-muted-foreground text-xs">·</span>
+              <span className="text-muted-foreground text-xs">{comment.timeAgo}</span>
             </div>
-            <p className="mt-1 text-sm">{comment.text}</p>
-            <div className="mt-2 flex items-center gap-2">
+            <p className="mt-1 text-sm text-foreground/90 leading-relaxed">{comment.text}</p>
+            <div className="mt-2.5 flex items-center gap-3">
               <Button 
                 variant="ghost" 
                 size="sm" 
                 onClick={handleMeowClick}
-                className={`h-8 px-2 text-sm gap-1 ${meowAnimating ? 'text-amber-500' : ''}`}
+                className={`h-8 px-2 text-xs gap-1.5 rounded-full ${meowAnimating ? 'text-amber-500 bg-amber-500/10' : ''}`}
               >
-                <div className={`transition-all duration-300 ${meowAnimating ? 'scale-125' : ''}`}>
-                  <Cat className="h-3.5 w-3.5" />
+                <div className="relative">
+                  <div className={`transition-all duration-300 ${meowAnimating ? 'scale-125' : ''}`}>
+                    <Cat className={`h-3.5 w-3.5 ${meowAnimating ? 'text-amber-500' : ''}`} />
+                  </div>
+                  {meowWavesAnimation && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="animate-ping absolute h-5 w-5 rounded-full bg-amber-500/30"></div>
+                      <div className="animate-ping delay-75 absolute h-7 w-7 rounded-full bg-amber-500/20"></div>
+                    </div>
+                  )}
                 </div>
                 <span className={`${meowAnimating ? 'text-amber-500 font-medium' : ''}`}>
                   {comment.meowCount}
@@ -431,27 +454,28 @@ const PostPage = () => {
                   variant="ghost" 
                   size="sm"
                   onClick={handleReplyClick}
-                  className="h-8 px-2 text-sm gap-1"
+                  className="h-8 px-2 text-xs gap-1.5 rounded-full hover:bg-secondary/80"
                 >
                   <Reply className="h-3.5 w-3.5" />
-                  <span>Reply</span>
+                  <span>{isReplying ? 'Cancel' : 'Reply'}</span>
                 </Button>
               )}
             </div>
             
             {isReplying && (
-              <div className="mt-3 space-y-2">
+              <div className="mt-3 space-y-2 bg-muted/30 p-3 rounded-lg border border-border/40">
                 <Textarea 
-                  placeholder="Write a reply..." 
+                  placeholder={`Reply to ${formatUsername(comment.username)}...`} 
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
-                  className="min-h-[60px] text-sm resize-none"
+                  className="min-h-[60px] text-sm resize-none bg-background"
                 />
                 <div className="flex gap-2 justify-end">
                   <Button 
                     variant="outline" 
                     size="sm" 
                     onClick={handleReplyClick}
+                    className="h-8 text-xs"
                   >
                     Cancel
                   </Button>
@@ -459,7 +483,9 @@ const PostPage = () => {
                     size="sm" 
                     onClick={() => handleAddReply(comment.id)}
                     disabled={!replyText.trim() || submittingComment}
+                    className="h-8 text-xs gap-1"
                   >
+                    <Send className="h-3.5 w-3.5" />
                     Reply
                   </Button>
                 </div>
@@ -469,7 +495,7 @@ const PostPage = () => {
         </div>
         
         {comment.replies && comment.replies.length > 0 && (
-          <div className="ml-12 space-y-3 mt-1">
+          <div className="space-y-4 mt-2">
             {comment.replies.map(reply => (
               <CommentWithReplies key={reply.id} comment={reply} />
             ))}
@@ -567,29 +593,39 @@ const PostPage = () => {
               variant={roared ? "roar-active" : "roar"}
               size="sm" 
               onClick={handleRoar}
-              className="gap-1"
+              className="gap-1.5 relative"
             >
-              <div className={`transition-all duration-300 ${roarAnimation ? 'scale-125' : ''}`}>
-                <span className="text-lg" role="img" aria-label="lion">🦁</span>
+              <div className="relative">
+                <div className={`transition-all duration-300 ${roarAnimation ? 'scale-150' : ''}`}>
+                  <span className="text-lg" role="img" aria-label="lion">🦁</span>
+                </div>
+                {roarWavesAnimation && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="animate-ping absolute h-6 w-6 rounded-full bg-amber-500/30"></div>
+                    <div className="animate-ping delay-75 absolute h-8 w-8 rounded-full bg-amber-500/20"></div>
+                  </div>
+                )}
               </div>
-              <span>{roarCount}</span>
+              <span className={`transition-transform ${roarTextAnimation ? 'scale-110 text-amber-500 font-medium' : ''}`}>
+                {roarCount}
+              </span>
             </Button>
-            <Button variant="ghost" size="sm" className="gap-1">
+            <Button variant="ghost" size="sm" className="gap-1.5">
               <RefreshCw className="h-4 w-4" />
               <span>Refresh</span>
             </Button>
           </div>
         </div>
         
-        <div className="flex gap-3">
-          <Avatar className="h-10 w-10 shrink-0">
+        <div className="flex gap-3 bg-muted/20 p-4 rounded-lg border border-border/40 hover:border-border/60 transition-colors">
+          <Avatar className="h-10 w-10 shrink-0 border border-muted/60">
             <AvatarImage src="https://api.dicebear.com/7.x/personas/svg?seed=you" />
             <AvatarFallback>Y</AvatarFallback>
           </Avatar>
           <div className="flex-1 space-y-2">
             <Textarea 
               placeholder="Add a comment..." 
-              className="min-h-[80px] resize-none"
+              className="min-h-[80px] resize-none bg-background"
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
             />
@@ -597,7 +633,7 @@ const PostPage = () => {
               <Button 
                 onClick={handleAddComment} 
                 disabled={!newComment.trim() || submittingComment}
-                className="gap-1"
+                className="gap-1.5"
               >
                 <Send className="h-4 w-4" />
                 Comment
@@ -607,15 +643,15 @@ const PostPage = () => {
         </div>
         
         {comments.length > 0 ? (
-          <div className="space-y-5 pt-4 divide-y divide-border/40">
+          <div className="space-y-6 pt-4 divide-y divide-border/20">
             {comments.map((comment) => (
-              <div key={comment.id} className="pt-4 first:pt-0">
+              <div key={comment.id} className="pt-6 first:pt-0">
                 <CommentWithReplies comment={comment} />
               </div>
             ))}
           </div>
         ) : (
-          <div className="text-center py-8">
+          <div className="text-center py-8 bg-muted/20 rounded-lg border border-border/40">
             <p className="text-muted-foreground">No comments yet. Be the first to comment!</p>
           </div>
         )}
