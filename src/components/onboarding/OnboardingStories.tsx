@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { X, ChevronLeft, ChevronRight, Gift, Zap, Users, ArrowUpRight, Trophy } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Zap, Users, ArrowUpRight, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
@@ -29,34 +29,34 @@ const OnboardingStories = ({ open, onOpenChange }: OnboardingStoriesProps) => {
   const stories: Story[] = [
     {
       id: 1,
-      title: "Welcome to ROAR!",
-      description: "You're about to join thousands of trailblazers reshaping the future of social investing.",
+      title: "Welcome to Dapps.co!",
+      description: "Join a community network where you truly belong. Create, connect, and own your social experience on a censorship-resistant platform built for real communities.",
       image: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&q=80",
-      icon: <Zap className="h-8 w-8 text-amber-400" />,
+      icon: <img src="https://dapps.co/logo.png" alt="Dapps.co Logo" className="h-10 w-10" />,
       backgroundColor: "from-blue-900/95 to-blue-950/95"
     },
     {
       id: 2,
-      title: "Own a Piece of What You Love",
-      description: "Here, every community you join gives you real ownership. Your engagement has actual value - not just likes.",
+      title: "Create & Earn in Communities",
+      description: "Post content that matters in communities you care about. Each community has a reward pool, and top creators earn real ETH every month. Quality content = real rewards.",
       image: "https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&q=80",
-      icon: <Trophy className="h-8 w-8 text-amber-400" />,
+      icon: <Zap className="h-8 w-8 text-amber-400" />,
       backgroundColor: "from-emerald-900/95 to-emerald-950/95"
     },
     {
       id: 3,
-      title: "Connect with Real Communities",
-      description: "Join communities built around shared passions, not algorithms. Here, every voice matters and creates real value.",
+      title: "Invest in What Matters",
+      description: "Buy shares in any community - from DeFi to Digital Art. Start your own community and earn 5% on all trades. Your social participation has real economic value.",
       image: "https://images.unsplash.com/photo-1605810230434-7631ac76ec81?auto=format&fit=crop&q=80",
-      icon: <Users className="h-8 w-8 text-amber-400" />,
+      icon: <Trophy className="h-8 w-8 text-amber-400" />,
       backgroundColor: "from-purple-900/95 to-purple-950/95"
     },
     {
       id: 4,
-      title: "Claim Your FREE Share Now!",
-      description: "As an early adopter, you've earned a free share in our founding community. This isn't just a digital badge - it's real equity that could grow in value.",
+      title: "Your Journey Begins Now!",
+      description: "To get you started, you've earned a FREE SHARE (0.067) in the DeFi Builders community. This isn't just a welcome gift—it's real ownership that could grow in value as the community thrives.",
       image: "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&q=80",
-      icon: <Gift className="h-10 w-10 text-amber-400 animate-pulse" />,
+      icon: <Users className="h-10 w-10 text-amber-400 animate-pulse" />,
       backgroundColor: "from-amber-900/95 to-amber-950/95"
     }
   ];
@@ -167,17 +167,7 @@ const OnboardingStories = ({ open, onOpenChange }: OnboardingStoriesProps) => {
           ))}
         </div>
 
-        {/* Controls */}
-        <div className="absolute top-2 right-2 z-10">
-          <button 
-            onClick={handleClose}
-            className="p-2 rounded-full bg-black/20 text-white hover:bg-black/40 transition"
-            aria-label="Close stories"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
+        {/* Controls for navigation - removed X button */}
         <div className="absolute inset-x-0 top-1/2 flex justify-between items-center px-4 z-10">
           <button
             onClick={handlePrev}
@@ -203,7 +193,7 @@ const OnboardingStories = ({ open, onOpenChange }: OnboardingStoriesProps) => {
         {/* Content */}
         <div className="absolute bottom-0 inset-x-0 p-6 text-white z-10">
           <div className="mb-6 flex justify-center">
-            <div className={`p-4 rounded-full ${isLastStory ? 'bg-amber-500 animate-pulse' : 'bg-white/10'}`}>
+            <div className={`p-4 rounded-full ${isLastStory ? 'bg-amber-500/20 animate-pulse' : 'bg-white/10'}`}>
               {currentStory.icon}
             </div>
           </div>
