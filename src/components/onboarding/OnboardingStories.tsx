@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Zap, Users, ArrowUpRight, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -32,7 +31,9 @@ const OnboardingStories = ({ open, onOpenChange }: OnboardingStoriesProps) => {
       title: "Welcome to Dapps.co!",
       description: "Join a community network where you truly belong. Create, connect, and own your social experience on a censorship-resistant platform built for real communities.",
       image: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&q=80",
-      icon: <img src="https://dapps.co/icon-128x128.png" alt="Dapps.co Logo" className="h-10 w-10" />,
+      icon: <div className="flex items-center justify-center w-full h-full">
+              <img src="https://dapps.co/icon-128x128.png" alt="Dapps.co Logo" className="w-full h-full object-contain" />
+            </div>,
       backgroundColor: "from-blue-900/95 to-blue-950/95"
     },
     {
@@ -68,7 +69,6 @@ const OnboardingStories = ({ open, onOpenChange }: OnboardingStoriesProps) => {
       setCurrentStoryIndex(prev => prev + 1);
       setProgress(0);
     } else {
-      // On last story, don't auto close
       setPaused(true);
     }
   };
@@ -137,7 +137,6 @@ const OnboardingStories = ({ open, onOpenChange }: OnboardingStoriesProps) => {
         onMouseDown={handleTouchStart}
         onMouseUp={handleTouchEnd}
       >
-        {/* Background image with gradient overlay */}
         <div className="absolute inset-0 bg-black">
           <img 
             src={currentStory.image} 
@@ -147,7 +146,6 @@ const OnboardingStories = ({ open, onOpenChange }: OnboardingStoriesProps) => {
           <div className={`absolute inset-0 bg-gradient-to-b ${currentStory.backgroundColor}`} />
         </div>
 
-        {/* Progress bar */}
         <div className="absolute top-0 left-0 right-0 flex space-x-1 p-2 z-10">
           {stories.map((story, idx) => (
             <div 
@@ -167,7 +165,6 @@ const OnboardingStories = ({ open, onOpenChange }: OnboardingStoriesProps) => {
           ))}
         </div>
 
-        {/* Controls for navigation - removed X button */}
         <div className="absolute inset-x-0 top-1/2 flex justify-between items-center px-4 z-10">
           <button
             onClick={handlePrev}
@@ -190,31 +187,32 @@ const OnboardingStories = ({ open, onOpenChange }: OnboardingStoriesProps) => {
           </button>
         </div>
 
-        {/* Content */}
-        <div className="absolute bottom-0 inset-x-0 p-6 text-white z-10">
-          <div className="mb-6 flex justify-center">
-            <div className={`p-4 rounded-full ${isLastStory ? 'bg-amber-500/20 animate-pulse' : 'bg-white/10'}`}>
+        <div className="absolute inset-0 flex flex-col justify-between p-6 text-white z-10">
+          <div className="mt-8 flex justify-center">
+            <div className={`p-3 rounded-full ${isLastStory ? 'bg-amber-500/20 animate-pulse' : 'bg-white/10'}`}>
               {currentStory.icon}
             </div>
           </div>
           
-          <h2 className={`text-2xl font-bold mb-3 text-center ${isLastStory ? 'text-amber-400' : 'text-white'}`}>
-            {currentStory.title}
-          </h2>
-          
-          <p className="text-white/90 text-center mb-6">
-            {currentStory.description}
-          </p>
+          <div className="mt-auto mb-6">
+            <h2 className={`text-2xl font-bold mb-3 text-center ${isLastStory ? 'text-amber-400' : 'text-white'}`}>
+              {currentStory.title}
+            </h2>
+            
+            <p className="text-white/90 text-center mb-6">
+              {currentStory.description}
+            </p>
 
-          {isLastStory && (
-            <Button 
-              onClick={handleClaimShare} 
-              className="w-full py-6 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 rounded-xl text-lg font-semibold group animate-slide-up"
-            >
-              <span>Claim Free Share</span>
-              <ArrowUpRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-            </Button>
-          )}
+            {isLastStory && (
+              <Button 
+                onClick={handleClaimShare} 
+                className="w-full py-6 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 rounded-xl text-lg font-semibold group animate-slide-up"
+              >
+                <span>Claim Free Share</span>
+                <ArrowUpRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>
