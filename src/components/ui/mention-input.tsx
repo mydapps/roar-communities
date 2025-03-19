@@ -1,8 +1,6 @@
 
 import React, { useState, useRef, useEffect, forwardRef } from 'react';
 import { AtSign, Hash } from 'lucide-react';
-import { Command, CommandGroup, CommandItem, CommandList } from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Textarea } from '@/components/ui/textarea';
 
 // Mock data for demonstration
@@ -52,53 +50,10 @@ export const MentionInput = forwardRef<HTMLTextAreaElement, MentionInputProps>(
     const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
-    const popoverTargetRef = useRef<HTMLDivElement>(null);
-    const lastKeyPressRef = useRef<string | null>(null);
+    const suggestionsRef = useRef<HTMLDivElement>(null);
+    const lastSelectionStart = useRef<number>(0);
+    const [popoverPosition, setPopoverPosition] = useState({ top: 0, left: 0 });
     
-    // Function to calculate the position where the popover should appear
-    const calculatePopoverPosition = () => {
-      if (!textareaRef.current) return { top: 0, left: 0 };
-      
-      const textarea = textareaRef.current;
-      const cursorPos = textarea.selectionStart;
-      
-      // Create a mirror div to calculate position
-      const mirror = document.createElement('div');
-      mirror.style.position = 'absolute';
-      mirror.style.top = '0';
-      mirror.style.left = '0';
-      mirror.style.visibility = 'hidden';
-      mirror.style.whiteSpace = 'pre-wrap';
-      mirror.style.wordWrap = 'break-word';
-      mirror.style.width = window.getComputedStyle(textarea).width;
-      mirror.style.padding = window.getComputedStyle(textarea).padding;
-      mirror.style.font = window.getComputedStyle(textarea).font;
-      
-      // Copy the text up to the cursor
-      const textBeforeCursor = value.substring(0, cursorPos);
-      mirror.textContent = textBeforeCursor;
-      
-      // Create a span to mark the cursor position
-      const span = document.createElement('span');
-      span.id = 'mirror-cursor-position';
-      mirror.appendChild(span);
-      
-      // Append to body, get position, then remove
-      document.body.appendChild(mirror);
-      const spanPosition = document.getElementById('mirror-cursor-position')?.getBoundingClientRect();
-      document.body.removeChild(mirror);
-      
-      if (!spanPosition) return { top: 0, left: 0 };
-      
-      const textareaPosition = textarea.getBoundingClientRect();
-      
-      // Calculate relative position
-      return {
-        top: spanPosition.top - textareaPosition.top + 20, // 20px below the cursor
-        left: Math.min(spanPosition.left - textareaPosition.left, textareaPosition.width - 250), // Prevent overflow
-      };
-    };
-
     // Combine the forwarded ref with our internal ref
     const combinedRef = (node: HTMLTextAreaElement) => {
       if (typeof ref === 'function') {
@@ -109,21 +64,77 @@ export const MentionInput = forwardRef<HTMLTextAreaElement, MentionInputProps>(
       textareaRef.current = node;
     };
 
-    // Function to check for mention triggers
+    // Calculate popover position based on cursor position
+    const calculatePopoverPosition = () => {
+      if (!textareaRef.current) return { top: 0, left: 0 };
+      
+      const textarea = textareaRef.current;
+      const cursorPos = textarea.selectionStart;
+      
+      // Get the text content up to the cursor
+      const textBeforeCursor = value.substring(0, cursorPos);
+      
+      // Create a mirror div with same styling as textarea
+      const mirror = document.createElement('div');
+      mirror.style.position = 'absolute';
+      mirror.style.top = '0';
+      mirror.style.left = '0';
+      mirror.style.visibility = 'hidden';
+      mirror.style.whiteSpace = 'pre-wrap';
+      mirror.style.wordWrap = 'break-word';
+      mirror.style.width = window.getComputedStyle(textarea).width;
+      mirror.style.padding = window.getComputedStyle(textarea).padding;
+      mirror.style.font = window.getComputedStyle(textarea).font;
+      mirror.style.lineHeight = window.getComputedStyle(textarea).lineHeight;
+      
+      // Find the last line break
+      const lastLineBreakIndex = textBeforeCursor.lastIndexOf('\n');
+      const textInCurrentLine = lastLineBreakIndex >= 0 
+        ? textBeforeCursor.substring(lastLineBreakIndex + 1) 
+        : textBeforeCursor;
+      
+      mirror.textContent = textInCurrentLine;
+      
+      // Create a span at the cursor position
+      const span = document.createElement('span');
+      span.id = 'cursor-position';
+      mirror.appendChild(span);
+      
+      // Add to DOM, measure, then remove
+      document.body.appendChild(mirror);
+      const spanPosition = document.getElementById('cursor-position')?.getBoundingClientRect();
+      document.body.removeChild(mirror);
+      
+      if (!spanPosition) return { top: 0, left: 0 };
+      
+      const textareaPosition = textarea.getBoundingClientRect();
+      
+      // Measure vertical position (how many lines down)
+      const lineHeight = parseInt(window.getComputedStyle(textarea).lineHeight);
+      const lineCount = (textBeforeCursor.match(/\n/g) || []).length;
+      const verticalOffset = lineCount * lineHeight;
+      
+      // Calculate exact position
+      return {
+        top: spanPosition.height + (verticalOffset) + 8, // Add some spacing
+        left: Math.min(spanPosition.width, textareaPosition.width - 250) // Prevent overflow
+      };
+    };
+
+    // Check for mention triggers (@ or /c/)
     const checkForMentionTriggers = (text: string, cursorPos: number) => {
       if (!textareaRef.current) return;
       
       // Get text before cursor
       const textBeforeCursor = text.substring(0, cursorPos);
       
-      // Match for @ mentions
-      const atMatch = /@(\w*)$/.exec(textBeforeCursor);
+      // Check for @ mentions - find the last @ before cursor that's not part of a word
+      const atMatch = /@(\S*)$/.exec(textBeforeCursor);
       
-      // Match for /c/ community mentions  
-      const communityMatch = /\/c\/(\w*)$/.exec(textBeforeCursor);
+      // Check for /c/ community mentions
+      const communityMatch = /\/c\/(\S*)$/.exec(textBeforeCursor);
       
       if (atMatch) {
-        // Handle @ mentions
         const searchText = atMatch[1];
         setSuggestionType('user');
         setSearchTerm(searchText);
@@ -137,8 +148,12 @@ export const MentionInput = forwardRef<HTMLTextAreaElement, MentionInputProps>(
           
         setFilteredSuggestions(filtered);
         setShowSuggestions(filtered.length > 0);
+        
+        if (filtered.length > 0) {
+          const position = calculatePopoverPosition();
+          setPopoverPosition(position);
+        }
       } else if (communityMatch) {
-        // Handle /c/ community mentions
         const searchText = communityMatch[1];
         setSuggestionType('community');
         setSearchTerm(searchText);
@@ -152,6 +167,11 @@ export const MentionInput = forwardRef<HTMLTextAreaElement, MentionInputProps>(
           
         setFilteredSuggestions(filtered);
         setShowSuggestions(filtered.length > 0);
+        
+        if (filtered.length > 0) {
+          const position = calculatePopoverPosition();
+          setPopoverPosition(position);
+        }
       } else {
         // No triggers found
         setShowSuggestions(false);
@@ -162,21 +182,21 @@ export const MentionInput = forwardRef<HTMLTextAreaElement, MentionInputProps>(
     const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       const newValue = e.target.value;
       const cursorPos = e.target.selectionStart;
+      lastSelectionStart.current = cursorPos;
       
       onChange(newValue);
       checkForMentionTriggers(newValue, cursorPos);
     };
 
-    // Handle cursor position changes
+    // Handle selection change to update suggestions
     const handleSelect = (e: React.SyntheticEvent<HTMLTextAreaElement>) => {
       const cursorPos = (e.target as HTMLTextAreaElement).selectionStart;
+      lastSelectionStart.current = cursorPos;
       checkForMentionTriggers(value, cursorPos);
     };
 
-    // Handle key presses for navigation through suggestions
+    // Handle key presses for navigation
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      lastKeyPressRef.current = e.key;
-      
       if (!showSuggestions || filteredSuggestions.length === 0) return;
       
       // Tab or Enter to select the first suggestion
@@ -192,7 +212,7 @@ export const MentionInput = forwardRef<HTMLTextAreaElement, MentionInputProps>(
       }
     };
 
-    // Handle when user selects a suggestion
+    // Handle selection of a suggestion
     const handleSelectSuggestion = (suggestion: string) => {
       if (!textareaRef.current) return;
       
@@ -233,66 +253,87 @@ export const MentionInput = forwardRef<HTMLTextAreaElement, MentionInputProps>(
           textareaRef.current.selectionEnd = newCursorPos;
           textareaRef.current.focus();
         }
-      }, 10);
+      }, 0);
     };
 
-    // Calculate popover position when suggestions change
-    const [popoverPosition, setPopoverPosition] = useState({ top: 0, left: 0 });
-    
+    // Close suggestions when clicking outside
     useEffect(() => {
-      if (showSuggestions) {
-        const position = calculatePopoverPosition();
-        setPopoverPosition(position);
-      }
-    }, [showSuggestions, searchTerm, value]);
+      const handleClickOutside = (event: MouseEvent) => {
+        if (
+          suggestionsRef.current && 
+          !suggestionsRef.current.contains(event.target as Node) && 
+          textareaRef.current && 
+          !textareaRef.current.contains(event.target as Node)
+        ) {
+          setShowSuggestions(false);
+        }
+      };
+      
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }, []);
+
+    // Recalculate position when window resizes
+    useEffect(() => {
+      const handleResize = () => {
+        if (showSuggestions) {
+          const position = calculatePopoverPosition();
+          setPopoverPosition(position);
+        }
+      };
+      
+      window.addEventListener('resize', handleResize);
+      return () => {
+        window.removeEventListener('resize', handleResize);
+      };
+    }, [showSuggestions]);
 
     return (
       <div className="relative w-full">
-        <div className="relative w-full" ref={popoverTargetRef}>
-          <Textarea
-            ref={combinedRef}
-            value={value}
-            onChange={handleChange}
-            onSelect={handleSelect}
-            onKeyDown={handleKeyDown}
-            placeholder={placeholder}
-            onFocus={onFocus}
-            className={`${className} resize-none`}
-            style={{ minHeight, maxHeight }}
-          />
-          
-          {showSuggestions && (
-            <div 
-              className="absolute z-50"
-              style={{ top: `${popoverPosition.top}px`, left: `${popoverPosition.left}px` }}
-            >
-              <div className="w-60 bg-popover text-popover-foreground rounded-md border shadow-md overflow-hidden">
-                <div className="p-1">
-                  <div className="text-xs text-muted-foreground px-2 py-1.5">
-                    {suggestionType === 'user' ? 'Suggested Users' : 'Suggested Communities'}
-                    <span className="text-xs ml-1 text-muted-foreground opacity-60">(Tab to select)</span>
+        <Textarea
+          ref={combinedRef}
+          value={value}
+          onChange={handleChange}
+          onSelect={handleSelect}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          onFocus={onFocus}
+          className={`${className} resize-none`}
+          style={{ minHeight, maxHeight }}
+        />
+        
+        {showSuggestions && (
+          <div 
+            className="absolute z-50"
+            style={{ top: `${popoverPosition.top}px`, left: `${popoverPosition.left}px` }}
+            ref={suggestionsRef}
+          >
+            <div className="w-56 bg-popover text-popover-foreground rounded-md border shadow-sm overflow-hidden">
+              <div className="text-xs text-muted-foreground px-2 py-1.5">
+                {suggestionType === 'user' ? 'Suggested Users' : 'Suggested Communities'}
+                <span className="text-xs ml-1 opacity-60">(Tab to select)</span>
+              </div>
+              <div className="max-h-[180px] overflow-y-auto">
+                {filteredSuggestions.map((suggestion) => (
+                  <div
+                    key={suggestion}
+                    className="flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground cursor-pointer rounded-sm"
+                    onClick={() => handleSelectSuggestion(suggestion)}
+                  >
+                    {suggestionType === 'user' ? (
+                      <AtSign className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                    ) : (
+                      <Hash className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                    )}
+                    <span className="flex-1 truncate">{suggestion}</span>
                   </div>
-                  <div className="max-h-[200px] overflow-y-auto">
-                    {filteredSuggestions.map((suggestion) => (
-                      <div
-                        key={suggestion}
-                        className="flex items-center gap-2 px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground cursor-pointer rounded-sm"
-                        onClick={() => handleSelectSuggestion(suggestion)}
-                      >
-                        {suggestionType === 'user' ? (
-                          <AtSign className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                        ) : (
-                          <Hash className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                        )}
-                        <span className="flex-1 truncate">{suggestion}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -307,11 +348,6 @@ export const MentionContent = ({ content }: { content: string }) => {
     // Regex patterns for finding mentions
     const userPattern = /@([\w.]+)/g;
     const communityPattern = /\/c\/([\w\s]+)/g;
-    
-    // Break the content into parts based on mentions
-    let lastIndex = 0;
-    const parts: JSX.Element[] = [];
-    let match;
     
     // Add user mentions
     const contentWithUserMentions = content.replace(userPattern, (match, username) => {

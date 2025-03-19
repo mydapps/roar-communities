@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, memo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useResponsive } from '@/hooks/use-mobile';
 import { useToast } from '@/hooks/use-toast';
@@ -16,13 +16,11 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Post } from '@/components/feed/Post';
-import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { MentionInput, MentionContent } from '@/components/ui/mention-input';
 
 // Icons
-import { ChevronLeft, RefreshCw, MessageCircle, Send, Cat, ChevronDown, Reply } from 'lucide-react';
+import { ChevronLeft, RefreshCw, Send, Cat, ChevronDown, Reply } from 'lucide-react';
 
 // Mock data for demonstration
 const MOCK_POSTS = [
@@ -212,6 +210,212 @@ const MOCK_COMMENTS: CommentType[] = [
   }
 ];
 
+// Memoized comment component to prevent unnecessary re-renders
+const MemoizedCommentWithReplies = memo(({ 
+  comment, 
+  expandedReplies, 
+  setExpandedReplies, 
+  meowedComments, 
+  handleMeowComment, 
+  handleAddReply, 
+  submittingComment
+}: { 
+  comment: CommentType;
+  expandedReplies: Record<string, boolean>;
+  setExpandedReplies: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
+  meowedComments: Record<string, boolean>;
+  handleMeowComment: (commentId: string) => void;
+  handleAddReply: (commentId: string, replyText: string) => void;
+  submittingComment: boolean;
+}) => {
+  const [localReplyText, setLocalReplyText] = useState('');
+  const [isReplying, setIsReplying] = useState(false);
+  const [meowAnimating, setMeowAnimating] = useState(false);
+  const [meowWavesAnimation, setMeowWavesAnimation] = useState(false);
+  const [meowTextAnimating, setMeowTextAnimating] = useState(false);
+  
+  const isExpanded = expandedReplies[comment.id] || false;
+  const isMeowed = meowedComments[comment.id] || false;
+  
+  const handleReplyClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsReplying(!isReplying);
+  };
+  
+  const handleMeowClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    setMeowWavesAnimation(true);
+    setMeowAnimating(true);
+    setMeowTextAnimating(true);
+    
+    setTimeout(() => handleMeowComment(comment.id), 10);
+    
+    setTimeout(() => setMeowWavesAnimation(false), 1000);
+    setTimeout(() => setMeowAnimating(false), 1200);
+    setTimeout(() => setMeowTextAnimating(false), 1500);
+  };
+
+  const handleSubmitReply = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    handleAddReply(comment.id, localReplyText);
+    setLocalReplyText('');
+    setIsReplying(false);
+  };
+  
+  const handleCancelReply = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsReplying(false);
+    setLocalReplyText('');
+  };
+
+  const toggleReplies = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setExpandedReplies(prev => ({
+      ...prev,
+      [comment.id]: !prev[comment.id]
+    }));
+  };
+  
+  const getIndentClass = () => {
+    const level = comment.level;
+    if (level === 1) return '';
+    if (level === 2) return 'ml-6';
+    if (level === 3) return 'ml-12';
+    return 'ml-16';
+  };
+
+  const formatUsername = (name: string) => {
+    return '@' + name.split('.')[0];
+  };
+
+  const hasReplies = comment.replies && comment.replies.length > 0;
+  
+  return (
+    <div className={`${getIndentClass()} animate-fade-in`}>
+      <div className={`flex gap-3 mb-4 ${comment.level > 1 ? 'border-l-2 border-primary/20 pl-3' : ''}`}>
+        <Avatar className="h-10 w-10 shrink-0 border border-muted/60">
+          <AvatarImage src={`https://api.dicebear.com/7.x/personas/svg?seed=${comment.username}`} />
+          <AvatarFallback>{comment.username[0].toUpperCase()}</AvatarFallback>
+        </Avatar>
+        <div className="flex-1">
+          <div className="flex flex-wrap items-center gap-1.5 mb-1">
+            <span className="font-medium text-foreground">
+              {comment.username === 'you' ? 'you' : formatUsername(comment.username)}
+            </span>
+            <span className="text-muted-foreground text-xs">·</span>
+            <span className="text-muted-foreground text-xs">{comment.timeAgo}</span>
+          </div>
+          <MentionContent content={comment.text} />
+          <div className="mt-2.5 flex items-center gap-3">
+            <Button 
+              variant={isMeowed ? "meow-active" : "meow"}
+              size="sm" 
+              onClick={handleMeowClick}
+              className="h-8 px-2 text-xs gap-1.5 rounded-full"
+            >
+              <div className="relative">
+                <div className={`transition-all duration-300 ${meowAnimating ? 'scale-125' : ''}`}>
+                  <Cat className={`h-3.5 w-3.5 ${isMeowed ? 'text-amber-500' : ''}`} />
+                </div>
+                {meowWavesAnimation && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="animate-ping absolute h-5 w-5 rounded-full bg-amber-500/30"></div>
+                    <div className="animate-ping delay-75 absolute h-7 w-7 rounded-full bg-amber-500/20"></div>
+                  </div>
+                )}
+              </div>
+              <span className={`${isMeowed || meowTextAnimating ? 'text-amber-500 font-medium' : ''}`}>
+                {meowTextAnimating ? "Meow!" : comment.meowCount}
+              </span>
+            </Button>
+            
+            {comment.level < 3 && (
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={handleReplyClick}
+                className="h-8 px-2 text-xs gap-1.5 rounded-full hover:bg-secondary/80"
+              >
+                <Reply className="h-3.5 w-3.5" />
+                <span>{isReplying ? 'Cancel' : 'Reply'}</span>
+              </Button>
+            )}
+
+            {hasReplies && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={toggleReplies}
+                className="h-8 px-2 text-xs gap-1.5 rounded-full hover:bg-secondary/80"
+              >
+                <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+                <span>{isExpanded ? 'Hide replies' : `Show ${comment.replies?.length} ${comment.replies?.length === 1 ? 'reply' : 'replies'}`}</span>
+              </Button>
+            )}
+          </div>
+          
+          {isReplying && (
+            <div className="mt-3 space-y-2 bg-muted/30 p-3 rounded-lg border border-border/40">
+              <MentionInput 
+                placeholder={`Reply to ${formatUsername(comment.username)}...`} 
+                value={localReplyText}
+                onChange={setLocalReplyText}
+                className="min-h-[60px] text-sm bg-background"
+                minHeight="60px"
+              />
+              <div className="flex gap-2 justify-end">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleCancelReply}
+                  className="h-8 text-xs"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  size="sm" 
+                  onClick={handleSubmitReply}
+                  disabled={!localReplyText.trim() || submittingComment}
+                  className="h-8 text-xs gap-1"
+                >
+                  <Send className="h-3.5 w-3.5" />
+                  Reply
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+      
+      {hasReplies && isExpanded && (
+        <div className="space-y-4 mt-2 pl-2 border-l-2 border-primary/10">
+          {comment.replies?.map(reply => (
+            <MemoizedCommentWithReplies 
+              key={reply.id} 
+              comment={reply}
+              expandedReplies={expandedReplies}
+              setExpandedReplies={setExpandedReplies}
+              meowedComments={meowedComments}
+              handleMeowComment={handleMeowComment}
+              handleAddReply={handleAddReply}
+              submittingComment={submittingComment}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+});
+
+MemoizedCommentWithReplies.displayName = 'MemoizedCommentWithReplies';
+
 const PostPage = () => {
   const { communityId, postId } = useParams();
   const navigate = useNavigate();
@@ -228,8 +432,6 @@ const PostPage = () => {
   const [roarAnimation, setRoarAnimation] = useState(false);
   const [roarWavesAnimation, setRoarWavesAnimation] = useState(false);
   const [roarTextAnimation, setRoarTextAnimation] = useState(false);
-  const [replyingTo, setReplyingTo] = useState<string | null>(null);
-  const [replyText, setReplyText] = useState('');
   const [expandedReplies, setExpandedReplies] = useState<Record<string, boolean>>({});
   const [meowedComments, setMeowedComments] = useState<Record<string, boolean>>({});
 
@@ -263,7 +465,7 @@ const PostPage = () => {
     }, 1000);
   }, [communityId, postId]);
   
-  const handleAddComment = () => {
+  const handleAddComment = useCallback(() => {
     if (!newComment.trim()) return;
     
     setSubmittingComment(true);
@@ -287,27 +489,9 @@ const PostPage = () => {
         description: "Your comment has been added to the post",
       });
     }, 500);
-  };
+  }, [newComment, toast]);
 
-  const findCommentById = (
-    commentId: string, 
-    commentsArray: CommentType[]
-  ): CommentType | null => {
-    for (const comment of commentsArray) {
-      if (comment.id === commentId) {
-        return comment;
-      }
-      
-      if (comment.replies) {
-        const found = findCommentById(commentId, comment.replies);
-        if (found) return found;
-      }
-    }
-    
-    return null;
-  };
-
-  const handleAddReply = (commentId: string, replyText: string) => {
+  const handleAddReply = useCallback((commentId: string, replyText: string) => {
     if (!replyText.trim()) return;
     
     setSubmittingComment(true);
@@ -342,7 +526,7 @@ const PostPage = () => {
         });
       };
       
-      setComments(updateComments);
+      setComments(prev => updateComments(prev));
       setSubmittingComment(false);
       
       toast({
@@ -350,9 +534,9 @@ const PostPage = () => {
         description: "Your reply has been added to the comment",
       });
     }, 500);
-  };
+  }, [toast]);
 
-  const handleMeowComment = (commentId: string) => {
+  const handleMeowComment = useCallback((commentId: string) => {
     setMeowedComments(prev => ({
       ...prev,
       [commentId]: !prev[commentId]
@@ -379,9 +563,9 @@ const PostPage = () => {
       
       return updateMeowCount(prevComments);
     });
-  };
+  }, [meowedComments]);
 
-  const handleRoar = () => {
+  const handleRoar = useCallback(() => {
     const newRoared = !roared;
     setRoared(newRoared);
     setRoarCount(prev => newRoared ? prev + 1 : prev - 1);
@@ -400,186 +584,21 @@ const PostPage = () => {
       title: newRoared ? "Post roared!" : "Roar removed",
       description: newRoared ? "You've roared at this post" : "You've removed your roar from this post",
     });
-  };
+  }, [roared, toast]);
 
   const goBack = () => {
     navigate(-1);
   };
 
-  const CommentWithReplies = ({ comment }: { comment: CommentType }) => {
-    const [localReplyText, setLocalReplyText] = useState('');
-    const [isReplying, setIsReplying] = useState(false);
-    const [meowAnimating, setMeowAnimating] = useState(false);
-    const [meowWavesAnimation, setMeowWavesAnimation] = useState(false);
-    const [meowTextAnimating, setMeowTextAnimating] = useState(false);
-    
-    const isExpanded = expandedReplies[comment.id] || false;
-    const isMeowed = meowedComments[comment.id] || false;
-    
-    const handleReplyClick = (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setIsReplying(!isReplying);
-    };
-    
-    const handleMeowClick = (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      
-      setMeowWavesAnimation(true);
-      setMeowAnimating(true);
-      setMeowTextAnimating(true);
-      
-      setTimeout(() => handleMeowComment(comment.id), 10);
-      
-      setTimeout(() => setMeowWavesAnimation(false), 1000);
-      setTimeout(() => setMeowAnimating(false), 1200);
-      setTimeout(() => setMeowTextAnimating(false), 1500);
-    };
-
-    const handleSubmitReply = (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      
-      handleAddReply(comment.id, localReplyText);
-      setLocalReplyText('');
-      setIsReplying(false);
-    };
-    
-    const handleCancelReply = (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setIsReplying(false);
-      setLocalReplyText('');
-    };
-
-    const toggleReplies = (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setExpandedReplies(prev => ({
-        ...prev,
-        [comment.id]: !prev[comment.id]
-      }));
-    };
-    
-    const getIndentClass = () => {
-      const level = comment.level;
-      if (level === 1) return '';
-      if (level === 2) return 'ml-6';
-      if (level === 3) return 'ml-12';
-      return 'ml-16';
-    };
-
-    const hasReplies = comment.replies && comment.replies.length > 0;
-    
-    return (
-      <div className={`${getIndentClass()} animate-fade-in`}>
-        <div className={`flex gap-3 mb-4 ${comment.level > 1 ? 'border-l-2 border-primary/20 pl-3' : ''}`}>
-          <Avatar className="h-10 w-10 shrink-0 border border-muted/60">
-            <AvatarImage src={`https://api.dicebear.com/7.x/personas/svg?seed=${comment.username}`} />
-            <AvatarFallback>{comment.username[0].toUpperCase()}</AvatarFallback>
-          </Avatar>
-          <div className="flex-1">
-            <div className="flex flex-wrap items-center gap-1.5 mb-1">
-              <span className="font-medium text-foreground">
-                {comment.username === 'you' ? 'you' : formatUsername(comment.username)}
-              </span>
-              <span className="text-muted-foreground text-xs">·</span>
-              <span className="text-muted-foreground text-xs">{comment.timeAgo}</span>
-            </div>
-            <MentionContent content={comment.text} />
-            <div className="mt-2.5 flex items-center gap-3">
-              <Button 
-                variant={isMeowed ? "meow-active" : "meow"}
-                size="sm" 
-                onClick={handleMeowClick}
-                className="h-8 px-2 text-xs gap-1.5 rounded-full"
-              >
-                <div className="relative">
-                  <div className={`transition-all duration-300 ${meowAnimating ? 'scale-125' : ''}`}>
-                    <Cat className={`h-3.5 w-3.5 ${isMeowed ? 'text-amber-500' : ''}`} />
-                  </div>
-                  {meowWavesAnimation && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="animate-ping absolute h-5 w-5 rounded-full bg-amber-500/30"></div>
-                      <div className="animate-ping delay-75 absolute h-7 w-7 rounded-full bg-amber-500/20"></div>
-                    </div>
-                  )}
-                </div>
-                <span className={`${isMeowed || meowTextAnimating ? 'text-amber-500 font-medium' : ''}`}>
-                  {meowTextAnimating ? "Meow!" : comment.meowCount}
-                </span>
-              </Button>
-              
-              {comment.level < 3 && (
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={handleReplyClick}
-                  className="h-8 px-2 text-xs gap-1.5 rounded-full hover:bg-secondary/80"
-                >
-                  <Reply className="h-3.5 w-3.5" />
-                  <span>{isReplying ? 'Cancel' : 'Reply'}</span>
-                </Button>
-              )}
-
-              {hasReplies && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={toggleReplies}
-                  className="h-8 px-2 text-xs gap-1.5 rounded-full hover:bg-secondary/80"
-                >
-                  <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
-                  <span>{isExpanded ? 'Hide replies' : `Show ${comment.replies?.length} ${comment.replies?.length === 1 ? 'reply' : 'replies'}`}</span>
-                </Button>
-              )}
-            </div>
-            
-            {isReplying && (
-              <div className="mt-3 space-y-2 bg-muted/30 p-3 rounded-lg border border-border/40">
-                <MentionInput 
-                  placeholder={`Reply to ${formatUsername(comment.username)}...`} 
-                  value={localReplyText}
-                  onChange={setLocalReplyText}
-                  className="min-h-[60px] text-sm bg-background"
-                  minHeight="60px"
-                />
-                <div className="flex gap-2 justify-end">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={handleCancelReply}
-                    className="h-8 text-xs"
-                  >
-                    Cancel
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    onClick={handleSubmitReply}
-                    disabled={!localReplyText.trim() || submittingComment}
-                    className="h-8 text-xs gap-1"
-                  >
-                    <Send className="h-3.5 w-3.5" />
-                    Reply
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-        
-        {hasReplies && isExpanded && (
-          <div className="space-y-4 mt-2 pl-2 border-l-2 border-primary/10">
-            {comment.replies?.map(reply => (
-              <CommentWithReplies key={reply.id} comment={reply} />
-            ))}
-          </div>
-        )}
-      </div>
-    );
+  const formatUsername = (name: string) => {
+    return '@' + name.split('.')[0];
   };
-
+  
+  const truncateTitle = (content: string, maxLength = 30) => {
+    if (content.length <= maxLength) return content;
+    return content.substring(0, maxLength) + '...';
+  };
+  
   if (loading) {
     return (
       <div className="space-y-6 animate-fade-in">
@@ -609,15 +628,6 @@ const PostPage = () => {
       </div>
     );
   }
-  
-  const formatUsername = (name: string) => {
-    return '@' + name.split('.')[0];
-  };
-  
-  const truncateTitle = (content: string, maxLength = 30) => {
-    if (content.length <= maxLength) return content;
-    return content.substring(0, maxLength) + '...';
-  };
   
   return (
     <div className="max-w-full overflow-x-hidden animate-fade-in">
@@ -722,7 +732,15 @@ const PostPage = () => {
           <div className="space-y-6 pt-4 divide-y divide-border/20">
             {comments.map((comment) => (
               <div key={comment.id} className="pt-6 first:pt-0">
-                <CommentWithReplies comment={comment} />
+                <MemoizedCommentWithReplies 
+                  comment={comment}
+                  expandedReplies={expandedReplies}
+                  setExpandedReplies={setExpandedReplies}
+                  meowedComments={meowedComments}
+                  handleMeowComment={handleMeowComment}
+                  handleAddReply={handleAddReply}
+                  submittingComment={submittingComment}
+                />
               </div>
             ))}
           </div>
