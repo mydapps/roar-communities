@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { ShareDialog } from '@/components/community/ShareDialog';
 import { toast } from "sonner";
 import { 
@@ -187,7 +188,7 @@ const CommunityPage = () => {
   };
 
   return (
-    <div className="flex flex-col md:flex-row gap-4 animate-fade-in">
+    <div className="flex flex-col md:flex-row gap-4 animate-fade-in max-w-full overflow-x-hidden">
       <div className="flex-1 order-2 md:order-1">
         {isMobile && (
           <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm pb-3 mb-3 border-b">
@@ -196,12 +197,12 @@ const CommunityPage = () => {
                 <AvatarImage src={communityData.image} alt={communityData.name} />
                 <AvatarFallback>{communityData.name[0]}</AvatarFallback>
               </Avatar>
-              <div className="flex-1">
-                <h1 className="text-xl font-bold">{communityData.name}</h1>
+              <div className="flex-1 min-w-0">
+                <h1 className="text-xl font-bold truncate">{communityData.name}</h1>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="bg-background/80 text-xs flex items-center">
                     <Users className="h-3 w-3 mr-1" />
-                    {communityData.members} members
+                    {communityData.members}
                   </Badge>
                   {communityData.priceChange > 0 ? (
                     <Badge className="bg-green-500/10 text-green-600 text-xs">
@@ -219,29 +220,26 @@ const CommunityPage = () => {
               <Button 
                 size="sm"
                 variant="default"
-                className="bg-purple-600 hover:bg-purple-700 text-white shadow-sm"
+                className="bg-purple-600 hover:bg-purple-700 text-white shadow-sm flex-shrink-0"
                 onClick={() => setTradeSheetOpen(true)}
               >
-                {communityData.userShareCount > 0 ? 'Buy More' : 'Join'}
+                {communityData.userShareCount > 0 ? 'Trade' : 'Join'}
               </Button>
             </div>
             
-            <div className="flex items-center justify-between px-2">
-              <div className="flex-1">
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              <div className="bg-muted/50 rounded-lg p-2">
                 <div className="text-xs text-muted-foreground">Share Price</div>
-                <div className="font-semibold text-base flex items-center">
-                  <DollarSign className="h-3.5 w-3.5 mr-0.5 text-muted-foreground" />
-                  {priceInUsd.toFixed(2)}
-                  <span className="text-xs text-muted-foreground ml-1">
-                    ({communityData.pricePerShare.toFixed(3)} ETH)
-                  </span>
+                <div className="font-semibold text-sm flex items-center">
+                  ${priceInUsd.toFixed(2)}
                 </div>
               </div>
-              <div className="flex-1">
+              <div className="bg-muted/50 rounded-lg p-2">
                 <div className="text-xs text-muted-foreground">Market Cap</div>
-                <div className="font-semibold text-base flex items-center">
-                  <TrendingUp className="h-3.5 w-3.5 mr-0.5 text-muted-foreground" />
-                  ${marketCapUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                <div className="font-semibold text-sm flex items-center">
+                  ${marketCapUsd >= 1000000 
+                    ? (marketCapUsd / 1000000).toFixed(1) + 'M' 
+                    : marketCapUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                 </div>
               </div>
             </div>
@@ -249,24 +247,26 @@ const CommunityPage = () => {
         )}
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full md:w-auto justify-start mb-6 overflow-x-visible flex-nowrap border-b pb-px">
-            <TabsTrigger value="posts" className="flex-shrink-0">
-              <MessageCircle className="h-4 w-4 mr-2" />
-              Posts
-            </TabsTrigger>
-            <TabsTrigger value="members" className="flex-shrink-0">
-              <Users className="h-4 w-4 mr-2" />
-              Members
-            </TabsTrigger>
-            <TabsTrigger value="rewards" className="flex-shrink-0">
-              <DollarSign className="h-4 w-4 mr-2" />
-              Rewards
-            </TabsTrigger>
-            <TabsTrigger value="about" className="flex-shrink-0">
-              <Info className="h-4 w-4 mr-2" />
-              About
-            </TabsTrigger>
-          </TabsList>
+          <ScrollArea className="w-full max-w-full pb-2">
+            <TabsList className="w-full md:w-auto justify-start mb-6 pb-px overflow-x-auto flex-nowrap border-b">
+              <TabsTrigger value="posts" className="flex-shrink-0">
+                <MessageCircle className="h-4 w-4 mr-2" />
+                Posts
+              </TabsTrigger>
+              <TabsTrigger value="members" className="flex-shrink-0">
+                <Users className="h-4 w-4 mr-2" />
+                Members
+              </TabsTrigger>
+              <TabsTrigger value="rewards" className="flex-shrink-0">
+                <DollarSign className="h-4 w-4 mr-2" />
+                Rewards
+              </TabsTrigger>
+              <TabsTrigger value="about" className="flex-shrink-0">
+                <Info className="h-4 w-4 mr-2" />
+                About
+              </TabsTrigger>
+            </TabsList>
+          </ScrollArea>
           
           <TabsContent value="posts" className="animate-fade-in">
             <Card className="mb-6 bg-gradient-to-br from-primary/5 to-secondary/5 border-primary/20">
