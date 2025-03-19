@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Sparkles, Flame, Clock, Globe, ShieldCheck } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Link } from 'react-router-dom';
 
 const FeedPage = () => {
   const [userPosts, setUserPosts] = useState<any[]>([]);
@@ -120,6 +121,23 @@ const FeedPage = () => {
         </TabsContent>
       </Tabs>
     </div>
+  );
+};
+
+// Enhanced Community Badge component
+const CommunityBadge = ({ name }: { name: string }) => {
+  const slug = name.toLowerCase().replace(/\s+/g, '-');
+  
+  return (
+    <Link to={`/c/${slug}`}>
+      <Badge 
+        variant="outline" 
+        className="bg-primary/10 hover:bg-primary/20 transition-colors duration-200 hover:border-primary/40 cursor-pointer group overflow-hidden relative"
+      >
+        <span className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 group-hover:animate-pulse opacity-0 group-hover:opacity-100"></span>
+        <span className="relative z-10">{name}</span>
+      </Badge>
+    </Link>
   );
 };
 
@@ -237,7 +255,9 @@ const PostsList = ({ trendingOnly = false, globalFeed = false }: { trendingOnly?
         <Post 
           key={`sample-post-${index}`}
           username={post.username}
-          community={post.community}
+          community={
+            <CommunityBadge name={post.community} />
+          }
           timeAgo={post.timeAgo}
           content={post.content}
           roarCount={post.roarCount}

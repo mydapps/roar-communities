@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -38,6 +39,7 @@ const CommunityCard = ({
   const marketCapUsd = marketCap * ethToUsd;
   
   const [tradeSheetOpen, setTradeSheetOpen] = useState(false);
+  const slug = name.toLowerCase().replace(/\s+/g, '-');
 
   return (
     <Card className="overflow-hidden hover:shadow-md transition-all duration-300 animate-scale-in relative">
@@ -60,7 +62,7 @@ const CommunityCard = ({
         
         <div className="flex-1">
           <Link 
-            to={`/c/${name.toLowerCase().replace(/\s+/g, '-')}`}
+            to={`/c/${slug}`}
             className="text-lg font-bold hover:text-primary transition-colors"
           >
             {name}
@@ -79,11 +81,11 @@ const CommunityCard = ({
               </Badge>
             )}
             <div className="flex flex-col">
-              <span className="text-xs font-semibold">
-                {pricePerShare.toFixed(3)} ETH
+              <span className="text-sm font-semibold">
+                ${priceInUsd.toFixed(2)}
               </span>
               <span className="text-xs text-muted-foreground">
-                ${priceInUsd.toFixed(2)}
+                {pricePerShare.toFixed(3)} ETH
               </span>
             </div>
           </div>
@@ -104,11 +106,12 @@ const CommunityCard = ({
           <div>
             <div className="text-xs text-muted-foreground mb-1">Market Cap</div>
             <div className="flex flex-col">
-              <div className="flex items-center">
-                <TrendingUp className="h-4 w-4 mr-1.5 text-muted-foreground" />
-                <span className="font-medium">{marketCap.toFixed(1)} ETH</span>
+              <div className="font-medium">
+                ${marketCapUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}
               </div>
-              <span className="text-xs text-muted-foreground">${marketCapUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+              <span className="text-xs text-muted-foreground">
+                {marketCap.toFixed(1)} ETH
+              </span>
             </div>
           </div>
         </div>
@@ -119,8 +122,8 @@ const CommunityCard = ({
             <div className="flex justify-between items-center mb-1">
               <span className="font-medium text-primary">Reward Pool</span>
               <div className="text-right">
-                <div className="font-bold text-lg">{rewardPool.toFixed(2)} ETH</div>
-                <div className="text-xs text-muted-foreground">${rewardPoolUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                <div className="font-bold text-lg">${rewardPoolUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                <div className="text-xs text-muted-foreground">{rewardPool.toFixed(2)} ETH</div>
               </div>
             </div>
           </div>
@@ -129,7 +132,7 @@ const CommunityCard = ({
       
       <CardFooter className="bg-muted/40 flex justify-between pt-3">
         <Button variant="ghost" size="sm" asChild>
-          <Link to={`/c/${name.toLowerCase().replace(/\s+/g, '-')}`}>
+          <Link to={`/c/${slug}`}>
             View Details
           </Link>
         </Button>

@@ -18,6 +18,8 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
+import { ShareDialog } from '@/components/community/ShareDialog';
+import { toast } from "sonner";
 import { 
   ArrowUp, 
   ArrowDown, 
@@ -30,7 +32,11 @@ import {
   Share2,
   ChevronUp,
   Sparkles,
-  Heart
+  Heart,
+  Copy,
+  FileText,
+  BookOpen,
+  MoreHorizontal
 } from 'lucide-react';
 import { TradeSheet } from '@/components/shares/TradeSheet';
 
@@ -50,6 +56,8 @@ const CommunityPage = () => {
   const [tradeSheetOpen, setTradeSheetOpen] = useState(false);
   const [isRoared, setIsRoared] = useState<Record<number, boolean>>({});
   const [activeTab, setActiveTab] = useState("posts");
+  const [isMirroredPost, setIsMirroredPost] = useState<Record<number, boolean>>({});
+  const [isIPFSSaved, setIsIPFSSaved] = useState<Record<number, boolean>>({});
   
   const [communityData, setCommunityData] = useState({
     name: id ? id.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') : '',
@@ -146,6 +154,32 @@ const CommunityPage = () => {
     });
   };
   
+  const handleMirror = (postId: number) => {
+    setIsMirroredPost(prev => {
+      const updated = { ...prev };
+      updated[postId] = !updated[postId];
+      
+      if (updated[postId]) {
+        toast.success("Post mirrored to your profile!");
+      }
+      
+      return updated;
+    });
+  };
+  
+  const handleSaveToIPFS = (postId: number) => {
+    setIsIPFSSaved(prev => {
+      const updated = { ...prev };
+      updated[postId] = !updated[postId];
+      
+      if (updated[postId]) {
+        toast.success("Post saved to IPFS permanently!");
+      }
+      
+      return updated;
+    });
+  };
+  
   // For the interactive trading chart effect
   const chartPoints = communityData.priceChange > 0 
     ? "M0,50 Q25,30 50,20 T100,10" 
@@ -158,26 +192,42 @@ const CommunityPage = () => {
         {/* Header for mobile */}
         {isMobile && (
           <div className="sticky top-0 z-10 bg-background/90 backdrop-blur-sm pb-2 mb-3">
-            <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10">
-                <AvatarImage src={communityData.image} alt={communityData.name} />
-                <AvatarFallback>{communityData.name[0]}</AvatarFallback>
-              </Avatar>
-              <div>
-                <h1 className="text-xl font-bold">{communityData.name}</h1>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">{communityData.members} members</span>
-                  {communityData.priceChange > 0 ? (
-                    <Badge className="bg-green-500/10 text-green-600 text-xs">
-                      <ArrowUp className="h-3 w-3 mr-1" />
-                      {communityData.priceChange.toFixed(1)}%
-                    </Badge>
-                  ) : (
-                    <Badge className="bg-red-500/10 text-red-600 text-xs">
-                      <ArrowDown className="h-3 w-3 mr-1" />
-                      {Math.abs(communityData.priceChange).toFixed(1)}%
-                    </Badge>
-                  )}
+            <div className="flex flex-col">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src={communityData.image} alt={communityData.name} />
+                  <AvatarFallback>{communityData.name[0]}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <h1 className="text-xl font-bold">{communityData.name}</h1>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">{communityData.members} members</span>
+                    {communityData.priceChange > 0 ? (
+                      <Badge className="bg-green-500/10 text-green-600 text-xs">
+                        <ArrowUp className="h-3 w-3 mr-1" />
+                        {communityData.priceChange.toFixed(1)}%
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-red-500/10 text-red-600 text-xs">
+                        <ArrowDown className="h-3 w-3 mr-1" />
+                        {Math.abs(communityData.priceChange).toFixed(1)}%
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Market cap and share price for mobile */}
+              <div className="mt-2 flex items-center justify-between bg-muted/40 p-2 rounded-lg">
+                <div>
+                  <div className="text-xs text-muted-foreground">Share Price</div>
+                  <div className="font-semibold text-sm">${priceInUsd.toFixed(2)}</div>
+                  <div className="text-xs text-muted-foreground">{communityData.pricePerShare.toFixed(3)} ETH</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">Market Cap</div>
+                  <div className="font-semibold text-sm">${marketCapUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                  <div className="text-xs text-muted-foreground">{(communityData.totalShares * communityData.pricePerShare).toFixed(1)} ETH</div>
                 </div>
               </div>
             </div>
@@ -186,7 +236,7 @@ const CommunityPage = () => {
         
         {/* Tabs for content sections */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full justify-start mb-6 overflow-x-auto flex-nowrap">
+          <TabsList className="w-full md:w-auto justify-start mb-6 overflow-x-visible flex-nowrap border-b pb-px">
             <TabsTrigger value="posts" className="flex-shrink-0">
               <MessageCircle className="h-4 w-4 mr-2" />
               Posts
@@ -246,9 +296,15 @@ const CommunityPage = () => {
                           <span className="text-xs text-muted-foreground">{post.timeAgo}</span>
                         </div>
                       </div>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Share2 className="h-4 w-4" />
-                      </Button>
+                      
+                      <ShareDialog 
+                        postTitle={post.content.slice(0, 30) + (post.content.length > 30 ? '...' : '')}
+                        communityName={communityData.name}
+                      >
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Share2 className="h-4 w-4" />
+                        </Button>
+                      </ShareDialog>
                     </div>
                   </CardHeader>
                   
@@ -258,22 +314,21 @@ const CommunityPage = () => {
                   
                   <CardFooter className="flex justify-between py-3 mt-2 bg-muted/20">
                     <Button 
-                      variant="ghost" 
+                      variant={isRoared[post.id] ? "roar-active" : "roar"} 
                       size="sm" 
                       onClick={() => handleRoar(post.id)}
-                      className={isRoared[post.id] ? "text-purple-600" : ""}
                     >
                       <div className="relative">
                         <LionIcon />
                         {isRoared[post.id] && (
-                          <span className="absolute -top-2 -right-2 inline-flex animate-roar-text opacity-0 text-purple-600">
+                          <span className="absolute -top-2 -right-2 inline-flex animate-roar-text opacity-0 text-amber-500">
                             +1
                           </span>
                         )}
                       </div>
                       <span className="ml-1">{post.roarCount}</span>
                       {isRoared[post.id] && (
-                        <span className="absolute inset-0 rounded-full animate-roar-waves opacity-0 bg-purple-500/20"></span>
+                        <span className="absolute inset-0 rounded-full animate-roar-waves opacity-0 bg-amber-500/20"></span>
                       )}
                     </Button>
                     
@@ -282,9 +337,24 @@ const CommunityPage = () => {
                       <span>{post.commentCount}</span>
                     </Button>
                     
-                    <Button variant="ghost" size="sm" className="group/upvote">
-                      <ChevronUp className="h-4 w-4 mr-1 group-hover/upvote:text-green-500 transition-colors" />
-                      <span className="group-hover/upvote:text-green-500 transition-colors">Upvote</span>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className={isMirroredPost[post.id] ? "text-primary" : ""}
+                      onClick={() => handleMirror(post.id)}
+                    >
+                      <BookOpen className="h-4 w-4 mr-1" />
+                      <span>Mirror</span>
+                    </Button>
+                    
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className={isIPFSSaved[post.id] ? "text-green-500" : ""}
+                      onClick={() => handleSaveToIPFS(post.id)}
+                    >
+                      <FileText className="h-4 w-4 mr-1" />
+                      <span>IPFS</span>
                     </Button>
                   </CardFooter>
                 </Card>
@@ -548,16 +618,16 @@ const CommunityPage = () => {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Price per Share</span>
                     <div className="text-right">
-                      <div className="font-medium">{communityData.pricePerShare.toFixed(3)} ETH</div>
-                      <div className="text-xs text-muted-foreground">${priceInUsd.toFixed(2)}</div>
+                      <div className="font-semibold text-[15px]">${priceInUsd.toFixed(2)}</div>
+                      <div className="text-xs text-muted-foreground">{communityData.pricePerShare.toFixed(3)} ETH</div>
                     </div>
                   </div>
                   
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Market Cap</span>
                     <div className="text-right">
-                      <div className="font-medium">{(communityData.totalShares * communityData.pricePerShare).toFixed(1)} ETH</div>
-                      <div className="text-xs text-muted-foreground">${marketCapUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                      <div className="font-semibold text-[15px]">${marketCapUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                      <div className="text-xs text-muted-foreground">{(communityData.totalShares * communityData.pricePerShare).toFixed(1)} ETH</div>
                     </div>
                   </div>
                   
@@ -575,9 +645,9 @@ const CommunityPage = () => {
                         <div className="flex justify-between">
                           <span className="text-sm text-muted-foreground">Value</span>
                           <div className="text-right">
-                            <div className="font-medium">{(communityData.userShareCount * communityData.pricePerShare).toFixed(3)} ETH</div>
+                            <div className="font-semibold">${(communityData.userShareCount * communityData.pricePerShare * ethToUsd).toFixed(2)}</div>
                             <div className="text-xs text-muted-foreground">
-                              ${(communityData.userShareCount * communityData.pricePerShare * ethToUsd).toFixed(2)}
+                              {(communityData.userShareCount * communityData.pricePerShare).toFixed(3)} ETH
                             </div>
                           </div>
                         </div>
@@ -596,8 +666,8 @@ const CommunityPage = () => {
                       <div className="flex justify-between items-center mb-1">
                         <span className="font-medium text-primary">Reward Pool</span>
                         <div className="text-right">
-                          <div className="font-bold text-lg">{communityData.rewardPool.toFixed(2)} ETH</div>
-                          <div className="text-xs text-muted-foreground">${rewardPoolUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                          <div className="font-bold text-lg">${rewardPoolUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                          <div className="text-xs text-muted-foreground">{communityData.rewardPool.toFixed(2)} ETH</div>
                         </div>
                       </div>
                     </div>
@@ -607,7 +677,7 @@ const CommunityPage = () => {
               
               <CardFooter className="flex flex-col gap-3 pt-0">
                 <Button 
-                  className="w-full" 
+                  className="w-full bg-purple-600 hover:bg-purple-700 text-white shadow-md hover:shadow-lg" 
                   onClick={() => setTradeSheetOpen(true)}
                 >
                   {communityData.userShareCount > 0 ? 'Buy More Shares' : 'Join Community'}
@@ -629,12 +699,12 @@ const CommunityPage = () => {
         <div className="fixed bottom-16 inset-x-0 p-4 bg-background/80 backdrop-blur-sm z-10 border-t animate-slide-up">
           <div className="flex items-center justify-between">
             <div>
-              <div className="font-medium text-sm">{communityData.pricePerShare.toFixed(3)} ETH</div>
-              <div className="text-xs text-muted-foreground">${priceInUsd.toFixed(2)}</div>
+              <div className="font-medium text-base">${priceInUsd.toFixed(2)}</div>
+              <div className="text-xs text-muted-foreground">{communityData.pricePerShare.toFixed(3)} ETH</div>
             </div>
             <Button 
               onClick={() => setTradeSheetOpen(true)}
-              className="bg-purple-600 hover:bg-purple-700 text-white"
+              className="bg-purple-600 hover:bg-purple-700 text-white shadow-md hover:shadow-lg"
             >
               {communityData.userShareCount > 0 ? 'Buy More' : 'Join Now'}
             </Button>
