@@ -22,6 +22,7 @@ import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import confetti from 'canvas-confetti';
+import OnboardingStories from '@/components/onboarding/OnboardingStories';
 
 interface Task {
   id: string;
@@ -44,6 +45,7 @@ const RequestInvitePage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pointsEarned, setPointsEarned] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [showStories, setShowStories] = useState(false);
   
   // Mock tasks that users can complete to jump the queue
   const [tasks, setTasks] = useState<Task[]>([
@@ -150,14 +152,23 @@ const RequestInvitePage = () => {
     
     setIsSubmitting(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      toast.success("🚀 Invite code accepted! Welcome to ROAR!");
-      triggerConfetti();
-      
-      // Redirect to feed after successful verification
-      setTimeout(() => navigate('/feed'), 1500);
-    }, 1000);
+    // For demo purposes, accept code "ABC123"
+    if (inviteCode.toUpperCase() === "ABC123") {
+      setTimeout(() => {
+        toast.success("🚀 Invite code accepted! Welcome to ROAR!");
+        triggerConfetti();
+        
+        // Show onboarding stories instead of redirecting immediately
+        setShowStories(true);
+        setIsSubmitting(false);
+      }, 1000);
+    } else {
+      // Handle invalid code
+      setTimeout(() => {
+        toast.error("Invalid invite code. Please try again.");
+        setIsSubmitting(false);
+      }, 1000);
+    }
   };
 
   const generateRandomCode = () => {
@@ -180,151 +191,161 @@ const RequestInvitePage = () => {
   }, [queuePosition, originalPosition]);
 
   return (
-    <div className="max-w-4xl mx-auto animate-fade-in">
-      {/* Hero Section */}
-      <div className="text-center mb-8">
-        <div className="inline-block p-4 bg-amber-500/10 rounded-full mb-4">
-          <Gift className="h-10 w-10 text-amber-500" />
-        </div>
-        <h1 className="text-3xl md:text-4xl font-bold mb-2">You're Almost There!</h1>
-        <p className="text-muted-foreground text-lg md:text-xl max-w-2xl mx-auto">
-          Get exclusive early access and a <span className="font-semibold text-amber-500">free share in a community</span> when you join with an invite code.
-        </p>
-      </div>
-
-      {/* Queue Position Card */}
-      <Card className="mb-8 overflow-hidden">
-        <div className="bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-amber-500/10 p-6 text-center">
-          <h2 className="text-xl font-semibold mb-2">Your Current Position</h2>
-          <div className="flex items-center justify-center">
-            <User className="h-6 w-6 mr-2 text-muted-foreground" />
-            <div className="text-4xl font-bold">
-              #{originalPosition.toLocaleString()}
+    <div className="min-h-screen bg-background flex flex-col">
+      <div className="flex-1 overflow-auto">
+        <div className="max-w-4xl mx-auto p-4 sm:p-6 animate-fade-in">
+          {/* Hero Section */}
+          <div className="text-center mb-8">
+            <div className="inline-block p-4 bg-amber-500/10 rounded-full mb-4">
+              <Gift className="h-10 w-10 text-amber-500" />
             </div>
+            <h1 className="text-3xl md:text-4xl font-bold mb-2">You're Almost There!</h1>
+            <p className="text-muted-foreground text-lg md:text-xl max-w-2xl mx-auto">
+              Get exclusive early access and <span className="font-semibold text-amber-500">free shares in a community</span> when you join with an invite code.
+            </p>
           </div>
-          
-          {pointsEarned > 0 && (
-            <div className="mt-3 flex items-center justify-center text-green-500 font-medium">
-              <ArrowUp className="h-4 w-4 mr-1" />
-              Jumped {pointsEarned.toLocaleString()} positions!
-            </div>
-          )}
-        </div>
-        
-        <CardContent className="pt-6">
-          {!showCodeInput ? (
-            <Button 
-              variant="outline" 
-              className="w-full text-base py-6" 
-              onClick={() => setShowCodeInput(true)}
-            >
-              I have an invite code
-            </Button>
-          ) : (
-            <form onSubmit={handleSubmitInviteCode} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="inviteCode">Enter your invite code</Label>
-                <Input
-                  id="inviteCode"
-                  value={inviteCode}
-                  onChange={(e) => setInviteCode(e.target.value)}
-                  placeholder="Enter code (e.g. ABC123)"
-                  className="text-lg py-6"
-                  autoFocus
-                />
-              </div>
-              <Button 
-                type="submit" 
-                className="w-full py-6 text-base"
-                disabled={isSubmitting || !inviteCode.trim()}
-              >
-                {isSubmitting ? 'Verifying...' : 'Activate Code'}
-              </Button>
-            </form>
-          )}
-        </CardContent>
-      </Card>
 
-      {/* Tasks Section */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold">Jump the Queue</h2>
-          <div className="text-muted-foreground text-sm">
-            Complete tasks to get ahead
-          </div>
-        </div>
-        
-        <div className="grid gap-4 md:grid-cols-2">
-          {tasks.map((task) => (
-            <Card 
-              key={task.id} 
-              className={cn(
-                "transition-all duration-300 border overflow-hidden",
-                task.completed && "border-green-500/50 bg-green-500/5"
-              )}
-            >
-              <CardContent className="p-6">
-                <div className="flex justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <div className={cn(
-                      "p-2 rounded-full",
-                      task.completed ? "bg-green-500/20" : "bg-secondary"
-                    )}>
-                      {task.completed ? <CheckCircle2 className="h-5 w-5 text-green-500" /> : task.icon}
-                    </div>
-                    <h3 className="font-semibold">{task.title}</h3>
-                  </div>
-                  <div className="flex items-center bg-secondary text-secondary-foreground rounded-full px-3 py-1 text-xs">
-                    <Trophy className="h-3 w-3 mr-1" />
-                    +{task.points.toLocaleString()}
-                  </div>
+          {/* Queue Position Card */}
+          <Card className="mb-8 overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-amber-500/10 p-6 text-center">
+              <h2 className="text-xl font-semibold mb-2">Your Current Position</h2>
+              <div className="flex items-center justify-center">
+                <User className="h-6 w-6 mr-2 text-muted-foreground" />
+                <div className="text-4xl font-bold">
+                  #{originalPosition.toLocaleString()}
                 </div>
-                
-                <p className="text-muted-foreground text-sm mb-4">
-                  {task.description}
-                </p>
-                
-                <Button
-                  variant={task.completed ? "outline" : "default"}
-                  className={cn(
-                    "w-full",
-                    task.completed && "border-green-500 text-green-600"
-                  )}
-                  disabled={task.completed}
-                  onClick={task.action}
+              </div>
+              
+              {pointsEarned > 0 && (
+                <div className="mt-3 flex items-center justify-center text-green-500 font-medium">
+                  <ArrowUp className="h-4 w-4 mr-1" />
+                  Jumped {pointsEarned.toLocaleString()} positions!
+                </div>
+              )}
+            </div>
+            
+            <CardContent className="pt-6">
+              {!showCodeInput ? (
+                <Button 
+                  variant="outline" 
+                  className="w-full text-base py-6" 
+                  onClick={() => setShowCodeInput(true)}
                 >
-                  {task.completed ? (
-                    <span className="flex items-center">
-                      <Check className="h-4 w-4 mr-2" /> Completed
-                    </span>
-                  ) : task.cta}
+                  I have an invite code
                 </Button>
-              </CardContent>
-            </Card>
-          ))}
+              ) : (
+                <form onSubmit={handleSubmitInviteCode} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="inviteCode">Enter your invite code</Label>
+                    <Input
+                      id="inviteCode"
+                      value={inviteCode}
+                      onChange={(e) => setInviteCode(e.target.value)}
+                      placeholder="Enter code (e.g. ABC123)"
+                      className="text-lg py-6"
+                      autoFocus
+                    />
+                  </div>
+                  <Button 
+                    type="submit" 
+                    className="w-full py-6 text-base"
+                    disabled={isSubmitting || !inviteCode.trim()}
+                  >
+                    {isSubmitting ? 'Verifying...' : 'Activate Code'}
+                  </Button>
+                </form>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Tasks Section */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold">Jump the Queue</h2>
+              <div className="text-muted-foreground text-sm">
+                Complete tasks to get ahead
+              </div>
+            </div>
+            
+            <div className="grid gap-4 md:grid-cols-2">
+              {tasks.map((task) => (
+                <Card 
+                  key={task.id} 
+                  className={cn(
+                    "transition-all duration-300 border overflow-hidden",
+                    task.completed && "border-green-500/50 bg-green-500/5"
+                  )}
+                >
+                  <CardContent className="p-6">
+                    <div className="flex justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className={cn(
+                          "p-2 rounded-full",
+                          task.completed ? "bg-green-500/20" : "bg-secondary"
+                        )}>
+                          {task.completed ? <CheckCircle2 className="h-5 w-5 text-green-500" /> : task.icon}
+                        </div>
+                        <h3 className="font-semibold">{task.title}</h3>
+                      </div>
+                      <div className="flex items-center bg-secondary text-secondary-foreground rounded-full px-3 py-1 text-xs">
+                        <Trophy className="h-3 w-3 mr-1" />
+                        +{task.points.toLocaleString()}
+                      </div>
+                    </div>
+                    
+                    <p className="text-muted-foreground text-sm mb-4">
+                      {task.description}
+                    </p>
+                    
+                    <Button
+                      variant={task.completed ? "outline" : "default"}
+                      className={cn(
+                        "w-full",
+                        task.completed && "border-green-500 text-green-600"
+                      )}
+                      disabled={task.completed}
+                      onClick={task.action}
+                    >
+                      {task.completed ? (
+                        <span className="flex items-center">
+                          <Check className="h-4 w-4 mr-2" /> Completed
+                        </span>
+                      ) : task.cta}
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+
+          {/* Referral Bonus */}
+          <Card className="mb-8 bg-gradient-to-r from-amber-500/5 via-amber-500/10 to-amber-500/5 border-amber-500/20">
+            <CardContent className="p-6">
+              <div className="flex flex-col md:flex-row md:items-center gap-4">
+                <div className="flex-1">
+                  <h3 className="text-xl font-semibold mb-2">Supercharge Your Experience</h3>
+                  <p className="text-muted-foreground">
+                    Get instant access and earn free shares when you're referred by an existing member!
+                  </p>
+                </div>
+                <Button 
+                  variant="outline" 
+                  className="bg-white/50 dark:bg-black/50 border-amber-500/30 hover:border-amber-500/50"
+                  onClick={() => setShowCodeInput(true)}
+                >
+                  Enter Invite Code
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
-      {/* Referral Bonus */}
-      <Card className="mb-8 bg-gradient-to-r from-amber-500/5 via-amber-500/10 to-amber-500/5 border-amber-500/20">
-        <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row md:items-center gap-4">
-            <div className="flex-1">
-              <h3 className="text-xl font-semibold mb-2">Supercharge Your Experience</h3>
-              <p className="text-muted-foreground">
-                Get instant access and earn 50 free shares when you're referred by an existing member!
-              </p>
-            </div>
-            <Button 
-              variant="outline" 
-              className="bg-white/50 dark:bg-black/50 border-amber-500/30 hover:border-amber-500/50"
-              onClick={() => setShowCodeInput(true)}
-            >
-              Enter Invite Code
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Onboarding Stories */}
+      <OnboardingStories 
+        open={showStories} 
+        onOpenChange={setShowStories} 
+      />
     </div>
   );
 };

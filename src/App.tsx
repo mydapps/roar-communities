@@ -19,6 +19,11 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Special routes without main layout */}
+        <Route path="request-invite" element={<RequestInvitePage />} />
+        <Route path="invite/:code" element={<ReferralPage />} />
+        
+        {/* Routes with main layout */}
         <Route path="/" element={<MainLayout />}>
           <Route index element={<FeedPage />} />
           <Route path="feed" element={<FeedPage />} />
@@ -30,8 +35,6 @@ function App() {
           <Route path="account" element={<AccountPage />} />
           <Route path="search" element={<SearchPage />} />
           <Route path="referral" element={<ReferralPage />} />
-          <Route path="request-invite" element={<RequestInvitePage />} />
-          <Route path="invite/:code" element={<ReferralPage />} />
           <Route path="login" element={<LoginPage />} />
           <Route path="*" element={<NotFound />} />
         </Route>
