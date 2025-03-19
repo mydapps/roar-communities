@@ -32,7 +32,7 @@ const OnboardingStories = ({ open, onOpenChange }: OnboardingStoriesProps) => {
       title: "Welcome to Dapps.co!",
       description: "Join a community network where you truly belong. Create, connect, and own your social experience on a censorship-resistant platform built for real communities.",
       image: "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&q=80",
-      icon: <img src="https://dapps.co/logo.png" alt="Dapps.co Logo" className="h-10 w-10" />,
+      icon: <img src="https://dapps.co/icon-128x128.png" alt="Dapps.co Logo" className="h-10 w-10" />,
       backgroundColor: "from-blue-900/95 to-blue-950/95"
     },
     {
