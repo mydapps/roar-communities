@@ -47,6 +47,7 @@ const RequestInvitePage = () => {
   const [pointsEarned, setPointsEarned] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
   const [showStories, setShowStories] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [tasks, setTasks] = useState<Task[]>([
     {
       id: 'connect-twitter',
@@ -163,6 +164,7 @@ const RequestInvitePage = () => {
     if (!inviteCode.trim()) return;
     
     setIsSubmitting(true);
+    setErrorMessage('');
     
     if (inviteCode.toUpperCase() === "ABC123") {
       setTimeout(() => {
@@ -174,9 +176,7 @@ const RequestInvitePage = () => {
       }, 1000);
     } else {
       setTimeout(() => {
-        toast.error(getRandomWittyResponse(), {
-          icon: <AlertCircle className="h-5 w-5 text-destructive" />,
-        });
+        setErrorMessage(getRandomWittyResponse());
         setIsSubmitting(false);
       }, 1000);
     }
@@ -245,12 +245,21 @@ const RequestInvitePage = () => {
                 <form onSubmit={handleSubmitInviteCode} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="inviteCode">Enter your invite code</Label>
+                    {errorMessage && (
+                      <div className="flex items-center p-3 rounded-md bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 text-sm mb-2">
+                        <AlertCircle className="h-4 w-4 mr-2 flex-shrink-0" />
+                        <p>{errorMessage}</p>
+                      </div>
+                    )}
                     <Input
                       id="inviteCode"
                       value={inviteCode}
                       onChange={(e) => setInviteCode(e.target.value)}
                       placeholder="Enter code (e.g. ABC123)"
-                      className="text-lg py-6"
+                      className={cn(
+                        "text-lg py-6",
+                        errorMessage && "border-red-500 focus-visible:ring-red-500"
+                      )}
                       autoFocus
                     />
                   </div>
