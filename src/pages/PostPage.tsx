@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useResponsive } from '@/hooks/use-mobile';
@@ -30,7 +29,7 @@ const MOCK_POSTS = [
     username: 'vitalik.eth',
     community: 'ethereum-devs',
     timeAgo: '2h',
-    content: 'Just published a new proposal for improving gas efficiency in rollups. Check it out and let me know your thoughts!',
+    content: "Just published a new proposal for improving gas efficiency in rollups. Check it out and let me know your thoughts!",
     roarCount: 128,
     commentCount: 32,
     shareCount: 14,
@@ -44,7 +43,7 @@ const MOCK_POSTS = [
     username: 'satoshi.btc',
     community: 'bitcoin-core',
     timeAgo: '5h',
-    content: 'New research on Lightning Network throughput optimizations shows promising results. We might be able to scale to 1M TPS sooner than expected.',
+    content: "New research on Lightning Network throughput optimizations shows promising results. We might be able to scale to 1M TPS sooner than expected.",
     roarCount: 245,
     commentCount: 56,
     shareCount: 28
@@ -63,7 +62,7 @@ const MOCK_POSTS = [
     ]
   },
   {
-    id: 'thgvt0',  // Adding the postId from the current route
+    id: 'thgvt0',
     username: 'vitalik.eth',
     community: 'ethereum-devs',
     timeAgo: '3h',
@@ -71,6 +70,19 @@ const MOCK_POSTS = [
     roarCount: 420,
     commentCount: 76,
     shareCount: 35
+  },
+  {
+    id: '03qpgt',
+    username: 'vitalik.eth',
+    community: 'ethereum-devs',
+    timeAgo: '4h',
+    content: "Discussing potential EIP for improving smart contract verification with formal methods.",
+    roarCount: 215,
+    commentCount: 45,
+    shareCount: 20,
+    images: [
+      'https://picsum.photos/seed/eip/800/600'
+    ]
   }
 ];
 
@@ -79,7 +91,7 @@ const MOCK_COMMENTS = [
   { 
     id: 'comment1',
     username: 'alice.lens',
-    text: 'This is incredibly insightful! Have you considered how this might interact with zk proofs?',
+    text: "This is incredibly insightful! Have you considered how this might interact with zk proofs?",
     timeAgo: '1h',
     roarCount: 15
   },
@@ -203,7 +215,9 @@ const PostPage = () => {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
         <h2 className="text-2xl font-bold mb-2">Post Not Found</h2>
-        <p className="text-muted-foreground mb-6">The post you're looking for doesn't exist or has been removed.</p>
+        <p className="text-muted-foreground mb-6">
+          The post with ID "{postId}" in community "{communityId}" doesn't exist or has been removed.
+        </p>
         <Button onClick={goBack}>Go Back</Button>
       </div>
     );
