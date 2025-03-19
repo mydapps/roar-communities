@@ -10,7 +10,7 @@ import {
   Users, 
   Trophy,
   CheckCircle2, 
-  Twitter,
+  XIcon,
   Facebook,
   Send,
   Zap,
@@ -227,38 +227,38 @@ const ReferralPage = () => {
                     <Button 
                       size="sm" 
                       variant="outline" 
-                      className="flex items-center justify-center gap-1.5"
+                      className="flex items-center justify-center gap-1.5 min-w-0"
                       onClick={() => handleShare('twitter')}
                     >
-                      <Twitter className="h-4 w-4 text-[#1DA1F2]" />
-                      {!isMobile && <span>Twitter</span>}
+                      <XIcon className="h-4 w-4 text-[#1DA1F2]" />
+                      {!isMobile && <span className="truncate">X</span>}
                     </Button>
                     <Button 
                       size="sm" 
                       variant="outline" 
-                      className="flex items-center justify-center gap-1.5"
+                      className="flex items-center justify-center gap-1.5 min-w-0"
                       onClick={() => handleShare('facebook')}
                     >
                       <Facebook className="h-4 w-4 text-[#1877F2]" />
-                      {!isMobile && <span>Facebook</span>}
+                      {!isMobile && <span className="truncate">Facebook</span>}
                     </Button>
                     <Button 
                       size="sm" 
                       variant="outline" 
-                      className="flex items-center justify-center gap-1.5"
+                      className="flex items-center justify-center gap-1.5 min-w-0"
                       onClick={() => handleShare('telegram')}
                     >
                       <Send className="h-4 w-4 text-[#26A5E4]" />
-                      {!isMobile && <span>Telegram</span>}
+                      {!isMobile && <span className="truncate">Telegram</span>}
                     </Button>
                     <Button 
                       size="sm" 
                       variant="outline" 
-                      className="flex items-center justify-center gap-1.5"
+                      className="flex items-center justify-center gap-1.5 min-w-0"
                       onClick={() => handleShare('farcaster')}
                     >
                       <Zap className="h-4 w-4 text-purple-500" />
-                      {!isMobile && <span>Farcaster</span>}
+                      {!isMobile && <span className="truncate">Farcaster</span>}
                     </Button>
                   </div>
                 </div>

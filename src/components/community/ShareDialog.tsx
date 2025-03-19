@@ -3,7 +3,7 @@ import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { shareToSocialMedia, SharePlatform } from '@/utils/shareUtils';
-import { Copy, Twitter, Facebook, Linkedin, Send } from 'lucide-react';
+import { Copy, Facebook, Linkedin, Send, XIcon } from 'lucide-react';
 import { toast } from "sonner";
 
 interface ShareDialogProps {
@@ -36,8 +36,8 @@ export const ShareDialog = ({ children, postTitle, communityName }: ShareDialogP
         </DialogHeader>
         <div className="grid grid-cols-2 gap-4 py-4">
           <Button variant="twitter" className="flex gap-2" onClick={() => handleShare('twitter')}>
-            <Twitter className="h-4 w-4" />
-            Twitter
+            <XIcon className="h-4 w-4" />
+            X
           </Button>
           <Button variant="facebook" className="flex gap-2" onClick={() => handleShare('facebook')}>
             <Facebook className="h-4 w-4" />

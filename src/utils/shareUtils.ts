@@ -1,4 +1,3 @@
-
 export type SharePlatform = 'twitter' | 'facebook' | 'linkedin' | 'telegram' | 'farcaster' | 'copy' | 'native';
 
 interface ShareOptions {
@@ -17,6 +16,7 @@ export const shareToSocialMedia = (platform: SharePlatform, options: ShareOption
   
   switch (platform) {
     case 'twitter':
+      // Twitter was rebranded to X, but the API endpoints remain the same
       shareUrl = `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedText}`;
       break;
     case 'facebook':

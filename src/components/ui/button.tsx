@@ -25,7 +25,7 @@ const buttonVariants = cva(
         "meow-active": "text-amber-500 bg-amber-500/10 transition-all duration-300",
         linkedin: "bg-[#0077B5] text-white hover:bg-[#0077B5]/90",
         telegram: "bg-[#26A5E4] text-white hover:bg-[#26A5E4]/90",
-        twitter: "bg-[#1DA1F2] text-white hover:bg-[#1DA1F2]/90",
+        twitter: "bg-black text-white hover:bg-black/90", // Changed from Twitter blue to X black
         facebook: "bg-[#1877F2] text-white hover:bg-[#1877F2]/90",
       },
       size: {
