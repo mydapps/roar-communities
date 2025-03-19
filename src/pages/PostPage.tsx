@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useResponsive } from '@/hooks/use-mobile';
@@ -82,6 +83,32 @@ const MOCK_POSTS = [
     shareCount: 20,
     images: [
       'https://picsum.photos/seed/eip/800/600'
+    ]
+  },
+  {
+    id: 'zpkz3f',
+    username: 'vitalik.eth',
+    community: 'Ethereum Devs',
+    timeAgo: '6h',
+    content: "Just released new benchmarks comparing different L2 solutions. The results are fascinating!",
+    roarCount: 187,
+    commentCount: 42,
+    shareCount: 28,
+    images: [
+      'https://picsum.photos/seed/benchmark/800/600'
+    ]
+  },
+  {
+    id: 'tfjhdw',
+    username: 'alex.sol',
+    community: 'Solana Builders',
+    timeAgo: '1d',
+    content: "Breaking down the latest Solana performance upgrades and what they mean for dApp developers.",
+    roarCount: 156,
+    commentCount: 37,
+    shareCount: 23,
+    images: [
+      'https://picsum.photos/seed/solana/800/600'
     ]
   }
 ];
