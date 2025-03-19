@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useResponsive } from '@/hooks/use-mobile';
@@ -54,7 +53,7 @@ const MOCK_POSTS = [
     username: 'hayden.uni',
     community: 'defi-explorers',
     timeAgo: '1d',
-    content: 'Uniswap v4 will revolutionize on-chain liquidity. Here's how the new concentrated liquidity hooks work...',
+    content: "Uniswap v4 will revolutionize on-chain liquidity. Here's how the new concentrated liquidity hooks work...",
     roarCount: 302,
     commentCount: 89,
     shareCount: 42,
@@ -76,7 +75,7 @@ const MOCK_COMMENTS = [
   {
     id: 'comment2',
     username: 'bob.eth',
-    text: 'I've been working on something similar. Would love to collaborate on this.',
+    text: "I've been working on something similar. Would love to collaborate on this.",
     timeAgo: '45m',
     roarCount: 8
   },
@@ -115,15 +114,11 @@ const PostPage = () => {
   const [newComment, setNewComment] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
   
-  // Fetch post data
   useEffect(() => {
-    // Simulate API call
     setTimeout(() => {
-      // Find a post that matches communityId
       const foundPost = MOCK_POSTS.find(p => p.community === communityId);
       if (foundPost) {
         setPost(foundPost);
-        // Load comments for this post
         setComments(MOCK_COMMENTS);
       }
       setLoading(false);
@@ -135,7 +130,6 @@ const PostPage = () => {
     
     setSubmittingComment(true);
     
-    // Simulate API call
     setTimeout(() => {
       const newCommentObj = {
         id: `comment-${Date.now()}`,
@@ -199,7 +193,6 @@ const PostPage = () => {
   }
   
   const formatUsername = (name: string) => {
-    // Remove any extensions like .eth, .lens, etc. and add @
     return '@' + name.split('.')[0];
   };
   
@@ -210,7 +203,6 @@ const PostPage = () => {
   
   return (
     <div className="max-w-full overflow-x-hidden animate-fade-in">
-      {/* Breadcrumb navigation */}
       <div className="mb-6">
         <ScrollArea className="w-full">
           <Breadcrumb>
@@ -235,7 +227,6 @@ const PostPage = () => {
         </ScrollArea>
       </div>
       
-      {/* Post content */}
       <div className="mb-8">
         <Post 
           username={post.username}
@@ -250,7 +241,6 @@ const PostPage = () => {
         />
       </div>
       
-      {/* Comment section */}
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold">Comments ({comments.length})</h2>
@@ -260,7 +250,6 @@ const PostPage = () => {
           </Button>
         </div>
         
-        {/* Add comment */}
         <div className="flex gap-3">
           <Avatar className="h-10 w-10 shrink-0">
             <AvatarImage src="https://api.dicebear.com/7.x/personas/svg?seed=you" />
@@ -286,7 +275,6 @@ const PostPage = () => {
           </div>
         </div>
         
-        {/* Comments list */}
         {comments.length > 0 ? (
           <div className="space-y-5 pt-4">
             {comments.map((comment) => (
