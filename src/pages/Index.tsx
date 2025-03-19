@@ -21,14 +21,14 @@ const Index = () => {
   // Check if we're on an invite route
   const isInviteRoute = location.pathname.includes('/invite/');
   
-  // Animation headlines - updated to appeal to different audiences with distinct stories
+  // Animation headlines - updated to focus on benefits without "For X:" prefix
   const headlines = [
-    "For creators: Own your audience",
-    "For investors: Profit from discovery",
-    "For community builders: Scale impact",
-    "For enthusiasts: Support what you love",
-    "For innovators: Turn social into wealth",
-    "For believers: Build lasting connections"
+    "Own your audience and your influence",
+    "Transform your social value into real assets",
+    "Build communities with true ownership",
+    "Support what you love and earn rewards",
+    "Turn engagement into lasting wealth",
+    "Create powerful connections that pay off"
   ];
 
   // Generate random avatar usernames
@@ -69,7 +69,7 @@ const Index = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Text typing animation
+  // Text typing animation with updated timing (8 seconds)
   useEffect(() => {
     if (isTyping) {
       const currentHeadline = headlines[currentTextIndex];
@@ -84,7 +84,7 @@ const Index = () => {
           setIsTyping(true);
           setCurrentTextIndex((currentTextIndex + 1) % headlines.length);
           setDisplayText('');
-        }, 2000);
+        }, 8000); // Updated to 8 seconds
         return () => clearTimeout(timeout);
       }
     }
@@ -209,7 +209,7 @@ const Index = () => {
               {avatars.map((username, i) => (
                 <Avatar key={username} className="w-12 h-12 shadow-md transition-all duration-500 hover:scale-110">
                   <AvatarImage 
-                    src={`https://s.dapps.co/avatar/${username}.svg`} 
+                    src={`https://img.dapps.co/avatar/${username}.svg`} 
                     alt="User avatar" 
                     className="animate-fade-in"
                     style={{ animationDelay: `${i * 0.2}s` }}
