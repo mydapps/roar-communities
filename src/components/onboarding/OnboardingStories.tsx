@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Zap, Users, ArrowUpRight, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -62,7 +63,10 @@ const OnboardingStories = ({ open, onOpenChange }: OnboardingStoriesProps) => {
 
   const isLastStory = currentStoryIndex === stories.length - 1;
 
-  const handleNext = () => {
+  const handleNext = (e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation(); // Prevent event bubbling
+    }
     if (currentStoryIndex < stories.length - 1) {
       setCurrentStoryIndex(prev => prev + 1);
       setProgress(0);
@@ -71,7 +75,10 @@ const OnboardingStories = ({ open, onOpenChange }: OnboardingStoriesProps) => {
     }
   };
 
-  const handlePrev = () => {
+  const handlePrev = (e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation(); // Prevent event bubbling
+    }
     if (currentStoryIndex > 0) {
       setCurrentStoryIndex(prev => prev - 1);
       setProgress(0);
@@ -163,25 +170,25 @@ const OnboardingStories = ({ open, onOpenChange }: OnboardingStoriesProps) => {
           ))}
         </div>
 
-        <div className="absolute inset-x-0 top-1/2 flex justify-between items-center px-4 z-10">
+        <div className="absolute inset-x-0 top-1/2 flex justify-between items-center px-4 z-20 -translate-y-1/2 pointer-events-none">
           <button
             onClick={handlePrev}
-            className={`p-1 rounded-full bg-black/20 text-white hover:bg-black/40 transition ${
+            className={`p-2 rounded-full bg-black/20 text-white hover:bg-black/40 transition pointer-events-auto ${
               currentStoryIndex === 0 ? 'invisible' : ''
             }`}
             aria-label="Previous story"
           >
-            <ChevronLeft className="h-6 w-6" />
+            <ChevronLeft className="h-8 w-8" />
           </button>
           
           <button
             onClick={handleNext}
-            className={`p-1 rounded-full bg-black/20 text-white hover:bg-black/40 transition ${
+            className={`p-2 rounded-full bg-black/20 text-white hover:bg-black/40 transition pointer-events-auto ${
               isLastStory ? 'invisible' : ''
             }`}
             aria-label="Next story"
           >
-            <ChevronRight className="h-6 w-6" />
+            <ChevronRight className="h-8 w-8" />
           </button>
         </div>
 
