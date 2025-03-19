@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -18,10 +17,8 @@ const Index = () => {
   const [isTyping, setIsTyping] = useState(true);
   const [avatars, setAvatars] = useState<string[]>([]);
 
-  // Check if we're on an invite route
   const isInviteRoute = location.pathname.includes('/invite/');
-  
-  // Animation headlines - updated to focus on benefits without "For X:" prefix
+
   const headlines = [
     "Own your audience and your influence",
     "Transform your social value into real assets",
@@ -31,7 +28,6 @@ const Index = () => {
     "Create powerful connections that pay off"
   ];
 
-  // Generate random avatar usernames
   useEffect(() => {
     const usernames = [
       'alice', 'bob', 'charlie', 'dave', 'emma', 
@@ -39,11 +35,9 @@ const Index = () => {
       'kevin', 'lisa', 'mike', 'nina', 'oscar'
     ];
     
-    // Shuffle the array
     const shuffled = [...usernames].sort(() => 0.5 - Math.random());
     setAvatars(shuffled.slice(0, 5));
 
-    // Rotate avatars every few seconds
     const interval = setInterval(() => {
       const shuffled = [...usernames].sort(() => 0.5 - Math.random());
       setAvatars(shuffled.slice(0, 5));
@@ -53,13 +47,11 @@ const Index = () => {
   }, []);
 
   useEffect(() => {
-    // Stagger animations for elements
     const elements = ['hero', 'feature-1', 'feature-2', 'feature-3', 'cta'];
     const timer = setTimeout(() => {
       setAnimatedElements(['hero']);
     }, 100);
     
-    // Stagger the rest of the animations
     elements.slice(1).forEach((element, index) => {
       setTimeout(() => {
         setAnimatedElements(prev => [...prev, element]);
@@ -69,7 +61,6 @@ const Index = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Text typing animation with updated timing (8 seconds)
   useEffect(() => {
     if (isTyping) {
       const currentHeadline = headlines[currentTextIndex];
@@ -84,7 +75,7 @@ const Index = () => {
           setIsTyping(true);
           setCurrentTextIndex((currentTextIndex + 1) % headlines.length);
           setDisplayText('');
-        }, 8000); // Updated to 8 seconds
+        }, 8000);
         return () => clearTimeout(timeout);
       }
     }
@@ -97,22 +88,21 @@ const Index = () => {
   return (
     <>
       <div className="min-h-screen flex flex-col bg-background">
-        {/* Hero Section */}
         <header className="relative flex-grow flex items-center justify-center pt-16 md:pt-24 pb-10 md:pb-16 px-4">
+          {isInviteRoute && (
+            <div className="max-w-xl mx-auto mb-8 p-4 rounded-lg bg-[#31bcc3]/10 border border-[#31bcc3]/20">
+              <p className="text-lg text-[#31bcc3] dark:text-[#31bcc3]">
+                You've been invited by <span className="font-bold">@bravegoldfish</span>! Sign up to skip the queue and get your first share (up to $100) for free.
+              </p>
+            </div>
+          )}
+          
           <div className="max-w-5xl mx-auto text-center">
             <div 
               className={`space-y-8 ${
                 animatedElements.includes('hero') ? 'animate-fade-in' : 'opacity-0'
               }`}
             >
-              {isInviteRoute && (
-                <div className="max-w-xl mx-auto mb-8 p-4 rounded-lg bg-[#31bcc3]/10 border border-[#31bcc3]/20">
-                  <p className="text-lg text-[#31bcc3] dark:text-[#31bcc3]">
-                    You've been invited by <span className="font-bold">@bravegoldfish</span>! Sign up to skip the queue and get your first share (up to $100) for free.
-                  </p>
-                </div>
-              )}
-              
               <h1 className="text-4xl md:text-7xl font-bold tracking-tight max-w-3xl mx-auto leading-tight">
                 <span className="block h-[3.5em] md:h-[2.5em] overflow-hidden mb-2">
                   <span className="bg-gradient-to-r from-[#31bcc3] to-[#31bcc3]/80 bg-clip-text text-transparent">
@@ -143,11 +133,9 @@ const Index = () => {
           </div>
         </header>
 
-        {/* Benefits Section */}
         <section className="py-20 px-4 bg-gradient-to-b from-background to-muted/20">
           <div className="max-w-5xl mx-auto">
             <div className="grid md:grid-cols-3 gap-10 md:gap-12">
-              {/* Benefit 1 */}
               <div 
                 className={`flex flex-col items-center text-center p-6 rounded-2xl transition-all duration-300 ${
                   animatedElements.includes('feature-1') ? 'animate-slide-up' : 'opacity-0'
@@ -162,7 +150,6 @@ const Index = () => {
                 </p>
               </div>
 
-              {/* Benefit 2 */}
               <div 
                 className={`flex flex-col items-center text-center p-6 rounded-2xl transition-all duration-300 ${
                   animatedElements.includes('feature-2') ? 'animate-slide-up' : 'opacity-0'
@@ -177,7 +164,6 @@ const Index = () => {
                 </p>
               </div>
 
-              {/* Benefit 3 */}
               <div 
                 className={`flex flex-col items-center text-center p-6 rounded-2xl transition-all duration-300 ${
                   animatedElements.includes('feature-3') ? 'animate-slide-up' : 'opacity-0'
@@ -195,7 +181,6 @@ const Index = () => {
           </div>
         </section>
 
-        {/* Social Proof Section */}
         <section 
           className={`py-20 px-4 ${
             animatedElements.includes('cta') ? 'animate-fade-in' : 'opacity-0'
@@ -236,7 +221,6 @@ const Index = () => {
           </div>
         </section>
 
-        {/* Footer */}
         <footer className="mt-auto py-8 border-t">
           <div className="max-w-5xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center mb-4 md:mb-0">
@@ -254,7 +238,6 @@ const Index = () => {
         </footer>
       </div>
 
-      {/* Onboarding Stories Overlay */}
       <OnboardingStories 
         open={isOnboardingOpen} 
         onOpenChange={setIsOnboardingOpen} 
