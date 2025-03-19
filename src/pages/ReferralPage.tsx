@@ -1,52 +1,44 @@
 
 import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardHeader, 
-  CardTitle,
-  CardFooter
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { motion, AnimatePresence } from 'framer-motion';
+import confetti from 'canvas-confetti';
 import { 
   CopyIcon, 
   Share2, 
   Gift, 
   Sparkles, 
   Users, 
-  Rocket, 
-  Trophy, 
-  Link,
-  ArrowRight,
-  CheckCircle2,
+  Trophy,
+  CheckCircle2, 
   Twitter,
   Facebook,
-  ChevronRight,
+  Send,
+  Zap,
+  User,
+  ArrowRight,
+  Link as LinkIcon,
   Wallet
 } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
-import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { motion, AnimatePresence } from 'framer-motion';
-import confetti from 'canvas-confetti';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { toast } from 'sonner';
+import { shareToSocialMedia, SharePlatform } from '@/utils/shareUtils';
+import { useResponsive } from '@/hooks/use-mobile';
 
 const ReferralPage = () => {
+  const { isMobile } = useResponsive();
   const [copied, setCopied] = useState(false);
-  const [animateShare, setAnimateShare] = useState(false);
-  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [rewardsClaimable, setRewardsClaimable] = useState(true);
   const [isClaimingRewards, setIsClaimingRewards] = useState(false);
-  
-  const referralUrl = 'dapps.co/invite/abc';
+  const [showCopyNotification, setShowCopyNotification] = useState(false);
   
   // Reward state
   const [totalEarned, setTotalEarned] = useState(1.25);
   const [availableRewards, setAvailableRewards] = useState(0.18);
-  const [progressEarned, setProgressEarned] = useState(0);
-  const [progressAvailable, setProgressAvailable] = useState(0);
   
+  const referralUrl = 'dapps.co/invite/abc';
   const totalReferrals = 8;
   const activeReferrals = 5;
   
@@ -55,7 +47,11 @@ const ReferralPage = () => {
     setCopied(true);
     
     // Show success toast
-    toast.success("Invite link copied to clipboard!");
+    toast.success("Invite link copied!");
+    
+    // Show copy notification
+    setShowCopyNotification(true);
+    setTimeout(() => setShowCopyNotification(false), 2000);
     
     // Trigger confetti effect
     confetti({
@@ -66,463 +62,341 @@ const ReferralPage = () => {
     
     // Reset copied state after 2s
     setTimeout(() => setCopied(false), 2000);
-    
-    // Show success message briefly
-    setShowSuccessMessage(true);
-    setTimeout(() => setShowSuccessMessage(false), 3000);
   };
   
-  const handleShare = () => {
-    setAnimateShare(true);
-    setTimeout(() => setAnimateShare(false), 500);
+  const handleShare = (platform: SharePlatform) => {
+    const options = {
+      url: referralUrl,
+      title: 'Join me on dapps.co',
+      text: 'Skip the waitlist and get a free share! Join me on dapps.co'
+    };
     
-    // Try to use Web Share API if available
-    if (navigator.share) {
-      navigator.share({
-        title: 'Join me on dapps.co',
-        text: 'Skip the waitlist and get a free share! Join me on dapps.co',
-        url: referralUrl,
-      }).catch(() => {
-        // Fallback to copying to clipboard if share fails or is cancelled
-        handleCopy();
-      });
-    } else {
-      // Fallback to copying to clipboard
-      handleCopy();
-    }
+    shareToSocialMedia(platform, options).then((success) => {
+      if (success && platform === 'copy') {
+        toast.success("Link copied to clipboard!");
+      } else if (success) {
+        toast.success(`Shared successfully to ${platform}!`);
+        
+        // Trigger small confetti burst on successful share
+        confetti({
+          particleCount: 50,
+          spread: 50,
+          origin: { y: 0.6 }
+        });
+      }
+    });
   };
 
   const handleClaimRewards = () => {
     setIsClaimingRewards(true);
     
     // Animate reward claiming
+    let tempAvailable = availableRewards;
     const claimAnimation = setInterval(() => {
-      setProgressAvailable((prev) => {
-        const newValue = Math.max(0, prev - 3);
-        return newValue;
-      });
+      if (tempAvailable <= 0.01) {
+        clearInterval(claimAnimation);
+        setAvailableRewards(0);
+        setTotalEarned((prev) => prev + tempAvailable);
+        setIsClaimingRewards(false);
+        setRewardsClaimable(false);
+        
+        // Success animation
+        confetti({
+          particleCount: 150,
+          spread: 90,
+          origin: { y: 0.6 },
+          colors: ['#4F46E5', '#10B981', '#F59E0B']
+        });
+        
+        toast.success("Rewards claimed successfully!");
+        return;
+      }
       
-      setTotalEarned((prev) => prev + 0.005);
+      const increment = 0.01;
+      tempAvailable -= increment;
+      
+      setAvailableRewards(tempAvailable);
+      setTotalEarned((prev) => prev + increment);
     }, 50);
-    
-    // Simulate API call with timeout
-    setTimeout(() => {
-      clearInterval(claimAnimation);
-      
-      // Success animation
-      confetti({
-        particleCount: 150,
-        spread: 90,
-        origin: { y: 0.6 },
-        colors: ['#4F46E5', '#10B981', '#F59E0B']
-      });
-      
-      toast.success("Rewards claimed successfully!");
-      setIsClaimingRewards(false);
-      setRewardsClaimable(false);
-      setAvailableRewards(0);
-      setProgressAvailable(0);
-    }, 1500);
   };
   
-  // Animate progress bars on mount
-  useEffect(() => {
-    setTimeout(() => setProgressEarned(85), 300);
-    setTimeout(() => setProgressAvailable(15), 600);
-  }, []);
-
   // Sample data for referral history
   const referralHistory = [
-    { 
-      username: "alex.eth", 
-      date: "2023-08-15", 
-      amount: 0.35,
-      active: true 
-    },
-    { 
-      username: "jenny.sol", 
-      date: "2023-09-02", 
-      amount: 0.28,
-      active: true 
-    },
-    { 
-      username: "max.btc", 
-      date: "2023-09-10", 
-      amount: 0.42,
-      active: true 
-    },
-    { 
-      username: "sarah.avax", 
-      date: "2023-09-18", 
-      amount: 0.12,
-      active: true 
-    },
-    { 
-      username: "tom.arb", 
-      date: "2023-09-25", 
-      amount: 0.08,
-      active: true 
-    },
-    { 
-      username: "jessica.matic", 
-      date: "2023-10-05", 
-      amount: 0,
-      active: false 
-    },
-    { 
-      username: "mike.op", 
-      date: "2023-10-12", 
-      amount: 0,
-      active: false 
-    },
-    { 
-      username: "lily.base", 
-      date: "2023-10-19", 
-      amount: 0,
-      active: false 
-    }
+    { username: "alex.eth", date: "2023-08-15", amount: 0.35, active: true },
+    { username: "jenny.sol", date: "2023-09-02", amount: 0.28, active: true },
+    { username: "max.btc", date: "2023-09-10", amount: 0.42, active: true },
+    { username: "sarah.avax", date: "2023-09-18", amount: 0.12, active: true },
+    { username: "tom.arb", date: "2023-09-25", amount: 0.08, active: true },
+    { username: "jessica.matic", date: "2023-10-05", amount: 0, active: false },
+    { username: "mike.op", date: "2023-10-12", amount: 0, active: false },
+    { username: "lily.base", date: "2023-10-19", amount: 0, active: false }
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 max-w-3xl mx-auto px-4 pb-20">
+      {/* Header Section */}
       <motion.div 
-        initial={{ opacity: 0, y: -20 }}
+        initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="flex items-center justify-between"
+        className="bg-gradient-to-r from-primary/10 to-primary/5 rounded-xl p-5 border border-primary/20 relative overflow-hidden"
       >
-        <h1 className="text-2xl font-bold">Share the Love</h1>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Total Invited:</span>
-          <motion.span 
-            initial={{ scale: 0.8 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.3 }}
-            className="font-bold text-primary"
+        <div className="absolute -top-16 -right-16 w-32 h-32 bg-primary/20 rounded-full blur-xl"></div>
+        <div className="absolute -bottom-20 -left-10 w-32 h-32 bg-primary/10 rounded-full blur-xl"></div>
+        
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              <Gift className="h-6 w-6 text-primary" />
+              Share the Love
+            </h1>
+            <p className="text-sm max-w-sm">
+              Skip the 75,000+ waitlist for your friends and earn rewards
+            </p>
+          </div>
+          
+          <motion.div 
+            className="bg-primary/10 px-3 py-2 rounded-lg border border-primary/20 text-center"
+            whileHover={{ scale: 1.05 }}
           >
-            {totalReferrals}
-          </motion.span>
+            <div className="text-sm text-muted-foreground">Your Invites</div>
+            <div className="text-2xl font-bold text-primary">{totalReferrals}</div>
+          </motion.div>
         </div>
       </motion.div>
       
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <motion.div 
-          className="col-span-1 lg:col-span-2"
-          initial={{ opacity: 0, y: 20 }}
+      {/* Invite Link + Rewards Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Invite Link Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
+          transition={{ delay: 0.1 }}
         >
-          <Card className="overflow-hidden border-2 border-primary/20 relative bg-gradient-to-br from-background to-primary/5">
-            <div className="absolute top-0 right-0 w-24 h-24 -mt-8 -mr-8 bg-primary/10 rounded-full blur-xl animate-pulse"></div>
-            <div className="absolute bottom-0 left-0 w-32 h-32 -mb-12 -ml-12 bg-primary/5 rounded-full blur-xl"></div>
+          <Card className="border-primary/20 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-48 h-48 -mt-20 -mr-20 bg-primary/5 rounded-full blur-2xl"></div>
             
-            <CardHeader className="pb-2">
-              <motion.div 
-                className="flex items-center gap-2"
-                initial={{ x: -20, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                transition={{ delay: 0.1 }}
-              >
-                <Gift className="h-6 w-6 text-primary animate-pulse" />
-                <CardTitle>Your Invite Link</CardTitle>
-              </motion.div>
-              <motion.div
-                initial={{ y: 10, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.2 }}
-              >
-                <CardDescription className="text-base mt-2">
-                  Share this link with friends to help them skip the <motion.span 
-                    className="font-semibold"
-                    animate={{ color: ['#4F46E5', '#10B981', '#4F46E5'] }}
-                    transition={{ duration: 5, repeat: Infinity }}
-                  >75,000+ waitlist</motion.span> and get a <span className="font-semibold text-primary">free share in a community</span>!
-                </CardDescription>
-              </motion.div>
+            <CardHeader className="pb-0">
+              <CardTitle className="flex items-center gap-2 text-xl">
+                <LinkIcon className="h-5 w-5 text-primary" />
+                Your Invite Link
+              </CardTitle>
+              <CardDescription className="text-sm">
+                Share to give friends <span className="font-medium text-primary">instant access</span> and a <span className="font-medium text-primary">free share</span>
+              </CardDescription>
             </CardHeader>
             
-            <CardContent className="pb-2">
-              <motion.div 
-                className="relative p-6 bg-primary/5 rounded-xl border border-primary/20 shadow-sm"
-                whileHover={{ boxShadow: "0 10px 25px -5px rgba(79, 70, 229, 0.1), 0 10px 10px -5px rgba(79, 70, 229, 0.04)" }}
-                transition={{ duration: 0.2 }}
-              >
-                <div className={`absolute inset-0 flex items-center justify-center bg-black/5 backdrop-blur-sm rounded-xl transition-opacity duration-300 z-10 ${showSuccessMessage ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                  <div className="flex items-center gap-2 bg-green-500 text-white px-4 py-2 rounded-md shadow-lg">
-                    <CheckCircle2 className="h-5 w-5" />
-                    <span className="font-medium">Link copied to clipboard!</span>
-                  </div>
-                </div>
+            <CardContent className="pb-3 pt-4">
+              <div className="relative">
+                {showCopyNotification && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="absolute -top-12 left-1/2 transform -translate-x-1/2 bg-green-600 text-white px-3 py-1.5 rounded-md shadow-lg z-10 flex items-center gap-1"
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span>Copied!</span>
+                  </motion.div>
+                )}
                 
-                <div className="flex flex-col sm:flex-row items-center gap-3">
-                  <div className="relative flex-1 w-full">
-                    <Link className="absolute left-3 top-3 h-5 w-5 text-primary" />
-                    <Input
-                      value={referralUrl}
-                      readOnly
-                      className="pl-10 pr-4 py-6 text-base font-medium border-primary/20 bg-background"
-                    />
-                  </div>
-                  <div className="flex gap-2 w-full sm:w-auto">
-                    <motion.div whileTap={{ scale: 0.95 }} className="flex-1 sm:flex-none">
+                <div className="flex flex-col gap-2">
+                  <div className="flex gap-2 items-center">
+                    <div className="relative flex-1">
+                      <Input
+                        value={referralUrl}
+                        readOnly
+                        className="pr-20 py-5 text-base font-medium border-primary/20 bg-muted/30"
+                      />
                       <Button 
-                        variant={copied ? "default" : "outline"} 
-                        size="lg"
+                        variant="ghost" 
+                        size="sm" 
+                        className="absolute right-0 top-0 h-full border-l border-primary/10 rounded-none px-3 text-primary"
                         onClick={handleCopy}
-                        className={`relative overflow-hidden w-full ${copied ? "bg-green-600 hover:bg-green-700" : "border-primary/20"}`}
                       >
-                        <CopyIcon className="h-5 w-5 mr-2" />
-                        {copied ? "Copied!" : "Copy Link"}
+                        {copied ? (
+                          <CheckCircle2 className="h-4 w-4 mr-1" />
+                        ) : (
+                          <CopyIcon className="h-4 w-4 mr-1" />
+                        )}
+                        {isMobile ? '' : (copied ? 'Copied!' : 'Copy')}
                       </Button>
-                    </motion.div>
-                    <motion.div whileTap={{ scale: 0.95 }} className="flex-1 sm:flex-none">
-                      <Button 
-                        size="lg" 
-                        onClick={handleShare}
-                        className={`relative overflow-hidden w-full ${animateShare ? 'animate-pulse' : ''}`}
-                      >
-                        <Share2 className="h-5 w-5 mr-2" />
-                        Share
-                      </Button>
-                    </motion.div>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-4 gap-2 mt-1">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="flex items-center justify-center gap-1.5"
+                      onClick={() => handleShare('twitter')}
+                    >
+                      <Twitter className="h-4 w-4 text-[#1DA1F2]" />
+                      {!isMobile && <span>Twitter</span>}
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="flex items-center justify-center gap-1.5"
+                      onClick={() => handleShare('facebook')}
+                    >
+                      <Facebook className="h-4 w-4 text-[#1877F2]" />
+                      {!isMobile && <span>Facebook</span>}
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="flex items-center justify-center gap-1.5"
+                      onClick={() => handleShare('telegram')}
+                    >
+                      <Send className="h-4 w-4 text-[#26A5E4]" />
+                      {!isMobile && <span>Telegram</span>}
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="flex items-center justify-center gap-1.5"
+                      onClick={() => handleShare('farcaster')}
+                    >
+                      <Zap className="h-4 w-4 text-purple-500" />
+                      {!isMobile && <span>Farcaster</span>}
+                    </Button>
                   </div>
                 </div>
-                
-                <motion.div 
-                  className="mt-4 pt-4 border-t border-primary/10 flex flex-wrap gap-2"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                >
-                  <Button variant="outline" size="sm" className="group" onClick={handleShare}>
-                    <Twitter className="h-4 w-4 mr-2 text-[#1DA1F2] group-hover:animate-spin" />
-                    Twitter
-                  </Button>
-                  <Button variant="outline" size="sm" className="group" onClick={handleShare}>
-                    <Facebook className="h-4 w-4 mr-2 text-[#1877F2] group-hover:animate-pulse" />
-                    Facebook
-                  </Button>
-                </motion.div>
-              </motion.div>
+              </div>
             </CardContent>
             
-            <CardFooter className="flex justify-center py-4 text-center text-sm text-muted-foreground">
+            <CardFooter className="pt-0 pb-4">
               <motion.div 
-                className="max-w-md"
+                className="text-xs text-muted-foreground text-center w-full"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ delay: 0.4 }}
+                transition={{ delay: 0.3 }}
               >
-                <span className="font-medium">You earn 2% of all buy amounts</span> from your referrals forever!
+                You earn <span className="font-medium text-primary">2% of all buy amounts</span> from your referrals forever!
               </motion.div>
             </CardFooter>
           </Card>
         </motion.div>
         
+        {/* Rewards Card */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.2 }}
+          transition={{ delay: 0.2 }}
         >
-          <Card className="border-2 border-primary/10 overflow-hidden bg-gradient-to-br from-background to-primary/5">
-            <CardHeader>
-              <motion.div 
-                className="flex items-center gap-2"
-                initial={{ x: -20, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                transition={{ delay: 0.2 }}
-              >
-                <Trophy className="h-6 w-6 text-primary" />
-                <CardTitle>Your Rewards</CardTitle>
-              </motion.div>
-              <motion.div
-                initial={{ y: 10, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.3 }}
-              >
-                <CardDescription className="text-base">
-                  Track earnings from your invites
-                </CardDescription>
-              </motion.div>
+          <Card className="border-primary/20 h-full">
+            <CardHeader className="pb-0">
+              <CardTitle className="flex items-center gap-2 text-xl">
+                <Trophy className="h-5 w-5 text-primary" />
+                Your Rewards
+              </CardTitle>
+              <CardDescription className="text-sm">
+                Track your earnings from invites
+              </CardDescription>
             </CardHeader>
             
-            <CardContent>
-              <div className="space-y-6">
-                <motion.div 
-                  className="space-y-2"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
+            <CardContent className="pt-4">
+              <div className="space-y-4">
+                {/* Total Earned */}
+                <motion.div
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3 }}
+                  className="flex items-center justify-between"
                 >
-                  <div className="flex justify-between text-sm">
-                    <span className="flex items-center gap-1 font-medium">
+                  <div className="flex items-center gap-1.5">
+                    <div className="p-1.5 bg-primary/10 rounded-full">
                       <Sparkles className="h-4 w-4 text-primary" />
-                      Total Earned
-                    </span>
-                    <motion.span 
-                      className="font-bold text-primary text-lg"
-                      initial={{ scale: 0.8 }}
-                      animate={{ scale: 1 }}
-                      transition={{ delay: 0.4 }}
-                    >
-                      {totalEarned.toFixed(2)} ETH
-                    </motion.span>
-                  </div>
-                  
-                  <motion.div
-                    className="bg-primary/10 p-4 rounded-xl relative overflow-hidden"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.4 }}
-                  >
-                    <motion.div
-                      className="absolute inset-0 bg-gradient-to-r from-primary/20 to-primary/5"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${progressEarned}%` }}
-                      transition={{ delay: 0.5, duration: 1 }}
-                    />
-                    <div className="relative flex items-center justify-center py-2">
-                      <motion.div
-                        initial={{ scale: 0.8, opacity: 0 }}
-                        animate={{ 
-                          scale: [0.8, 1.1, 1],
-                          opacity: 1
-                        }}
-                        transition={{ delay: 0.6, duration: 0.5 }}
-                        className="text-xl font-bold text-primary"
-                      >
-                        Great earning potential!
-                      </motion.div>
                     </div>
+                    <span className="font-medium">Total Earned</span>
+                  </div>
+                  <motion.div 
+                    className="text-xl font-bold text-primary"
+                    animate={isClaimingRewards ? { scale: [1, 1.05, 1] } : {}}
+                    transition={{ repeat: isClaimingRewards ? Infinity : 0, duration: 0.5 }}
+                  >
+                    {totalEarned.toFixed(2)} ETH
                   </motion.div>
                 </motion.div>
                 
-                <motion.div 
-                  className="space-y-2"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.4 }}
-                >
-                  <div className="flex justify-between text-sm">
-                    <span className="flex items-center gap-1 font-medium">
-                      <Wallet className="h-4 w-4 text-amber-500" />
-                      Available Rewards
-                    </span>
-                    <motion.span 
-                      className="font-bold text-amber-500 text-lg"
-                      initial={{ scale: 0.8 }}
-                      animate={rewardsClaimable ? { 
-                        scale: [1, 1.1, 1],
-                        transition: { 
-                          repeat: Infinity,
-                          repeatType: "reverse",
-                          duration: 1.5
-                        }
-                      } : { scale: 1 }}
+                {/* Available Rewards */}
+                {availableRewards > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4 }}
+                    className="flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <div className="p-1.5 bg-amber-500/10 rounded-full">
+                        <Wallet className="h-4 w-4 text-amber-500" />
+                      </div>
+                      <span className="font-medium">Available Rewards</span>
+                    </div>
+                    <motion.div 
+                      className="text-xl font-bold text-amber-500"
+                      animate={rewardsClaimable && !isClaimingRewards ? { 
+                        scale: [1, 1.05, 1],
+                      } : {}}
+                      transition={{ 
+                        repeat: rewardsClaimable && !isClaimingRewards ? Infinity : 0, 
+                        duration: 1.5 
+                      }}
                     >
                       {availableRewards.toFixed(2)} ETH
-                    </motion.span>
-                  </div>
-                  
-                  {availableRewards > 0 && (
-                    <motion.div
-                      className="bg-amber-500/10 p-4 rounded-xl relative overflow-hidden"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: 0.5 }}
-                    >
-                      <motion.div
-                        className="absolute inset-0 bg-gradient-to-r from-amber-500/20 to-amber-500/5"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${progressAvailable}%` }}
-                        transition={{ delay: 0.6, duration: 0.5 }}
-                      />
-                      <div className="relative flex items-center justify-center py-2">
-                        <motion.div
-                          initial={{ scale: 0.8, opacity: 0 }}
-                          animate={{ 
-                            scale: [0.8, 1.1, 1],
-                            opacity: 1
-                          }}
-                          transition={{ delay: 0.7, duration: 0.5 }}
-                          className="text-lg font-medium text-amber-600"
-                        >
-                          Ready to claim!
-                        </motion.div>
-                      </div>
                     </motion.div>
-                  )}
-                </motion.div>
-
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
+                  </motion.div>
+                )}
+                
+                {availableRewards > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.5 }}
+                  >
+                    <Button 
+                      variant={rewardsClaimable ? "default" : "outline"}
+                      className="w-full"
+                      disabled={!rewardsClaimable || isClaimingRewards}
+                      onClick={handleClaimRewards}
+                    >
+                      {isClaimingRewards ? (
+                        <>
+                          <motion.div
+                            animate={{ rotate: 360 }}
+                            transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                            className="mr-1.5"
+                          >
+                            <Sparkles className="h-4 w-4" />
+                          </motion.div>
+                          Claiming Rewards...
+                        </>
+                      ) : rewardsClaimable ? (
+                        <>Claim Rewards</>
+                      ) : (
+                        <>No Rewards Available</>
+                      )}
+                    </Button>
+                  </motion.div>
+                )}
+                
+                {/* Stats */}
+                <motion.div 
+                  className="grid grid-cols-2 gap-3 mt-2"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
                   transition={{ delay: 0.5 }}
                 >
-                  <Button 
-                    className="w-full"
-                    size="lg"
-                    variant={rewardsClaimable ? "default" : "outline"}
-                    onClick={handleClaimRewards}
-                    disabled={!rewardsClaimable || isClaimingRewards}
-                  >
-                    {isClaimingRewards ? (
-                      <>
-                        <motion.div
-                          animate={{ rotate: 360 }}
-                          transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-                          className="mr-2"
-                        >
-                          <Sparkles className="h-5 w-5" />
-                        </motion.div>
-                        Claiming...
-                      </>
-                    ) : rewardsClaimable ? (
-                      <>Claim Rewards</>
-                    ) : (
-                      <>No Rewards Available</>
-                    )}
-                  </Button>
-                </motion.div>
-                
-                <motion.div 
-                  className="grid grid-cols-2 gap-4"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.6 }}
-                >
-                  <motion.div 
-                    className="bg-muted/40 rounded-lg p-4 text-center border border-border/50"
-                    whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)" }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <Users className="h-5 w-5 mx-auto mb-2 text-primary" />
-                    <motion.div 
-                      className="text-2xl font-bold"
-                      initial={{ scale: 0.8 }}
-                      animate={{ scale: 1 }}
-                      transition={{ delay: 0.7 }}
-                    >
-                      {totalReferrals}
-                    </motion.div>
-                    <div className="text-sm text-muted-foreground">Total Invites</div>
-                  </motion.div>
-                  <motion.div 
-                    className="bg-muted/40 rounded-lg p-4 text-center border border-border/50"
-                    whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)" }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <Sparkles className="h-5 w-5 mx-auto mb-2 text-amber-500" />
-                    <motion.div 
-                      className="text-2xl font-bold"
-                      initial={{ scale: 0.8 }}
-                      animate={{ scale: 1 }}
-                      transition={{ delay: 0.7 }}
-                    >
-                      {activeReferrals}
-                    </motion.div>
-                    <div className="text-sm text-muted-foreground">Active Invites</div>
-                  </motion.div>
+                  <div className="bg-muted/40 rounded-lg p-3 text-center border border-border/50">
+                    <Users className="h-4 w-4 mx-auto mb-1 text-primary" />
+                    <div className="text-xl font-bold">{totalReferrals}</div>
+                    <div className="text-xs text-muted-foreground">Total Invites</div>
+                  </div>
+                  <div className="bg-muted/40 rounded-lg p-3 text-center border border-border/50">
+                    <CheckCircle2 className="h-4 w-4 mx-auto mb-1 text-green-500" />
+                    <div className="text-xl font-bold">{activeReferrals}</div>
+                    <div className="text-xs text-muted-foreground">Active Invites</div>
+                  </div>
                 </motion.div>
               </div>
             </CardContent>
@@ -530,236 +404,133 @@ const ReferralPage = () => {
         </motion.div>
       </div>
       
+      {/* Benefits Section */}
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5, duration: 0.4 }}
+        transition={{ delay: 0.3 }}
       >
-        <Card className="overflow-hidden border-2 border-primary/10 relative bg-gradient-to-tl from-background to-primary/5">
-          <div className="absolute bottom-0 right-0 w-32 h-32 -mb-10 -mr-10 bg-primary/5 rounded-full blur-xl"></div>
-          <CardHeader className="pb-2">
-            <motion.div
-              initial={{ x: -20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ delay: 0.6 }}
-              className="flex items-center gap-2"
-            >
-              <Rocket className="h-6 w-6 text-primary" />
-              <CardTitle>How Invites Work</CardTitle>
-            </motion.div>
-            <motion.div
-              initial={{ y: 10, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.7 }}
-            >
-              <CardDescription className="text-base">
-                Learn about our invitation program benefits
-              </CardDescription>
-            </motion.div>
+        <Card className="border-primary/20">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <Sparkles className="h-5 w-5 text-primary" />
+              How Invites Work
+            </CardTitle>
+            <CardDescription className="text-sm">
+              Key benefits of our referral program
+            </CardDescription>
           </CardHeader>
           
-          <CardContent>
-            <div className="grid md:grid-cols-3 gap-6">
+          <CardContent className="pt-0">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <motion.div 
-                className="space-y-4"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.8 }}
+                className="rounded-lg border border-primary/20 p-4 relative overflow-hidden bg-gradient-to-b from-primary/5 to-transparent"
+                whileHover={{ y: -5 }}
+                transition={{ type: "spring", stiffness: 300, damping: 15 }}
               >
-                <motion.div 
-                  className="bg-primary/5 rounded-lg p-6 border border-primary/10"
-                  whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(79, 70, 229, 0.1), 0 10px 10px -5px rgba(79, 70, 229, 0.04)" }}
-                >
-                  <motion.div 
-                    className="rounded-full bg-primary/10 w-12 h-12 flex items-center justify-center mb-4"
-                    whileHover={{ rotate: 10 }}
-                  >
-                    <Gift className="h-6 w-6 text-primary" />
-                  </motion.div>
-                  <h3 className="font-medium text-lg mb-2 text-primary">For Your Friends</h3>
-                  <p className="text-muted-foreground">
-                    They <span className="font-medium text-foreground">skip the 75,000+ waitlist</span> and get <span className="font-medium text-foreground">instant access</span> to dapps.co.
-                  </p>
-                </motion.div>
-                <motion.div 
-                  className="rounded-lg p-4 border border-primary/10"
-                  animate={{ 
-                    boxShadow: ['0 0 0 rgba(79, 70, 229, 0)', '0 0 10px rgba(79, 70, 229, 0.2)', '0 0 0 rgba(79, 70, 229, 0)']
-                  }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                >
-                  <div className="flex items-center gap-3">
-                    <motion.div 
-                      className="rounded-full bg-primary/10 p-2 text-primary"
-                      animate={{ x: [0, 3, 0] }}
-                      transition={{ duration: 1.5, repeat: Infinity }}
-                    >
-                      <ArrowRight className="h-4 w-4" />
-                    </motion.div>
-                    <span>Your friends get immediate access</span>
-                  </div>
-                </motion.div>
+                <div className="absolute top-0 right-0 w-16 h-16 bg-primary/10 rounded-full -mt-8 -mr-8 blur-xl"></div>
+                <Gift className="h-8 w-8 text-primary mb-3" />
+                <h3 className="font-semibold text-lg mb-1">For Your Friends</h3>
+                <p className="text-sm text-muted-foreground">
+                  They <span className="text-foreground font-medium">skip the 75,000+ waitlist</span> and get <span className="text-foreground font-medium">instant access</span>.
+                </p>
               </motion.div>
               
               <motion.div 
-                className="space-y-4"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.9 }}
+                className="rounded-lg border border-primary/20 p-4 relative overflow-hidden bg-gradient-to-b from-primary/5 to-transparent"
+                whileHover={{ y: -5 }}
+                transition={{ type: "spring", stiffness: 300, damping: 15 }}
               >
-                <motion.div 
-                  className="bg-primary/5 rounded-lg p-6 border border-primary/10"
-                  whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(79, 70, 229, 0.1), 0 10px 10px -5px rgba(79, 70, 229, 0.04)" }}
-                >
-                  <motion.div 
-                    className="rounded-full bg-primary/10 w-12 h-12 flex items-center justify-center mb-4"
-                    whileHover={{ rotate: 10 }}
-                  >
-                    <Sparkles className="h-6 w-6 text-primary" />
-                  </motion.div>
-                  <h3 className="font-medium text-lg mb-2 text-primary">Free Share</h3>
-                  <p className="text-muted-foreground">
-                    Your friends receive a <span className="font-medium text-foreground">free share in a community</span> when they join.
-                  </p>
-                </motion.div>
-                <motion.div 
-                  className="rounded-lg p-4 border border-primary/10"
-                  animate={{ 
-                    boxShadow: ['0 0 0 rgba(79, 70, 229, 0)', '0 0 10px rgba(79, 70, 229, 0.2)', '0 0 0 rgba(79, 70, 229, 0)']
-                  }}
-                  transition={{ duration: 2, delay: 0.3, repeat: Infinity }}
-                >
-                  <div className="flex items-center gap-3">
-                    <motion.div 
-                      className="rounded-full bg-primary/10 p-2 text-primary"
-                      animate={{ x: [0, 3, 0] }}
-                      transition={{ duration: 1.5, delay: 0.3, repeat: Infinity }}
-                    >
-                      <ArrowRight className="h-4 w-4" />
-                    </motion.div>
-                    <span>Free share worth up to $100</span>
-                  </div>
-                </motion.div>
+                <div className="absolute top-0 right-0 w-16 h-16 bg-primary/10 rounded-full -mt-8 -mr-8 blur-xl"></div>
+                <Sparkles className="h-8 w-8 text-primary mb-3" />
+                <h3 className="font-semibold text-lg mb-1">Free Share</h3>
+                <p className="text-sm text-muted-foreground">
+                  Your friends receive a <span className="text-foreground font-medium">free share in a community</span> when they join.
+                </p>
               </motion.div>
               
               <motion.div 
-                className="space-y-4"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 1 }}
+                className="rounded-lg border border-primary/20 p-4 relative overflow-hidden bg-gradient-to-b from-primary/5 to-transparent"
+                whileHover={{ y: -5 }}
+                transition={{ type: "spring", stiffness: 300, damping: 15 }}
               >
-                <motion.div 
-                  className="bg-primary/5 rounded-lg p-6 border border-primary/10"
-                  whileHover={{ y: -5, boxShadow: "0 10px 25px -5px rgba(79, 70, 229, 0.1), 0 10px 10px -5px rgba(79, 70, 229, 0.04)" }}
-                >
-                  <motion.div 
-                    className="rounded-full bg-primary/10 w-12 h-12 flex items-center justify-center mb-4"
-                    whileHover={{ rotate: 10 }}
-                  >
-                    <Trophy className="h-6 w-6 text-primary" />
-                  </motion.div>
-                  <h3 className="font-medium text-lg mb-2 text-primary">You Earn</h3>
-                  <p className="text-muted-foreground">
-                    You earn <span className="font-medium text-foreground">up to 2% of all buy amounts</span> from users who join through your invite link.
-                  </p>
-                </motion.div>
-                <motion.div 
-                  className="rounded-lg p-4 border border-primary/10"
-                  animate={{ 
-                    boxShadow: ['0 0 0 rgba(79, 70, 229, 0)', '0 0 10px rgba(79, 70, 229, 0.2)', '0 0 0 rgba(79, 70, 229, 0)']
-                  }}
-                  transition={{ duration: 2, delay: 0.6, repeat: Infinity }}
-                >
-                  <div className="flex items-center gap-3">
-                    <motion.div 
-                      className="rounded-full bg-primary/10 p-2 text-primary"
-                      animate={{ x: [0, 3, 0] }}
-                      transition={{ duration: 1.5, delay: 0.6, repeat: Infinity }}
-                    >
-                      <ArrowRight className="h-4 w-4" />
-                    </motion.div>
-                    <span>Rewards paid in ETH to your wallet</span>
-                  </div>
-                </motion.div>
+                <div className="absolute top-0 right-0 w-16 h-16 bg-primary/10 rounded-full -mt-8 -mr-8 blur-xl"></div>
+                <Trophy className="h-8 w-8 text-primary mb-3" />
+                <h3 className="font-semibold text-lg mb-1">You Earn</h3>
+                <p className="text-sm text-muted-foreground">
+                  You earn <span className="text-foreground font-medium">2% of all buy amounts</span> from your referrals forever!
+                </p>
               </motion.div>
             </div>
           </CardContent>
         </Card>
       </motion.div>
       
+      {/* Recent Referrals Section */}
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.1, duration: 0.4 }}
+        transition={{ delay: 0.4 }}
+        className="mb-10"
       >
-        <Card className="overflow-hidden border border-border/60 bg-gradient-to-br from-background to-primary/5">
-          <CardHeader>
-            <motion.div
-              initial={{ x: -20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ delay: 1.2 }}
-              className="flex items-center gap-2"
-            >
-              <Users className="h-6 w-6 text-primary" />
-              <CardTitle>Your Invites</CardTitle>
-            </motion.div>
-            <CardDescription>
-              View your referred users and earnings
+        <Card className="border-primary/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <Users className="h-5 w-5 text-primary" />
+              Recent Invites
+            </CardTitle>
+            <CardDescription className="text-sm">
+              Your most recent referrals and their status
             </CardDescription>
           </CardHeader>
           
           <CardContent>
-            <div className="space-y-4">
-              <AnimatePresence>
-                {referralHistory.map((referral, index) => (
-                  <motion.div 
-                    key={index} 
-                    className="flex items-center justify-between p-4 rounded-lg border border-border/40 hover:bg-muted/20 transition-colors"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 * index + 1.2 }}
-                    whileHover={{ backgroundColor: "rgba(79, 70, 229, 0.05)" }}
-                  >
-                    <div className="flex items-center gap-3">
-                      <motion.div whileHover={{ scale: 1.1 }} transition={{ duration: 0.2 }}>
-                        <Avatar>
-                          <AvatarImage src={`https://avatar.vercel.sh/${referral.username}`} />
-                          <AvatarFallback>{referral.username[0].toUpperCase()}</AvatarFallback>
-                        </Avatar>
-                      </motion.div>
-                      <div>
-                        <div className="font-medium">{referral.username}</div>
-                        <div className="text-sm text-muted-foreground">Joined on {referral.date}</div>
-                      </div>
+            <div className="space-y-2">
+              {referralHistory.slice(0, isMobile ? 3 : 5).map((referral, index) => (
+                <motion.div 
+                  key={index}
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 * index + 0.5 }}
+                  className="flex items-center justify-between p-3 rounded-lg border border-border/40 hover:bg-muted/20 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={`https://avatar.vercel.sh/${referral.username}`} />
+                      <AvatarFallback>{referral.username[0].toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="font-medium text-sm">{referral.username}</div>
+                      <div className="text-xs text-muted-foreground">{referral.date}</div>
                     </div>
-                    <div className="text-right">
-                      <div className="font-medium">
-                        {referral.amount > 0 ? (
-                          <motion.span 
-                            className="text-primary"
-                            whileHover={{ scale: 1.05 }}
-                          >
-                            {referral.amount.toFixed(2)} ETH
-                          </motion.span>
-                        ) : "-"}
-                      </div>
-                      <div className="text-sm">
-                        {referral.active ? (
-                          <motion.span 
-                            className="text-green-600 flex items-center gap-1 justify-end"
-                            animate={{ opacity: [0.7, 1, 0.7] }}
-                            transition={{ duration: 1.5, repeat: Infinity }}
-                          >
-                            <CheckCircle2 className="h-3 w-3" /> Active
-                          </motion.span>
-                        ) : (
-                          <span className="text-muted-foreground">Pending</span>
-                        )}
-                      </div>
+                  </div>
+                  
+                  <div className="text-right">
+                    <div className="font-medium text-sm">
+                      {referral.amount > 0 ? (
+                        <span className="text-primary">{referral.amount.toFixed(2)} ETH</span>
+                      ) : "-"}
                     </div>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
+                    <div className="text-xs">
+                      {referral.active ? (
+                        <span className="text-green-600 flex items-center gap-1 justify-end">
+                          <CheckCircle2 className="h-3 w-3" /> Active
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">Pending</span>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+              
+              {/* View More Button (mobile only) */}
+              {isMobile && totalReferrals > 3 && (
+                <Button variant="outline" size="sm" className="w-full mt-2 text-primary">
+                  <ArrowRight className="h-4 w-4 mr-1" />
+                  View All {totalReferrals} Invites
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>

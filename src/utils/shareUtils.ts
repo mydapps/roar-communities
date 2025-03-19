@@ -1,5 +1,5 @@
 
-export type SharePlatform = 'twitter' | 'facebook' | 'linkedin' | 'telegram' | 'copy' | 'native';
+export type SharePlatform = 'twitter' | 'facebook' | 'linkedin' | 'telegram' | 'farcaster' | 'copy' | 'native';
 
 interface ShareOptions {
   url: string;
@@ -27,6 +27,10 @@ export const shareToSocialMedia = (platform: SharePlatform, options: ShareOption
       break;
     case 'telegram':
       shareUrl = `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}`;
+      break;
+    case 'farcaster':
+      // Farcaster's Cast sharing URL format
+      shareUrl = `https://warpcast.com/~/compose?text=${encodedText}%20${encodedUrl}`;
       break;
     case 'copy':
       navigator.clipboard.writeText(url);
