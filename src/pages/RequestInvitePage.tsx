@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -10,7 +11,8 @@ import {
   Trophy,
   ArrowUp,
   User,
-  CheckCircle2
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -172,7 +174,9 @@ const RequestInvitePage = () => {
       }, 1000);
     } else {
       setTimeout(() => {
-        toast.error(getRandomWittyResponse());
+        toast.error(getRandomWittyResponse(), {
+          icon: <AlertCircle className="h-5 w-5 text-destructive" />,
+        });
         setIsSubmitting(false);
       }, 1000);
     }

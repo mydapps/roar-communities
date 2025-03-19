@@ -2,7 +2,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
-import HomePage from '@/pages/HomePage';
 import FeedPage from '@/pages/FeedPage';
 import CommunitiesPage from '@/pages/CommunitiesPage';
 import CommunityPage from '@/pages/CommunityPage';
@@ -20,12 +19,12 @@ function App() {
     <BrowserRouter>
       <Routes>
         {/* Special routes without main layout */}
+        <Route path="/" element={<RequestInvitePage />} />
         <Route path="request-invite" element={<RequestInvitePage />} />
         <Route path="invite/:code" element={<ReferralPage />} />
         
         {/* Routes with main layout */}
         <Route path="/" element={<MainLayout />}>
-          <Route index element={<RequestInvitePage />} />
           <Route path="feed" element={<FeedPage />} />
           <Route path="communities" element={<CommunitiesPage />} />
           <Route path="c/:id" element={<CommunityPage />} />
