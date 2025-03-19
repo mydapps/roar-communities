@@ -3,13 +3,13 @@ import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { ImageIcon, VideoIcon, LinkIcon, XIcon, SendIcon, SearchIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { MentionInput } from '@/components/ui/mention-input';
 
 // Available communities for linking
 const COMMUNITIES = [
@@ -148,12 +148,13 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
                   </Button>
                 </div>
               )}
-              <Textarea 
+              <MentionInput 
                 value={content}
-                onChange={(e) => setContent(e.target.value)}
+                onChange={setContent}
                 onFocus={handleFocus}
-                className="w-full rounded-lg border border-border/60 bg-muted/40 p-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none min-h-[80px] transition-all duration-200" 
+                className="w-full rounded-lg border border-border/60 bg-muted/40 p-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none transition-all duration-200" 
                 placeholder={selectedCommunity ? `Share your thoughts with ${selectedCommunity}...` : "What's on your mind?"}
+                minHeight="80px"
               />
             </div>
             

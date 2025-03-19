@@ -53,7 +53,7 @@ export const MentionInput = forwardRef<HTMLTextAreaElement, MentionInputProps>(
     const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([]);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const popoverTargetRef = useRef<HTMLDivElement>(null);
-    const [ignoreNextCheck, setIgnoreNextCheck] = useState(false);
+    const [suppressSuggestions, setSuppressSuggestions] = useState(false);
 
     // Combine the forwarded ref with our internal ref
     const combinedRef = (node: HTMLTextAreaElement) => {
@@ -65,144 +65,143 @@ export const MentionInput = forwardRef<HTMLTextAreaElement, MentionInputProps>(
       textareaRef.current = node;
     };
 
-    useEffect(() => {
-      // Check if we need to show suggestions
-      const checkForMentionTriggers = () => {
-        if (!textareaRef.current || ignoreNextCheck) {
-          setIgnoreNextCheck(false);
-          return;
-        }
-        
-        const curPos = textareaRef.current.selectionStart;
-        const textBeforeCursor = value.substring(0, curPos);
-        
-        // Check for @mention
-        const atIndex = textBeforeCursor.lastIndexOf('@');
-        const hasAtTrigger = atIndex >= 0 && 
-                            (atIndex === 0 || textBeforeCursor[atIndex - 1] === ' ' || textBeforeCursor[atIndex - 1] === '\n');
-        
-        // Check for /c/ for community
-        const cIndex = textBeforeCursor.lastIndexOf('/c/');
-        const hasCTrigger = cIndex >= 0 && 
-                           (cIndex === 0 || textBeforeCursor[cIndex - 1] === ' ' || textBeforeCursor[cIndex - 1] === '\n');
-        
-        if (hasAtTrigger && (!hasCTrigger || atIndex > cIndex)) {
-          // Handle @mention
-          const searchText = textBeforeCursor.substring(atIndex + 1);
-          if (searchText.includes(' ')) {
-            // Space found, stop suggesting
-            setIsSuggesting(false);
-          } else {
-            // Only show suggestions if there's some text to search for
-            const shouldShowSuggestions = searchText.length > 0;
-            setIsSuggesting(shouldShowSuggestions);
-            setSuggestionType('user');
-            setSearchTerm(searchText);
-            setCursorPosition(curPos);
-            
-            const filtered = USERS.filter(user => 
-              user.toLowerCase().includes(searchText.toLowerCase())
-            );
-            setFilteredSuggestions(filtered);
-          }
-        } else if (hasCTrigger) {
-          // Handle /c/ for community
-          const searchText = textBeforeCursor.substring(cIndex + 3);
-          if (searchText.includes(' ') || searchText.includes('/')) {
-            // Space or slash found, stop suggesting
-            setIsSuggesting(false);
-          } else {
-            // Only show suggestions if there's some text to search for
-            const shouldShowSuggestions = searchText.length > 0;
-            setIsSuggesting(shouldShowSuggestions);
-            setSuggestionType('community');
-            setSearchTerm(searchText);
-            setCursorPosition(curPos);
-            
-            const filtered = COMMUNITIES.filter(community => 
-              community.toLowerCase().includes(searchText.toLowerCase())
-            );
-            setFilteredSuggestions(filtered);
-          }
-        } else {
-          setIsSuggesting(false);
-        }
-      };
+    // Function to check if we need to show suggestions
+    const checkForMentionTriggers = () => {
+      if (!textareaRef.current || suppressSuggestions) return;
       
+      const curPos = textareaRef.current.selectionStart;
+      const textBeforeCursor = value.substring(0, curPos);
+      
+      // Check for @mention
+      const atMatch = /@(\w*)$/.exec(textBeforeCursor);
+      const hasAtTrigger = atMatch !== null;
+      
+      // Check for /c/ for community
+      const communityMatch = /\/c\/(\w*)$/.exec(textBeforeCursor);
+      const hasCommunityTrigger = communityMatch !== null;
+      
+      if (hasAtTrigger && (!hasCommunityTrigger || atMatch.index > communityMatch?.index || 0)) {
+        // Handle @mention
+        const searchText = atMatch[1];
+        if (searchText.length >= 1) {
+          setIsSuggesting(true);
+          setSuggestionType('user');
+          setSearchTerm(searchText);
+          setCursorPosition(curPos);
+          
+          const filtered = USERS.filter(user => 
+            user.toLowerCase().includes(searchText.toLowerCase())
+          );
+          setFilteredSuggestions(filtered.length > 0 ? filtered : []);
+        } else {
+          // Show all users if just @ is typed
+          setIsSuggesting(true);
+          setSuggestionType('user');
+          setSearchTerm('');
+          setCursorPosition(curPos);
+          setFilteredSuggestions(USERS);
+        }
+      } else if (hasCommunityTrigger) {
+        // Handle /c/ for community
+        const searchText = communityMatch[1];
+        if (searchText.length >= 1) {
+          setIsSuggesting(true);
+          setSuggestionType('community');
+          setSearchTerm(searchText);
+          setCursorPosition(curPos);
+          
+          const filtered = COMMUNITIES.filter(community => 
+            community.toLowerCase().includes(searchText.toLowerCase())
+          );
+          setFilteredSuggestions(filtered.length > 0 ? filtered : []);
+        } else {
+          // Show all communities if just /c/ is typed
+          setIsSuggesting(true);
+          setSuggestionType('community');
+          setSearchTerm('');
+          setCursorPosition(curPos);
+          setFilteredSuggestions(COMMUNITIES);
+        }
+      } else {
+        setIsSuggesting(false);
+      }
+    };
+    
+    // Check for mention triggers when content or cursor position changes
+    useEffect(() => {
       checkForMentionTriggers();
-    }, [value, textareaRef.current?.selectionStart, ignoreNextCheck]);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [value, textareaRef.current?.selectionStart]);
 
+    // Handle when user selects a suggestion
     const handleSelectSuggestion = (suggestion: string) => {
       if (!textareaRef.current) return;
       
       const currentText = value;
-      let startPos: number;
-      let endPos: number;
+      let beforeMatch: string;
+      let afterMatch: string;
+      let newText: string;
       
       if (suggestionType === 'user') {
-        // Find the position of the @ symbol
-        startPos = currentText.substring(0, cursorPosition).lastIndexOf('@');
-        endPos = cursorPosition;
+        const atIndex = currentText.lastIndexOf('@', cursorPosition);
+        beforeMatch = currentText.substring(0, atIndex);
+        afterMatch = currentText.substring(cursorPosition);
         
         // Replace @partial with @selected_user
-        const newText = 
-          currentText.substring(0, startPos) + 
-          `@${suggestion}` + 
-          currentText.substring(endPos);
-          
-        onChange(newText);
-        
-        // Set cursor position after the inserted suggestion
-        setTimeout(() => {
-          if (textareaRef.current) {
-            const newCursorPos = startPos + suggestion.length + 1; // +1 for @
-            textareaRef.current.selectionStart = newCursorPos;
-            textareaRef.current.selectionEnd = newCursorPos;
-            textareaRef.current.focus();
-          }
-        }, 0);
+        newText = beforeMatch + '@' + suggestion + ' ' + afterMatch;
       } else if (suggestionType === 'community') {
-        // Find the position of the /c/ tag
-        startPos = currentText.substring(0, cursorPosition).lastIndexOf('/c/');
-        endPos = cursorPosition;
+        const communityIndex = currentText.lastIndexOf('/c/', cursorPosition);
+        beforeMatch = currentText.substring(0, communityIndex);
+        afterMatch = currentText.substring(cursorPosition);
         
         // Replace /c/partial with /c/selected_community
-        const newText = 
-          currentText.substring(0, startPos) + 
-          `/c/${suggestion}` + 
-          currentText.substring(endPos);
-          
-        onChange(newText);
-        
-        // Set cursor position after the inserted suggestion
-        setTimeout(() => {
-          if (textareaRef.current) {
-            const newCursorPos = startPos + suggestion.length + 3; // +3 for /c/
-            textareaRef.current.selectionStart = newCursorPos;
-            textareaRef.current.selectionEnd = newCursorPos;
-            textareaRef.current.focus();
-          }
-        }, 0);
+        newText = beforeMatch + '/c/' + suggestion + ' ' + afterMatch;
+      } else {
+        return;
       }
       
+      onChange(newText);
+      
+      // Temporarily suppress suggestions to prevent the popup from immediately reappearing
+      setSuppressSuggestions(true);
+      setTimeout(() => setSuppressSuggestions(false), 100);
+      
+      // Close suggestions
       setIsSuggesting(false);
-      setIgnoreNextCheck(true);
+      
+      // Set cursor position after the inserted suggestion and space
+      setTimeout(() => {
+        if (textareaRef.current) {
+          const newCursorPos = suggestionType === 'user' 
+            ? beforeMatch.length + suggestion.length + 2  // +2 for @ and space
+            : beforeMatch.length + suggestion.length + 4; // +4 for /c/ and space
+          
+          textareaRef.current.selectionStart = newCursorPos;
+          textareaRef.current.selectionEnd = newCursorPos;
+          textareaRef.current.focus();
+        }
+      }, 10);
     };
 
+    // Handle key events for keyboard navigation
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (isSuggesting) {
-        if (e.key === 'Escape') {
-          setIsSuggesting(false);
+      if (isSuggesting && filteredSuggestions.length > 0) {
+        if (e.key === 'Tab' || e.key === 'Enter') {
+          // Select the first suggestion with Tab or Enter
           e.preventDefault();
-        } else if (e.key === 'Tab' && filteredSuggestions.length > 0) {
           handleSelectSuggestion(filteredSuggestions[0]);
+        } else if (e.key === 'Escape') {
+          // Close suggestions with Escape
+          e.preventDefault();
+          setIsSuggesting(false);
+        } else if (e.key === 'ArrowDown' && filteredSuggestions.length > 1) {
+          // Move selection down (would need additional state for selection index)
+          e.preventDefault();
+        } else if (e.key === 'ArrowUp' && filteredSuggestions.length > 1) {
+          // Move selection up (would need additional state for selection index)
           e.preventDefault();
         }
       }
-    };
-
-    const closeSuggestions = () => {
-      setIsSuggesting(false);
     };
 
     return (
@@ -214,49 +213,47 @@ export const MentionInput = forwardRef<HTMLTextAreaElement, MentionInputProps>(
             onChange={(e) => onChange(e.target.value)}
             placeholder={placeholder}
             onKeyDown={handleKeyDown}
-            onFocus={onFocus}
-            onBlur={() => {
-              // Delay closing to allow clicking on suggestions
-              setTimeout(closeSuggestions, 200);
+            onFocus={() => {
+              onFocus?.();
+              checkForMentionTriggers();
             }}
             className={`${className} resize-none`}
             style={{ minHeight, maxHeight }}
           />
         </div>
         
-        <Popover open={isSuggesting && filteredSuggestions.length > 0} onOpenChange={setIsSuggesting}>
+        <Popover 
+          open={isSuggesting && filteredSuggestions.length > 0} 
+          onOpenChange={(open) => {
+            if (!open) setIsSuggesting(false);
+          }}
+        >
           <PopoverTrigger asChild>
             <div className="absolute top-0 left-0 h-0 w-0 overflow-hidden" />
           </PopoverTrigger>
           <PopoverContent 
-            className="w-60 p-0" 
+            className="w-72 p-0 shadow-lg" 
             align="start" 
-            sideOffset={5} 
-            alignOffset={-20}
+            sideOffset={5}
+            alignOffset={-5}
           >
             <Command>
-              <CommandList>
-                <CommandGroup heading={suggestionType === 'user' ? 'Users' : 'Communities'}>
-                  {filteredSuggestions.length > 0 ? (
-                    filteredSuggestions.map((suggestion) => (
-                      <CommandItem
-                        key={suggestion}
-                        onSelect={() => handleSelectSuggestion(suggestion)}
-                        className="flex items-center gap-2"
-                      >
-                        {suggestionType === 'user' ? (
-                          <AtSign className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <Hash className="h-4 w-4 text-muted-foreground" />
-                        )}
-                        <span>{suggestion}</span>
-                      </CommandItem>
-                    ))
-                  ) : (
-                    <div className="py-6 text-center text-sm text-muted-foreground">
-                      No {suggestionType === 'user' ? 'users' : 'communities'} found
-                    </div>
-                  )}
+              <CommandList className="max-h-[300px]">
+                <CommandGroup heading={suggestionType === 'user' ? `Users matching "${searchTerm || ''}"` : `Communities matching "${searchTerm || ''}"`}>
+                  {filteredSuggestions.map((suggestion) => (
+                    <CommandItem
+                      key={suggestion}
+                      onSelect={() => handleSelectSuggestion(suggestion)}
+                      className="flex items-center gap-2 cursor-pointer hover:bg-accent"
+                    >
+                      {suggestionType === 'user' ? (
+                        <AtSign className="h-4 w-4 text-primary flex-shrink-0" />
+                      ) : (
+                        <Hash className="h-4 w-4 text-primary flex-shrink-0" />
+                      )}
+                      <span className="flex-1 truncate">{suggestion}</span>
+                    </CommandItem>
+                  ))}
                 </CommandGroup>
               </CommandList>
             </Command>
