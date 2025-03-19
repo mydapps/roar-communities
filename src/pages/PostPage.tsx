@@ -19,9 +19,10 @@ import { Button } from '@/components/ui/button';
 import { Post } from '@/components/feed/Post';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 // Icons
-import { ChevronLeft, RefreshCw, MessageCircle, Send } from 'lucide-react';
+import { ChevronLeft, RefreshCw, MessageCircle, Send, Cat, ChevronDown, Reply } from 'lucide-react';
 
 // Mock data for demonstration
 const MOCK_POSTS = [
@@ -113,42 +114,88 @@ const MOCK_POSTS = [
   }
 ];
 
-// Mock comments data
-const MOCK_COMMENTS = [
+// Extended mock comment type with replies
+type CommentType = {
+  id: string;
+  username: string;
+  text: string;
+  timeAgo: string;
+  meowCount: number;
+  replies?: CommentType[];
+  level: number;
+};
+
+// Mock comments data with nested replies
+const MOCK_COMMENTS: CommentType[] = [
   { 
     id: 'comment1',
     username: 'alice.lens',
     text: "This is incredibly insightful! Have you considered how this might interact with zk proofs?",
     timeAgo: '1h',
-    roarCount: 15
+    meowCount: 15,
+    level: 1,
+    replies: [
+      {
+        id: 'reply1-1',
+        username: 'vitalik.eth',
+        text: "Great question! ZK proofs are actually a perfect complement to this approach because they can verify computation without revealing the underlying data.",
+        timeAgo: '45m',
+        meowCount: 12,
+        level: 2,
+        replies: [
+          {
+            id: 'reply1-1-1',
+            username: 'alice.lens',
+            text: "That makes a lot of sense. I'm working on a project that could benefit from this combination.",
+            timeAgo: '30m',
+            meowCount: 8,
+            level: 3
+          }
+        ]
+      }
+    ]
   },
   {
     id: 'comment2',
     username: 'bob.eth',
     text: "I've been working on something similar. Would love to collaborate on this.",
     timeAgo: '45m',
-    roarCount: 8
+    meowCount: 8,
+    level: 1
   },
   {
     id: 'comment3',
     username: 'crypto_researcher',
     text: 'The implications for scalability are enormous. This could be a game-changer for on-chain analytics.',
     timeAgo: '30m',
-    roarCount: 12
+    meowCount: 12,
+    level: 1,
+    replies: [
+      {
+        id: 'reply3-1',
+        username: 'data_wizard',
+        text: "Agreed! Especially when you consider the potential for real-time data processing.",
+        timeAgo: '20m',
+        meowCount: 5,
+        level: 2
+      }
+    ]
   },
   { 
     id: 'comment4', 
     username: 'defi_maxi', 
     text: 'How does this compare to the solution proposed at DevCon last year?', 
     timeAgo: '25m', 
-    roarCount: 5 
+    meowCount: 5,
+    level: 1
   },
   { 
     id: 'comment5', 
     username: 'zero_knowledge', 
     text: 'I think this approach has merit, but we need to consider the privacy implications as well.', 
     timeAgo: '15m', 
-    roarCount: 9 
+    meowCount: 9,
+    level: 1
   }
 ];
 
@@ -160,9 +207,14 @@ const PostPage = () => {
   
   const [post, setPost] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
-  const [comments, setComments] = useState<any[]>([]);
+  const [comments, setComments] = useState<CommentType[]>([]);
   const [newComment, setNewComment] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
+  const [roared, setRoared] = useState(false);
+  const [roarCount, setRoarCount] = useState(0);
+  const [roarAnimation, setRoarAnimation] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState('');
   
   useEffect(() => {
     setTimeout(() => {
@@ -175,24 +227,27 @@ const PostPage = () => {
       
       if (foundPost) {
         setPost(foundPost);
+        setRoarCount(foundPost.roarCount);
         setComments(MOCK_COMMENTS);
       }
       setLoading(false);
     }, 1000);
   }, [communityId, postId]);
   
+  // Function to add a comment to the top level
   const handleAddComment = () => {
     if (!newComment.trim()) return;
     
     setSubmittingComment(true);
     
     setTimeout(() => {
-      const newCommentObj = {
+      const newCommentObj: CommentType = {
         id: `comment-${Date.now()}`,
         username: 'you',
         text: newComment,
         timeAgo: 'just now',
-        roarCount: 0
+        meowCount: 0,
+        level: 1
       };
       
       setComments(prev => [newCommentObj, ...prev]);
@@ -205,19 +260,223 @@ const PostPage = () => {
       });
     }, 500);
   };
+
+  // Helper function to find a comment by its ID (at any nesting level)
+  const findCommentById = (
+    commentId: string, 
+    commentsArray: CommentType[]
+  ): CommentType | null => {
+    for (const comment of commentsArray) {
+      if (comment.id === commentId) {
+        return comment;
+      }
+      
+      if (comment.replies) {
+        const found = findCommentById(commentId, comment.replies);
+        if (found) return found;
+      }
+    }
+    
+    return null;
+  };
+
+  // Function to add a reply to a specific comment
+  const handleAddReply = (commentId: string) => {
+    if (!replyText.trim()) return;
+    
+    setSubmittingComment(true);
+    
+    setTimeout(() => {
+      // Create a deep copy of the comments state
+      const updateComments = (comments: CommentType[]): CommentType[] => {
+        return comments.map(comment => {
+          if (comment.id === commentId) {
+            const parentLevel = comment.level;
+            // Don't allow replies beyond level 3
+            if (parentLevel >= 3) return comment;
+            
+            const newReply: CommentType = {
+              id: `reply-${Date.now()}`,
+              username: 'you',
+              text: replyText,
+              timeAgo: 'just now',
+              meowCount: 0,
+              level: parentLevel + 1
+            };
+            
+            return {
+              ...comment,
+              replies: comment.replies ? [...comment.replies, newReply] : [newReply]
+            };
+          } else if (comment.replies) {
+            return {
+              ...comment,
+              replies: updateComments(comment.replies)
+            };
+          }
+          return comment;
+        });
+      };
+      
+      setComments(updateComments);
+      setReplyText('');
+      setReplyingTo(null);
+      setSubmittingComment(false);
+      
+      toast({
+        title: "Reply added",
+        description: "Your reply has been added to the comment",
+      });
+    }, 500);
+  };
   
-  const handleRoarComment = (commentId: string) => {
-    setComments(prev => 
-      prev.map(comment => 
-        comment.id === commentId 
-          ? { ...comment, roarCount: comment.roarCount + 1 } 
-          : comment
-      )
-    );
+  // Function to handle meow on a comment
+  const handleMeowComment = (commentId: string) => {
+    const updateMeowCount = (comments: CommentType[]): CommentType[] => {
+      return comments.map(comment => {
+        if (comment.id === commentId) {
+          return { ...comment, meowCount: comment.meowCount + 1 };
+        } else if (comment.replies) {
+          return {
+            ...comment,
+            replies: updateMeowCount(comment.replies)
+          };
+        }
+        return comment;
+      });
+    };
+    
+    setComments(updateMeowCount);
+  };
+  
+  // Function to handle roar on the post
+  const handleRoar = () => {
+    if (roared) {
+      setRoarCount(prev => prev - 1);
+    } else {
+      setRoarCount(prev => prev + 1);
+      
+      // Animation sequence
+      setRoarAnimation(true);
+      setTimeout(() => setRoarAnimation(false), 1000);
+    }
+    setRoared(!roared);
+    
+    toast({
+      title: roared ? "Roar removed" : "Post roared!",
+      description: roared ? "You've removed your roar from this post" : "You've roared at this post",
+    });
   };
   
   const goBack = () => {
     navigate(-1);
+  };
+
+  // Recursive component to render comments with replies
+  const CommentWithReplies = ({ comment }: { comment: CommentType }) => {
+    const [isReplying, setIsReplying] = useState(false);
+    const [meowAnimating, setMeowAnimating] = useState(false);
+    
+    const handleReplyClick = () => {
+      setIsReplying(!isReplying);
+      if (!isReplying) {
+        setReplyingTo(comment.id);
+        setReplyText('');
+      } else {
+        setReplyingTo(null);
+      }
+    };
+    
+    const handleMeowClick = () => {
+      handleMeowComment(comment.id);
+      setMeowAnimating(true);
+      setTimeout(() => setMeowAnimating(false), 1000);
+    };
+    
+    const indentClass = `ml-${Math.min(comment.level * 4, 12)}`;
+    
+    return (
+      <div className={`${comment.level > 1 ? indentClass : ''} animate-fade-in`}>
+        <div className={`flex gap-3 mb-3 ${comment.level > 1 ? 'border-l-2 border-muted pl-3' : ''}`}>
+          <Avatar className="h-10 w-10 shrink-0">
+            <AvatarImage src={`https://api.dicebear.com/7.x/personas/svg?seed=${comment.username}`} />
+            <AvatarFallback>{comment.username[0].toUpperCase()}</AvatarFallback>
+          </Avatar>
+          <div className="flex-1">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="font-medium">
+                {comment.username === 'you' ? 'you' : formatUsername(comment.username)}
+              </span>
+              <span className="text-muted-foreground text-sm">·</span>
+              <span className="text-muted-foreground text-sm">{comment.timeAgo}</span>
+            </div>
+            <p className="mt-1 text-sm">{comment.text}</p>
+            <div className="mt-2 flex items-center gap-2">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleMeowClick}
+                className={`h-8 px-2 text-sm gap-1 ${meowAnimating ? 'text-amber-500' : ''}`}
+              >
+                <div className={`transition-all duration-300 ${meowAnimating ? 'scale-125' : ''}`}>
+                  <Cat className="h-3.5 w-3.5" />
+                </div>
+                <span className={`${meowAnimating ? 'text-amber-500 font-medium' : ''}`}>
+                  {comment.meowCount}
+                </span>
+              </Button>
+              
+              {comment.level < 3 && (
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={handleReplyClick}
+                  className="h-8 px-2 text-sm gap-1"
+                >
+                  <Reply className="h-3.5 w-3.5" />
+                  <span>Reply</span>
+                </Button>
+              )}
+            </div>
+            
+            {isReplying && (
+              <div className="mt-3 space-y-2">
+                <Textarea 
+                  placeholder="Write a reply..." 
+                  value={replyText}
+                  onChange={(e) => setReplyText(e.target.value)}
+                  className="min-h-[60px] text-sm resize-none"
+                />
+                <div className="flex gap-2 justify-end">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleReplyClick}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    onClick={() => handleAddReply(comment.id)}
+                    disabled={!replyText.trim() || submittingComment}
+                  >
+                    Reply
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        {comment.replies && comment.replies.length > 0 && (
+          <div className="ml-12 space-y-3 mt-1">
+            {comment.replies.map(reply => (
+              <CommentWithReplies key={reply.id} comment={reply} />
+            ))}
+          </div>
+        )}
+      </div>
+    );
   };
 
   if (loading) {
@@ -291,21 +550,35 @@ const PostPage = () => {
           community={post.community}
           timeAgo={post.timeAgo}
           content={post.content}
-          roarCount={post.roarCount}
+          roarCount={roarCount}
           commentCount={comments.length}
           shareCount={post.shareCount}
           images={post.images}
           video={post.video}
+          disableNavigation={true}
         />
       </div>
       
-      <div className="space-y-6">
+      <div className="space-y-6 mb-10">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold">Comments ({comments.length})</h2>
-          <Button variant="ghost" size="sm" className="gap-1">
-            <RefreshCw className="h-4 w-4" />
-            <span>Refresh</span>
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant={roared ? "roar-active" : "roar"}
+              size="sm" 
+              onClick={handleRoar}
+              className="gap-1"
+            >
+              <div className={`transition-all duration-300 ${roarAnimation ? 'scale-125' : ''}`}>
+                <span className="text-lg" role="img" aria-label="lion">🦁</span>
+              </div>
+              <span>{roarCount}</span>
+            </Button>
+            <Button variant="ghost" size="sm" className="gap-1">
+              <RefreshCw className="h-4 w-4" />
+              <span>Refresh</span>
+            </Button>
+          </div>
         </div>
         
         <div className="flex gap-3">
@@ -334,42 +607,10 @@ const PostPage = () => {
         </div>
         
         {comments.length > 0 ? (
-          <div className="space-y-5 pt-4">
+          <div className="space-y-5 pt-4 divide-y divide-border/40">
             {comments.map((comment) => (
-              <div key={comment.id} className="flex gap-3 animate-fade-in">
-                <Avatar className="h-10 w-10 shrink-0">
-                  <AvatarImage src={`https://api.dicebear.com/7.x/personas/svg?seed=${comment.username}`} />
-                  <AvatarFallback>{comment.username[0].toUpperCase()}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="font-medium">
-                      {comment.username === 'you' ? 'you' : formatUsername(comment.username)}
-                    </span>
-                    <span className="text-muted-foreground text-sm">·</span>
-                    <span className="text-muted-foreground text-sm">{comment.timeAgo}</span>
-                  </div>
-                  <p className="mt-1">{comment.text}</p>
-                  <div className="mt-2 flex items-center gap-1">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => handleRoarComment(comment.id)}
-                      className="h-8 px-2 text-sm gap-1"
-                    >
-                      <span className="text-lg" role="img" aria-label="lion">🦁</span>
-                      <span>{comment.roarCount}</span>
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      className="h-8 px-2 text-sm gap-1"
-                    >
-                      <MessageCircle className="h-3.5 w-3.5" />
-                      <span>Reply</span>
-                    </Button>
-                  </div>
-                </div>
+              <div key={comment.id} className="pt-4 first:pt-0">
+                <CommentWithReplies comment={comment} />
               </div>
             ))}
           </div>
