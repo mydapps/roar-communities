@@ -1,5 +1,5 @@
-
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -66,7 +66,7 @@ import {
   DrawerTrigger,
   DrawerClose
 } from "@/components/ui/drawer";
-import { Toggle } from "@/components/ui/toggle";
+import { Toggle } from '@/components/ui/toggle';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -81,6 +81,7 @@ export interface PostProps {
   shareCount: number;
   images?: string[];
   video?: string;
+  disableNavigation?: boolean;
 }
 
 export const Post = ({ 
@@ -92,8 +93,10 @@ export const Post = ({
   commentCount, 
   shareCount,
   images,
-  video
+  video,
+  disableNavigation = false
 }: PostProps) => {
+  const navigate = useNavigate();
   const [roared, setRoared] = useState(false);
   const [localRoarCount, setLocalRoarCount] = useState(roarCount);
   const [showComments, setShowComments] = useState(false);
@@ -496,8 +499,31 @@ export const Post = ({
     </>
   );
 
+  const handlePostClick = (e: React.MouseEvent) => {
+    // If navigation is disabled, or the click was on a button/link, do nothing
+    if (disableNavigation || 
+        (e.target as HTMLElement).closest('button') || 
+        (e.target as HTMLElement).closest('a')) {
+      return;
+    }
+    
+    // Navigate to the post page
+    if (community) {
+      navigate(`/c/${community}/${postId}`);
+    }
+  };
+  
+  // Generate a mock post ID for links
+  const postId = useRef(Array.from({length: 6}, () => 
+    Math.floor(Math.random() * 36).toString(36)).join('')
+  ).current;
+
   return (
-    <Card className="border border-border/40 shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden animate-scale-in">
+    <Card 
+      className="border border-border/40 shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden animate-scale-in"
+      onClick={handlePostClick}
+      style={{ cursor: disableNavigation ? 'default' : 'pointer' }}
+    >
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-3">
@@ -646,256 +672,4 @@ export const Post = ({
             <video 
               src={video} 
               controls 
-              className="rounded-md w-full max-h-[300px]"
-            />
-          </div>
-        )}
-      </CardContent>
-      <Separator />
-      <CardFooter className="py-3">
-        <div className="flex justify-between w-full">
-          <Button 
-            variant={roared ? "roar-active" : "roar"}
-            size="sm"
-            className={`flex items-center gap-1.5 relative ${roared ? 'hover:animate-shake-subtle' : ''}`}
-            onClick={handleRoar}
-          >
-            {/* Animated ripple waves when roaring */}
-            {roarWavesAnimation && (
-              <div className="absolute inset-0 rounded-md border-2 border-amber-500/30 animate-roar-waves pointer-events-none"></div>
-            )}
-            
-            {/* Lion emoji with animation container */}
-            <div className={`relative flex items-center justify-center ${roarAnimation ? "animate-roar-icon" : ""}`}>
-              <span 
-                className={`text-xl transition-all ${roared ? "text-amber-500" : "text-foreground/30"} 
-                  ${!roared ? "hover:text-amber-500/70" : ""} group-hover:scale-110`} 
-                role="img" 
-                aria-label="lion"
-              >
-                🦁
-              </span>
-              
-              {/* Animated "ROAR!" text that flies out */}
-              {roarTextAnimation && (
-                <>
-                  <div className="absolute top-0 right-0 animate-roar-text pointer-events-none z-10">
-                    <span className="font-bold whitespace-nowrap bg-gradient-to-br from-amber-500 to-amber-600 text-transparent bg-clip-text text-sm">ROAR!</span>
-                  </div>
-                  <div className="absolute top-2 right-2 animate-roar-text pointer-events-none z-10" style={{ animationDelay: '0.1s' }}>
-                    <span className="font-bold whitespace-nowrap text-amber-500/60 text-xs">ROAR!</span>
-                  </div>
-                </>
-              )}
-            </div>
-            
-            {/* Roar count with emphasis on active state */}
-            <span className={`font-medium transition-all duration-300 ${roared ? "text-amber-500 scale-110" : "text-foreground/50"}`}>
-              {localRoarCount}
-            </span>
-          </Button>
-          
-          <Button 
-            variant={showComments ? "secondary" : "ghost"} 
-            size="sm"
-            onClick={handleCommentToggle}
-            className="flex gap-1.5 items-center transition-all duration-200"
-          >
-            <MessageCircle className="h-4 w-4" />
-            <span>{comments.length || commentCount}</span>
-          </Button>
-          
-          {/* Conditional rendering for Mirror based on mobile vs. desktop */}
-          {isMobile ? (
-            <Drawer open={mirrorSheetOpen} onOpenChange={setMirrorSheetOpen}>
-              <DrawerTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  className="flex gap-1.5 items-center transition-all duration-200"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  <span>{shareCount}</span>
-                </Button>
-              </DrawerTrigger>
-              <DrawerContent className="max-h-[85vh]">
-                <DrawerHeader className="border-b">
-                  <DrawerTitle>Mirror this post</DrawerTitle>
-                  <DrawerDescription>
-                    Share this post with a community
-                  </DrawerDescription>
-                </DrawerHeader>
-                
-                {renderMirrorContent()}
-                
-                <DrawerFooter className="flex-row justify-end gap-2 p-4 border-t">
-                  <DrawerClose asChild>
-                    <Button variant="outline">Cancel</Button>
-                  </DrawerClose>
-                  <Button 
-                    onClick={handleMirror} 
-                    disabled={!selectedCommunity}
-                  >
-                    Mirror Post
-                  </Button>
-                </DrawerFooter>
-              </DrawerContent>
-            </Drawer>
-          ) : (
-            <Sheet open={mirrorSheetOpen} onOpenChange={setMirrorSheetOpen}>
-              <SheetTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  className="flex gap-1.5 items-center transition-all duration-200"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  <span>{shareCount}</span>
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="sm:max-w-md">
-                <SheetHeader>
-                  <SheetTitle>Mirror this post</SheetTitle>
-                  <SheetDescription>
-                    Share this post with a community
-                  </SheetDescription>
-                </SheetHeader>
-                
-                {renderMirrorContent()}
-                
-                <SheetFooter className="flex flex-row justify-end gap-2 mt-6">
-                  <SheetClose asChild>
-                    <Button variant="outline">Cancel</Button>
-                  </SheetClose>
-                  <Button 
-                    onClick={handleMirror} 
-                    disabled={!selectedCommunity}
-                  >
-                    Mirror Post
-                  </Button>
-                </SheetFooter>
-              </SheetContent>
-            </Sheet>
-          )}
-          
-          {/* Conditional rendering for Share based on mobile vs. desktop */}
-          {isMobile ? (
-            <Drawer open={shareSheetOpen} onOpenChange={setShareSheetOpen}>
-              <DrawerTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  className="flex gap-1.5 items-center transition-all duration-200"
-                >
-                  <Share2 className="h-4 w-4" />
-                  <span>Share</span>
-                </Button>
-              </DrawerTrigger>
-              <DrawerContent className="max-h-[85vh]">
-                <DrawerHeader className="border-b">
-                  <DrawerTitle>Share this post</DrawerTitle>
-                  <DrawerDescription>
-                    Choose a platform to share
-                  </DrawerDescription>
-                </DrawerHeader>
-                
-                {renderShareContent()}
-                
-                <DrawerFooter className="flex-row justify-end gap-2 p-4 border-t">
-                  <DrawerClose asChild>
-                    <Button variant="outline">Cancel</Button>
-                  </DrawerClose>
-                </DrawerFooter>
-              </DrawerContent>
-            </Drawer>
-          ) : (
-            <Sheet open={shareSheetOpen} onOpenChange={setShareSheetOpen}>
-              <SheetTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  className="flex gap-1.5 items-center transition-all duration-200"
-                >
-                  <Share2 className="h-4 w-4" />
-                  <span>Share</span>
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="sm:max-w-md">
-                <SheetHeader>
-                  <SheetTitle>Share this post</SheetTitle>
-                  <SheetDescription>
-                    Choose a platform to share
-                  </SheetDescription>
-                </SheetHeader>
-                
-                {renderShareContent()}
-                
-                <SheetFooter className="flex flex-row justify-end gap-2 mt-6">
-                  <SheetClose asChild>
-                    <Button variant="outline">Cancel</Button>
-                  </SheetClose>
-                </SheetFooter>
-              </SheetContent>
-            </Sheet>
-          )}
-        </div>
-      </CardFooter>
-      
-      {/* Comments section */}
-      {showComments && (
-        <div className="px-6 pb-4">
-          <Separator className="mb-3" />
-          
-          {/* Comment list */}
-          <div className="space-y-3 max-h-60 overflow-y-auto mb-4">
-            {comments.map((comment, i) => (
-              <div key={i} className="flex gap-2 animate-fade-in">
-                <Avatar className="h-7 w-7">
-                  <AvatarImage src={`https://api.dicebear.com/7.x/personas/svg?seed=${comment.user}`} />
-                  <AvatarFallback>{comment.user[0].toUpperCase()}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-medium text-sm">{comment.user === 'you' ? 'you' : '@' + comment.user}</span>
-                    <span className="text-muted-foreground text-xs">{comment.timeAgo}</span>
-                  </div>
-                  <p className="text-sm mt-0.5">{comment.text}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-          
-          {/* Comment input */}
-          <div className="flex gap-2">
-            <Avatar className="h-8 w-8">
-              <AvatarImage src="https://api.dicebear.com/7.x/personas/svg?seed=you" />
-              <AvatarFallback>Y</AvatarFallback>
-            </Avatar>
-            <div className="flex-1 flex gap-2">
-              <Textarea 
-                placeholder="Add a comment..." 
-                className="min-h-0 h-9 py-2 resize-none"
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleAddComment();
-                  }
-                }}
-              />
-              <Button 
-                size="sm" 
-                onClick={handleAddComment}
-                className="h-9"
-                disabled={!newComment.trim()}
-              >
-                Post
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-    </Card>
-  );
-};
+              className="rounded-md w-full max-h-[300

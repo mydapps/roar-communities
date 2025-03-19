@@ -49,3 +49,41 @@ export function useIsTablet() {
 
   return isTablet
 }
+
+export function useResponsive() {
+  const [deviceType, setDeviceType] = React.useState<'mobile' | 'tablet' | 'desktop'>(
+    typeof window !== 'undefined' 
+      ? window.innerWidth < MOBILE_BREAKPOINT 
+        ? 'mobile' 
+        : window.innerWidth < TABLET_BREAKPOINT 
+          ? 'tablet' 
+          : 'desktop'
+      : 'desktop'
+  )
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return
+    
+    const handleResize = () => {
+      if (window.innerWidth < MOBILE_BREAKPOINT) {
+        setDeviceType('mobile')
+      } else if (window.innerWidth < TABLET_BREAKPOINT) {
+        setDeviceType('tablet')
+      } else {
+        setDeviceType('desktop')
+      }
+    }
+    
+    window.addEventListener('resize', handleResize)
+    handleResize() // Set initial value
+    
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  return {
+    isMobile: deviceType === 'mobile',
+    isTablet: deviceType === 'tablet',
+    isDesktop: deviceType === 'desktop',
+    deviceType
+  }
+}

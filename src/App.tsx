@@ -6,6 +6,7 @@ import HomePage from '@/pages/HomePage';
 import FeedPage from '@/pages/FeedPage';
 import CommunitiesPage from '@/pages/CommunitiesPage';
 import CommunityPage from '@/pages/CommunityPage';
+import PostPage from '@/pages/PostPage';
 import MySharesPage from '@/pages/MySharesPage';
 import AccountPage from '@/pages/AccountPage';
 import SearchPage from '@/pages/SearchPage';
@@ -21,8 +22,8 @@ function App() {
           <Route index element={<HomePage />} />
           <Route path="feed" element={<FeedPage />} />
           <Route path="communities" element={<CommunitiesPage />} />
-          {/* Changed from /community/:id to /c/:id */}
           <Route path="c/:id" element={<CommunityPage />} />
+          <Route path="c/:communityId/:postId" element={<PostPage />} />
           <Route path="my-shares" element={<MySharesPage />} />
           <Route path="account" element={<AccountPage />} />
           <Route path="search" element={<SearchPage />} />
