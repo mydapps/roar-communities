@@ -21,8 +21,8 @@ function App() {
       <Routes>
         {/* Special routes without main layout */}
         <Route path="/" element={<Index />} />
+        <Route path="/invite/:code" element={<Index />} />
         <Route path="request-invite" element={<RequestInvitePage />} />
-        <Route path="invite/:code" element={<ReferralPage />} />
         
         {/* Routes with main layout */}
         <Route path="/" element={<MainLayout />}>

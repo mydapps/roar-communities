@@ -1,14 +1,30 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, ShieldCheck, Zap, Users, Trophy } from 'lucide-react';
+import { ArrowRight, Users, Zap, Trophy } from 'lucide-react';
 import OnboardingStories from '@/components/onboarding/OnboardingStories';
 
 const Index = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { code } = useParams();
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [animatedElements, setAnimatedElements] = useState<string[]>([]);
+  const [currentTextIndex, setCurrentTextIndex] = useState(0);
+  const [displayText, setDisplayText] = useState('');
+  const [isTyping, setIsTyping] = useState(true);
+
+  // Check if we're on an invite route
+  const isInviteRoute = location.pathname.includes('/invite/');
+  
+  // Animation headlines
+  const headlines = [
+    "Own your social experience",
+    "Create content that earns",
+    "Join thriving communities",
+    "Invest in what you love"
+  ];
 
   useEffect(() => {
     // Stagger animations for elements
@@ -27,51 +43,85 @@ const Index = () => {
     return () => clearTimeout(timer);
   }, []);
 
+  // Text typing animation
+  useEffect(() => {
+    if (isTyping) {
+      const currentHeadline = headlines[currentTextIndex];
+      if (displayText.length < currentHeadline.length) {
+        const timeout = setTimeout(() => {
+          setDisplayText(currentHeadline.slice(0, displayText.length + 1));
+        }, 50);
+        return () => clearTimeout(timeout);
+      } else {
+        setIsTyping(false);
+        const timeout = setTimeout(() => {
+          setIsTyping(true);
+          setCurrentTextIndex((currentTextIndex + 1) % headlines.length);
+          setDisplayText('');
+        }, 2000);
+        return () => clearTimeout(timeout);
+      }
+    }
+  }, [displayText, currentTextIndex, isTyping, headlines]);
+
   const handleGetStarted = () => {
     setIsOnboardingOpen(true);
   };
 
   return (
     <>
-      <div className="min-h-screen flex flex-col">
+      <div className="min-h-screen flex flex-col bg-background">
         {/* Hero Section */}
-        <header className="relative pt-16 md:pt-24 pb-10 md:pb-16 px-4">
+        <header className="relative flex-grow flex items-center justify-center pt-16 md:pt-24 pb-10 md:pb-16 px-4">
           <div className="max-w-5xl mx-auto text-center">
             <div 
-              className={`space-y-6 ${
+              className={`space-y-8 ${
                 animatedElements.includes('hero') ? 'animate-fade-in' : 'opacity-0'
               }`}
             >
-              <h1 className="text-4xl md:text-6xl font-bold tracking-tight max-w-3xl mx-auto">
-                Own Your Social Experience with{" "}
-                <span className="bg-gradient-to-r from-amber-500 to-amber-600 bg-clip-text text-transparent">
-                  Dapps.co
+              {isInviteRoute && (
+                <div className="max-w-xl mx-auto mb-8 p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                  <p className="text-lg text-amber-600 dark:text-amber-400">
+                    You've been invited by <span className="font-bold">@bravegoldfish</span>! Sign up to skip the queue and get your first share (up to $100) for free.
+                  </p>
+                </div>
+              )}
+              
+              <h1 className="text-4xl md:text-7xl font-bold tracking-tight max-w-3xl mx-auto leading-tight">
+                <span className="block h-[2.5em] md:h-[1.5em] overflow-hidden">
+                  <span className="bg-gradient-to-r from-amber-500 to-amber-600 bg-clip-text text-transparent">
+                    {displayText}
+                    <span className="animate-pulse">|</span>
+                  </span>
+                </span>
+                <span className="text-foreground">
+                  with <span className="bg-gradient-to-r from-amber-500 to-amber-600 bg-clip-text text-transparent">Dapps.co</span>
                 </span>
               </h1>
               
               <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                A community network where you truly belong. Create, connect, and own your social experience.
+                The first social network where your contributions have real value. Create, connect, and earn in a community that rewards quality.
               </p>
               
-              <div className="pt-6">
+              <div className="pt-8">
                 <Button 
                   size="lg" 
                   onClick={handleGetStarted}
-                  className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-lg group"
+                  className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-lg group px-10 py-6 text-lg"
                 >
-                  <span>Get Started</span>
-                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  <span>Login / Sign Up</span>
+                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </div>
             </div>
           </div>
         </header>
 
-        {/* Features Section */}
-        <section className="py-16 px-4 bg-gradient-to-b from-background to-muted/20">
+        {/* Benefits Section */}
+        <section className="py-20 px-4 bg-gradient-to-b from-background to-muted/20">
           <div className="max-w-5xl mx-auto">
-            <div className="grid md:grid-cols-3 gap-10 md:gap-8">
-              {/* Feature 1 */}
+            <div className="grid md:grid-cols-3 gap-10 md:gap-12">
+              {/* Benefit 1 */}
               <div 
                 className={`flex flex-col items-center text-center p-6 rounded-2xl transition-all duration-300 ${
                   animatedElements.includes('feature-1') ? 'animate-slide-up' : 'opacity-0'
@@ -80,13 +130,13 @@ const Index = () => {
                 <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center mb-5">
                   <Users className="h-8 w-8 text-amber-500" />
                 </div>
-                <h3 className="text-xl font-bold mb-3">Community Owned</h3>
+                <h3 className="text-xl font-bold mb-3">Truly Belong</h3>
                 <p className="text-muted-foreground">
-                  Join communities with shared interests, where you have ownership and a true sense of belonging.
+                  Escape algorithm-driven feeds and join communities built around real connection, where your voice matters and contributions are valued.
                 </p>
               </div>
 
-              {/* Feature 2 */}
+              {/* Benefit 2 */}
               <div 
                 className={`flex flex-col items-center text-center p-6 rounded-2xl transition-all duration-300 ${
                   animatedElements.includes('feature-2') ? 'animate-slide-up' : 'opacity-0'
@@ -95,13 +145,13 @@ const Index = () => {
                 <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center mb-5">
                   <Zap className="h-8 w-8 text-amber-500" />
                 </div>
-                <h3 className="text-xl font-bold mb-3">Create & Earn</h3>
+                <h3 className="text-xl font-bold mb-3">Earn While Creating</h3>
                 <p className="text-muted-foreground">
-                  Post content that matters and earn real ETH through community reward pools. Quality content = real rewards.
+                  Turn your insights, creativity, and community building into real value. Every upvote translates to tangible rewards from community pools.
                 </p>
               </div>
 
-              {/* Feature 3 */}
+              {/* Benefit 3 */}
               <div 
                 className={`flex flex-col items-center text-center p-6 rounded-2xl transition-all duration-300 ${
                   animatedElements.includes('feature-3') ? 'animate-slide-up' : 'opacity-0'
@@ -110,36 +160,43 @@ const Index = () => {
                 <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center mb-5">
                   <Trophy className="h-8 w-8 text-amber-500" />
                 </div>
-                <h3 className="text-xl font-bold mb-3">Invest in Communities</h3>
+                <h3 className="text-xl font-bold mb-3">Grow Your Influence</h3>
                 <p className="text-muted-foreground">
-                  Buy shares in any community - or start your own and earn 5% on trades. Your social participation has real economic value.
+                  As your communities thrive, so does your stake in them. Build, invest, and grow with real ownership in the spaces you help create.
                 </p>
               </div>
             </div>
           </div>
         </section>
 
-        {/* CTA Section */}
-        <section className="py-20 px-4">
-          <div 
-            className={`max-w-3xl mx-auto text-center space-y-6 ${
-              animatedElements.includes('cta') ? 'animate-fade-in' : 'opacity-0'
-            }`}
-          >
+        {/* Social Proof Section */}
+        <section 
+          className={`py-20 px-4 ${
+            animatedElements.includes('cta') ? 'animate-fade-in' : 'opacity-0'
+          }`}
+        >
+          <div className="max-w-3xl mx-auto text-center space-y-6">
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
-              Ready to Join a Better Social Network?
+              Join thousands already building their social equity
             </h2>
+            <div className="flex flex-wrap justify-center gap-4 py-6">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="w-12 h-12 rounded-full bg-muted animate-pulse" style={{
+                  animationDelay: `${i * 0.2}s`
+                }} />
+              ))}
+            </div>
             <p className="text-xl text-muted-foreground">
-              Get started with a free community share worth real ETH.
+              The next generation of social networks starts with you.
             </p>
-            <div className="pt-6">
+            <div className="pt-8">
               <Button 
                 size="lg" 
                 onClick={handleGetStarted}
-                className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-lg group"
+                className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-lg group px-10 py-6 text-lg"
               >
-                <span>Create Account</span>
-                <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                <span>Get Started Now</span>
+                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
               </Button>
             </div>
           </div>
