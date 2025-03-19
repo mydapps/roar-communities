@@ -1,19 +1,23 @@
 
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { 
   Card, 
   CardContent, 
-  CardDescription, 
-  CardFooter, 
   CardHeader, 
-  CardTitle 
+  CardTitle,
+  CardFooter,
+  CardDescription
 } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
 import { 
   ArrowUp, 
   ArrowDown, 
@@ -22,12 +26,13 @@ import {
   MessageCircle, 
   DollarSign, 
   Info,
-  Clock
+  Clock,
+  Share2,
+  ChevronUp,
+  Sparkles,
+  Heart
 } from 'lucide-react';
-import { Post } from '@/components/feed/Post';
-import { MembersList } from '@/components/community/MembersList';
-import { Progress } from '@/components/ui/progress';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { TradeSheet } from '@/components/shares/TradeSheet';
 
 // Custom Lion icon for the Roar button
 const LionIcon = () => (
@@ -41,6 +46,11 @@ const LionIcon = () => (
 
 const CommunityPage = () => {
   const { id } = useParams<{ id: string }>();
+  const isMobile = useIsMobile();
+  const [tradeSheetOpen, setTradeSheetOpen] = useState(false);
+  const [isRoared, setIsRoared] = useState<Record<number, boolean>>({});
+  const [activeTab, setActiveTab] = useState("posts");
+  
   const [communityData, setCommunityData] = useState({
     name: id ? id.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') : '',
     description: "A community for Ethereum developers to share knowledge, collaborate on projects, and discuss the latest advancements in Ethereum technology. Members can contribute content, participate in discussions, and earn rewards from the community pool.",
@@ -52,6 +62,8 @@ const CommunityPage = () => {
     adminAddress: "0x1a2b...3c4d",
     createdAt: "2023-06-15",
     tags: ["Development", "Ethereum", "Smart Contracts"],
+    image: "https://images.unsplash.com/photo-1639322537228-f710d846310a?q=80&w=2532&auto=format&fit=crop",
+    userShareCount: 0,
     posts: [
       {
         id: 1,
@@ -60,7 +72,8 @@ const CommunityPage = () => {
         content: "Just deployed my first smart contract on Ethereum. The gas fees were surprisingly reasonable!",
         roarCount: 24,
         commentCount: 5,
-        shareCount: 2
+        shareCount: 2,
+        avatar: "https://avatar.vercel.sh/alice.eth"
       },
       {
         id: 2,
@@ -69,7 +82,18 @@ const CommunityPage = () => {
         content: "Anyone trying out the new DEX? The UI is clean and the liquidity seems good so far. I'm impressed with the low slippage.",
         roarCount: 42,
         commentCount: 12,
-        shareCount: 7
+        shareCount: 7,
+        avatar: "https://avatar.vercel.sh/bob.lens"
+      },
+      {
+        id: 3,
+        username: "crypto_sarah",
+        timeAgo: "1d",
+        content: "I've been experimenting with layer 2 solutions like Optimism and Arbitrum. The transaction fees are a game changer for smaller transactions! Have any of you had a chance to compare their performance?",
+        roarCount: 37,
+        commentCount: 15,
+        shareCount: 4,
+        avatar: "https://avatar.vercel.sh/crypto_sarah"
       }
     ],
     members_list: [
@@ -83,209 +107,184 @@ const CommunityPage = () => {
 
   const [buyAmount, setBuyAmount] = useState<number>(1);
   const estimatedCost = buyAmount * communityData.pricePerShare;
+  
+  // ETH to USD conversion
+  const ethToUsd = 3500; // 1 ETH = $3500 USD
+  const priceInUsd = communityData.pricePerShare * ethToUsd;
+  const rewardPoolUsd = communityData.rewardPool * ethToUsd;
+  const marketCapUsd = (communityData.totalShares * communityData.pricePerShare) * ethToUsd;
+  
+  const handleRoar = (postId: number) => {
+    setIsRoared(prev => {
+      const updatedState = { ...prev };
+      if (updatedState[postId]) {
+        updatedState[postId] = false;
+        
+        // Update roar count in posts
+        setCommunityData(prev => ({
+          ...prev,
+          posts: prev.posts.map(post => 
+            post.id === postId 
+              ? { ...post, roarCount: post.roarCount - 1 } 
+              : post
+          )
+        }));
+      } else {
+        updatedState[postId] = true;
+        
+        // Update roar count in posts
+        setCommunityData(prev => ({
+          ...prev,
+          posts: prev.posts.map(post => 
+            post.id === postId 
+              ? { ...post, roarCount: post.roarCount + 1 } 
+              : post
+          )
+        }));
+      }
+      return updatedState;
+    });
+  };
+  
+  // For the interactive trading chart effect
+  const chartPoints = communityData.priceChange > 0 
+    ? "M0,50 Q25,30 50,20 T100,10" 
+    : "M0,50 Q25,70 50,80 T100,90";
 
   return (
-    <div>
-      <div className="mb-6 animate-fade-in">
-        <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-6">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <Badge variant="outline" className="px-2 py-1 font-normal">
-                <Clock className="h-3 w-3 mr-1" />
-                Created {communityData.createdAt}
-              </Badge>
-              {communityData.priceChange > 0 ? (
-                <Badge className="bg-green-500/10 text-green-600">
-                  <ArrowUp className="h-3 w-3 mr-1" />
-                  {communityData.priceChange.toFixed(1)}%
-                </Badge>
-              ) : (
-                <Badge className="bg-red-500/10 text-red-600">
-                  <ArrowDown className="h-3 w-3 mr-1" />
-                  {Math.abs(communityData.priceChange).toFixed(1)}%
-                </Badge>
-              )}
-            </div>
-            <h1 className="text-3xl font-bold mb-2">{communityData.name}</h1>
-            <p className="text-muted-foreground max-w-2xl mb-3">{communityData.description}</p>
-            <div className="flex flex-wrap gap-2">
-              {communityData.tags.map((tag) => (
-                <Badge key={tag} variant="secondary" className="text-xs">
-                  {tag}
-                </Badge>
-              ))}
+    <div className="flex flex-col md:flex-row gap-4 animate-fade-in">
+      {/* Main content section */}
+      <div className="flex-1 order-2 md:order-1">
+        {/* Header for mobile */}
+        {isMobile && (
+          <div className="sticky top-0 z-10 bg-background/90 backdrop-blur-sm pb-2 mb-3">
+            <div className="flex items-center gap-3">
+              <Avatar className="h-10 w-10">
+                <AvatarImage src={communityData.image} alt={communityData.name} />
+                <AvatarFallback>{communityData.name[0]}</AvatarFallback>
+              </Avatar>
+              <div>
+                <h1 className="text-xl font-bold">{communityData.name}</h1>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">{communityData.members} members</span>
+                  {communityData.priceChange > 0 ? (
+                    <Badge className="bg-green-500/10 text-green-600 text-xs">
+                      <ArrowUp className="h-3 w-3 mr-1" />
+                      {communityData.priceChange.toFixed(1)}%
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-red-500/10 text-red-600 text-xs">
+                      <ArrowDown className="h-3 w-3 mr-1" />
+                      {Math.abs(communityData.priceChange).toFixed(1)}%
+                    </Badge>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
-          
-          <Card className="w-full md:w-72 animate-scale-in">
-            <CardHeader className="pb-2">
-              <CardTitle>Share Details</CardTitle>
-            </CardHeader>
-            <CardContent className="pb-4">
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Price per Share</span>
-                  <span className="font-medium">{communityData.pricePerShare.toFixed(3)} ETH</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total Shares</span>
-                  <span className="font-medium">{communityData.totalShares.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Members</span>
-                  <div className="flex items-center">
-                    <Users className="h-4 w-4 mr-1 text-muted-foreground" />
-                    <span className="font-medium">{communityData.members.toLocaleString()}</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="mt-4 space-y-2">
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-muted-foreground">Reward Pool</span>
-                  <span className="font-medium">{communityData.rewardPool.toFixed(2)} ETH</span>
-                </div>
-                <Progress value={Math.min(communityData.rewardPool * 10, 100)} className="h-2" />
-              </div>
-            </CardContent>
-            <CardFooter className="flex flex-col gap-3 pt-0">
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button className="w-full">Buy Shares</Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Buy Shares in {communityData.name}</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Number of Shares</label>
-                      <Input 
-                        type="number" 
-                        min="1" 
-                        value={buyAmount} 
-                        onChange={(e) => setBuyAmount(parseInt(e.target.value) || 0)} 
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Estimated Cost</label>
-                      <div className="text-lg font-bold">{estimatedCost.toFixed(3)} ETH</div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Includes 1.5% admin fee and 2% reward pool contribution
-                      </p>
-                    </div>
-                    <Button className="w-full">Confirm Purchase</Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-              
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button variant="outline" className="w-full">Sell Shares</Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Sell Shares from {communityData.name}</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Number of Shares to Sell</label>
-                      <Input type="number" min="1" placeholder="Enter amount" />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Estimated Receive</label>
-                      <div className="text-lg font-bold">0.000 ETH</div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        After 1.5% admin fee and 2% reward pool contribution
-                      </p>
-                    </div>
-                    <Button className="w-full">Confirm Sale</Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </CardFooter>
-          </Card>
-        </div>
+        )}
         
-        <Tabs defaultValue="posts" className="w-full">
-          <TabsList className="w-full justify-start mb-6 max-w-md">
-            <TabsTrigger value="posts">
+        {/* Tabs for content sections */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="w-full justify-start mb-6 overflow-x-auto flex-nowrap">
+            <TabsTrigger value="posts" className="flex-shrink-0">
               <MessageCircle className="h-4 w-4 mr-2" />
               Posts
             </TabsTrigger>
-            <TabsTrigger value="members">
+            <TabsTrigger value="members" className="flex-shrink-0">
               <Users className="h-4 w-4 mr-2" />
               Members
             </TabsTrigger>
-            <TabsTrigger value="rewards">
+            <TabsTrigger value="rewards" className="flex-shrink-0">
               <DollarSign className="h-4 w-4 mr-2" />
               Rewards
             </TabsTrigger>
-            <TabsTrigger value="about">
+            <TabsTrigger value="about" className="flex-shrink-0">
               <Info className="h-4 w-4 mr-2" />
               About
             </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="posts" className="space-y-6 animate-fade-in">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex gap-4">
-                  <Avatar>
+          <TabsContent value="posts" className="animate-fade-in">
+            {/* Post creation card */}
+            <Card className="mb-6 overflow-hidden border-primary/20">
+              <CardContent className="pt-4">
+                <div className="flex gap-3">
+                  <Avatar className="h-10 w-10 flex-shrink-0">
                     <AvatarImage src="https://github.com/shadcn.png" />
                     <AvatarFallback>CN</AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
                     <textarea 
-                      className="w-full rounded-lg border border-border p-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none min-h-[100px]" 
+                      className="w-full rounded-lg border border-border p-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none min-h-[80px]" 
                       placeholder={`Share your thoughts with the ${communityData.name} community...`}
                     />
                     <div className="mt-3 flex justify-end">
-                      <Button>Post</Button>
+                      <Button>
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        Post
+                      </Button>
                     </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
             
+            {/* Posts list */}
             <div className="space-y-4">
               {communityData.posts.map((post) => (
-                <Card key={post.id} className="border border-border/40 shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300">
-                  <CardHeader className="pb-2">
-                    <div className="flex justify-between items-start">
+                <Card key={post.id} className="overflow-hidden group hover:border-primary/30 transition-all duration-300">
+                  <CardHeader className="py-3 px-4">
+                    <div className="flex justify-between items-start gap-2">
                       <div className="flex items-center gap-3">
                         <Avatar>
-                          <AvatarImage src={`https://avatar.vercel.sh/${post.username}`} />
+                          <AvatarImage src={post.avatar} />
                           <AvatarFallback>{post.username[0].toUpperCase()}</AvatarFallback>
                         </Avatar>
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-1">
-                            <span className="font-medium">{post.username}</span>
-                            <span className="text-muted-foreground text-sm mx-1">·</span>
-                            <span className="text-muted-foreground text-sm">{post.timeAgo}</span>
-                          </div>
+                        <div>
+                          <div className="font-medium">{post.username}</div>
+                          <span className="text-xs text-muted-foreground">{post.timeAgo}</span>
                         </div>
                       </div>
-                      <Button variant="ghost" size="icon" className="rounded-full h-8 w-8">
-                        <TrendingUp className="h-4 w-4" />
+                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Share2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </CardHeader>
-                  <CardContent className="pb-3">
-                    <p className="text-sm mt-2">{post.content}</p>
+                  
+                  <CardContent className="py-0 px-4">
+                    <p>{post.content}</p>
                   </CardContent>
-                  <CardFooter className="flex justify-between py-3">
-                    <Button variant="ghost" size="sm">
-                      <LionIcon />
+                  
+                  <CardFooter className="flex justify-between py-3 mt-2 bg-muted/20">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => handleRoar(post.id)}
+                      className={isRoared[post.id] ? "text-purple-600" : ""}
+                    >
+                      <div className="relative">
+                        <LionIcon />
+                        {isRoared[post.id] && (
+                          <span className="absolute -top-2 -right-2 inline-flex animate-roar-text opacity-0 text-purple-600">
+                            +1
+                          </span>
+                        )}
+                      </div>
                       <span className="ml-1">{post.roarCount}</span>
+                      {isRoared[post.id] && (
+                        <span className="absolute inset-0 rounded-full animate-roar-waves opacity-0 bg-purple-500/20"></span>
+                      )}
                     </Button>
+                    
                     <Button variant="ghost" size="sm">
                       <MessageCircle className="h-4 w-4 mr-1" />
                       <span>{post.commentCount}</span>
                     </Button>
-                    <Button variant="ghost" size="sm">
-                      <ArrowUp className="h-4 w-4 mr-1" />
-                      <span>Upvote</span>
+                    
+                    <Button variant="ghost" size="sm" className="group/upvote">
+                      <ChevronUp className="h-4 w-4 mr-1 group-hover/upvote:text-green-500 transition-colors" />
+                      <span className="group-hover/upvote:text-green-500 transition-colors">Upvote</span>
                     </Button>
                   </CardFooter>
                 </Card>
@@ -293,6 +292,7 @@ const CommunityPage = () => {
             </div>
           </TabsContent>
           
+          {/* Members tab */}
           <TabsContent value="members" className="animate-fade-in">
             <Card>
               <CardHeader>
@@ -302,9 +302,9 @@ const CommunityPage = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {communityData.members_list.map((member, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 rounded-lg border border-border/40">
+                    <div key={index} className="flex items-center justify-between p-3 rounded-lg border border-border/40 hover:border-primary/30 transition-colors">
                       <div className="flex items-center gap-3">
                         <Avatar>
                           <AvatarImage src={`https://avatar.vercel.sh/${member.username}`} />
@@ -312,12 +312,12 @@ const CommunityPage = () => {
                         </Avatar>
                         <div>
                           <div className="font-medium">{member.username}</div>
-                          <div className="text-sm text-muted-foreground">Joined {member.joinedAt}</div>
+                          <div className="text-xs text-muted-foreground">Joined {member.joinedAt}</div>
                         </div>
                       </div>
                       <div className="text-right">
                         <div className="font-medium">{member.shares} shares</div>
-                        <div className="text-sm text-muted-foreground">
+                        <div className="text-xs text-muted-foreground">
                           {(member.shares * communityData.pricePerShare).toFixed(3)} ETH
                         </div>
                       </div>
@@ -328,6 +328,7 @@ const CommunityPage = () => {
             </Card>
           </TabsContent>
           
+          {/* Rewards tab */}
           <TabsContent value="rewards" className="animate-fade-in">
             <Card>
               <CardHeader>
@@ -338,16 +339,24 @@ const CommunityPage = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Current Reward Pool</span>
-                      <span className="font-bold">{communityData.rewardPool.toFixed(2)} ETH</span>
+                  <div className="bg-primary/5 rounded-lg p-4 mb-4 border border-primary/20 shadow-sm relative overflow-hidden animate-pulse">
+                    <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0"></div>
+                    <div className="relative z-10">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="font-medium text-primary">Current Reward Pool</span>
+                        <div className="text-right">
+                          <div className="font-bold text-lg">{communityData.rewardPool.toFixed(2)} ETH</div>
+                          <div className="text-sm text-muted-foreground">${rewardPoolUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                        </div>
+                      </div>
                     </div>
-                    <Progress value={Math.min(communityData.rewardPool * 10, 100)} className="h-3" />
                   </div>
                   
                   <div className="bg-muted/40 p-4 rounded-lg">
-                    <h3 className="font-medium mb-2">How Rewards Work</h3>
+                    <h3 className="font-medium mb-2 flex items-center">
+                      <Sparkles className="h-4 w-4 mr-2 text-primary" />
+                      How Rewards Work
+                    </h3>
                     <ul className="space-y-2 text-sm text-muted-foreground list-disc pl-5">
                       <li>2% of all buy/sell transactions go to the reward pool</li>
                       <li>Rewards are distributed on the last day of each month</li>
@@ -360,9 +369,9 @@ const CommunityPage = () => {
                   <div>
                     <h3 className="font-medium mb-3">Last Month's Winners</h3>
                     <div className="space-y-3">
-                      <div className="flex items-center justify-between p-3 rounded-lg border border-border/40 bg-muted/20">
+                      <div className="flex items-center justify-between p-3 rounded-lg border border-primary/30 bg-primary/5 shadow-sm">
                         <div className="flex items-center gap-3">
-                          <div className="bg-primary/10 rounded-full h-8 w-8 flex items-center justify-center text-primary font-bold">
+                          <div className="bg-primary text-primary-foreground rounded-full h-8 w-8 flex items-center justify-center font-bold">
                             1
                           </div>
                           <div>
@@ -373,7 +382,7 @@ const CommunityPage = () => {
                         <div className="font-bold">0.45 ETH</div>
                       </div>
                       
-                      <div className="flex items-center justify-between p-3 rounded-lg border border-border/40">
+                      <div className="flex items-center justify-between p-3 rounded-lg border border-primary/20 shadow-sm">
                         <div className="flex items-center gap-3">
                           <div className="bg-primary/10 rounded-full h-8 w-8 flex items-center justify-center text-primary font-bold">
                             2
@@ -386,9 +395,9 @@ const CommunityPage = () => {
                         <div className="font-bold">0.32 ETH</div>
                       </div>
                       
-                      <div className="flex items-center justify-between p-3 rounded-lg border border-border/40">
+                      <div className="flex items-center justify-between p-3 rounded-lg border border-border shadow-sm">
                         <div className="flex items-center gap-3">
-                          <div className="bg-primary/10 rounded-full h-8 w-8 flex items-center justify-center text-primary font-bold">
+                          <div className="bg-primary/5 rounded-full h-8 w-8 flex items-center justify-center text-primary font-bold">
                             3
                           </div>
                           <div>
@@ -405,6 +414,7 @@ const CommunityPage = () => {
             </Card>
           </TabsContent>
           
+          {/* About tab */}
           <TabsContent value="about" className="animate-fade-in">
             <Card>
               <CardHeader>
@@ -479,6 +489,170 @@ const CommunityPage = () => {
           </TabsContent>
         </Tabs>
       </div>
+      
+      {/* Sidebar for community info */}
+      {!isMobile && (
+        <div className="w-full md:w-80 order-1 md:order-2 flex-shrink-0">
+          <div className="sticky top-4 space-y-4">
+            {/* Community Card */}
+            <Card className="overflow-hidden relative">
+              {/* Visual price chart background */}
+              <div className="absolute inset-0 opacity-[0.05] pointer-events-none">
+                <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                  <path 
+                    d={chartPoints + " V100 H0 Z"} 
+                    fill={communityData.priceChange > 0 ? "#10B981" : "#EF4444"} 
+                  />
+                </svg>
+              </div>
+              
+              {/* Header with image */}
+              <div className="relative">
+                <div 
+                  className="h-32 w-full bg-cover bg-center" 
+                  style={{ backgroundImage: `url(${communityData.image})` }}
+                />
+                <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-background to-transparent"></div>
+                
+                <Avatar className="absolute bottom-0 left-4 transform translate-y-1/2 h-16 w-16 border-4 border-background">
+                  <AvatarImage src={communityData.image} alt={communityData.name} />
+                  <AvatarFallback>{communityData.name[0].toUpperCase()}</AvatarFallback>
+                </Avatar>
+              </div>
+              
+              <CardHeader className="pt-10 pb-2">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle>{communityData.name}</CardTitle>
+                    <CardDescription className="mt-1 line-clamp-2">
+                      {communityData.members} members
+                    </CardDescription>
+                  </div>
+                  
+                  {communityData.priceChange > 0 ? (
+                    <Badge className="bg-green-500/10 text-green-600">
+                      <ArrowUp className="h-3 w-3 mr-1" />
+                      {communityData.priceChange.toFixed(1)}%
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-red-500/10 text-red-600">
+                      <ArrowDown className="h-3 w-3 mr-1" />
+                      {Math.abs(communityData.priceChange).toFixed(1)}%
+                    </Badge>
+                  )}
+                </div>
+              </CardHeader>
+              
+              <CardContent className="pb-4">
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Price per Share</span>
+                    <div className="text-right">
+                      <div className="font-medium">{communityData.pricePerShare.toFixed(3)} ETH</div>
+                      <div className="text-xs text-muted-foreground">${priceInUsd.toFixed(2)}</div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Market Cap</span>
+                    <div className="text-right">
+                      <div className="font-medium">{(communityData.totalShares * communityData.pricePerShare).toFixed(1)} ETH</div>
+                      <div className="text-xs text-muted-foreground">${marketCapUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                    </div>
+                  </div>
+                  
+                  <Separator />
+                  
+                  {/* Your Holdings section */}
+                  <div className="pt-1">
+                    <div className="text-sm font-medium mb-2">Your Holdings</div>
+                    {communityData.userShareCount > 0 ? (
+                      <div className="bg-primary/5 p-3 rounded-lg">
+                        <div className="flex justify-between mb-1">
+                          <span className="text-sm text-muted-foreground">Shares Owned</span>
+                          <span className="font-medium">{communityData.userShareCount}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-sm text-muted-foreground">Value</span>
+                          <div className="text-right">
+                            <div className="font-medium">{(communityData.userShareCount * communityData.pricePerShare).toFixed(3)} ETH</div>
+                            <div className="text-xs text-muted-foreground">
+                              ${(communityData.userShareCount * communityData.pricePerShare * ethToUsd).toFixed(2)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-2 text-sm text-muted-foreground">
+                        You don't own any shares yet
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Reward Pool */}
+                  <div className="bg-primary/5 rounded-lg p-3 mb-2 border border-primary/20 shadow-sm relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 animate-pulse"></div>
+                    <div className="relative z-10">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="font-medium text-primary">Reward Pool</span>
+                        <div className="text-right">
+                          <div className="font-bold text-lg">{communityData.rewardPool.toFixed(2)} ETH</div>
+                          <div className="text-xs text-muted-foreground">${rewardPoolUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+              
+              <CardFooter className="flex flex-col gap-3 pt-0">
+                <Button 
+                  className="w-full" 
+                  onClick={() => setTradeSheetOpen(true)}
+                >
+                  {communityData.userShareCount > 0 ? 'Buy More Shares' : 'Join Community'}
+                </Button>
+                
+                {communityData.userShareCount > 0 && (
+                  <Button variant="outline" className="w-full">
+                    Sell Shares
+                  </Button>
+                )}
+              </CardFooter>
+            </Card>
+          </div>
+        </div>
+      )}
+      
+      {/* Mobile action buttons - fixed at bottom */}
+      {isMobile && (
+        <div className="fixed bottom-16 inset-x-0 p-4 bg-background/80 backdrop-blur-sm z-10 border-t animate-slide-up">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="font-medium text-sm">{communityData.pricePerShare.toFixed(3)} ETH</div>
+              <div className="text-xs text-muted-foreground">${priceInUsd.toFixed(2)}</div>
+            </div>
+            <Button 
+              onClick={() => setTradeSheetOpen(true)}
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+            >
+              {communityData.userShareCount > 0 ? 'Buy More' : 'Join Now'}
+            </Button>
+          </div>
+        </div>
+      )}
+      
+      {/* Trade Sheet */}
+      <TradeSheet
+        open={tradeSheetOpen}
+        onOpenChange={setTradeSheetOpen}
+        community={{
+          name: communityData.name,
+          currentPrice: communityData.pricePerShare
+        }}
+        action={communityData.userShareCount > 0 ? "buy" : "buy"}
+        userEthBalance="0.536"
+      />
     </div>
   );
 };

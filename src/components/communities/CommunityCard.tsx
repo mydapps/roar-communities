@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,24 +30,19 @@ const CommunityCard = ({
   image = "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=500&h=500&fit=crop",
   isMember = false
 }: CommunityCardProps) => {
-  // Fallback for community initials if image fails to load
   const initials = name.split(' ').map(word => word[0]).join('').toUpperCase();
   
-  // ETH to USD conversion (simplified for this example)
-  const ethToUsd = 3500; // 1 ETH = $3500 USD
+  const ethToUsd = 3500;
   const priceInUsd = pricePerShare * ethToUsd;
   const rewardPoolUsd = rewardPool * ethToUsd;
   const marketCapUsd = marketCap * ethToUsd;
   
-  // State for trade sheet
   const [tradeSheetOpen, setTradeSheetOpen] = useState(false);
 
   return (
     <Card className="overflow-hidden hover:shadow-md transition-all duration-300 animate-scale-in relative">
-      {/* Price change indicator strip at top */}
       <div className={`h-1 w-full ${priceChange > 0 ? "bg-green-500" : "bg-red-500"}`} />
       
-      {/* Background graph effect - simplified stylistic approach */}
       <div 
         className="absolute inset-0 opacity-[0.03] pointer-events-none" 
         style={{
@@ -66,7 +60,7 @@ const CommunityCard = ({
         
         <div className="flex-1">
           <Link 
-            to={`/community/${name.toLowerCase().replace(/\s+/g, '-')}`}
+            to={`/c/${name.toLowerCase().replace(/\s+/g, '-')}`}
             className="text-lg font-bold hover:text-primary transition-colors"
           >
             {name}
@@ -119,7 +113,6 @@ const CommunityCard = ({
           </div>
         </div>
         
-        {/* Reward Pool - made more prominent with a glowing card */}
         <div className="bg-primary/5 rounded-lg p-3 mb-4 border border-primary/20 shadow-sm relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 animate-pulse"></div>
           <div className="relative z-10">
@@ -136,7 +129,7 @@ const CommunityCard = ({
       
       <CardFooter className="bg-muted/40 flex justify-between pt-3">
         <Button variant="ghost" size="sm" asChild>
-          <Link to={`/community/${name.toLowerCase().replace(/\s+/g, '-')}`}>
+          <Link to={`/c/${name.toLowerCase().replace(/\s+/g, '-')}`}>
             View Details
           </Link>
         </Button>
@@ -160,7 +153,6 @@ const CommunityCard = ({
         )}
       </CardFooter>
       
-      {/* Trade Sheet for both Join and Buy */}
       <TradeSheet
         open={tradeSheetOpen}
         onOpenChange={setTradeSheetOpen}
@@ -168,7 +160,7 @@ const CommunityCard = ({
           name: name,
           currentPrice: pricePerShare
         }}
-        action={isMember ? "buy" : "buy"} // Both actions open buy flow
+        action={isMember ? "buy" : "buy"}
         userEthBalance="0.536"
       />
     </Card>
