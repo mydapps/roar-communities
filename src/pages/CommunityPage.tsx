@@ -38,8 +38,9 @@ import {
   MoreHorizontal
 } from 'lucide-react';
 import { TradeSheet } from '@/components/shares/TradeSheet';
+import { Post } from '@/components/feed/Post';
+import CreatePostCard from '@/components/feed/CreatePostCard';
 
-// Custom Lion icon for the Roar button
 const LionIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-5 w-5">
     <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -57,6 +58,7 @@ const CommunityPage = () => {
   const [activeTab, setActiveTab] = useState("posts");
   const [isMirroredPost, setIsMirroredPost] = useState<Record<number, boolean>>({});
   const [isIPFSSaved, setIsIPFSSaved] = useState<Record<number, boolean>>({});
+  const [userPosts, setUserPosts] = useState<any[]>([]);
   
   const [communityData, setCommunityData] = useState({
     name: id ? id.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') : '',
@@ -115,7 +117,6 @@ const CommunityPage = () => {
   const [buyAmount, setBuyAmount] = useState<number>(1);
   const estimatedCost = buyAmount * communityData.pricePerShare;
   
-  // ETH to USD conversion
   const ethToUsd = 3500; // 1 ETH = $3500 USD
   const priceInUsd = communityData.pricePerShare * ethToUsd;
   const rewardPoolUsd = communityData.rewardPool * ethToUsd;
@@ -127,7 +128,6 @@ const CommunityPage = () => {
       if (updatedState[postId]) {
         updatedState[postId] = false;
         
-        // Update roar count in posts
         setCommunityData(prev => ({
           ...prev,
           posts: prev.posts.map(post => 
@@ -139,7 +139,6 @@ const CommunityPage = () => {
       } else {
         updatedState[postId] = true;
         
-        // Update roar count in posts
         setCommunityData(prev => ({
           ...prev,
           posts: prev.posts.map(post => 
@@ -179,16 +178,17 @@ const CommunityPage = () => {
     });
   };
   
-  // For the interactive trading chart effect
   const chartPoints = communityData.priceChange > 0 
     ? "M0,50 Q25,30 50,20 T100,10" 
     : "M0,50 Q25,70 50,80 T100,90";
+    
+  const handlePostCreated = (newPost: any) => {
+    setUserPosts([newPost, ...userPosts]);
+  };
 
   return (
     <div className="flex flex-col md:flex-row gap-4 animate-fade-in">
-      {/* Main content section */}
       <div className="flex-1 order-2 md:order-1">
-        {/* Header for mobile */}
         {isMobile && (
           <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm pb-3 mb-3 border-b">
             <div className="flex items-center gap-3 mb-2">
@@ -226,7 +226,6 @@ const CommunityPage = () => {
               </Button>
             </div>
             
-            {/* Market cap and share price for mobile */}
             <div className="flex items-center justify-between px-2">
               <div className="flex-1">
                 <div className="text-xs text-muted-foreground">Share Price</div>
@@ -249,7 +248,6 @@ const CommunityPage = () => {
           </div>
         )}
         
-        {/* Tabs for content sections */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-full md:w-auto justify-start mb-6 overflow-x-visible flex-nowrap border-b pb-px">
             <TabsTrigger value="posts" className="flex-shrink-0">
@@ -271,113 +269,49 @@ const CommunityPage = () => {
           </TabsList>
           
           <TabsContent value="posts" className="animate-fade-in">
-            {/* Post creation card */}
-            <Card className="mb-6 overflow-hidden border-primary/20">
-              <CardContent className="pt-4">
-                <div className="flex gap-3">
-                  <Avatar className="h-10 w-10 flex-shrink-0">
-                    <AvatarImage src="https://github.com/shadcn.png" />
-                    <AvatarFallback>CN</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <textarea 
-                      className="w-full rounded-lg border border-border p-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none min-h-[80px]" 
-                      placeholder={`Share your thoughts with the ${communityData.name} community...`}
-                    />
-                    <div className="mt-3 flex justify-end">
-                      <Button>
-                        <Sparkles className="h-4 w-4 mr-2" />
-                        Post
-                      </Button>
-                    </div>
-                  </div>
-                </div>
+            <Card className="mb-6 bg-gradient-to-br from-primary/5 to-secondary/5 border-primary/20">
+              <CardContent className="pt-6">
+                <h2 className="text-xl font-semibold mb-3 flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  What's on your mind?
+                </h2>
+                <CreatePostCard onPostCreated={handlePostCreated} />
               </CardContent>
             </Card>
             
-            {/* Posts list */}
-            <div className="space-y-4">
+            <div className="space-y-6">
+              {userPosts.map((post, index) => (
+                <Post 
+                  key={`user-post-${index}`}
+                  username={post.username}
+                  community={post.community}
+                  timeAgo={post.timeAgo}
+                  content={post.content}
+                  roarCount={post.roarCount}
+                  commentCount={post.commentCount}
+                  shareCount={post.shareCount}
+                  images={post.images}
+                  video={post.video}
+                />
+              ))}
+              
               {communityData.posts.map((post) => (
-                <Card key={post.id} className="overflow-hidden group hover:border-primary/30 transition-all duration-300">
-                  <CardHeader className="py-3 px-4">
-                    <div className="flex justify-between items-start gap-2">
-                      <div className="flex items-center gap-3">
-                        <Avatar>
-                          <AvatarImage src={post.avatar} />
-                          <AvatarFallback>{post.username[0].toUpperCase()}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium">{post.username}</div>
-                          <span className="text-xs text-muted-foreground">{post.timeAgo}</span>
-                        </div>
-                      </div>
-                      
-                      <ShareDialog 
-                        postTitle={post.content.slice(0, 30) + (post.content.length > 30 ? '...' : '')}
-                        communityName={communityData.name}
-                      >
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Share2 className="h-4 w-4" />
-                        </Button>
-                      </ShareDialog>
-                    </div>
-                  </CardHeader>
-                  
-                  <CardContent className="py-0 px-4">
-                    <p>{post.content}</p>
-                  </CardContent>
-                  
-                  <CardFooter className="flex justify-between py-3 mt-2 bg-muted/20">
-                    <Button 
-                      variant={isRoared[post.id] ? "roar-active" : "roar"} 
-                      size="sm" 
-                      onClick={() => handleRoar(post.id)}
-                    >
-                      <div className="relative">
-                        <LionIcon />
-                        {isRoared[post.id] && (
-                          <span className="absolute -top-2 -right-2 inline-flex animate-roar-text opacity-0 text-amber-500">
-                            +1
-                          </span>
-                        )}
-                      </div>
-                      <span className="ml-1">{post.roarCount}</span>
-                      {isRoared[post.id] && (
-                        <span className="absolute inset-0 rounded-full animate-roar-waves opacity-0 bg-amber-500/20"></span>
-                      )}
-                    </Button>
-                    
-                    <Button variant="ghost" size="sm">
-                      <MessageCircle className="h-4 w-4 mr-1" />
-                      <span>{post.commentCount}</span>
-                    </Button>
-                    
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className={isMirroredPost[post.id] ? "text-primary" : ""}
-                      onClick={() => handleMirror(post.id)}
-                    >
-                      <BookOpen className="h-4 w-4 mr-1" />
-                      <span>Mirror</span>
-                    </Button>
-                    
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className={isIPFSSaved[post.id] ? "text-green-500" : ""}
-                      onClick={() => handleSaveToIPFS(post.id)}
-                    >
-                      <FileText className="h-4 w-4 mr-1" />
-                      <span>IPFS</span>
-                    </Button>
-                  </CardFooter>
-                </Card>
+                <Post 
+                  key={`community-post-${post.id}`}
+                  username={post.username}
+                  community={communityData.name}
+                  timeAgo={post.timeAgo}
+                  content={post.content}
+                  roarCount={post.roarCount}
+                  commentCount={post.commentCount || 0}
+                  shareCount={post.shareCount || 0}
+                  images={[]}
+                  video={undefined}
+                />
               ))}
             </div>
           </TabsContent>
           
-          {/* Members tab */}
           <TabsContent value="members" className="animate-fade-in">
             <Card>
               <CardHeader>
@@ -413,7 +347,6 @@ const CommunityPage = () => {
             </Card>
           </TabsContent>
           
-          {/* Rewards tab */}
           <TabsContent value="rewards" className="animate-fade-in">
             <Card>
               <CardHeader>
@@ -499,7 +432,6 @@ const CommunityPage = () => {
             </Card>
           </TabsContent>
           
-          {/* About tab */}
           <TabsContent value="about" className="animate-fade-in">
             <Card>
               <CardHeader>
@@ -575,13 +507,10 @@ const CommunityPage = () => {
         </Tabs>
       </div>
       
-      {/* Sidebar for community info */}
       {!isMobile && (
         <div className="w-full md:w-80 order-1 md:order-2 flex-shrink-0">
           <div className="sticky top-4 space-y-4">
-            {/* Community Card */}
             <Card className="overflow-hidden relative">
-              {/* Visual price chart background */}
               <div className="absolute inset-0 opacity-[0.05] pointer-events-none">
                 <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
                   <path 
@@ -591,7 +520,6 @@ const CommunityPage = () => {
                 </svg>
               </div>
               
-              {/* Header with image */}
               <div className="relative">
                 <div 
                   className="h-32 w-full bg-cover bg-center" 
@@ -648,7 +576,6 @@ const CommunityPage = () => {
                   
                   <Separator />
                   
-                  {/* Your Holdings section */}
                   <div className="pt-1">
                     <div className="text-sm font-medium mb-2">Your Holdings</div>
                     {communityData.userShareCount > 0 ? (
@@ -674,7 +601,6 @@ const CommunityPage = () => {
                     )}
                   </div>
                   
-                  {/* Reward Pool */}
                   <div className="bg-primary/5 rounded-lg p-3 mb-2 border border-primary/20 shadow-sm relative overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 animate-pulse"></div>
                     <div className="relative z-10">
@@ -709,7 +635,6 @@ const CommunityPage = () => {
         </div>
       )}
       
-      {/* Trade Sheet */}
       <TradeSheet
         open={tradeSheetOpen}
         onOpenChange={setTradeSheetOpen}

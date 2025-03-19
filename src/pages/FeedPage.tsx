@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -124,7 +125,7 @@ const FeedPage = () => {
 };
 
 // Enhanced Community Badge component
-const CommunityBadge = ({ name }: { name: string }) => {
+export const CommunityBadge = ({ name }: { name: string }) => {
   const slug = name.toLowerCase().replace(/\s+/g, '-');
   
   return (
