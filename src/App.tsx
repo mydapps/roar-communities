@@ -25,7 +25,7 @@ function App() {
         
         {/* Routes with main layout */}
         <Route path="/" element={<MainLayout />}>
-          <Route index element={<FeedPage />} />
+          <Route index element={<RequestInvitePage />} />
           <Route path="feed" element={<FeedPage />} />
           <Route path="communities" element={<CommunitiesPage />} />
           <Route path="c/:id" element={<CommunityPage />} />

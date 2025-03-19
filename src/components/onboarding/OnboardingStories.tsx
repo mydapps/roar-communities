@@ -186,12 +186,12 @@ const OnboardingStories = ({ open, onOpenChange }: { open: boolean; onOpenChange
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className="sm:max-w-md p-0 overflow-hidden border-none w-full max-h-[85vh] bg-transparent shadow-none" 
+        className="sm:max-w-md p-0 overflow-hidden border-none w-full max-h-screen h-[100vh] bg-transparent shadow-none" 
         onInteractOutside={(e) => e.preventDefault()}
       >
         <div 
           ref={storyContainerRef}
-          className="flex flex-col h-full max-h-[85vh] w-full rounded-xl overflow-hidden bg-background shadow-lg"
+          className="flex flex-col h-full w-full rounded-none sm:rounded-xl overflow-hidden bg-background shadow-lg"
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
         >
@@ -213,7 +213,7 @@ const OnboardingStories = ({ open, onOpenChange }: { open: boolean; onOpenChange
           
           {/* Story content */}
           <div className="flex-1 overflow-y-auto p-4">
-            <div className={`rounded-xl p-6 bg-gradient-to-r ${stories[currentStory].gradient} min-h-[300px]`}>
+            <div className={`rounded-xl p-6 bg-gradient-to-r ${stories[currentStory].gradient} min-h-[300px] h-full flex flex-col`}>
               <div className="mb-6">
                 <div className={`inline-block p-3 rounded-full mb-4 ${stories[currentStory].color} bg-background/20`}>
                   {stories[currentStory].icon}
@@ -221,7 +221,7 @@ const OnboardingStories = ({ open, onOpenChange }: { open: boolean; onOpenChange
                 <h3 className="text-2xl font-bold">{stories[currentStory].title}</h3>
               </div>
               
-              <div className="prose prose-sm dark:prose-invert">
+              <div className="prose prose-sm dark:prose-invert flex-1">
                 {stories[currentStory].content}
               </div>
             </div>

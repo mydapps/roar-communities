@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -46,8 +45,6 @@ const RequestInvitePage = () => {
   const [pointsEarned, setPointsEarned] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
   const [showStories, setShowStories] = useState(false);
-  
-  // Mock tasks that users can complete to jump the queue
   const [tasks, setTasks] = useState<Task[]>([
     {
       id: 'connect-twitter',
@@ -101,6 +98,21 @@ const RequestInvitePage = () => {
     }
   ]);
 
+  const wittyResponses = [
+    "Nice try, but that's not a golden ticket! 🎫",
+    "That code is as real as unicorns with credit cards! 🦄",
+    "Close, but no crypto! Try another code.",
+    "Our AI says this code is from a parallel universe. Try one from this dimension!",
+    "That's like trying to open a digital door with an analog key!",
+    "The blockchain gods have reviewed your code and... they're still laughing.",
+    "Error 404: Valid Code Not Found. But your persistence is impressive!",
+    "That code expired sometime during the Jurassic period. Got a newer one?",
+  ];
+
+  const getRandomWittyResponse = () => {
+    return wittyResponses[Math.floor(Math.random() * wittyResponses.length)];
+  };
+
   const triggerConfetti = () => {
     setShowConfetti(true);
     
@@ -116,13 +128,11 @@ const RequestInvitePage = () => {
   const handleCompleteTask = (taskId: string) => {
     setTasks(prev => prev.map(task => {
       if (task.id === taskId && !task.completed) {
-        // Simulate API call
         setTimeout(() => {
           toast.success(`🎉 You jumped ${task.points.toLocaleString()} positions in the queue!`);
           triggerConfetti();
         }, 500);
         
-        // Update queue position
         setQueuePosition(current => Math.max(1, current - task.points));
         setPointsEarned(prev => prev + task.points);
         
@@ -152,20 +162,17 @@ const RequestInvitePage = () => {
     
     setIsSubmitting(true);
     
-    // For demo purposes, accept code "ABC123"
     if (inviteCode.toUpperCase() === "ABC123") {
       setTimeout(() => {
         toast.success("🚀 Invite code accepted! Welcome to ROAR!");
         triggerConfetti();
         
-        // Show onboarding stories instead of redirecting immediately
         setShowStories(true);
         setIsSubmitting(false);
       }, 1000);
     } else {
-      // Handle invalid code
       setTimeout(() => {
-        toast.error("Invalid invite code. Please try again.");
+        toast.error(getRandomWittyResponse());
         setIsSubmitting(false);
       }, 1000);
     }
@@ -175,7 +182,6 @@ const RequestInvitePage = () => {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
   };
 
-  // Animation for queue position
   useEffect(() => {
     if (queuePosition < originalPosition) {
       const interval = setInterval(() => {
@@ -194,7 +200,6 @@ const RequestInvitePage = () => {
     <div className="min-h-screen bg-background flex flex-col">
       <div className="flex-1 overflow-auto">
         <div className="max-w-4xl mx-auto p-4 sm:p-6 animate-fade-in">
-          {/* Hero Section */}
           <div className="text-center mb-8">
             <div className="inline-block p-4 bg-amber-500/10 rounded-full mb-4">
               <Gift className="h-10 w-10 text-amber-500" />
@@ -205,7 +210,6 @@ const RequestInvitePage = () => {
             </p>
           </div>
 
-          {/* Queue Position Card */}
           <Card className="mb-8 overflow-hidden">
             <div className="bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-amber-500/10 p-6 text-center">
               <h2 className="text-xl font-semibold mb-2">Your Current Position</h2>
@@ -258,7 +262,6 @@ const RequestInvitePage = () => {
             </CardContent>
           </Card>
 
-          {/* Tasks Section */}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold">Jump the Queue</h2>
@@ -318,7 +321,6 @@ const RequestInvitePage = () => {
             </div>
           </div>
 
-          {/* Referral Bonus */}
           <Card className="mb-8 bg-gradient-to-r from-amber-500/5 via-amber-500/10 to-amber-500/5 border-amber-500/20">
             <CardContent className="p-6">
               <div className="flex flex-col md:flex-row md:items-center gap-4">
@@ -341,7 +343,6 @@ const RequestInvitePage = () => {
         </div>
       </div>
 
-      {/* Onboarding Stories */}
       <OnboardingStories 
         open={showStories} 
         onOpenChange={setShowStories} 
