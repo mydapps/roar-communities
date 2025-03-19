@@ -24,6 +24,7 @@ function App() {
           <Route path="communities" element={<CommunitiesPage />} />
           <Route path="c/:id" element={<CommunityPage />} />
           <Route path="c/:communityId/:postId" element={<PostPage />} />
+          <Route path="u/:username" element={<AccountPage />} />
           <Route path="my-shares" element={<MySharesPage />} />
           <Route path="account" element={<AccountPage />} />
           <Route path="search" element={<SearchPage />} />

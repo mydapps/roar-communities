@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useResponsive } from '@/hooks/use-mobile';
@@ -20,6 +19,7 @@ import { Post } from '@/components/feed/Post';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { MentionInput, MentionContent } from '@/components/ui/mention-input';
 
 // Icons
 import { ChevronLeft, RefreshCw, MessageCircle, Send, Cat, ChevronDown, Reply } from 'lucide-react';
@@ -230,15 +230,11 @@ const PostPage = () => {
   const [roarTextAnimation, setRoarTextAnimation] = useState(false);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
-  // Show all replies by default
   const [expandedReplies, setExpandedReplies] = useState<Record<string, boolean>>({});
-
-  // Cache of meow states to prevent re-renders
   const [meowedComments, setMeowedComments] = useState<Record<string, boolean>>({});
-  
+
   useEffect(() => {
     setTimeout(() => {
-      // Find post by ID first, then by community as fallback
       const foundPost = MOCK_POSTS.find(p => p.id === postId) || 
                         MOCK_POSTS.find(p => p.community === communityId);
       
@@ -249,7 +245,6 @@ const PostPage = () => {
         setPost(foundPost);
         setRoarCount(foundPost.roarCount);
         
-        // Pre-expand all replies by default
         const initialExpandState: Record<string, boolean> = {};
         const expandAllReplies = (comments: CommentType[]) => {
           comments.forEach(comment => {
@@ -268,7 +263,6 @@ const PostPage = () => {
     }, 1000);
   }, [communityId, postId]);
   
-  // Function to add a comment to the top level
   const handleAddComment = () => {
     if (!newComment.trim()) return;
     
@@ -295,7 +289,6 @@ const PostPage = () => {
     }, 500);
   };
 
-  // Helper function to find a comment by its ID (at any nesting level)
   const findCommentById = (
     commentId: string, 
     commentsArray: CommentType[]
@@ -314,19 +307,16 @@ const PostPage = () => {
     return null;
   };
 
-  // Function to add a reply to a specific comment
   const handleAddReply = (commentId: string, replyText: string) => {
     if (!replyText.trim()) return;
     
     setSubmittingComment(true);
     
     setTimeout(() => {
-      // Create a deep copy of the comments state
       const updateComments = (comments: CommentType[]): CommentType[] => {
         return comments.map(comment => {
           if (comment.id === commentId) {
             const parentLevel = comment.level;
-            // Don't allow replies beyond level 3
             if (parentLevel >= 3) return comment;
             
             const newReply: CommentType = {
@@ -361,45 +351,42 @@ const PostPage = () => {
       });
     }, 500);
   };
-  
-  // Function to handle meow on a comment
+
   const handleMeowComment = (commentId: string) => {
-    // Update the meowed state first to prevent UI flickering
     setMeowedComments(prev => ({
       ...prev,
       [commentId]: !prev[commentId]
     }));
     
-    const updateMeowCount = (comments: CommentType[]): CommentType[] => {
-      return comments.map(comment => {
-        if (comment.id === commentId) {
-          const isMeowed = meowedComments[commentId];
-          return { 
-            ...comment, 
-            meowCount: isMeowed ? comment.meowCount - 1 : comment.meowCount + 1 
-          };
-        } else if (comment.replies) {
-          return {
-            ...comment,
-            replies: updateMeowCount(comment.replies)
-          };
-        }
-        return comment;
-      });
-    };
-    
-    setComments(updateMeowCount);
+    setComments(prevComments => {
+      const updateMeowCount = (comments: CommentType[]): CommentType[] => {
+        return comments.map(comment => {
+          if (comment.id === commentId) {
+            const isMeowed = meowedComments[commentId];
+            return { 
+              ...comment, 
+              meowCount: isMeowed ? comment.meowCount - 1 : comment.meowCount + 1 
+            };
+          } else if (comment.replies) {
+            return {
+              ...comment,
+              replies: updateMeowCount(comment.replies)
+            };
+          }
+          return comment;
+        });
+      };
+      
+      return updateMeowCount(prevComments);
+    });
   };
-  
-  // Function to handle roar on the post
+
   const handleRoar = () => {
-    // Update state first to prevent flicker
     const newRoared = !roared;
     setRoared(newRoared);
     setRoarCount(prev => newRoared ? prev + 1 : prev - 1);
     
     if (newRoared) {
-      // Animation sequence matching feed page
       setRoarWavesAnimation(true);
       setTimeout(() => setRoarAnimation(true), 50);
       setTimeout(() => setRoarTextAnimation(true), 100);
@@ -414,12 +401,11 @@ const PostPage = () => {
       description: newRoared ? "You've roared at this post" : "You've removed your roar from this post",
     });
   };
-  
+
   const goBack = () => {
     navigate(-1);
   };
 
-  // Recursive component to render comments with replies
   const CommentWithReplies = ({ comment }: { comment: CommentType }) => {
     const [localReplyText, setLocalReplyText] = useState('');
     const [isReplying, setIsReplying] = useState(false);
@@ -440,12 +426,11 @@ const PostPage = () => {
       e.preventDefault();
       e.stopPropagation();
       
-      handleMeowComment(comment.id);
-      
-      // Enhanced meow animation sequence
       setMeowWavesAnimation(true);
       setMeowAnimating(true);
       setMeowTextAnimating(true);
+      
+      setTimeout(() => handleMeowComment(comment.id), 10);
       
       setTimeout(() => setMeowWavesAnimation(false), 1000);
       setTimeout(() => setMeowAnimating(false), 1200);
@@ -477,7 +462,6 @@ const PostPage = () => {
       }));
     };
     
-    // Use better indent styling for nested comments
     const getIndentClass = () => {
       const level = comment.level;
       if (level === 1) return '';
@@ -503,13 +487,13 @@ const PostPage = () => {
               <span className="text-muted-foreground text-xs">·</span>
               <span className="text-muted-foreground text-xs">{comment.timeAgo}</span>
             </div>
-            <p className="mt-1 text-sm text-foreground/90 leading-relaxed">{comment.text}</p>
+            <MentionContent content={comment.text} />
             <div className="mt-2.5 flex items-center gap-3">
               <Button 
-                variant="ghost" 
+                variant={isMeowed ? "meow-active" : "meow"}
                 size="sm" 
                 onClick={handleMeowClick}
-                className={`h-8 px-2 text-xs gap-1.5 rounded-full ${isMeowed ? 'text-amber-500 bg-amber-500/10' : ''}`}
+                className="h-8 px-2 text-xs gap-1.5 rounded-full"
               >
                 <div className="relative">
                   <div className={`transition-all duration-300 ${meowAnimating ? 'scale-125' : ''}`}>
@@ -554,11 +538,12 @@ const PostPage = () => {
             
             {isReplying && (
               <div className="mt-3 space-y-2 bg-muted/30 p-3 rounded-lg border border-border/40">
-                <Textarea 
+                <MentionInput 
                   placeholder={`Reply to ${formatUsername(comment.username)}...`} 
                   value={localReplyText}
-                  onChange={(e) => setLocalReplyText(e.target.value)}
-                  className="min-h-[60px] text-sm resize-none bg-background"
+                  onChange={setLocalReplyText}
+                  className="min-h-[60px] text-sm bg-background"
+                  minHeight="60px"
                 />
                 <div className="flex gap-2 justify-end">
                   <Button 
@@ -713,11 +698,12 @@ const PostPage = () => {
             <AvatarFallback>Y</AvatarFallback>
           </Avatar>
           <div className="flex-1 space-y-2">
-            <Textarea 
+            <MentionInput 
               placeholder="Add a comment..." 
-              className="min-h-[80px] resize-none bg-background"
+              className="resize-none bg-background"
               value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
+              onChange={setNewComment}
+              minHeight="80px"
             />
             <div className="flex justify-end">
               <Button 
