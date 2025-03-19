@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -255,9 +254,7 @@ const PostsList = ({ trendingOnly = false, globalFeed = false }: { trendingOnly?
         <Post 
           key={`sample-post-${index}`}
           username={post.username}
-          community={
-            <CommunityBadge name={post.community} />
-          }
+          community={post.community}
           timeAgo={post.timeAgo}
           content={post.content}
           roarCount={post.roarCount}
