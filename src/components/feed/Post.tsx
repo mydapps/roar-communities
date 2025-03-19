@@ -118,10 +118,8 @@ export const Post = ({
   
   const [emblaRef, emblaApi] = useEmblaCarousel();
 
-  // Generate a mock IPFS hash for the demo
   const ipfsHash = `Qm${Array.from({length: 44}, () => Math.floor(Math.random() * 16).toString(16)).join('')}`;
 
-  // Set up a listener for carousel slides
   useEffect(() => {
     if (emblaApi) {
       emblaApi.on('select', () => {
@@ -136,17 +134,13 @@ export const Post = ({
     } else {
       setLocalRoarCount(prev => prev + 1);
       
-      // Trigger a sequence of animations for a more satisfying effect
       setRoarWavesAnimation(true);
       setTimeout(() => setRoarAnimation(true), 50);
       setTimeout(() => setRoarTextAnimation(true), 100);
       
-      // Use longer durations for more satisfying animations
       setTimeout(() => setRoarWavesAnimation(false), 1500);
       setTimeout(() => setRoarAnimation(false), 1800);
       setTimeout(() => setRoarTextAnimation(false), 2000);
-      
-      // Removed toast notification as requested
     }
     setRoared(!roared);
   };
@@ -154,7 +148,6 @@ export const Post = ({
   const handleCommentToggle = () => {
     setShowComments(!showComments);
     
-    // Load dummy comments if none exist yet
     if (comments.length === 0) {
       setComments([
         { user: 'sarah', text: 'This is amazing! Thanks for sharing.', timeAgo: '5m' },
@@ -165,22 +158,17 @@ export const Post = ({
 
   const handleAddComment = () => {
     if (newComment.trim()) {
-      // Add the new comment
       setComments([
         ...comments,
         { user: 'you', text: newComment, timeAgo: 'just now' }
       ]);
-      
-      // Clear the input
       setNewComment('');
     }
   };
 
   const handleShare = async (platform: string) => {
-    // Close the share menu
     setShareSheetOpen(false);
     
-    // Prepare share data
     const shareData = {
       title: `${username}'s post on Lion's Roar`,
       text: content,
@@ -204,7 +192,6 @@ export const Post = ({
         description: "Link has been copied to clipboard",
       });
     } else {
-      // For other platforms, we would implement platform-specific sharing
       console.log(`Sharing to ${platform}`);
     }
   };
@@ -229,11 +216,9 @@ export const Post = ({
   };
 
   const formatUsername = (name: string) => {
-    // Remove any extensions like .eth, .lens, etc. and add @
     return '@' + name.split('.')[0];
   };
 
-  // Sample communities for the mirror functionality
   const communities = [
     { name: "Ethereum Devs", members: 12400 },
     { name: "DeFi Explorers", members: 8300 },
@@ -249,7 +234,6 @@ export const Post = ({
     community => community.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Shared content for Mirror functionality
   const renderMirrorContent = () => (
     <>
       <div className="p-4 border-b">
@@ -349,8 +333,7 @@ export const Post = ({
       </div>
     </>
   );
-  
-  // Shared content for IPFS functionality
+
   const renderIpfsContent = () => (
     <>
       <div className="flex flex-col space-y-4 p-4">
@@ -384,11 +367,9 @@ export const Post = ({
       </div>
     </>
   );
-  
-  // Shared content for Share functionality
+
   const renderShareContent = () => (
     <>
-      {/* Post preview */}
       <div className="p-4 border-b">
         <div className="flex items-start gap-3 mb-2">
           <Avatar className="h-10 w-10">
@@ -429,7 +410,6 @@ export const Post = ({
         )}
       </div>
       
-      {/* Share options */}
       <div className="p-4">
         <h3 className="mb-4 text-sm font-medium">Share via</h3>
         <div className="grid grid-cols-3 gap-2">
@@ -500,20 +480,17 @@ export const Post = ({
   );
 
   const handlePostClick = (e: React.MouseEvent) => {
-    // If navigation is disabled, or the click was on a button/link, do nothing
     if (disableNavigation || 
         (e.target as HTMLElement).closest('button') || 
         (e.target as HTMLElement).closest('a')) {
       return;
     }
     
-    // Navigate to the post page
     if (community) {
       navigate(`/c/${community}/${postId}`);
     }
   };
-  
-  // Generate a mock post ID for links
+
   const postId = useRef(Array.from({length: 6}, () => 
     Math.floor(Math.random() * 36).toString(36)).join('')
   ).current;
@@ -545,7 +522,6 @@ export const Post = ({
             </div>
           </div>
           
-          {/* Conditional rendering for Shield/IPFS based on mobile vs. desktop */}
           {isMobile ? (
             <Drawer open={ipfsSheetOpen} onOpenChange={setIpfsSheetOpen}>
               <DrawerTrigger asChild>
@@ -624,7 +600,6 @@ export const Post = ({
       <CardContent className="pb-3">
         <p className="text-sm mt-2">{content}</p>
         
-        {/* Display media content */}
         {images && images.length > 0 && (
           <div className="mt-3 relative">
             {images.length === 1 ? (
@@ -672,4 +647,181 @@ export const Post = ({
             <video 
               src={video} 
               controls 
-              className="rounded-md w-full max-h-[300
+              className="rounded-md w-full max-h-[300px]"
+            />
+          </div>
+        )}
+      </CardContent>
+      <CardFooter className="pt-0 flex justify-between">
+        <div className="flex items-center gap-1.5">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={handleRoar}
+            className={`gap-2 hover:text-primary hover:bg-primary/10 ${roared ? 'text-primary' : ''}`}
+          >
+            <div className="relative">
+              <span className={`text-xl transition-transform ${roarAnimation ? 'scale-150' : ''}`} role="img" aria-label="lion">🦁</span>
+              {roarWavesAnimation && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="animate-ping absolute h-6 w-6 rounded-full bg-primary/30"></div>
+                  <div className="animate-ping delay-75 absolute h-8 w-8 rounded-full bg-primary/20"></div>
+                </div>
+              )}
+            </div>
+            <span className={`transition-transform ${roarTextAnimation ? 'scale-110 text-primary font-medium' : ''}`}>
+              {localRoarCount}
+            </span>
+          </Button>
+          
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={handleCommentToggle}
+            className="gap-2 hover:text-blue-500 hover:bg-blue-500/10"
+          >
+            <MessageCircle className="h-4 w-4" />
+            <span>{commentCount}</span>
+          </Button>
+          
+          {isMobile ? (
+            <Drawer open={mirrorSheetOpen} onOpenChange={setMirrorSheetOpen}>
+              <DrawerTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  className="gap-2 hover:text-purple-500 hover:bg-purple-500/10"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  <span>Mirror</span>
+                </Button>
+              </DrawerTrigger>
+              <DrawerContent className="max-h-[90vh]">
+                <DrawerHeader className="border-b">
+                  <DrawerTitle>Mirror Post</DrawerTitle>
+                  <DrawerDescription>
+                    Share this post with other communities
+                  </DrawerDescription>
+                </DrawerHeader>
+                
+                {renderMirrorContent()}
+                
+                <DrawerFooter className="flex-row justify-between gap-2 p-4 border-t">
+                  <DrawerClose asChild>
+                    <Button variant="outline">Cancel</Button>
+                  </DrawerClose>
+                  <Button 
+                    onClick={handleMirror}
+                    disabled={!selectedCommunity}
+                    className="gap-1.5"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Mirror Post
+                  </Button>
+                </DrawerFooter>
+              </DrawerContent>
+            </Drawer>
+          ) : (
+            <Sheet open={mirrorSheetOpen} onOpenChange={setMirrorSheetOpen}>
+              <SheetTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  className="gap-2 hover:text-purple-500 hover:bg-purple-500/10"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  <span>Mirror</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="sm:max-w-md">
+                <SheetHeader>
+                  <SheetTitle>Mirror Post</SheetTitle>
+                  <SheetDescription>
+                    Share this post with other communities
+                  </SheetDescription>
+                </SheetHeader>
+                
+                {renderMirrorContent()}
+                
+                <SheetFooter className="flex flex-row justify-between gap-2 mt-6">
+                  <SheetClose asChild>
+                    <Button variant="outline">Cancel</Button>
+                  </SheetClose>
+                  <Button 
+                    onClick={handleMirror}
+                    disabled={!selectedCommunity}
+                    className="gap-1.5"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Mirror Post
+                  </Button>
+                </SheetFooter>
+              </SheetContent>
+            </Sheet>
+          )}
+        </div>
+        
+        {isMobile ? (
+          <Drawer open={shareSheetOpen} onOpenChange={setShareSheetOpen}>
+            <DrawerTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                className="gap-2 hover:text-green-500 hover:bg-green-500/10"
+              >
+                <Share2 className="h-4 w-4" />
+                <span>Share</span>
+              </Button>
+            </DrawerTrigger>
+            <DrawerContent className="max-h-[90vh]">
+              <DrawerHeader className="border-b">
+                <DrawerTitle>Share Post</DrawerTitle>
+                <DrawerDescription>
+                  Share this post with others
+                </DrawerDescription>
+              </DrawerHeader>
+              
+              {renderShareContent()}
+              
+              <DrawerFooter className="border-t p-4">
+                <DrawerClose asChild>
+                  <Button variant="outline" className="w-full">Cancel</Button>
+                </DrawerClose>
+              </DrawerFooter>
+            </DrawerContent>
+          </Drawer>
+        ) : (
+          <Sheet open={shareSheetOpen} onOpenChange={setShareSheetOpen}>
+            <SheetTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                className="gap-2 hover:text-green-500 hover:bg-green-500/10"
+              >
+                <Share2 className="h-4 w-4" />
+                <span>Share</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="sm:max-w-md">
+              <SheetHeader>
+                <SheetTitle>Share Post</SheetTitle>
+                <SheetDescription>
+                  Share this post with others
+                </SheetDescription>
+              </SheetHeader>
+              
+              {renderShareContent()}
+              
+              <SheetFooter className="mt-6">
+                <SheetClose asChild>
+                  <Button variant="outline" className="w-full">Cancel</Button>
+                </SheetClose>
+              </SheetFooter>
+            </SheetContent>
+          </Sheet>
+        )}
+      </CardFooter>
+    </Card>
+  );
+};
+
