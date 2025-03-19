@@ -11,6 +11,7 @@ import MySharesPage from '@/pages/MySharesPage';
 import AccountPage from '@/pages/AccountPage';
 import SearchPage from '@/pages/SearchPage';
 import ReferralPage from '@/pages/ReferralPage';
+import RequestInvitePage from '@/pages/RequestInvitePage';
 import LoginPage from '@/pages/LoginPage';
 import NotFound from '@/pages/NotFound';
 
@@ -29,6 +30,7 @@ function App() {
           <Route path="account" element={<AccountPage />} />
           <Route path="search" element={<SearchPage />} />
           <Route path="referral" element={<ReferralPage />} />
+          <Route path="request-invite" element={<RequestInvitePage />} />
           <Route path="invite/:code" element={<ReferralPage />} />
           <Route path="login" element={<LoginPage />} />
           <Route path="*" element={<NotFound />} />
