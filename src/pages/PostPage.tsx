@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useResponsive } from '@/hooks/use-mobile';
@@ -25,7 +26,7 @@ import { ChevronLeft, RefreshCw, MessageCircle, Send } from 'lucide-react';
 // Mock data for demonstration
 const MOCK_POSTS = [
   {
-    id: 'abc123',
+    id: 'post1',
     username: 'vitalik.eth',
     community: 'ethereum-devs',
     timeAgo: '2h',
@@ -39,7 +40,7 @@ const MOCK_POSTS = [
     ]
   },
   {
-    id: 'def456',
+    id: 'post2',
     username: 'satoshi.btc',
     community: 'bitcoin-core',
     timeAgo: '5h',
@@ -49,7 +50,7 @@ const MOCK_POSTS = [
     shareCount: 28
   },
   {
-    id: 'ghi789',
+    id: 'post3',
     username: 'hayden.uni',
     community: 'defi-explorers',
     timeAgo: '1d',
@@ -60,6 +61,16 @@ const MOCK_POSTS = [
     images: [
       'https://picsum.photos/seed/uniswap/800/600'
     ]
+  },
+  {
+    id: 'thgvt0',  // Adding the postId from the current route
+    username: 'vitalik.eth',
+    community: 'ethereum-devs',
+    timeAgo: '3h',
+    content: "Ethereum's roadmap for 2023 includes significant improvements to layer 2 scaling and sharding technologies.",
+    roarCount: 420,
+    commentCount: 76,
+    shareCount: 35
   }
 ];
 
@@ -116,7 +127,13 @@ const PostPage = () => {
   
   useEffect(() => {
     setTimeout(() => {
-      const foundPost = MOCK_POSTS.find(p => p.community === communityId);
+      // Find post by ID first, then by community as fallback
+      const foundPost = MOCK_POSTS.find(p => p.id === postId) || 
+                        MOCK_POSTS.find(p => p.community === communityId);
+      
+      console.log("Looking for post with ID:", postId, "or community:", communityId);
+      console.log("Found post:", foundPost);
+      
       if (foundPost) {
         setPost(foundPost);
         setComments(MOCK_COMMENTS);
