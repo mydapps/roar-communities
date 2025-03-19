@@ -6,9 +6,10 @@ import {
   Search, 
   Users, 
   Wallet, 
-  Share2, 
+  Gift, 
   Settings,
-  X 
+  X,
+  Sparkles
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -69,7 +70,17 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
               <NavItem to="/search" icon={<Search className="h-5 w-5" />} label="Search" />
               <NavItem to="/communities" icon={<Users className="h-5 w-5" />} label="Communities" />
               <NavItem to="/my-shares" icon={<Wallet className="h-5 w-5" />} label="My Shares" />
-              <NavItem to="/referral" icon={<Share2 className="h-5 w-5" />} label="Referrals" />
+              <NavItem 
+                to="/referral" 
+                icon={
+                  <div className="relative">
+                    <Gift className="h-5 w-5 text-primary" />
+                    <Sparkles className="h-3 w-3 absolute -top-1 -right-1 text-primary" />
+                  </div>
+                } 
+                label="Share the Love" 
+                className="font-medium"
+              />
               <NavItem to="/account" icon={<Settings className="h-5 w-5" />} label="Account" />
             </nav>
 
@@ -100,9 +111,10 @@ interface NavItemProps {
   to: string;
   icon: React.ReactNode;
   label: string;
+  className?: string;
 }
 
-const NavItem = ({ to, icon, label }: NavItemProps) => {
+const NavItem = ({ to, icon, label, className }: NavItemProps) => {
   return (
     <NavLink
       to={to}
@@ -111,7 +123,8 @@ const NavItem = ({ to, icon, label }: NavItemProps) => {
           "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
           isActive 
             ? "bg-primary text-primary-foreground" 
-            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            : "text-muted-foreground hover:bg-muted hover:text-foreground",
+          className
         )
       }
     >

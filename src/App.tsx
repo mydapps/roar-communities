@@ -29,6 +29,7 @@ function App() {
           <Route path="account" element={<AccountPage />} />
           <Route path="search" element={<SearchPage />} />
           <Route path="referral" element={<ReferralPage />} />
+          <Route path="invite/:code" element={<ReferralPage />} />
           <Route path="login" element={<LoginPage />} />
           <Route path="*" element={<NotFound />} />
         </Route>

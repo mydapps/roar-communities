@@ -2,7 +2,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Bell, Menu, Search, User, Share2 } from 'lucide-react';
+import { Bell, Menu, Search, User, Gift, Sparkles } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   DropdownMenu, 
@@ -56,9 +56,12 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
 
         <div className="flex items-center gap-2">
           {isMobile && (
-            <Button variant="ghost" size="icon" asChild>
-              <Link to="/referrals">
-                <Share2 className="h-5 w-5" />
+            <Button variant="ghost" size="icon" asChild className="relative">
+              <Link to="/referral">
+                <Gift className="h-5 w-5 text-primary animate-pulse" />
+                <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-[10px] font-medium text-primary-foreground flex items-center justify-center">
+                  <Sparkles className="h-3 w-3" />
+                </span>
               </Link>
             </Button>
           )}
@@ -94,8 +97,9 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link to="/referrals" className="cursor-pointer">
-                  Referrals
+                <Link to="/referral" className="cursor-pointer flex items-center gap-2">
+                  <Gift className="h-4 w-4 text-primary" />
+                  <span className="text-primary font-medium">Share the Love</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
