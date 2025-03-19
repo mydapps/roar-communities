@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -191,43 +190,59 @@ const CommunityPage = () => {
       <div className="flex-1 order-2 md:order-1">
         {/* Header for mobile */}
         {isMobile && (
-          <div className="sticky top-0 z-10 bg-background/90 backdrop-blur-sm pb-2 mb-3">
-            <div className="flex flex-col">
-              <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10">
-                  <AvatarImage src={communityData.image} alt={communityData.name} />
-                  <AvatarFallback>{communityData.name[0]}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <h1 className="text-xl font-bold">{communityData.name}</h1>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">{communityData.members} members</span>
-                    {communityData.priceChange > 0 ? (
-                      <Badge className="bg-green-500/10 text-green-600 text-xs">
-                        <ArrowUp className="h-3 w-3 mr-1" />
-                        {communityData.priceChange.toFixed(1)}%
-                      </Badge>
-                    ) : (
-                      <Badge className="bg-red-500/10 text-red-600 text-xs">
-                        <ArrowDown className="h-3 w-3 mr-1" />
-                        {Math.abs(communityData.priceChange).toFixed(1)}%
-                      </Badge>
-                    )}
-                  </div>
+          <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm pb-3 mb-3 border-b">
+            <div className="flex items-center gap-3 mb-2">
+              <Avatar className="h-10 w-10">
+                <AvatarImage src={communityData.image} alt={communityData.name} />
+                <AvatarFallback>{communityData.name[0]}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <h1 className="text-xl font-bold">{communityData.name}</h1>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="bg-background/80 text-xs flex items-center">
+                    <Users className="h-3 w-3 mr-1" />
+                    {communityData.members} members
+                  </Badge>
+                  {communityData.priceChange > 0 ? (
+                    <Badge className="bg-green-500/10 text-green-600 text-xs">
+                      <ArrowUp className="h-3 w-3 mr-1" />
+                      {communityData.priceChange.toFixed(1)}%
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-red-500/10 text-red-600 text-xs">
+                      <ArrowDown className="h-3 w-3 mr-1" />
+                      {Math.abs(communityData.priceChange).toFixed(1)}%
+                    </Badge>
+                  )}
                 </div>
               </div>
-              
-              {/* Market cap and share price for mobile */}
-              <div className="mt-2 flex items-center justify-between bg-muted/40 p-2 rounded-lg">
-                <div>
-                  <div className="text-xs text-muted-foreground">Share Price</div>
-                  <div className="font-semibold text-sm">${priceInUsd.toFixed(2)}</div>
-                  <div className="text-xs text-muted-foreground">{communityData.pricePerShare.toFixed(3)} ETH</div>
+              <Button 
+                size="sm"
+                variant="default"
+                className="bg-purple-600 hover:bg-purple-700 text-white shadow-sm"
+                onClick={() => setTradeSheetOpen(true)}
+              >
+                {communityData.userShareCount > 0 ? 'Buy More' : 'Join'}
+              </Button>
+            </div>
+            
+            {/* Market cap and share price for mobile */}
+            <div className="flex items-center justify-between px-2">
+              <div className="flex-1">
+                <div className="text-xs text-muted-foreground">Share Price</div>
+                <div className="font-semibold text-base flex items-center">
+                  <DollarSign className="h-3.5 w-3.5 mr-0.5 text-muted-foreground" />
+                  {priceInUsd.toFixed(2)}
+                  <span className="text-xs text-muted-foreground ml-1">
+                    ({communityData.pricePerShare.toFixed(3)} ETH)
+                  </span>
                 </div>
-                <div>
-                  <div className="text-xs text-muted-foreground">Market Cap</div>
-                  <div className="font-semibold text-sm">${marketCapUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-                  <div className="text-xs text-muted-foreground">{(communityData.totalShares * communityData.pricePerShare).toFixed(1)} ETH</div>
+              </div>
+              <div className="flex-1">
+                <div className="text-xs text-muted-foreground">Market Cap</div>
+                <div className="font-semibold text-base flex items-center">
+                  <TrendingUp className="h-3.5 w-3.5 mr-0.5 text-muted-foreground" />
+                  ${marketCapUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                 </div>
               </div>
             </div>
@@ -690,24 +705,6 @@ const CommunityPage = () => {
                 )}
               </CardFooter>
             </Card>
-          </div>
-        </div>
-      )}
-      
-      {/* Mobile action buttons - fixed at bottom */}
-      {isMobile && (
-        <div className="fixed bottom-16 inset-x-0 p-4 bg-background/80 backdrop-blur-sm z-10 border-t animate-slide-up">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="font-medium text-base">${priceInUsd.toFixed(2)}</div>
-              <div className="text-xs text-muted-foreground">{communityData.pricePerShare.toFixed(3)} ETH</div>
-            </div>
-            <Button 
-              onClick={() => setTradeSheetOpen(true)}
-              className="bg-purple-600 hover:bg-purple-700 text-white shadow-md hover:shadow-lg"
-            >
-              {communityData.userShareCount > 0 ? 'Buy More' : 'Join Now'}
-            </Button>
           </div>
         </div>
       )}
