@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from '@/components/layout/MainLayout';
 import HomePage from '@/pages/HomePage';
 import FeedPage from '@/pages/FeedPage';
@@ -19,7 +19,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<MainLayout />}>
-          <Route index element={<HomePage />} />
+          <Route index element={<Navigate to="/feed" replace />} />
           <Route path="feed" element={<FeedPage />} />
           <Route path="communities" element={<CommunitiesPage />} />
           <Route path="c/:id" element={<CommunityPage />} />

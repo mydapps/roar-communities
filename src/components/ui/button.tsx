@@ -21,6 +21,8 @@ const buttonVariants = cva(
         link: "text-primary underline-offset-4 hover:underline",
         roar: "text-foreground/40 hover:text-amber-500 hover:bg-amber-500/10 transition-all duration-300",
         "roar-active": "text-amber-500 hover:bg-amber-500/10 transition-all duration-300",
+        meow: "text-foreground/40 hover:text-amber-500 hover:bg-amber-500/10 transition-all duration-300",
+        "meow-active": "text-amber-500 bg-amber-500/10 transition-all duration-300",
         linkedin: "bg-[#0077B5] text-white hover:bg-[#0077B5]/90",
         telegram: "bg-[#26A5E4] text-white hover:bg-[#26A5E4]/90",
         twitter: "bg-[#1DA1F2] text-white hover:bg-[#1DA1F2]/90",

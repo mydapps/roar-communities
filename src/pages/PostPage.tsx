@@ -111,6 +111,19 @@ const MOCK_POSTS = [
     images: [
       'https://picsum.photos/seed/solana/800/600'
     ]
+  },
+  {
+    id: 'q3fx7z',
+    username: 'vitalik.eth',
+    community: 'Ethereum Devs',
+    timeAgo: '3h',
+    content: "Just finished implementing a new scaling solution that could increase throughput by 10x. Would love feedback from the community!",
+    roarCount: 278,
+    commentCount: 53,
+    shareCount: 41,
+    images: [
+      'https://picsum.photos/seed/ethereum/800/600'
+    ]
   }
 ];
 
@@ -217,6 +230,10 @@ const PostPage = () => {
   const [roarTextAnimation, setRoarTextAnimation] = useState(false);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState('');
+  const [expandedReplies, setExpandedReplies] = useState<Record<string, boolean>>({});
+
+  // Cache of meow states to prevent re-renders
+  const [meowedComments, setMeowedComments] = useState<Record<string, boolean>>({});
   
   useEffect(() => {
     setTimeout(() => {
@@ -334,10 +351,20 @@ const PostPage = () => {
   
   // Function to handle meow on a comment
   const handleMeowComment = (commentId: string) => {
+    // Update the meowed state first to prevent UI flickering
+    setMeowedComments(prev => ({
+      ...prev,
+      [commentId]: !prev[commentId]
+    }));
+    
     const updateMeowCount = (comments: CommentType[]): CommentType[] => {
       return comments.map(comment => {
         if (comment.id === commentId) {
-          return { ...comment, meowCount: comment.meowCount + 1 };
+          const isMeowed = meowedComments[commentId];
+          return { 
+            ...comment, 
+            meowCount: isMeowed ? comment.meowCount - 1 : comment.meowCount + 1 
+          };
         } else if (comment.replies) {
           return {
             ...comment,
@@ -353,13 +380,12 @@ const PostPage = () => {
   
   // Function to handle roar on the post
   const handleRoar = () => {
-    if (roared) {
-      setRoarCount(prev => prev - 1);
-      setRoared(false);
-    } else {
-      setRoarCount(prev => prev + 1);
-      setRoared(true);
-      
+    // Update state first to prevent flicker
+    const newRoared = !roared;
+    setRoared(newRoared);
+    setRoarCount(prev => newRoared ? prev + 1 : prev - 1);
+    
+    if (newRoared) {
       // Animation sequence matching feed page
       setRoarWavesAnimation(true);
       setTimeout(() => setRoarAnimation(true), 50);
@@ -371,8 +397,8 @@ const PostPage = () => {
     }
     
     toast({
-      title: roared ? "Roar removed" : "Post roared!",
-      description: roared ? "You've removed your roar from this post" : "You've roared at this post",
+      title: newRoared ? "Post roared!" : "Roar removed",
+      description: newRoared ? "You've roared at this post" : "You've removed your roar from this post",
     });
   };
   
@@ -385,12 +411,16 @@ const PostPage = () => {
     const [isReplying, setIsReplying] = useState(false);
     const [meowAnimating, setMeowAnimating] = useState(false);
     const [meowWavesAnimation, setMeowWavesAnimation] = useState(false);
+    const [meowTextAnimating, setMeowTextAnimating] = useState(false);
+    const [localReplyText, setLocalReplyText] = useState('');
+    const isExpanded = expandedReplies[comment.id] || false;
+    const isMeowed = meowedComments[comment.id] || false;
     
     const handleReplyClick = () => {
       setIsReplying(!isReplying);
       if (!isReplying) {
         setReplyingTo(comment.id);
-        setReplyText('');
+        setLocalReplyText('');
       } else {
         setReplyingTo(null);
       }
@@ -402,16 +432,41 @@ const PostPage = () => {
       // Enhanced meow animation sequence
       setMeowWavesAnimation(true);
       setMeowAnimating(true);
+      setMeowTextAnimating(true);
       
       setTimeout(() => setMeowWavesAnimation(false), 1000);
       setTimeout(() => setMeowAnimating(false), 1200);
+      setTimeout(() => setMeowTextAnimating(false), 1500);
+    };
+
+    const handleSubmitReply = () => {
+      if (replyingTo === comment.id) {
+        setReplyText(localReplyText);
+        handleAddReply(comment.id);
+        setIsReplying(false);
+      }
+    };
+
+    const toggleReplies = () => {
+      setExpandedReplies(prev => ({
+        ...prev,
+        [comment.id]: !prev[comment.id]
+      }));
     };
     
     // Use better indent styling for nested comments
-    const indentClass = comment.level > 1 ? `ml-${Math.min(comment.level * 3, 9)}` : '';
+    const getIndentClass = () => {
+      const level = comment.level;
+      if (level === 1) return '';
+      if (level === 2) return 'ml-6';
+      if (level === 3) return 'ml-12';
+      return 'ml-16';
+    };
+
+    const hasReplies = comment.replies && comment.replies.length > 0;
     
     return (
-      <div className={`${indentClass} animate-fade-in`}>
+      <div className={`${getIndentClass()} animate-fade-in`}>
         <div className={`flex gap-3 mb-4 ${comment.level > 1 ? 'border-l-2 border-primary/20 pl-3' : ''}`}>
           <Avatar className="h-10 w-10 shrink-0 border border-muted/60">
             <AvatarImage src={`https://api.dicebear.com/7.x/personas/svg?seed=${comment.username}`} />
@@ -431,11 +486,11 @@ const PostPage = () => {
                 variant="ghost" 
                 size="sm" 
                 onClick={handleMeowClick}
-                className={`h-8 px-2 text-xs gap-1.5 rounded-full ${meowAnimating ? 'text-amber-500 bg-amber-500/10' : ''}`}
+                className={`h-8 px-2 text-xs gap-1.5 rounded-full ${isMeowed ? 'text-amber-500 bg-amber-500/10' : ''}`}
               >
                 <div className="relative">
                   <div className={`transition-all duration-300 ${meowAnimating ? 'scale-125' : ''}`}>
-                    <Cat className={`h-3.5 w-3.5 ${meowAnimating ? 'text-amber-500' : ''}`} />
+                    <Cat className={`h-3.5 w-3.5 ${isMeowed ? 'text-amber-500' : ''}`} />
                   </div>
                   {meowWavesAnimation && (
                     <div className="absolute inset-0 flex items-center justify-center">
@@ -444,8 +499,8 @@ const PostPage = () => {
                     </div>
                   )}
                 </div>
-                <span className={`${meowAnimating ? 'text-amber-500 font-medium' : ''}`}>
-                  {comment.meowCount}
+                <span className={`${isMeowed || meowTextAnimating ? 'text-amber-500 font-medium' : ''}`}>
+                  {meowTextAnimating ? "Meow!" : comment.meowCount}
                 </span>
               </Button>
               
@@ -460,14 +515,26 @@ const PostPage = () => {
                   <span>{isReplying ? 'Cancel' : 'Reply'}</span>
                 </Button>
               )}
+
+              {hasReplies && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={toggleReplies}
+                  className="h-8 px-2 text-xs gap-1.5 rounded-full hover:bg-secondary/80"
+                >
+                  <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
+                  <span>{isExpanded ? 'Hide replies' : `Show ${comment.replies?.length} ${comment.replies?.length === 1 ? 'reply' : 'replies'}`}</span>
+                </Button>
+              )}
             </div>
             
             {isReplying && (
               <div className="mt-3 space-y-2 bg-muted/30 p-3 rounded-lg border border-border/40">
                 <Textarea 
                   placeholder={`Reply to ${formatUsername(comment.username)}...`} 
-                  value={replyText}
-                  onChange={(e) => setReplyText(e.target.value)}
+                  value={localReplyText}
+                  onChange={(e) => setLocalReplyText(e.target.value)}
                   className="min-h-[60px] text-sm resize-none bg-background"
                 />
                 <div className="flex gap-2 justify-end">
@@ -481,8 +548,8 @@ const PostPage = () => {
                   </Button>
                   <Button 
                     size="sm" 
-                    onClick={() => handleAddReply(comment.id)}
-                    disabled={!replyText.trim() || submittingComment}
+                    onClick={handleSubmitReply}
+                    disabled={!localReplyText.trim() || submittingComment}
                     className="h-8 text-xs gap-1"
                   >
                     <Send className="h-3.5 w-3.5" />
@@ -494,9 +561,9 @@ const PostPage = () => {
           </div>
         </div>
         
-        {comment.replies && comment.replies.length > 0 && (
-          <div className="space-y-4 mt-2">
-            {comment.replies.map(reply => (
+        {hasReplies && isExpanded && (
+          <div className="space-y-4 mt-2 pl-2 border-l-2 border-primary/10">
+            {comment.replies?.map(reply => (
               <CommentWithReplies key={reply.id} comment={reply} />
             ))}
           </div>
@@ -606,7 +673,7 @@ const PostPage = () => {
                   </div>
                 )}
               </div>
-              <span className={`transition-transform ${roarTextAnimation ? 'scale-110 text-amber-500 font-medium' : ''}`}>
+              <span className={`transition-transform ${roarTextAnimation ? 'scale-110 text-amber-500 font-medium' : ''} ${roared ? 'text-amber-500' : ''}`}>
                 {roarCount}
               </span>
             </Button>
