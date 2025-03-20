@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -5,6 +6,7 @@ import { ArrowRight, Users, Zap, Trophy } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { usePrivy } from '@privy-io/react-auth';
+import { toast } from 'sonner';
 
 const Index = () => {
   const location = useLocation();
@@ -14,6 +16,8 @@ const Index = () => {
   const [displayText, setDisplayText] = useState('');
   const [isTyping, setIsTyping] = useState(true);
   const [avatars, setAvatars] = useState<string[]>([]);
+  const [showInviteMessage, setShowInviteMessage] = useState(false);
+  const [inviterHandle, setInviterHandle] = useState('');
   const { login } = usePrivy();
 
   const isInviteRoute = location.pathname.includes('/invite/');
@@ -26,6 +30,36 @@ const Index = () => {
     "Turn engagement into lasting wealth",
     "Create powerful connections that pay off"
   ];
+
+  // Check and validate invite code
+  useEffect(() => {
+    if (isInviteRoute && code) {
+      const validateInviteCode = async () => {
+        try {
+          const response = await fetch(`https://api.dapps.co/check_invite_code?code=${code}`);
+          const data = await response.json();
+          
+          if (data.success && data.valid === 1) {
+            // Valid invite code
+            setShowInviteMessage(true);
+            setInviterHandle('bravegoldfish'); // This would come from the API in a real scenario
+            
+            // Store the invite code in localStorage
+            localStorage.setItem('dapps_invite_code', data.code);
+          } else {
+            // Invalid invite code, don't show the invite message
+            setShowInviteMessage(false);
+            console.log('Invalid invite code');
+          }
+        } catch (error) {
+          console.error('Error validating invite code:', error);
+          setShowInviteMessage(false);
+        }
+      };
+      
+      validateInviteCode();
+    }
+  }, [isInviteRoute, code]);
 
   useEffect(() => {
     const usernames = [
@@ -87,10 +121,10 @@ const Index = () => {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <header className="relative flex-grow flex items-center justify-center pt-16 md:pt-24 pb-10 md:pb-16 px-4">
-        {isInviteRoute && (
+        {showInviteMessage && (
           <div className="max-w-xl mx-auto mb-8 p-4 rounded-lg bg-[#31bcc3]/10 border border-[#31bcc3]/20">
             <p className="text-lg text-[#31bcc3] dark:text-[#31bcc3]">
-              You've been invited by <span className="font-bold">@bravegoldfish</span>! Sign up to skip the queue and get your first share (up to $100) for free.
+              You've been invited by <span className="font-bold">@{inviterHandle}</span>! Sign up to skip the queue and get your first share (up to $100) for free.
             </p>
           </div>
         )}

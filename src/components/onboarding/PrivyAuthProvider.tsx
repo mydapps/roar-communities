@@ -46,7 +46,7 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
             const data = await response.json();
             
             if (data.success) {
-              // Store userId and userKey in localStorage
+              // Store all returned values in localStorage
               localStorage.setItem('dapps_user_id', data.userId.toString());
               localStorage.setItem('dapps_user_key', data.userKey);
               
@@ -54,16 +54,27 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
               if (data.handle) localStorage.setItem('dapps_user_handle', data.handle);
               if (data.avatar) localStorage.setItem('dapps_user_avatar', data.avatar);
               
-              // Check if we have a handle, if not redirect to avatar-handle page
-              if (!data.handle) {
-                if (window.location.pathname !== '/avatar-handle') {
-                  window.location.href = '/avatar-handle';
-                  toast.success('Please choose your avatar and handle');
+              // Check registration status
+              if (data.registered === "1") {
+                // User is fully registered, redirect to feed
+                if (window.location.pathname === '/' || window.location.pathname === '/login') {
+                  window.location.href = '/feed';
+                  toast.success('Successfully logged in!');
                 }
-              } else if (window.location.pathname === '/' || window.location.pathname === '/login') {
-                // Only redirect to feed if we're on the homepage or login page
-                window.location.href = '/feed';
-                toast.success('Successfully logged in!');
+              } else {
+                // User needs to complete registration
+                if (data.handle && data.avatar) {
+                  // Both handle and avatar are set, redirect to request-invite
+                  if (window.location.pathname !== '/request-invite') {
+                    window.location.href = '/request-invite';
+                  }
+                } else {
+                  // Missing handle or avatar, redirect to avatar-handle page
+                  if (window.location.pathname !== '/avatar-handle') {
+                    window.location.href = '/avatar-handle';
+                    toast.info('Please complete your profile');
+                  }
+                }
               }
             } else {
               toast.error('Authentication failed: ' + (data.message || 'Unknown error'));
