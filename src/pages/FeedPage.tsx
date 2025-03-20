@@ -23,7 +23,7 @@ const FeedPage = () => {
       return;
     }
     
-    // Check if user is registered
+    // Check if user is registered - only redirect if explicitly set to "0"
     const isRegistered = localStorage.getItem('dapps_user_registered');
     if (isRegistered === '0') {
       navigate('/request-invite');
