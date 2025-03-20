@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -25,30 +24,24 @@ const Index = () => {
 
   const isInviteRoute = location.pathname.includes('/invite/');
 
-  // Check if user is already logged in and redirect if needed
   useEffect(() => {
-    // Get user data from localStorage
     const userId = localStorage.getItem('dapps_user_id');
     const userKey = localStorage.getItem('dapps_user_key');
     const registered = localStorage.getItem('dapps_user_registered');
     const handle = localStorage.getItem('dapps_user_handle');
     const avatar = localStorage.getItem('dapps_user_avatar');
     
-    // Only check if we have the essential user data
     if (userId && userKey) {
       console.log('User already logged in, redirecting...');
       
-      // If registered, go to feed
       if (registered === "1") {
         navigate('/feed');
         return;
       }
       
-      // If both handle and avatar exist, go to request-invite
       if (handle && avatar) {
         navigate('/request-invite');
       } else {
-        // Missing handle or avatar, go to avatar-handle
         navigate('/avatar-handle');
       }
     }
@@ -63,7 +56,6 @@ const Index = () => {
     "Create powerful connections that pay off"
   ];
 
-  // Check and validate invite code
   useEffect(() => {
     if (isInviteRoute && code) {
       const validateInviteCode = async () => {
@@ -72,14 +64,10 @@ const Index = () => {
           const data = await response.json();
           
           if (data.success && data.valid === 1) {
-            // Valid invite code
             setShowInviteMessage(true);
-            setReferrerHandle(data.referrer || ''); // Use the referrer handle from API
-            
-            // Store the invite code in localStorage
+            setReferrerHandle(data.referrer || '');
             localStorage.setItem('dapps_invite_code', data.code);
           } else {
-            // Invalid invite code, don't show the invite message
             setShowInviteMessage(false);
             console.log('Invalid invite code');
           }
@@ -152,9 +140,9 @@ const Index = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <header className="relative flex-grow flex items-center justify-center pt-16 md:pt-24 pb-10 md:pb-16 px-4">
+      <header className="relative flex flex-col items-center justify-center pt-16 md:pt-24 pb-10 md:pb-16 px-4">
         {showInviteMessage && referrerHandle && (
-          <div className={`w-full max-w-xl mx-auto mb-6 md:mb-8 p-4 rounded-lg bg-[#31bcc3]/10 border border-[#31bcc3]/20 ${isMobile ? 'mx-4' : ''}`}>
+          <div className="w-full max-w-xl mx-auto mb-8 p-4 rounded-lg bg-[#31bcc3]/10 border border-[#31bcc3]/20">
             <div className="flex items-start gap-3">
               <Avatar className="h-10 w-10 shrink-0 mt-1">
                 <AvatarImage src={`https://img.dapps.co/avatar/${referrerHandle}.svg`} alt={referrerHandle} />
@@ -318,3 +306,4 @@ const Index = () => {
 };
 
 export default Index;
+
