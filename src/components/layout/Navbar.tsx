@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -36,8 +37,9 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
       await logout();
       console.log('Logged out from Privy');
       
-      // 3. Redirect to home page
-      window.location.href = '/';
+      // 3. Redirect to home page using navigate instead of window.location
+      console.log('Redirecting to homepage...');
+      navigate('/');
       
       toast.success('Successfully logged out');
     } catch (error) {
