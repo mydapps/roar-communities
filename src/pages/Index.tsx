@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -19,6 +20,7 @@ const Index = () => {
   const [avatars, setAvatars] = useState<string[]>([]);
   const [showInviteMessage, setShowInviteMessage] = useState(false);
   const [referrerHandle, setReferrerHandle] = useState('');
+  const [referrerAvatar, setReferrerAvatar] = useState('');
   const { login } = usePrivy();
   const isMobile = useIsMobile();
 
@@ -66,6 +68,7 @@ const Index = () => {
           if (data.success && data.valid === 1) {
             setShowInviteMessage(true);
             setReferrerHandle(data.referrer || '');
+            setReferrerAvatar(data.referrerAvatar || '');
             localStorage.setItem('dapps_invite_code', data.code);
           } else {
             setShowInviteMessage(false);
@@ -145,7 +148,10 @@ const Index = () => {
           <div className="w-full max-w-xl mx-auto mb-8 p-4 rounded-lg bg-[#31bcc3]/10 border border-[#31bcc3]/20">
             <div className="flex items-start gap-3">
               <Avatar className="h-10 w-10 shrink-0 mt-1">
-                <AvatarImage src={`https://img.dapps.co/avatar/${referrerHandle}.svg`} alt={referrerHandle} />
+                <AvatarImage 
+                  src={referrerAvatar || `https://img.dapps.co/avatar/${referrerHandle}.svg`} 
+                  alt={referrerHandle} 
+                />
                 <AvatarFallback className="bg-[#31bcc3]/20 text-[#31bcc3]">
                   {referrerHandle.substring(0, 2).toUpperCase()}
                 </AvatarFallback>
@@ -306,4 +312,3 @@ const Index = () => {
 };
 
 export default Index;
-
