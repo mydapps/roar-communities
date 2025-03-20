@@ -73,7 +73,7 @@ const RequestInvitePage = () => {
     {
       id: 'tweet-about',
       title: 'Share on X',
-      description: 'Tweet about ROAR to improve your position',
+      description: 'Tweet about dapps.co to improve your position',
       icon: <XIcon className="h-5 w-5" />,
       cta: 'Tweet Now',
       completed: false,
@@ -84,7 +84,7 @@ const RequestInvitePage = () => {
     {
       id: 'quote-tweet',
       title: 'Quote Tweet',
-      description: 'Quote tweet about ROAR for an additional boost',
+      description: 'Quote tweet about dapps.co for an additional boost',
       icon: <XIcon className="h-5 w-5" />,
       cta: 'Quote Tweet',
       completed: false,
@@ -143,6 +143,10 @@ const RequestInvitePage = () => {
           // Update queue position
           setQueuePosition(data.rank);
           setTotalInQueue(data.total);
+          
+          // Console log rank and total for debugging
+          console.log('Queue Position (Rank):', data.rank);
+          console.log('Total Users in Queue:', data.total);
           
           // Update task status
           const updatedTasks = [...tasks];
@@ -223,7 +227,7 @@ const RequestInvitePage = () => {
   };
 
   const handleShareTask = (platform: 'twitter' | 'quote-tweet') => {
-    const text = "I just joined the waitlist for ROAR, a revolutionary social platform for web3 communities! Join me and get early access:";
+    const text = "I just joined the waitlist for dapps.co, a revolutionary social platform for web3 communities! Join me and get early access:";
     const url = `${window.location.origin}/invite/${generateRandomCode()}`;
     
     let taskId;
@@ -239,7 +243,7 @@ const RequestInvitePage = () => {
         if (taskIndex === -1 || tasks[taskIndex].completed) return;
         
         // This would be replaced with the actual API call to verify the tweet
-        toast.success(`Successfully ${taskId === 'tweet-about' ? 'tweeted' : 'quote tweeted'} about ROAR!`);
+        toast.success(`Successfully ${taskId === 'tweet-about' ? 'tweeted' : 'quote tweeted'} about dapps.co!`);
         triggerConfetti();
         
         const updatedTasks = [...tasks];
@@ -304,7 +308,7 @@ const RequestInvitePage = () => {
             />
             <h1 className="text-3xl md:text-4xl font-bold mb-2">You're Almost There!</h1>
             <p className="text-muted-foreground text-lg md:text-xl max-w-2xl mx-auto">
-              Complete these tasks to get early access to ROAR.
+              Complete these tasks to get early access to dapps.co.
             </p>
           </div>
 
