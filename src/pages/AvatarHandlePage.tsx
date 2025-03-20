@@ -13,6 +13,7 @@ const AvatarHandlePage = () => {
   const [avatar, setAvatar] = useState('');
   const [handle, setHandle] = useState('');
   const [isHandleValid, setIsHandleValid] = useState<boolean | null>(null);
+  const [showError, setShowError] = useState(false);
   const { isMobile } = useResponsive();
   
   // Generate a random avatar on first load
@@ -40,11 +41,16 @@ const AvatarHandlePage = () => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setHandle(value);
+    // We still calculate if it's valid for the UI indicators, but don't show error message
     validateHandle(value);
   };
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Now we show errors if the form is submitted and handle is invalid
+    setShowError(true);
+    
     if (validateHandle(handle)) {
       // Store the selected avatar and handle in localStorage
       localStorage.setItem('dapps_user_avatar', avatar);
@@ -117,7 +123,7 @@ const AvatarHandlePage = () => {
                   </div>
                 )}
               </div>
-              {isHandleValid === false && (
+              {showError && isHandleValid === false && (
                 <div className="flex items-center gap-1.5 text-sm text-red-500 mt-1.5 animate-fade-in">
                   <AlertCircle className="h-4 w-4" />
                   <span>This handle is not available. Try "bravegoldfish"</span>
