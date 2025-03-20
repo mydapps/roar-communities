@@ -10,18 +10,20 @@ import {
   User,
   CheckCircle2,
   AlertCircle,
-  Loader2
+  Loader2,
+  PartyPopper
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { shareToSocialMedia } from '@/utils/shareUtils';
-import { toast } from 'sonner';
+import { toast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import confetti from 'canvas-confetti';
 import OnboardingStories from '@/components/onboarding/OnboardingStories';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Task {
   id: string;
@@ -52,11 +54,13 @@ const RequestInvitePage = () => {
   const [inviteCode, setInviteCode] = useState('');
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [queuePosition, setQueuePosition] = useState(0);
+  const [displayQueuePosition, setDisplayQueuePosition] = useState(0);
   const [totalInQueue, setTotalInQueue] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isConnectingTwitter, setIsConnectingTwitter] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
   const [showStories, setShowStories] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [tasks, setTasks] = useState<Task[]>([
@@ -80,7 +84,7 @@ const RequestInvitePage = () => {
       completed: false,
       disabled: true,
       points: 25000,
-      action: () => handleShareTask('twitter')
+      action: () => handleTweet()
     },
     {
       id: 'quote-tweet',
@@ -91,7 +95,7 @@ const RequestInvitePage = () => {
       completed: false,
       disabled: true,
       points: 10000,
-      action: () => handleShareTask('quote-tweet')
+      action: () => handleQuoteTweet()
     }
   ]);
 
@@ -127,6 +131,34 @@ const RequestInvitePage = () => {
     fetchInviteStatus(userKey);
   }, [navigate]);
 
+  // Animation effect for queue position
+  useEffect(() => {
+    if (displayQueuePosition !== queuePosition) {
+      const interval = setInterval(() => {
+        setDisplayQueuePosition(prev => {
+          if (prev > queuePosition) {
+            // Decrease faster for larger differences
+            const step = Math.max(1, Math.ceil((prev - queuePosition) / 20));
+            return Math.max(queuePosition, prev - step);
+          }
+          return prev;
+        });
+      }, 50);
+      
+      return () => clearInterval(interval);
+    }
+  }, [queuePosition, displayQueuePosition]);
+
+  // Check if all tasks are completed
+  useEffect(() => {
+    const allCompleted = tasks.every(task => task.completed);
+    if (allCompleted && !showCelebration && tasks.length > 0) {
+      setTimeout(() => {
+        triggerCelebration();
+      }, 1000);
+    }
+  }, [tasks]);
+
   const fetchInviteStatus = async (userKey: string) => {
     setIsLoading(true);
     try {
@@ -141,8 +173,14 @@ const RequestInvitePage = () => {
         const data: ApiResponse = await response.json();
         
         if (data.success) {
+          // Store previous position for animation
+          const previousPosition = queuePosition;
+          
           // Update queue position
           setQueuePosition(data.rank);
+          if (previousPosition === 0) {
+            setDisplayQueuePosition(data.rank); // Initial load, no animation
+          }
           setTotalInQueue(data.total);
           
           // Console log rank and total for debugging
@@ -165,14 +203,26 @@ const RequestInvitePage = () => {
           
           setTasks(updatedTasks);
         } else {
-          toast.error('Failed to fetch invite status. Please try again.');
+          toast({
+            title: "Error",
+            description: "Failed to fetch invite status. Please try again.",
+            variant: "destructive"
+          });
         }
       } else {
-        toast.error('Failed to fetch invite status. Please try again.');
+        toast({
+          title: "Error",
+          description: "Failed to fetch invite status. Please try again.",
+          variant: "destructive"
+        });
       }
     } catch (error) {
       console.error('Error fetching invite status:', error);
-      toast.error('Failed to fetch invite status. Please try again.');
+      toast({
+        title: "Error",
+        description: "Failed to fetch invite status. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
@@ -194,17 +244,64 @@ const RequestInvitePage = () => {
     setTimeout(() => setShowConfetti(false), 2000);
   };
 
+  const triggerCelebration = () => {
+    setShowCelebration(true);
+    
+    // Multiple confetti bursts for major celebration
+    const duration = 3000;
+    const end = Date.now() + duration;
+    
+    const frame = () => {
+      confetti({
+        particleCount: 2,
+        angle: 60,
+        spread: 55,
+        origin: { x: 0 },
+        colors: ['#ff0000', '#00ff00', '#0000ff']
+      });
+      
+      confetti({
+        particleCount: 2,
+        angle: 120,
+        spread: 55,
+        origin: { x: 1 },
+        colors: ['#ff0000', '#00ff00', '#0000ff']
+      });
+      
+      if (Date.now() < end) {
+        requestAnimationFrame(frame);
+      }
+    };
+    
+    frame();
+    
+    toast({
+      title: "🎉 Amazing work!",
+      description: "You're at the top of our list! Expect your invite very soon.",
+      variant: "default"
+    });
+    
+    setTimeout(() => setShowCelebration(false), 5000);
+  };
+
   const handleConnectTwitter = async () => {
     const userKey = localStorage.getItem('dapps_user_key');
     if (!userKey) {
-      toast.error('User key not found. Please try signing in again.');
+      toast({
+        title: "Error",
+        description: "User key not found. Please try signing in again.",
+        variant: "destructive"
+      });
       return;
     }
     
     setIsConnectingTwitter(true);
     
     try {
-      toast.info('Connecting to X account...');
+      toast({
+        title: "Connecting",
+        description: "Connecting to X account...",
+      });
       
       const response = await fetch('https://api.dapps.co/twitter_auth', {
         method: 'GET',
@@ -236,7 +333,10 @@ const RequestInvitePage = () => {
                 
                 if (statusData.tasks.twitter_connect === 1) {
                   clearInterval(checkInterval);
-                  toast.success('Successfully connected X account!');
+                  toast({
+                    title: "Success!",
+                    description: "Successfully connected X account!",
+                  });
                   triggerConfetti();
                   
                   const updatedTasks = [...tasks];
@@ -246,6 +346,9 @@ const RequestInvitePage = () => {
                   
                   setTasks(updatedTasks);
                   setIsConnectingTwitter(false);
+                  
+                  // Refresh invite status to show updated queue position with animation
+                  fetchInviteStatus(userKey);
                 }
               }
             }, 3000); // Check every 3 seconds
@@ -255,13 +358,20 @@ const RequestInvitePage = () => {
               clearInterval(checkInterval);
               if (!tasks[0].completed) {
                 setIsConnectingTwitter(false);
-                toast.error('Failed to connect X account. Please try again.');
+                toast({
+                  title: "Error",
+                  description: "Failed to connect X account. Please try again.",
+                  variant: "destructive"
+                });
               }
             }, 120000);
           } else {
             // For demo/testing purposes we'll simulate successful connection
             setTimeout(() => {
-              toast.success('Successfully connected X account!');
+              toast({
+                title: "Success!",
+                description: "Successfully connected X account!",
+              });
               triggerConfetti();
               
               const updatedTasks = [...tasks];
@@ -272,22 +382,190 @@ const RequestInvitePage = () => {
               setTasks(updatedTasks);
               setIsConnectingTwitter(false);
               
-              // Refresh invite status
+              // Refresh invite status to show updated queue position with animation
               fetchInviteStatus(userKey);
             }, 1500);
           }
         } else {
-          toast.error('Failed to connect X account. Please try again.');
+          toast({
+            title: "Error",
+            description: "Failed to connect X account. Please try again.",
+            variant: "destructive"
+          });
           setIsConnectingTwitter(false);
         }
       } else {
-        toast.error('Failed to connect X account. Please try again.');
+        toast({
+          title: "Error",
+          description: "Failed to connect X account. Please try again.",
+          variant: "destructive"
+        });
         setIsConnectingTwitter(false);
       }
     } catch (error) {
       console.error('Error connecting X account:', error);
-      toast.error('Failed to connect X account. Please try again.');
+      toast({
+        title: "Error",
+        description: "Failed to connect X account. Please try again.",
+        variant: "destructive"
+      });
       setIsConnectingTwitter(false);
+    }
+  };
+
+  const handleTweet = async () => {
+    const userKey = localStorage.getItem('dapps_user_key');
+    if (!userKey) {
+      toast({
+        title: "Error",
+        description: "User key not found. Please try signing in again.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const taskIndex = tasks.findIndex(task => task.id === 'tweet-about');
+    if (taskIndex === -1 || tasks[taskIndex].completed) return;
+    
+    const updatedTasks = [...tasks];
+    updatedTasks[taskIndex].disabled = true; // Disable during API call
+    setTasks(updatedTasks);
+    
+    try {
+      toast({
+        title: "Posting",
+        description: "Posting tweet about dapps.co...",
+      });
+      
+      const response = await fetch('https://api.dapps.co/twitter_tweet', {
+        method: 'POST',
+        headers: {
+          'x-user-key': userKey,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (data.success) {
+          toast({
+            title: "Success!",
+            description: "Successfully tweeted about dapps.co!",
+          });
+          triggerConfetti();
+          
+          updatedTasks[taskIndex].completed = true;
+          updatedTasks[taskIndex].disabled = false;
+          setTasks(updatedTasks);
+          
+          // Refresh invite status to show updated queue position with animation
+          fetchInviteStatus(userKey);
+        } else {
+          toast({
+            title: "Error",
+            description: "Failed to post tweet. Please try again.",
+            variant: "destructive"
+          });
+          updatedTasks[taskIndex].disabled = false;
+          setTasks(updatedTasks);
+        }
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to post tweet. Please try again.",
+          variant: "destructive"
+        });
+        updatedTasks[taskIndex].disabled = false;
+        setTasks(updatedTasks);
+      }
+    } catch (error) {
+      console.error('Error posting tweet:', error);
+      toast({
+        title: "Error",
+        description: "Failed to post tweet. Please try again.",
+        variant: "destructive"
+      });
+      updatedTasks[taskIndex].disabled = false;
+      setTasks(updatedTasks);
+    }
+  };
+
+  const handleQuoteTweet = async () => {
+    const userKey = localStorage.getItem('dapps_user_key');
+    if (!userKey) {
+      toast({
+        title: "Error",
+        description: "User key not found. Please try signing in again.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const taskIndex = tasks.findIndex(task => task.id === 'quote-tweet');
+    if (taskIndex === -1 || tasks[taskIndex].completed) return;
+    
+    const updatedTasks = [...tasks];
+    updatedTasks[taskIndex].disabled = true; // Disable during API call
+    setTasks(updatedTasks);
+    
+    try {
+      toast({
+        title: "Posting",
+        description: "Posting quote tweet about dapps.co...",
+      });
+      
+      const response = await fetch('https://api.dapps.co/twitter_quote_tweet', {
+        method: 'POST',
+        headers: {
+          'x-user-key': userKey,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (data.success) {
+          toast({
+            title: "Success!",
+            description: "Successfully quote tweeted about dapps.co!",
+          });
+          triggerConfetti();
+          
+          updatedTasks[taskIndex].completed = true;
+          updatedTasks[taskIndex].disabled = false;
+          setTasks(updatedTasks);
+          
+          // Refresh invite status to show updated queue position with animation
+          fetchInviteStatus(userKey);
+        } else {
+          toast({
+            title: "Error",
+            description: "Failed to post quote tweet. Please try again.",
+            variant: "destructive"
+          });
+          updatedTasks[taskIndex].disabled = false;
+          setTasks(updatedTasks);
+        }
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to post quote tweet. Please try again.",
+          variant: "destructive"
+        });
+        updatedTasks[taskIndex].disabled = false;
+        setTasks(updatedTasks);
+      }
+    } catch (error) {
+      console.error('Error posting quote tweet:', error);
+      toast({
+        title: "Error",
+        description: "Failed to post quote tweet. Please try again.",
+        variant: "destructive"
+      });
+      updatedTasks[taskIndex].disabled = false;
+      setTasks(updatedTasks);
     }
   };
 
@@ -295,32 +573,7 @@ const RequestInvitePage = () => {
     const text = "I just joined the waitlist for dapps.co, a revolutionary social platform for web3 communities! Join me and get early access:";
     const url = `${window.location.origin}/invite/${generateRandomCode()}`;
     
-    let taskId;
-    if (platform === 'twitter') {
-      taskId = 'tweet-about';
-    } else {
-      taskId = 'quote-tweet';
-    }
-    
-    shareToSocialMedia('twitter', { url, text })
-      .then(() => {
-        const taskIndex = tasks.findIndex(task => task.id === taskId);
-        if (taskIndex === -1 || tasks[taskIndex].completed) return;
-        
-        // This would be replaced with the actual API call to verify the tweet
-        toast.success(`Successfully ${taskId === 'tweet-about' ? 'tweeted' : 'quote tweeted'} about dapps.co!`);
-        triggerConfetti();
-        
-        const updatedTasks = [...tasks];
-        updatedTasks[taskIndex].completed = true;
-        setTasks(updatedTasks);
-        
-        // Refresh invite status
-        const userKey = localStorage.getItem('dapps_user_key');
-        if (userKey) {
-          fetchInviteStatus(userKey);
-        }
-      });
+    shareToSocialMedia('twitter', { url, text });
   };
 
   const handleSubmitInviteCode = (e: React.FormEvent) => {
@@ -332,7 +585,10 @@ const RequestInvitePage = () => {
     
     if (inviteCode.toUpperCase() === "ABC123") {
       setTimeout(() => {
-        toast.success("🚀 Invite code accepted! Welcome to dapps.co!");
+        toast({
+          title: "Success!",
+          description: "🚀 Invite code accepted! Welcome to dapps.co!",
+        });
         triggerConfetti();
         
         setShowStories(true);
@@ -382,14 +638,34 @@ const RequestInvitePage = () => {
               <h2 className="text-xl font-semibold mb-2">Your Current Position</h2>
               <div className="flex items-center justify-center">
                 <User className="h-6 w-6 mr-2 text-muted-foreground" />
-                <div className="text-4xl font-bold">
-                  #{queuePosition.toLocaleString()}
-                </div>
+                <AnimatePresence mode="wait">
+                  <motion.div 
+                    key={displayQueuePosition}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="text-4xl font-bold"
+                  >
+                    #{displayQueuePosition.toLocaleString()}
+                  </motion.div>
+                </AnimatePresence>
               </div>
               
               <div className="mt-2 text-sm text-muted-foreground">
                 Out of {totalInQueue.toLocaleString()} people in the queue
               </div>
+              
+              {showCelebration && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  className="mt-4 p-3 bg-green-500/20 rounded-lg flex items-center justify-center text-green-600"
+                >
+                  <PartyPopper className="h-5 w-5 mr-2" />
+                  <span className="font-semibold">You're at the top of our list!</span>
+                </motion.div>
+              )}
             </div>
             
             <CardContent className="pt-6">
