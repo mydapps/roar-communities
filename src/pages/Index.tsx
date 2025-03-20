@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { useLocation, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Users, Zap, Trophy } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -7,7 +7,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { usePrivy } from '@privy-io/react-auth';
 
 const Index = () => {
-  const navigate = useNavigate();
   const location = useLocation();
   const { code } = useParams();
   const [animatedElements, setAnimatedElements] = useState<string[]>([]);
