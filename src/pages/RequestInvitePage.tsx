@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Check, 
   XIcon, 
@@ -11,7 +10,8 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
-  PartyPopper
+  PartyPopper,
+  Unlock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -50,6 +50,7 @@ interface ApiResponse {
 
 const RequestInvitePage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const isMobile = useIsMobile();
   const [inviteCode, setInviteCode] = useState('');
   const [showCodeInput, setShowCodeInput] = useState(false);
@@ -114,30 +115,31 @@ const RequestInvitePage = () => {
     const userKey = localStorage.getItem('dapps_user_key');
     const isRegistered = localStorage.getItem('dapps_user_registered');
     
-    // If no user key, clear localStorage and redirect to index
     if (!userKey) {
       localStorage.clear();
       navigate('/');
       return;
     }
     
-    // If user is registered, redirect to feed
     if (isRegistered === '1') {
       navigate('/feed');
       return;
     }
     
-    // Fetch invite status
+    const savedInviteCode = localStorage.getItem('dapps_invite_code');
+    if (savedInviteCode) {
+      setInviteCode(savedInviteCode);
+      setShowCodeInput(true);
+    }
+    
     fetchInviteStatus(userKey);
   }, [navigate]);
 
-  // Animation effect for queue position
   useEffect(() => {
     if (displayQueuePosition !== queuePosition) {
       const interval = setInterval(() => {
         setDisplayQueuePosition(prev => {
           if (prev > queuePosition) {
-            // Decrease faster for larger differences
             const step = Math.max(1, Math.ceil((prev - queuePosition) / 20));
             return Math.max(queuePosition, prev - step);
           }
@@ -149,7 +151,6 @@ const RequestInvitePage = () => {
     }
   }, [queuePosition, displayQueuePosition]);
 
-  // Check if all tasks are completed
   useEffect(() => {
     const allCompleted = tasks.every(task => task.completed);
     if (allCompleted && !showCelebration && tasks.length > 0) {
@@ -173,31 +174,24 @@ const RequestInvitePage = () => {
         const data: ApiResponse = await response.json();
         
         if (data.success) {
-          // Store previous position for animation
           const previousPosition = queuePosition;
           
-          // Update queue position
           setQueuePosition(data.rank);
           if (previousPosition === 0) {
-            setDisplayQueuePosition(data.rank); // Initial load, no animation
+            setDisplayQueuePosition(data.rank);
           }
           setTotalInQueue(data.total);
           
-          // Console log rank and total for debugging
           console.log('Queue Position (Rank):', data.rank);
           console.log('Total Users in Queue:', data.total);
           
-          // Update task status
           const updatedTasks = [...tasks];
           
-          // Update Twitter Connect task
           updatedTasks[0].completed = data.tasks.twitter_connect === 1;
           
-          // Update Tweet task
           updatedTasks[1].completed = data.tasks.tweet === 1;
           updatedTasks[1].disabled = data.tasks.twitter_connect === 0;
           
-          // Update Quote Tweet task
           updatedTasks[2].completed = data.tasks.quote_tweet === 1;
           updatedTasks[2].disabled = data.tasks.twitter_connect === 0;
           
@@ -227,7 +221,7 @@ const RequestInvitePage = () => {
       setIsLoading(false);
     }
   };
-  
+
   const getRandomWittyResponse = () => {
     return wittyResponses[Math.floor(Math.random() * wittyResponses.length)];
   };
@@ -247,7 +241,6 @@ const RequestInvitePage = () => {
   const triggerCelebration = () => {
     setShowCelebration(true);
     
-    // Multiple confetti bursts for major celebration
     const duration = 3000;
     const end = Date.now() + duration;
     
@@ -314,12 +307,9 @@ const RequestInvitePage = () => {
         const data = await response.json();
         
         if (data.success) {
-          // If the API returns a URL to redirect to for Twitter OAuth
           if (data.url) {
-            // Open the Twitter auth URL in a new window
             window.open(data.url, '_blank', 'width=600,height=600');
             
-            // Poll for connection status
             const checkInterval = setInterval(async () => {
               const statusResponse = await fetch('https://api.dapps.co/request_invite_status', {
                 method: 'GET',
@@ -347,13 +337,11 @@ const RequestInvitePage = () => {
                   setTasks(updatedTasks);
                   setIsConnectingTwitter(false);
                   
-                  // Refresh invite status to show updated queue position with animation
                   fetchInviteStatus(userKey);
                 }
               }
-            }, 3000); // Check every 3 seconds
+            }, 3000);
             
-            // Stop checking after 2 minutes if no success
             setTimeout(() => {
               clearInterval(checkInterval);
               if (!tasks[0].completed) {
@@ -366,7 +354,6 @@ const RequestInvitePage = () => {
               }
             }, 120000);
           } else {
-            // For demo/testing purposes we'll simulate successful connection
             setTimeout(() => {
               toast({
                 title: "Success!",
@@ -382,7 +369,6 @@ const RequestInvitePage = () => {
               setTasks(updatedTasks);
               setIsConnectingTwitter(false);
               
-              // Refresh invite status to show updated queue position with animation
               fetchInviteStatus(userKey);
             }, 1500);
           }
@@ -428,7 +414,7 @@ const RequestInvitePage = () => {
     if (taskIndex === -1 || tasks[taskIndex].completed) return;
     
     const updatedTasks = [...tasks];
-    updatedTasks[taskIndex].disabled = true; // Disable during API call
+    updatedTasks[taskIndex].disabled = true;
     setTasks(updatedTasks);
     
     try {
@@ -459,7 +445,6 @@ const RequestInvitePage = () => {
           updatedTasks[taskIndex].disabled = false;
           setTasks(updatedTasks);
           
-          // Refresh invite status to show updated queue position with animation
           fetchInviteStatus(userKey);
         } else {
           toast({
@@ -506,7 +491,7 @@ const RequestInvitePage = () => {
     if (taskIndex === -1 || tasks[taskIndex].completed) return;
     
     const updatedTasks = [...tasks];
-    updatedTasks[taskIndex].disabled = true; // Disable during API call
+    updatedTasks[taskIndex].disabled = true;
     setTasks(updatedTasks);
     
     try {
@@ -537,7 +522,6 @@ const RequestInvitePage = () => {
           updatedTasks[taskIndex].disabled = false;
           setTasks(updatedTasks);
           
-          // Refresh invite status to show updated queue position with animation
           fetchInviteStatus(userKey);
         } else {
           toast({
@@ -576,29 +560,57 @@ const RequestInvitePage = () => {
     shareToSocialMedia('twitter', { url, text });
   };
 
-  const handleSubmitInviteCode = (e: React.FormEvent) => {
+  const handleSubmitInviteCode = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inviteCode.trim()) return;
     
     setIsSubmitting(true);
     setErrorMessage('');
     
-    if (inviteCode.toUpperCase() === "ABC123") {
-      setTimeout(() => {
+    const userKey = localStorage.getItem('dapps_user_key');
+    if (!userKey) {
+      toast({
+        title: "Error",
+        description: "User key not found. Please try signing in again.",
+        variant: "destructive"
+      });
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
+      const response = await fetch('https://api.dapps.co/invite_code_submit', {
+        method: 'POST',
+        headers: {
+          'x-user-key': userKey,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ inviteCode: inviteCode })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        localStorage.setItem('dapps_user_registered', '1');
+        
         toast({
           title: "Success!",
-          description: "🚀 Invite code accepted! Welcome to dapps.co!",
+          description: data.message || "Welcome to dapps.co! 🚀",
         });
+        
         triggerConfetti();
         
-        setShowStories(true);
+        setTimeout(() => {
+          navigate('/feed');
+        }, 2000);
+      } else {
+        setErrorMessage(data.error || "Invalid invite code. Please try again.");
         setIsSubmitting(false);
-      }, 1000);
-    } else {
-      setTimeout(() => {
-        setErrorMessage(getRandomWittyResponse());
-        setIsSubmitting(false);
-      }, 1000);
+      }
+    } catch (error) {
+      console.error('Error submitting invite code:', error);
+      setErrorMessage("Something went wrong. Please try again.");
+      setIsSubmitting(false);
     }
   };
 
@@ -680,7 +692,15 @@ const RequestInvitePage = () => {
               ) : (
                 <form onSubmit={handleSubmitInviteCode} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="inviteCode">Enter your invite code</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="inviteCode">Enter your invite code</Label>
+                      {inviteCode && localStorage.getItem('dapps_invite_code') === inviteCode && (
+                        <div className="flex items-center text-green-600 text-sm">
+                          <Check className="h-4 w-4 mr-1" />
+                          <span>Code verified</span>
+                        </div>
+                      )}
+                    </div>
                     {errorMessage && (
                       <div className="flex items-center p-3 rounded-md bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 text-sm mb-2">
                         <AlertCircle className="h-4 w-4 mr-2 flex-shrink-0" />
@@ -704,7 +724,15 @@ const RequestInvitePage = () => {
                     className="w-full py-6 text-base"
                     disabled={isSubmitting || !inviteCode.trim()}
                   >
-                    {isSubmitting ? 'Verifying...' : 'Activate Code'}
+                    {isSubmitting ? (
+                      <span className="flex items-center">
+                        <Loader2 className="h-5 w-5 mr-2 animate-spin" /> Verifying...
+                      </span>
+                    ) : (
+                      <span className="flex items-center">
+                        <Unlock className="h-5 w-5 mr-2" /> Unlock Access
+                      </span>
+                    )}
                   </Button>
                 </form>
               )}
