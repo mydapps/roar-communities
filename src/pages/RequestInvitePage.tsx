@@ -1,17 +1,16 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Check, 
   XIcon, 
-  Facebook, 
   Send, 
-  Zap,
-  Gift,
   Trophy,
   ArrowUp,
   User,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,7 +31,19 @@ interface Task {
   cta: string;
   completed: boolean;
   points: number;
+  disabled: boolean;
   action: () => void;
+}
+
+interface ApiResponse {
+  success: boolean;
+  rank: number;
+  total: number;
+  tasks: {
+    twitter_connect: number;
+    tweet: number;
+    quote_tweet: number;
+  };
 }
 
 const RequestInvitePage = () => {
@@ -40,10 +51,10 @@ const RequestInvitePage = () => {
   const isMobile = useIsMobile();
   const [inviteCode, setInviteCode] = useState('');
   const [showCodeInput, setShowCodeInput] = useState(false);
-  const [queuePosition, setQueuePosition] = useState(75768);
-  const [originalPosition, setOriginalPosition] = useState(75768);
+  const [queuePosition, setQueuePosition] = useState(0);
+  const [totalInQueue, setTotalInQueue] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [pointsEarned, setPointsEarned] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
   const [showConfetti, setShowConfetti] = useState(false);
   const [showStories, setShowStories] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -51,52 +62,35 @@ const RequestInvitePage = () => {
     {
       id: 'connect-twitter',
       title: 'Connect X Account',
-      description: 'Connect your X account to jump 15,000 positions in the queue',
+      description: 'Connect your X account to jump ahead in the queue',
       icon: <XIcon className="h-5 w-5" />,
       cta: 'Connect X',
       completed: false,
+      disabled: false,
       points: 15000,
       action: () => handleCompleteTask('connect-twitter')
     },
     {
       id: 'tweet-about',
       title: 'Share on X',
-      description: 'Tweet about ROAR to jump 25,000 positions in the queue',
+      description: 'Tweet about ROAR to improve your position',
       icon: <XIcon className="h-5 w-5" />,
       cta: 'Tweet Now',
       completed: false,
+      disabled: true,
       points: 25000,
       action: () => handleShareTask('twitter')
     },
     {
-      id: 'share-facebook',
-      title: 'Share on Facebook',
-      description: 'Share ROAR with your Facebook friends to jump 10,000 positions',
-      icon: <Facebook className="h-5 w-5" />,
-      cta: 'Share',
+      id: 'quote-tweet',
+      title: 'Quote Tweet',
+      description: 'Quote tweet about ROAR for an additional boost',
+      icon: <XIcon className="h-5 w-5" />,
+      cta: 'Quote Tweet',
       completed: false,
+      disabled: true,
       points: 10000,
-      action: () => handleShareTask('facebook')
-    },
-    {
-      id: 'share-telegram',
-      title: 'Share on Telegram',
-      description: 'Share ROAR with your Telegram contacts to jump 8,000 positions',
-      icon: <Send className="h-5 w-5" />,
-      cta: 'Share',
-      completed: false,
-      points: 8000,
-      action: () => handleShareTask('telegram')
-    },
-    {
-      id: 'share-farcaster',
-      title: 'Share on Farcaster',
-      description: 'Cast about ROAR to jump 20,000 positions in the queue',
-      icon: <Zap className="h-5 w-5" />,
-      cta: 'Cast Now',
-      completed: false,
-      points: 20000,
-      action: () => handleShareTask('farcaster')
+      action: () => handleShareTask('quote-tweet')
     }
   ]);
 
@@ -111,6 +105,74 @@ const RequestInvitePage = () => {
     "That code expired sometime during the Jurassic period. Got a newer one?",
   ];
 
+  useEffect(() => {
+    const userKey = localStorage.getItem('dapps_user_key');
+    const isRegistered = localStorage.getItem('dapps_user_registered');
+    
+    // If no user key, clear localStorage and redirect to index
+    if (!userKey) {
+      localStorage.clear();
+      navigate('/');
+      return;
+    }
+    
+    // If user is registered, redirect to feed
+    if (isRegistered === '1') {
+      navigate('/feed');
+      return;
+    }
+    
+    // Fetch invite status
+    fetchInviteStatus(userKey);
+  }, [navigate]);
+
+  const fetchInviteStatus = async (userKey: string) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('https://api.dapps.co/request_invite_status', {
+        method: 'GET',
+        headers: {
+          'x-user-key': userKey
+        }
+      });
+      
+      if (response.ok) {
+        const data: ApiResponse = await response.json();
+        
+        if (data.success) {
+          // Update queue position
+          setQueuePosition(data.rank);
+          setTotalInQueue(data.total);
+          
+          // Update task status
+          const updatedTasks = [...tasks];
+          
+          // Update Twitter Connect task
+          updatedTasks[0].completed = data.tasks.twitter_connect === 1;
+          
+          // Update Tweet task
+          updatedTasks[1].completed = data.tasks.tweet === 1;
+          updatedTasks[1].disabled = data.tasks.twitter_connect === 0;
+          
+          // Update Quote Tweet task
+          updatedTasks[2].completed = data.tasks.quote_tweet === 1;
+          updatedTasks[2].disabled = data.tasks.twitter_connect === 0;
+          
+          setTasks(updatedTasks);
+        } else {
+          toast.error('Failed to fetch invite status. Please try again.');
+        }
+      } else {
+        toast.error('Failed to fetch invite status. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error fetching invite status:', error);
+      toast.error('Failed to fetch invite status. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
   const getRandomWittyResponse = () => {
     return wittyResponses[Math.floor(Math.random() * wittyResponses.length)];
   };
@@ -128,33 +190,67 @@ const RequestInvitePage = () => {
   };
 
   const handleCompleteTask = (taskId: string) => {
-    setTasks(prev => prev.map(task => {
-      if (task.id === taskId && !task.completed) {
-        setTimeout(() => {
-          toast.success(`🎉 You jumped ${task.points.toLocaleString()} positions in the queue!`);
-          triggerConfetti();
-        }, 500);
-        
-        setQueuePosition(current => Math.max(1, current - task.points));
-        setPointsEarned(prev => prev + task.points);
-        
-        return { ...task, completed: true };
+    // In a real implementation, this would connect to the Twitter API
+    // For now, we'll just simulate it with a delay
+    const taskIndex = tasks.findIndex(task => task.id === taskId);
+    
+    if (taskIndex === -1 || tasks[taskIndex].completed) return;
+    
+    toast.info('Connecting to X account...');
+    
+    setTimeout(() => {
+      // This would be replaced with the actual API call to connect X
+      toast.success('Successfully connected X account!');
+      triggerConfetti();
+      
+      const updatedTasks = [...tasks];
+      updatedTasks[taskIndex].completed = true;
+      
+      // If this is the Twitter connect task, enable the other tasks
+      if (taskId === 'connect-twitter') {
+        updatedTasks[1].disabled = false;
+        updatedTasks[2].disabled = false;
       }
-      return task;
-    }));
+      
+      setTasks(updatedTasks);
+      
+      // Refresh invite status
+      const userKey = localStorage.getItem('dapps_user_key');
+      if (userKey) {
+        fetchInviteStatus(userKey);
+      }
+    }, 1500);
   };
 
-  const handleShareTask = (platform: 'twitter' | 'facebook' | 'telegram' | 'farcaster') => {
+  const handleShareTask = (platform: 'twitter' | 'quote-tweet') => {
     const text = "I just joined the waitlist for ROAR, a revolutionary social platform for web3 communities! Join me and get early access:";
     const url = `${window.location.origin}/invite/${generateRandomCode()}`;
     
-    shareToSocialMedia(platform, { url, text })
+    let taskId;
+    if (platform === 'twitter') {
+      taskId = 'tweet-about';
+    } else {
+      taskId = 'quote-tweet';
+    }
+    
+    shareToSocialMedia('twitter', { url, text })
       .then(() => {
-        const taskId = platform === 'twitter' ? 'tweet-about' : 
-                      platform === 'facebook' ? 'share-facebook' : 
-                      platform === 'telegram' ? 'share-telegram' : 'share-farcaster';
-                      
-        handleCompleteTask(taskId);
+        const taskIndex = tasks.findIndex(task => task.id === taskId);
+        if (taskIndex === -1 || tasks[taskIndex].completed) return;
+        
+        // This would be replaced with the actual API call to verify the tweet
+        toast.success(`Successfully ${taskId === 'tweet-about' ? 'tweeted' : 'quote tweeted'} about ROAR!`);
+        triggerConfetti();
+        
+        const updatedTasks = [...tasks];
+        updatedTasks[taskIndex].completed = true;
+        setTasks(updatedTasks);
+        
+        // Refresh invite status
+        const userKey = localStorage.getItem('dapps_user_key');
+        if (userKey) {
+          fetchInviteStatus(userKey);
+        }
       });
   };
 
@@ -185,31 +281,25 @@ const RequestInvitePage = () => {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
   };
 
-  useEffect(() => {
-    if (queuePosition < originalPosition) {
-      const interval = setInterval(() => {
-        setOriginalPosition(prev => {
-          const diff = prev - queuePosition;
-          const step = Math.max(1, Math.floor(diff / 10));
-          return prev - step <= queuePosition ? queuePosition : prev - step;
-        });
-      }, 100);
-      
-      return () => clearInterval(interval);
-    }
-  }, [queuePosition, originalPosition]);
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col justify-center items-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p className="text-lg text-muted-foreground">Loading your invite status...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <div className="flex-1 overflow-auto">
         <div className="max-w-4xl mx-auto p-4 sm:p-6 animate-fade-in">
           <div className="text-center mb-8">
-            <div className="inline-block p-4 bg-amber-500/10 rounded-full mb-4">
-              <Gift className="h-10 w-10 text-amber-500" />
-            </div>
             <h1 className="text-3xl md:text-4xl font-bold mb-2">You're Almost There!</h1>
             <p className="text-muted-foreground text-lg md:text-xl max-w-2xl mx-auto">
-              Get exclusive early access and <span className="font-semibold text-amber-500">free shares in a community</span> when you join with an invite code.
+              Complete these tasks to get early access to ROAR.
             </p>
           </div>
 
@@ -219,16 +309,13 @@ const RequestInvitePage = () => {
               <div className="flex items-center justify-center">
                 <User className="h-6 w-6 mr-2 text-muted-foreground" />
                 <div className="text-4xl font-bold">
-                  #{originalPosition.toLocaleString()}
+                  #{queuePosition.toLocaleString()}
                 </div>
               </div>
               
-              {pointsEarned > 0 && (
-                <div className="mt-3 flex items-center justify-center text-green-500 font-medium">
-                  <ArrowUp className="h-4 w-4 mr-1" />
-                  Jumped {pointsEarned.toLocaleString()} positions!
-                </div>
-              )}
+              <div className="mt-2 text-sm text-muted-foreground">
+                Out of {totalInQueue.toLocaleString()} people in the queue
+              </div>
             </div>
             
             <CardContent className="pt-6">
@@ -282,13 +369,14 @@ const RequestInvitePage = () => {
               </div>
             </div>
             
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4">
               {tasks.map((task) => (
                 <Card 
                   key={task.id} 
                   className={cn(
                     "transition-all duration-300 border overflow-hidden",
-                    task.completed && "border-green-500/50 bg-green-500/5"
+                    task.completed && "border-green-500/50 bg-green-500/5",
+                    task.disabled && "opacity-70"
                   )}
                 >
                   <CardContent className="p-6">
@@ -304,7 +392,7 @@ const RequestInvitePage = () => {
                       </div>
                       <div className="flex items-center bg-secondary text-secondary-foreground rounded-full px-3 py-1 text-xs">
                         <Trophy className="h-3 w-3 mr-1" />
-                        +{task.points.toLocaleString()}
+                        Jump ahead
                       </div>
                     </div>
                     
@@ -318,7 +406,7 @@ const RequestInvitePage = () => {
                         "w-full",
                         task.completed && "border-green-500 text-green-600"
                       )}
-                      disabled={task.completed}
+                      disabled={task.completed || task.disabled}
                       onClick={task.action}
                     >
                       {task.completed ? (
@@ -332,26 +420,6 @@ const RequestInvitePage = () => {
               ))}
             </div>
           </div>
-
-          <Card className="mb-8 bg-gradient-to-r from-amber-500/5 via-amber-500/10 to-amber-500/5 border-amber-500/20">
-            <CardContent className="p-6">
-              <div className="flex flex-col md:flex-row md:items-center gap-4">
-                <div className="flex-1">
-                  <h3 className="text-xl font-semibold mb-2">Supercharge Your Experience</h3>
-                  <p className="text-muted-foreground">
-                    Get instant access and earn free shares when you're referred by an existing member!
-                  </p>
-                </div>
-                <Button 
-                  variant="outline" 
-                  className="bg-white/50 dark:bg-black/50 border-amber-500/30 hover:border-amber-500/50"
-                  onClick={() => setShowCodeInput(true)}
-                >
-                  Enter Invite Code
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
 

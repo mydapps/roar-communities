@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Post } from '@/components/feed/Post';
@@ -8,11 +7,29 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Sparkles, Flame, Clock, Globe, ShieldCheck } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const FeedPage = () => {
   const [userPosts, setUserPosts] = useState<any[]>([]);
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check if user key exists
+    const userKey = localStorage.getItem('dapps_user_key');
+    if (!userKey) {
+      localStorage.clear();
+      navigate('/');
+      return;
+    }
+    
+    // Check if user is registered
+    const isRegistered = localStorage.getItem('dapps_user_registered');
+    if (isRegistered === '0') {
+      navigate('/request-invite');
+      return;
+    }
+  }, [navigate]);
 
   const handlePostCreated = (newPost: any) => {
     setUserPosts([newPost, ...userPosts]);
