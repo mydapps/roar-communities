@@ -1,13 +1,13 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Users, Zap, Trophy } from 'lucide-react';
+import { ArrowRight, Users, Zap, Trophy, Star } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { usePrivy } from '@privy-io/react-auth';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { motion } from 'framer-motion';
 
 const Index = () => {
   const location = useLocation();
@@ -21,6 +21,7 @@ const Index = () => {
   const [showInviteMessage, setShowInviteMessage] = useState(false);
   const [referrerHandle, setReferrerHandle] = useState('');
   const [referrerAvatar, setReferrerAvatar] = useState('');
+  const [totalWaitlist, setTotalWaitlist] = useState<number | null>(null);
   const { login } = usePrivy();
   const isMobile = useIsMobile();
 
@@ -48,6 +49,22 @@ const Index = () => {
       }
     }
   }, [navigate]);
+
+  useEffect(() => {
+    const fetchWaitlistCount = async () => {
+      try {
+        const response = await fetch('https://api.dapps.co/waitlist_count');
+        const data = await response.json();
+        if (data.success) {
+          setTotalWaitlist(data.count);
+        }
+      } catch (error) {
+        console.error('Error fetching waitlist count:', error);
+      }
+    };
+    
+    fetchWaitlistCount();
+  }, []);
 
   const headlines = [
     "Own your audience and your influence",
@@ -141,11 +158,55 @@ const Index = () => {
     login();
   };
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        type: "spring",
+        stiffness: 100,
+        damping: 10
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <header className="relative flex flex-col items-center justify-center pt-16 md:pt-24 pb-10 md:pb-16 px-4">
+      <motion.header 
+        className="relative flex flex-col items-center justify-center pt-16 md:pt-24 pb-10 md:pb-16 px-4"
+        initial="hidden"
+        animate="visible"
+        variants={containerVariants}
+      >
+        <motion.div 
+          className="w-full max-w-md mx-auto mb-8 flex justify-center"
+          variants={itemVariants}
+        >
+          <img 
+            src="https://dapps.co/logo1.png" 
+            alt="Dapps.co Logo" 
+            className="h-16 md:h-20 mb-6 animate-scale-in hover:scale-105 transition-transform duration-300"
+          />
+        </motion.div>
+        
         {showInviteMessage && referrerHandle && (
-          <div className="w-full max-w-xl mx-auto mb-8 p-4 rounded-lg bg-[#31bcc3]/10 border border-[#31bcc3]/20">
+          <motion.div 
+            className="w-full max-w-xl mx-auto mb-8 p-4 rounded-lg bg-[#31bcc3]/10 border border-[#31bcc3]/20"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
             <div className="flex items-start gap-3">
               <Avatar className="h-10 w-10 shrink-0 mt-1">
                 <AvatarImage 
@@ -165,16 +226,18 @@ const Index = () => {
                 </p>
               </div>
             </div>
-          </div>
+          </motion.div>
         )}
         
         <div className="max-w-5xl mx-auto text-center">
-          <div 
-            className={`space-y-8 ${
-              animatedElements.includes('hero') ? 'animate-fade-in' : 'opacity-0'
-            }`}
+          <motion.div 
+            className="space-y-8"
+            variants={containerVariants}
           >
-            <h1 className="text-4xl md:text-7xl font-bold tracking-tight max-w-3xl mx-auto leading-tight">
+            <motion.h1 
+              className="text-4xl md:text-7xl font-bold tracking-tight max-w-3xl mx-auto leading-tight"
+              variants={itemVariants}
+            >
               <span className="block h-[3.5em] md:h-[2.5em] overflow-hidden mb-2">
                 <span className="bg-gradient-to-r from-[#31bcc3] to-[#31bcc3]/80 bg-clip-text text-transparent">
                   {displayText}
@@ -184,27 +247,65 @@ const Index = () => {
               <span className="text-foreground">
                 with <span className="bg-gradient-to-r from-[#31bcc3] to-[#31bcc3]/80 bg-clip-text text-transparent">Dapps.co</span>
               </span>
-            </h1>
+            </motion.h1>
             
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            <motion.p 
+              className="text-xl text-muted-foreground max-w-2xl mx-auto"
+              variants={itemVariants}
+            >
               The first social network where your contributions have real value. Create, connect, and earn in a community that rewards quality.
-            </p>
+            </motion.p>
             
-            <div className="pt-8">
+            {totalWaitlist && (
+              <motion.div
+                className="flex items-center justify-center gap-2 text-muted-foreground"
+                variants={itemVariants}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3 }}
+              >
+                <Users className="h-5 w-5 text-[#31bcc3]" />
+                <span className="text-lg">
+                  <span className="font-bold text-[#31bcc3]">{totalWaitlist.toLocaleString()}</span> people waiting to join
+                </span>
+              </motion.div>
+            )}
+            
+            <motion.div 
+              className="pt-8"
+              variants={itemVariants}
+            >
               <Button 
                 size="lg" 
                 onClick={handleGetStarted}
                 className="bg-gradient-to-r from-[#31bcc3] to-[#31bcc3]/90 hover:from-[#31bcc3]/90 hover:to-[#31bcc3] text-white shadow-lg group px-10 py-6 text-lg"
               >
-                <span>Login / Sign Up</span>
-                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                <motion.div 
+                  className="flex items-center"
+                  whileHover={{ scale: 1.05 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                >
+                  <span>Login / Sign Up</span>
+                  <motion.span
+                    initial={{ x: 0 }}
+                    whileHover={{ x: 5 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                  >
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </motion.span>
+                </motion.div>
               </Button>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         </div>
-      </header>
+      </motion.header>
 
-      <section className="py-20 px-4 bg-gradient-to-b from-background to-muted/20">
+      <motion.section 
+        className="py-20 px-4 bg-gradient-to-b from-background to-muted/20"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.5 }}
+      >
         <div className="max-w-5xl mx-auto">
           <div className="grid md:grid-cols-3 gap-10 md:gap-12">
             <div 
@@ -250,12 +351,15 @@ const Index = () => {
             </div>
           </div>
         </div>
-      </section>
+      </motion.section>
 
-      <section 
+      <motion.section 
         className={`py-20 px-4 ${
           animatedElements.includes('cta') ? 'animate-fade-in' : 'opacity-0'
         }`}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.6 }}
       >
         <div className="max-w-3xl mx-auto text-center space-y-6">
           <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
@@ -290,7 +394,7 @@ const Index = () => {
             </Button>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       <footer className="mt-auto py-8 border-t">
         <div className="max-w-5xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center">
