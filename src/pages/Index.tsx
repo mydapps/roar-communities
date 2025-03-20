@@ -161,7 +161,7 @@ const Index = () => {
                   <span className="text-[#31bcc3] font-bold">@{referrerHandle}</span> invited you to join Dapps.co
                 </p>
                 <p className="text-sm md:text-base text-muted-foreground mt-1">
-                  Sign up now to skip the waiting list and receive a free share worth up to $100. No credit card required.
+                  Sign up now to skip the waiting list and receive a free share worth up to $100.
                 </p>
               </div>
             </div>
