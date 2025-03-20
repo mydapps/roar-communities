@@ -30,10 +30,8 @@ const AvatarHandlePage = () => {
   const validateHandle = (value: string) => {
     // Check if handle is 'bravegoldfish'
     if (value.trim().toLowerCase() === 'bravegoldfish') {
-      setIsHandleValid(true);
       return true;
     } else {
-      setIsHandleValid(value.length > 0 ? false : null);
       return false;
     }
   };
@@ -41,17 +39,25 @@ const AvatarHandlePage = () => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setHandle(value);
-    // We still calculate if it's valid for the UI indicators, but don't show error message
-    validateHandle(value);
+    // Reset error state when typing
+    if (showError) {
+      setShowError(false);
+    }
+    // Only set visual indicator if valid
+    if (value.trim().toLowerCase() === 'bravegoldfish') {
+      setIsHandleValid(true);
+    } else {
+      setIsHandleValid(null); // Keep neutral while typing
+    }
   };
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Now we show errors if the form is submitted and handle is invalid
-    setShowError(true);
+    // Now we validate and show errors if not "bravegoldfish"
+    const isValid = validateHandle(handle);
     
-    if (validateHandle(handle)) {
+    if (isValid) {
       // Store the selected avatar and handle in localStorage
       localStorage.setItem('dapps_user_avatar', avatar);
       localStorage.setItem('dapps_user_handle', handle);
@@ -60,6 +66,8 @@ const AvatarHandlePage = () => {
       window.location.href = '/request-invite';
       toast.success('Handle selected successfully!');
     } else {
+      setIsHandleValid(false); // Set to invalid after submit
+      setShowError(true);
       toast.error('The handle you entered is not valid');
     }
   };
@@ -74,7 +82,7 @@ const AvatarHandlePage = () => {
         <CardContent className="space-y-6">
           <div className="flex flex-col items-center space-y-4">
             <div className="relative group">
-              <Avatar className={`border-4 border-purple-200 shadow-md transition-all duration-300 ${isMobile ? 'w-28 h-28' : 'w-40 h-40'}`}>
+              <Avatar className={`border-4 border-purple-200 shadow-md transition-all duration-300 ${isMobile ? 'w-32 h-32' : 'w-44 h-44'}`}>
                 <AvatarImage src={avatar} alt="Your Avatar" className="object-cover" />
                 <AvatarFallback className="bg-purple-100 text-purple-800">
                   <RefreshCcw className="w-8 h-8" />
@@ -101,13 +109,13 @@ const AvatarHandlePage = () => {
               <div className="relative">
                 <Input
                   id="handle"
-                  placeholder="Enter your preferred handle"
+                  placeholder="Enter your handle"
                   value={handle}
                   onChange={handleInputChange}
                   className={`pr-10 ${
                     isHandleValid === true 
                       ? 'border-green-500 focus-visible:ring-green-500' 
-                      : isHandleValid === false 
+                      : isHandleValid === false && showError
                         ? 'border-red-500 focus-visible:ring-red-500' 
                         : ''
                   }`}
@@ -137,7 +145,7 @@ const AvatarHandlePage = () => {
           <Button 
             type="submit" 
             className="w-full bg-purple-600 hover:bg-purple-700 text-white group transition-all"
-            disabled={!isHandleValid}
+            disabled={handle.trim().length === 0}
             onClick={handleSubmit}
           >
             Continue
