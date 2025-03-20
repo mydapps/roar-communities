@@ -14,7 +14,7 @@ const OnboardingStories = ({ open, onOpenChange }: OnboardingStoriesProps) => {
 
   const handlePrivyLogin = () => {
     login();
-    // The rest of the authentication flow is handled in the PrivyAuthProvider
+    onOpenChange(false); // Close the sheet after login attempt
   };
 
   return (

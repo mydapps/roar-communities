@@ -15,6 +15,7 @@ import RequestInvitePage from '@/pages/RequestInvitePage';
 import LoginPage from '@/pages/LoginPage';
 import NotFound from '@/pages/NotFound';
 import PrivyAuthProvider from '@/components/onboarding/PrivyAuthProvider';
+import { Toaster } from 'sonner';
 
 function App() {
   return (
@@ -41,6 +42,7 @@ function App() {
             <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>
+        <Toaster position="top-right" />
       </BrowserRouter>
     </PrivyAuthProvider>
   );

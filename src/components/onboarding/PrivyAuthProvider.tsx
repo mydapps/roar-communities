@@ -1,7 +1,6 @@
 
 import React, { ReactNode, useEffect } from 'react';
 import { PrivyProvider, usePrivy } from '@privy-io/react-auth';
-import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 interface PrivyAuthProviderProps {
@@ -11,8 +10,7 @@ interface PrivyAuthProviderProps {
 // Wrapper component to handle Privy auth state and login flow
 const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
   const { ready, authenticated, user, login } = usePrivy();
-  const navigate = useNavigate();
-
+  
   useEffect(() => {
     // If user is authenticated with Privy, send info to backend
     if (ready && authenticated && user) {
@@ -37,8 +35,8 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
             localStorage.setItem('dapps_user_id', data.userId);
             localStorage.setItem('dapps_user_key', data.userKey);
             
-            // Navigate to feed and show success message
-            navigate('/feed');
+            // Navigate to feed using window.location instead of react-router
+            window.location.href = '/feed';
             toast.success('Successfully logged in!');
           } else {
             toast.error('Authentication failed. Please try again.');
@@ -51,7 +49,7 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
 
       handlePrivyAuth();
     }
-  }, [ready, authenticated, user, navigate]);
+  }, [ready, authenticated, user]);
 
   return <>{children}</>;
 };
