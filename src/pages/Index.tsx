@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -42,9 +41,8 @@ const Index = () => {
         return;
       }
       
-      // Check for avatar and handle
+      // If both handle and avatar exist, go to request-invite
       if (handle && avatar) {
-        // Both handle and avatar exist, go to request-invite
         navigate('/request-invite');
       } else {
         // Missing handle or avatar, go to avatar-handle
