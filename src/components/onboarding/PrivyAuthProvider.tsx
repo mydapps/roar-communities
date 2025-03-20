@@ -54,6 +54,9 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
               if (data.handle) localStorage.setItem('dapps_user_handle', data.handle);
               if (data.avatar) localStorage.setItem('dapps_user_avatar', data.avatar);
               
+              // Ensure we properly store the registered status
+              localStorage.setItem('dapps_user_registered', data.registered || "0");
+              
               // Check registration status
               if (data.registered === "1") {
                 // User is fully registered, redirect to feed
