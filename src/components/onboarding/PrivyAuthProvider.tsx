@@ -57,6 +57,8 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
               // Ensure we properly store the registered status
               localStorage.setItem('dapps_user_registered', data.registered || "0");
               
+              console.log('PrivyAuthProvider - Registration status:', data.registered);
+              
               // Check registration status
               if (data.registered === "1") {
                 // User is fully registered, redirect to feed
@@ -68,7 +70,7 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
                 // User needs to complete registration
                 if (data.handle && data.avatar) {
                   // Both handle and avatar are set, redirect to request-invite
-                  if (window.location.pathname !== '/request-invite') {
+                  if (window.location.pathname !== '/request-invite' && window.location.pathname !== '/feed') {
                     window.location.href = '/request-invite';
                   }
                 } else {
