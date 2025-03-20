@@ -18,6 +18,7 @@ const FeedPage = () => {
     // Check if user key exists
     const userKey = localStorage.getItem('dapps_user_key');
     if (!userKey) {
+      console.log('No user key found, redirecting to login');
       localStorage.clear();
       navigate('/');
       return;
@@ -25,7 +26,10 @@ const FeedPage = () => {
     
     // Check if user is registered - only redirect if explicitly set to "0"
     const isRegistered = localStorage.getItem('dapps_user_registered');
+    console.log('FeedPage - Registration status:', isRegistered);
+    
     if (isRegistered === '0') {
+      console.log('User not registered, redirecting to request-invite');
       navigate('/request-invite');
       return;
     }

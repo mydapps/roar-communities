@@ -36,6 +36,7 @@ const AvatarHandlePage = () => {
     const registered = localStorage.getItem('dapps_user_registered');
     
     if (handle && avatar) {
+      // Only redirect to request-invite if registered is not "1"
       if (registered === "1") {
         navigate('/feed');
       } else {

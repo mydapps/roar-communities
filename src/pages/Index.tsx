@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -36,7 +37,9 @@ const Index = () => {
     
     if (userId && userKey) {
       console.log('User already logged in, redirecting...');
+      console.log('Registration status:', registered);
       
+      // Only redirect to request-invite if explicitly set to "0"
       if (registered === "1") {
         navigate('/feed');
         return;
