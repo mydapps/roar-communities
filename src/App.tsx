@@ -14,6 +14,7 @@ import ReferralPage from '@/pages/ReferralPage';
 import RequestInvitePage from '@/pages/RequestInvitePage';
 import LoginPage from '@/pages/LoginPage';
 import NotFound from '@/pages/NotFound';
+import AvatarHandlePage from '@/pages/AvatarHandlePage';
 import PrivyAuthProvider from '@/components/onboarding/PrivyAuthProvider';
 import { Toaster } from 'sonner';
 
@@ -26,6 +27,7 @@ function App() {
           <Route path="/" element={<Index />} />
           <Route path="/invite/:code" element={<Index />} />
           <Route path="request-invite" element={<RequestInvitePage />} />
+          <Route path="avatar-handle" element={<AvatarHandlePage />} />
           
           {/* Routes with main layout */}
           <Route path="/" element={<MainLayout />}>

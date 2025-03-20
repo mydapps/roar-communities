@@ -52,9 +52,15 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
               if (data.handle) localStorage.setItem('dapps_user_handle', data.handle);
               if (data.avatar) localStorage.setItem('dapps_user_avatar', data.avatar);
               
-              // Navigate to feed using window.location instead of react-router
-              window.location.href = '/feed';
-              toast.success('Successfully logged in!');
+              // Check if we have a handle, if not redirect to avatar-handle page
+              if (!data.handle) {
+                window.location.href = '/avatar-handle';
+                toast.success('Please choose your avatar and handle');
+              } else {
+                // If we already have a handle, navigate to feed
+                window.location.href = '/feed';
+                toast.success('Successfully logged in!');
+              }
             } else {
               toast.error('Authentication failed: ' + (data.message || 'Unknown error'));
             }
