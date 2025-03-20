@@ -297,13 +297,18 @@ const RequestInvitePage = () => {
       <div className="flex-1 overflow-auto">
         <div className="max-w-4xl mx-auto p-4 sm:p-6 animate-fade-in">
           <div className="text-center mb-8">
+            <img 
+              src="https://dapps.co/logo1.png" 
+              alt="Dapps.co Logo" 
+              className="h-16 md:h-20 mb-6 mx-auto animate-scale-in hover:scale-105 transition-transform duration-300"
+            />
             <h1 className="text-3xl md:text-4xl font-bold mb-2">You're Almost There!</h1>
             <p className="text-muted-foreground text-lg md:text-xl max-w-2xl mx-auto">
               Complete these tasks to get early access to ROAR.
             </p>
           </div>
 
-          <Card className="mb-8 overflow-hidden">
+          <Card className="mb-8 overflow-hidden animate-slide-up">
             <div className="bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-amber-500/10 p-6 text-center">
               <h2 className="text-xl font-semibold mb-2">Your Current Position</h2>
               <div className="flex items-center justify-center">
@@ -370,14 +375,15 @@ const RequestInvitePage = () => {
             </div>
             
             <div className="grid gap-4">
-              {tasks.map((task) => (
+              {tasks.map((task, index) => (
                 <Card 
                   key={task.id} 
                   className={cn(
-                    "transition-all duration-300 border overflow-hidden",
+                    "transition-all duration-300 border overflow-hidden animate-slide-up",
                     task.completed && "border-green-500/50 bg-green-500/5",
                     task.disabled && "opacity-70"
                   )}
+                  style={{ animationDelay: `${index * 0.1}s` }}
                 >
                   <CardContent className="p-6">
                     <div className="flex justify-between mb-3">
