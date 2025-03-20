@@ -13,6 +13,11 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
   const [authProcessed, setAuthProcessed] = useState(false);
   
   useEffect(() => {
+    // Reset auth processed state when authentication status changes
+    if (!authenticated) {
+      setAuthProcessed(false);
+    }
+    
     // If user is authenticated with Privy, send info to backend
     if (ready && authenticated && user && !authProcessed) {
       const handlePrivyAuth = async () => {

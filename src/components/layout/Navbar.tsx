@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -27,19 +26,18 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
   
   const handleLogout = async () => {
     try {
-      // 1. Clear localStorage dapps variables
-      const localStorageKeys = Object.keys(localStorage);
-      localStorageKeys.forEach(key => {
-        if (key.startsWith('dapps_')) {
-          localStorage.removeItem(key);
-        }
-      });
+      console.log('Logging out user...');
+      
+      // 1. Clear ALL localStorage items
+      localStorage.clear();
+      console.log('Cleared all localStorage items');
       
       // 2. Logout from Privy
       await logout();
+      console.log('Logged out from Privy');
       
-      // 3. Redirect to /index
-      navigate('/index');
+      // 3. Redirect to home page
+      window.location.href = '/';
       
       toast.success('Successfully logged out');
     } catch (error) {
