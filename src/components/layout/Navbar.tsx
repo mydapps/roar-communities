@@ -1,8 +1,8 @@
 
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Bell, Menu, Search, User, Gift, Sparkles } from 'lucide-react';
+import { Bell, Menu, Search, User, Gift, Sparkles, LogOut } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   DropdownMenu, 
@@ -13,6 +13,8 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { usePrivy } from '@privy-io/react-auth';
+import { toast } from 'sonner';
 
 interface NavbarProps {
   onMenuClick: () => void;
@@ -20,6 +22,31 @@ interface NavbarProps {
 
 const Navbar = ({ onMenuClick }: NavbarProps) => {
   const isMobile = useIsMobile();
+  const { logout } = usePrivy();
+  const navigate = useNavigate();
+  
+  const handleLogout = async () => {
+    try {
+      // 1. Clear localStorage dapps variables
+      const localStorageKeys = Object.keys(localStorage);
+      localStorageKeys.forEach(key => {
+        if (key.startsWith('dapps_')) {
+          localStorage.removeItem(key);
+        }
+      });
+      
+      // 2. Logout from Privy
+      await logout();
+      
+      // 3. Redirect to /index
+      navigate('/index');
+      
+      toast.success('Successfully logged out');
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast.error('Error logging out. Please try again.');
+    }
+  };
   
   return (
     <header className="fixed top-0 left-0 right-0 z-50 w-full border-b bg-background/95 backdrop-blur-xl">
@@ -100,7 +127,11 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={handleLogout}
+                className="cursor-pointer text-red-500 hover:text-red-600 hover:bg-red-50"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
                 Logout
               </DropdownMenuItem>
             </DropdownMenuContent>
