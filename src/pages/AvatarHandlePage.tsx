@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { RefreshCcw, Check, X, ArrowRight } from 'lucide-react';
+import { RefreshCcw, Check, X, ArrowRight, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useResponsive } from '@/hooks/use-mobile';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -54,7 +54,7 @@ const AvatarHandlePage = () => {
       window.location.href = '/request-invite';
       toast.success('Handle selected successfully!');
     } else {
-      toast.error('Only "bravegoldfish" is accepted as a handle');
+      toast.error('The handle you entered is not valid');
     }
   };
   
@@ -62,14 +62,14 @@ const AvatarHandlePage = () => {
     <div className="min-h-screen bg-gradient-to-b from-purple-50 to-white flex items-center justify-center p-4">
       <Card className="w-full max-w-md mx-auto shadow-lg border-purple-100 animate-fade-in">
         <CardHeader className="text-center pb-2">
-          <CardTitle className="text-2xl font-bold text-purple-800">Choose Your Identity</CardTitle>
+          <CardTitle className="text-xl md:text-2xl font-bold text-purple-800">Create Your Identity</CardTitle>
         </CardHeader>
         
         <CardContent className="space-y-6">
           <div className="flex flex-col items-center space-y-4">
             <div className="relative group">
-              <Avatar className={`w-32 h-32 hover-scale ${isMobile ? 'w-24 h-24' : 'w-32 h-32'} border-4 border-purple-200 shadow-md`}>
-                <AvatarImage src={avatar} alt="Avatar" />
+              <Avatar className={`border-4 border-purple-200 shadow-md transition-all duration-300 ${isMobile ? 'w-28 h-28' : 'w-40 h-40'}`}>
+                <AvatarImage src={avatar} alt="Your Avatar" className="object-cover" />
                 <AvatarFallback className="bg-purple-100 text-purple-800">
                   <RefreshCcw className="w-8 h-8" />
                 </AvatarFallback>
@@ -77,24 +77,25 @@ const AvatarHandlePage = () => {
               <Button 
                 variant="secondary" 
                 size="icon" 
-                className="absolute -bottom-2 -right-2 rounded-full shadow-md bg-white hover:bg-purple-100"
+                className="absolute -bottom-2 -right-2 rounded-full shadow-md bg-white hover:bg-purple-100 border border-purple-200"
                 onClick={generateNewAvatar}
+                aria-label="Generate new avatar"
               >
                 <RefreshCcw className="w-4 h-4 text-purple-700" />
               </Button>
             </div>
-            <p className="text-sm text-gray-600">Click to generate a new avatar</p>
+            <p className="text-sm text-gray-600 font-medium">Tap to get a new avatar</p>
           </div>
           
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="handle" className="text-sm font-medium text-gray-700">
-                Choose your handle
+                Choose your unique handle
               </Label>
               <div className="relative">
                 <Input
                   id="handle"
-                  placeholder="Enter handle (hint: bravegoldfish)"
+                  placeholder="Enter your preferred handle"
                   value={handle}
                   onChange={handleInputChange}
                   className={`pr-10 ${
@@ -104,6 +105,7 @@ const AvatarHandlePage = () => {
                         ? 'border-red-500 focus-visible:ring-red-500' 
                         : ''
                   }`}
+                  autoComplete="off"
                 />
                 {isHandleValid !== null && (
                   <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
@@ -116,9 +118,10 @@ const AvatarHandlePage = () => {
                 )}
               </div>
               {isHandleValid === false && (
-                <p className="text-sm text-red-500 animate-fade-in">
-                  Only "bravegoldfish" is accepted for this demo
-                </p>
+                <div className="flex items-center gap-1.5 text-sm text-red-500 mt-1.5 animate-fade-in">
+                  <AlertCircle className="h-4 w-4" />
+                  <span>This handle is not available. Try "bravegoldfish"</span>
+                </div>
               )}
             </div>
           </form>
