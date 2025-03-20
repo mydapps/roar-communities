@@ -4,17 +4,45 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { RefreshCcw, Check, X, ArrowRight, AlertCircle } from 'lucide-react';
+import { RefreshCcw, Check, X, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useResponsive } from '@/hooks/use-mobile';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { useNavigate } from 'react-router-dom';
 
 const AvatarHandlePage = () => {
-  const [avatar, setAvatar] = useState('');
+  const [avatarCode, setAvatarCode] = useState('');
   const [handle, setHandle] = useState('');
   const [isHandleValid, setIsHandleValid] = useState<boolean | null>(null);
   const [showError, setShowError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const { isMobile } = useResponsive();
+  const navigate = useNavigate();
+  
+  // Check localStorage on mount
+  useEffect(() => {
+    const userKey = localStorage.getItem('dapps_user_key');
+    
+    if (!userKey) {
+      // Clear localStorage and redirect to index
+      localStorage.clear();
+      navigate('/');
+      return;
+    }
+    
+    const handle = localStorage.getItem('dapps_user_handle');
+    const avatar = localStorage.getItem('dapps_user_avatar');
+    const registered = localStorage.getItem('dapps_user_registered');
+    
+    if (handle && avatar) {
+      if (registered === "1") {
+        navigate('/feed');
+      } else {
+        navigate('/request-invite');
+      }
+    }
+  }, [navigate]);
   
   // Generate a random avatar on first load
   useEffect(() => {
@@ -24,16 +52,7 @@ const AvatarHandlePage = () => {
   const generateNewAvatar = () => {
     // Generate a random string for the avatar
     const randomStr = Math.random().toString(36).substring(2, 8);
-    setAvatar(`https://img.dapps.co/avatar/${randomStr}.svg`);
-  };
-  
-  const validateHandle = (value: string) => {
-    // Check if handle is 'bravegoldfish'
-    if (value.trim().toLowerCase() === 'bravegoldfish') {
-      return true;
-    } else {
-      return false;
-    }
+    setAvatarCode(randomStr);
   };
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -42,33 +61,72 @@ const AvatarHandlePage = () => {
     // Reset error state when typing
     if (showError) {
       setShowError(false);
+      setErrorMessage('');
     }
-    // Only set visual indicator if valid
-    if (value.trim().toLowerCase() === 'bravegoldfish') {
-      setIsHandleValid(true);
-    } else {
-      setIsHandleValid(null); // Keep neutral while typing
-    }
+    setIsHandleValid(null); // Keep neutral while typing
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Now we validate and show errors if not "bravegoldfish"
-    const isValid = validateHandle(handle);
+    if (handle.trim().length === 0) {
+      return;
+    }
     
-    if (isValid) {
-      // Store the selected avatar and handle in localStorage
-      localStorage.setItem('dapps_user_avatar', avatar);
-      localStorage.setItem('dapps_user_handle', handle);
+    setIsLoading(true);
+    
+    try {
+      const userKey = localStorage.getItem('dapps_user_key');
       
-      // Navigate to request_invite page
-      window.location.href = '/request-invite';
-      toast.success('Handle selected successfully!');
-    } else {
-      setIsHandleValid(false); // Set to invalid after submit
+      if (!userKey) {
+        toast.error('Authentication error. Please log in again.');
+        localStorage.clear();
+        navigate('/');
+        return;
+      }
+      
+      const response = await fetch('https://api.dapps.co/choose_handle_avatar', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-key': userKey
+        },
+        body: JSON.stringify({
+          handle: handle.trim(),
+          avatarCode: avatarCode
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Store the selected avatar and handle in localStorage
+        localStorage.setItem('dapps_user_avatar', data.avatarUrl || `https://img.dapps.co/avatar/${avatarCode}.svg`);
+        localStorage.setItem('dapps_user_handle', data.handle || handle);
+        
+        toast.success('Profile created successfully!');
+        
+        // Check registration status
+        const registered = localStorage.getItem('dapps_user_registered');
+        if (registered === "1") {
+          navigate('/feed');
+        } else {
+          navigate('/request-invite');
+        }
+      } else {
+        setIsHandleValid(false);
+        setShowError(true);
+        setErrorMessage(data.message || 'There was an error creating your profile.');
+        toast.error(data.message || 'Failed to create profile');
+      }
+    } catch (error) {
+      console.error('Error submitting handle and avatar:', error);
+      toast.error('Network error. Please try again.');
+      setIsHandleValid(false);
       setShowError(true);
-      toast.error('The handle you entered is not valid');
+      setErrorMessage('Network error. Please try again later.');
+    } finally {
+      setIsLoading(false);
     }
   };
   
@@ -83,7 +141,7 @@ const AvatarHandlePage = () => {
           <div className="flex flex-col items-center space-y-4">
             <div className="relative group">
               <Avatar className={`border-4 border-purple-200 shadow-md transition-all duration-300 ${isMobile ? 'w-32 h-32' : 'w-44 h-44'}`}>
-                <AvatarImage src={avatar} alt="Your Avatar" className="object-cover" />
+                <AvatarImage src={`https://img.dapps.co/avatar/${avatarCode}.svg`} alt="Your Avatar" className="object-cover" />
                 <AvatarFallback className="bg-purple-100 text-purple-800">
                   <RefreshCcw className="w-8 h-8" />
                 </AvatarFallback>
@@ -134,7 +192,7 @@ const AvatarHandlePage = () => {
               {showError && isHandleValid === false && (
                 <div className="flex items-center gap-1.5 text-sm text-red-500 mt-1.5 animate-fade-in">
                   <AlertCircle className="h-4 w-4" />
-                  <span>This handle is not available. Try "bravegoldfish"</span>
+                  <span>{errorMessage}</span>
                 </div>
               )}
             </div>
@@ -145,11 +203,20 @@ const AvatarHandlePage = () => {
           <Button 
             type="submit" 
             className="w-full bg-purple-600 hover:bg-purple-700 text-white group transition-all"
-            disabled={handle.trim().length === 0}
+            disabled={handle.trim().length === 0 || isLoading}
             onClick={handleSubmit}
           >
-            Continue
-            <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                Continue
+                <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+              </>
+            )}
           </Button>
         </CardFooter>
       </Card>
