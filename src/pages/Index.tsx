@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useLocation, useParams } from 'react-router-dom';
+import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Users, Zap, Trophy } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 
 const Index = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { code } = useParams();
   const [animatedElements, setAnimatedElements] = useState<string[]>([]);
   const [currentTextIndex, setCurrentTextIndex] = useState(0);
@@ -21,6 +22,36 @@ const Index = () => {
   const { login } = usePrivy();
 
   const isInviteRoute = location.pathname.includes('/invite/');
+
+  // Check if user is already logged in and redirect if needed
+  useEffect(() => {
+    // Get user data from localStorage
+    const userId = localStorage.getItem('dapps_user_id');
+    const userKey = localStorage.getItem('dapps_user_key');
+    const registered = localStorage.getItem('dapps_user_registered');
+    const handle = localStorage.getItem('dapps_user_handle');
+    const avatar = localStorage.getItem('dapps_user_avatar');
+    
+    // Only check if we have the essential user data
+    if (userId && userKey) {
+      console.log('User already logged in, redirecting...');
+      
+      // If registered, go to feed
+      if (registered === "1") {
+        navigate('/feed');
+        return;
+      }
+      
+      // Check for avatar and handle
+      if (handle && avatar) {
+        // Both handle and avatar exist, go to request-invite
+        navigate('/request-invite');
+      } else {
+        // Missing handle or avatar, go to avatar-handle
+        navigate('/avatar-handle');
+      }
+    }
+  }, [navigate]);
 
   const headlines = [
     "Own your audience and your influence",
