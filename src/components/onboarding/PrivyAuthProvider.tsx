@@ -1,5 +1,5 @@
 
-import React, { ReactNode, useEffect } from 'react';
+import React, { ReactNode, useEffect, useState } from 'react';
 import { PrivyProvider, usePrivy } from '@privy-io/react-auth';
 import { toast } from 'sonner';
 
@@ -10,10 +10,11 @@ interface PrivyAuthProviderProps {
 // Wrapper component to handle Privy auth state and login flow
 const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
   const { ready, authenticated, user, login, getAccessToken } = usePrivy();
+  const [authProcessed, setAuthProcessed] = useState(false);
   
   useEffect(() => {
     // If user is authenticated with Privy, send info to backend
-    if (ready && authenticated && user) {
+    if (ready && authenticated && user && !authProcessed) {
       const handlePrivyAuth = async () => {
         try {
           // Get JWT token from Privy
@@ -22,6 +23,7 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
           if (!token) {
             console.error('No JWT token available from Privy');
             toast.error('Authentication error: No token available');
+            setAuthProcessed(true);
             return;
           }
           
@@ -54,10 +56,12 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
               
               // Check if we have a handle, if not redirect to avatar-handle page
               if (!data.handle) {
-                window.location.href = '/avatar-handle';
-                toast.success('Please choose your avatar and handle');
-              } else {
-                // If we already have a handle, navigate to feed
+                if (window.location.pathname !== '/avatar-handle') {
+                  window.location.href = '/avatar-handle';
+                  toast.success('Please choose your avatar and handle');
+                }
+              } else if (window.location.pathname === '/' || window.location.pathname === '/login') {
+                // Only redirect to feed if we're on the homepage or login page
                 window.location.href = '/feed';
                 toast.success('Successfully logged in!');
               }
@@ -69,15 +73,19 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
             console.error('Authentication error response:', errorData);
             toast.error('Authentication failed. Please try again.');
           }
+          
+          // Mark auth as processed to prevent loops
+          setAuthProcessed(true);
         } catch (error) {
           console.error('Error during authentication:', error);
           toast.error('Could not complete authentication');
+          setAuthProcessed(true);
         }
       };
 
       handlePrivyAuth();
     }
-  }, [ready, authenticated, user, getAccessToken]);
+  }, [ready, authenticated, user, getAccessToken, authProcessed]);
 
   return <>{children}</>;
 };
