@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -6,6 +7,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { usePrivy } from '@privy-io/react-auth';
 import { toast } from 'sonner';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const Index = () => {
   const location = useLocation();
@@ -17,8 +19,9 @@ const Index = () => {
   const [isTyping, setIsTyping] = useState(true);
   const [avatars, setAvatars] = useState<string[]>([]);
   const [showInviteMessage, setShowInviteMessage] = useState(false);
-  const [inviterHandle, setInviterHandle] = useState('');
+  const [referrerHandle, setReferrerHandle] = useState('');
   const { login } = usePrivy();
+  const isMobile = useIsMobile();
 
   const isInviteRoute = location.pathname.includes('/invite/');
 
@@ -71,7 +74,7 @@ const Index = () => {
           if (data.success && data.valid === 1) {
             // Valid invite code
             setShowInviteMessage(true);
-            setInviterHandle('bravegoldfish'); // This would come from the API in a real scenario
+            setReferrerHandle(data.referrer || ''); // Use the referrer handle from API
             
             // Store the invite code in localStorage
             localStorage.setItem('dapps_invite_code', data.code);
@@ -150,11 +153,24 @@ const Index = () => {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <header className="relative flex-grow flex items-center justify-center pt-16 md:pt-24 pb-10 md:pb-16 px-4">
-        {showInviteMessage && (
-          <div className="max-w-xl mx-auto mb-8 p-4 rounded-lg bg-[#31bcc3]/10 border border-[#31bcc3]/20">
-            <p className="text-lg text-[#31bcc3] dark:text-[#31bcc3]">
-              You've been invited by <span className="font-bold">@{inviterHandle}</span>! Sign up to skip the queue and get your first share (up to $100) for free.
-            </p>
+        {showInviteMessage && referrerHandle && (
+          <div className={`w-full max-w-xl mx-auto mb-6 md:mb-8 p-4 rounded-lg bg-[#31bcc3]/10 border border-[#31bcc3]/20 ${isMobile ? 'mx-4' : ''}`}>
+            <div className="flex items-start gap-3">
+              <Avatar className="h-10 w-10 shrink-0 mt-1">
+                <AvatarImage src={`https://img.dapps.co/avatar/${referrerHandle}.svg`} alt={referrerHandle} />
+                <AvatarFallback className="bg-[#31bcc3]/20 text-[#31bcc3]">
+                  {referrerHandle.substring(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="text-base md:text-lg text-foreground font-medium">
+                  <span className="text-[#31bcc3] font-bold">@{referrerHandle}</span> invited you to join Dapps.co
+                </p>
+                <p className="text-sm md:text-base text-muted-foreground mt-1">
+                  Sign up now to skip the waiting list and receive a free share worth up to $100. No credit card required.
+                </p>
+              </div>
+            </div>
           </div>
         )}
         
