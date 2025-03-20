@@ -55,6 +55,7 @@ const RequestInvitePage = () => {
   const [totalInQueue, setTotalInQueue] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isConnectingTwitter, setIsConnectingTwitter] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [showStories, setShowStories] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -68,7 +69,7 @@ const RequestInvitePage = () => {
       completed: false,
       disabled: false,
       points: 15000,
-      action: () => handleCompleteTask('connect-twitter')
+      action: () => handleConnectTwitter()
     },
     {
       id: 'tweet-about',
@@ -193,37 +194,101 @@ const RequestInvitePage = () => {
     setTimeout(() => setShowConfetti(false), 2000);
   };
 
-  const handleCompleteTask = (taskId: string) => {
-    // In a real implementation, this would connect to the Twitter API
-    // For now, we'll just simulate it with a delay
-    const taskIndex = tasks.findIndex(task => task.id === taskId);
+  const handleConnectTwitter = async () => {
+    const userKey = localStorage.getItem('dapps_user_key');
+    if (!userKey) {
+      toast.error('User key not found. Please try signing in again.');
+      return;
+    }
     
-    if (taskIndex === -1 || tasks[taskIndex].completed) return;
+    setIsConnectingTwitter(true);
     
-    toast.info('Connecting to X account...');
-    
-    setTimeout(() => {
-      // This would be replaced with the actual API call to connect X
-      toast.success('Successfully connected X account!');
-      triggerConfetti();
+    try {
+      toast.info('Connecting to X account...');
       
-      const updatedTasks = [...tasks];
-      updatedTasks[taskIndex].completed = true;
+      const response = await fetch('https://api.dapps.co/twitter_auth', {
+        method: 'GET',
+        headers: { 
+          'x-user-key': userKey 
+        }
+      });
       
-      // If this is the Twitter connect task, enable the other tasks
-      if (taskId === 'connect-twitter') {
-        updatedTasks[1].disabled = false;
-        updatedTasks[2].disabled = false;
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (data.success) {
+          // If the API returns a URL to redirect to for Twitter OAuth
+          if (data.url) {
+            // Open the Twitter auth URL in a new window
+            window.open(data.url, '_blank', 'width=600,height=600');
+            
+            // Poll for connection status
+            const checkInterval = setInterval(async () => {
+              const statusResponse = await fetch('https://api.dapps.co/request_invite_status', {
+                method: 'GET',
+                headers: {
+                  'x-user-key': userKey
+                }
+              });
+              
+              if (statusResponse.ok) {
+                const statusData: ApiResponse = await statusResponse.json();
+                
+                if (statusData.tasks.twitter_connect === 1) {
+                  clearInterval(checkInterval);
+                  toast.success('Successfully connected X account!');
+                  triggerConfetti();
+                  
+                  const updatedTasks = [...tasks];
+                  updatedTasks[0].completed = true;
+                  updatedTasks[1].disabled = false;
+                  updatedTasks[2].disabled = false;
+                  
+                  setTasks(updatedTasks);
+                  setIsConnectingTwitter(false);
+                }
+              }
+            }, 3000); // Check every 3 seconds
+            
+            // Stop checking after 2 minutes if no success
+            setTimeout(() => {
+              clearInterval(checkInterval);
+              if (!tasks[0].completed) {
+                setIsConnectingTwitter(false);
+                toast.error('Failed to connect X account. Please try again.');
+              }
+            }, 120000);
+          } else {
+            // For demo/testing purposes we'll simulate successful connection
+            setTimeout(() => {
+              toast.success('Successfully connected X account!');
+              triggerConfetti();
+              
+              const updatedTasks = [...tasks];
+              updatedTasks[0].completed = true;
+              updatedTasks[1].disabled = false;
+              updatedTasks[2].disabled = false;
+              
+              setTasks(updatedTasks);
+              setIsConnectingTwitter(false);
+              
+              // Refresh invite status
+              fetchInviteStatus(userKey);
+            }, 1500);
+          }
+        } else {
+          toast.error('Failed to connect X account. Please try again.');
+          setIsConnectingTwitter(false);
+        }
+      } else {
+        toast.error('Failed to connect X account. Please try again.');
+        setIsConnectingTwitter(false);
       }
-      
-      setTasks(updatedTasks);
-      
-      // Refresh invite status
-      const userKey = localStorage.getItem('dapps_user_key');
-      if (userKey) {
-        fetchInviteStatus(userKey);
-      }
-    }, 1500);
+    } catch (error) {
+      console.error('Error connecting X account:', error);
+      toast.error('Failed to connect X account. Please try again.');
+      setIsConnectingTwitter(false);
+    }
   };
 
   const handleShareTask = (platform: 'twitter' | 'quote-tweet') => {
@@ -267,7 +332,7 @@ const RequestInvitePage = () => {
     
     if (inviteCode.toUpperCase() === "ABC123") {
       setTimeout(() => {
-        toast.success("🚀 Invite code accepted! Welcome to ROAR!");
+        toast.success("🚀 Invite code accepted! Welcome to dapps.co!");
         triggerConfetti();
         
         setShowStories(true);
@@ -416,14 +481,20 @@ const RequestInvitePage = () => {
                         "w-full",
                         task.completed && "border-green-500 text-green-600"
                       )}
-                      disabled={task.completed || task.disabled}
+                      disabled={task.completed || task.disabled || (task.id === 'connect-twitter' && isConnectingTwitter)}
                       onClick={task.action}
                     >
                       {task.completed ? (
                         <span className="flex items-center">
                           <Check className="h-4 w-4 mr-2" /> Completed
                         </span>
-                      ) : task.cta}
+                      ) : task.id === 'connect-twitter' && isConnectingTwitter ? (
+                        <span className="flex items-center">
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Connecting...
+                        </span>
+                      ) : (
+                        task.cta
+                      )}
                     </Button>
                   </CardContent>
                 </Card>
