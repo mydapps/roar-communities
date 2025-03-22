@@ -29,6 +29,7 @@ const FeedPage = () => {
 
   // Check authentication
   useEffect(() => {
+    console.log('FeedPage mounted - Checking auth status');
     // Check if user key exists
     const userKey = localStorage.getItem('dapps_user_key');
     if (!userKey) {
@@ -37,6 +38,13 @@ const FeedPage = () => {
       navigate('/');
       return;
     }
+    
+    // Temporary for testing - log user authentication data
+    console.log('User authentication data:');
+    console.log('- User key:', userKey ? `${userKey.substring(0, 5)}...` : 'None');
+    console.log('- User ID:', localStorage.getItem('dapps_user_id'));
+    console.log('- User registered:', localStorage.getItem('dapps_user_registered'));
+    console.log('- User handle:', localStorage.getItem('dapps_user_handle'));
     
     // Check if user is registered - only redirect if explicitly set to "0"
     const isRegistered = localStorage.getItem('dapps_user_registered');
@@ -51,28 +59,42 @@ const FeedPage = () => {
 
   // Fetch posts based on active tab
   const loadPosts = useCallback(async (page: number, resetExisting = false) => {
-    if (loading) return;
+    if (loading) {
+      console.log('Already loading posts, skipping fetch request');
+      return;
+    }
     
+    console.log(`Loading posts for tab "${activeTab}", page ${page}, resetExisting=${resetExisting}`);
     setLoading(true);
     try {
       let fetchedPosts: PostType[];
       
       if (activeTab === 'following') {
+        console.log('Fetching personal/following posts');
         fetchedPosts = await fetchPosts({ page, personal: true });
       } else if (activeTab === 'global') {
+        console.log('Fetching global posts');
         fetchedPosts = await fetchPosts({ page });
       } else {
+        console.log('Fetching trending posts');
         fetchedPosts = await fetchPosts({ page, trending: true });
       }
       
+      console.log(`Fetch complete - received ${fetchedPosts.length} posts`);
+      
       if (fetchedPosts.length === 0) {
+        console.log('No more posts available, setting hasMore=false');
         setHasMore(false);
       } else {
         // Update page for the next request
         setCurrentPage(page + 1);
         
         // Update posts state
-        setPosts(prev => resetExisting ? fetchedPosts : [...prev, ...fetchedPosts]);
+        setPosts(prev => {
+          const newPosts = resetExisting ? fetchedPosts : [...prev, ...fetchedPosts];
+          console.log(`Total posts now: ${newPosts.length}`);
+          return newPosts;
+        });
       }
     } catch (error) {
       console.error('Error loading posts:', error);
@@ -83,6 +105,7 @@ const FeedPage = () => {
 
   // Initial posts load when tab changes
   useEffect(() => {
+    console.log(`Tab changed to "${activeTab}" - resetting posts and loading page 1`);
     setPosts([]);
     setCurrentPage(1);
     setHasMore(true);
@@ -91,6 +114,7 @@ const FeedPage = () => {
 
   // Set up intersection observer for infinite scrolling
   useEffect(() => {
+    console.log('Setting up intersection observer for infinite scrolling');
     const options = {
       root: null,
       rootMargin: '0px',
@@ -99,16 +123,21 @@ const FeedPage = () => {
     
     observer.current = new IntersectionObserver((entries) => {
       if (entries[0].isIntersecting && hasMore && !loading) {
+        console.log(`Loading element is visible. hasMore=${hasMore}, loading=${loading}. Loading page ${currentPage}`);
         loadPosts(currentPage);
       }
     }, options);
     
     if (loadingRef.current) {
+      console.log('Observer attached to loading element');
       observer.current.observe(loadingRef.current);
+    } else {
+      console.log('Loading element ref not available yet');
     }
     
     return () => {
       if (observer.current) {
+        console.log('Cleaning up intersection observer');
         observer.current.disconnect();
       }
     };
@@ -116,9 +145,11 @@ const FeedPage = () => {
 
   // Handle toggling roar (upvote) status
   const handleRoar = async (postCode: string, currentRoarStatus: number) => {
+    console.log(`Toggling roar for post ${postCode}, current status: ${currentRoarStatus}`);
     const success = await toggleRoar(postCode);
     
     if (success) {
+      console.log('Roar toggle successful, updating UI');
       // Update local state to reflect the change immediately
       setPosts(prevPosts => prevPosts.map(post => 
         post.code === postCode 
@@ -133,8 +164,17 @@ const FeedPage = () => {
   };
 
   const handlePostCreated = (newPost: any) => {
+    console.log('New post created:', newPost);
     setUserPosts([newPost, ...userPosts]);
   };
+  
+  console.log('Rendering FeedPage:', {
+    activeTab,
+    postsCount: posts.length,
+    loading,
+    hasMore,
+    currentPage
+  });
 
   return (
     <div className="space-y-6">
@@ -196,60 +236,56 @@ const FeedPage = () => {
             ))}
             
             {/* API fetched posts */}
-            {posts.map(post => (
-              <PostComponent
-                key={`api-post-${post.code}`}
-                username={post.handle}
-                community={post.community}
-                timeAgo={post.timeAgo}
-                content={post.body}
-                roarCount={post.upvotes}
-                commentCount={post.comments}
-                shareCount={0}
-                images={post.images.length > 0 ? post.images : post.image_url ? [post.image_url] : undefined}
-                roared={post.roar === 1}
-                postCode={post.code}
-                onRoar={() => handleRoar(post.code, post.roar)}
-                isMirror={post.is_mirror === 1}
-                mirrorData={post.is_mirror === 1 ? {
-                  quote: post.mirror_quote || '',
-                  originalAuthor: post.original_author || '',
-                  originalCommunity: post.original_community || '',
-                  originalBody: post.original_body || '',
-                  originalTimeAgo: post.original_created_on || '',
-                  originalAvatar: post.original_author_avatar || ''
-                } : undefined}
-              />
-            ))}
-            
-            {/* Loading indicator */}
-            {hasMore && (
-              <div 
-                ref={loadingRef} 
-                className="flex justify-center items-center py-4"
-              >
-                {loading && <Loader2 className="w-6 h-6 text-primary animate-spin" />}
-              </div>
+            {posts.length > 0 ? (
+              posts.map(post => (
+                <PostComponent
+                  key={`api-post-${post.code}`}
+                  username={post.handle}
+                  community={post.community}
+                  timeAgo={post.timeAgo}
+                  content={post.body}
+                  roarCount={post.upvotes}
+                  commentCount={post.comments}
+                  shareCount={0}
+                  images={post.images?.length > 0 ? post.images : post.image_url ? [post.image_url] : undefined}
+                  roared={post.roar === 1}
+                  postCode={post.code}
+                  onRoar={() => handleRoar(post.code, post.roar)}
+                  isMirror={post.is_mirror === 1}
+                  mirrorData={post.is_mirror === 1 ? {
+                    quote: post.mirror_quote || '',
+                    originalAuthor: post.original_author || '',
+                    originalCommunity: post.original_community || '',
+                    originalBody: post.original_body || '',
+                    originalTimeAgo: post.original_created_on || '',
+                    originalAvatar: post.original_author_avatar || ''
+                  } : undefined}
+                />
+              ))
+            ) : !loading && (
+              <Card className="p-6 text-center">
+                <h3 className="text-lg font-medium mb-2">No posts to display</h3>
+                <p className="text-muted-foreground mb-4">
+                  {activeTab === 'following' 
+                    ? "You're not following any communities yet, or there are no posts in your feed."
+                    : `No posts available in the ${activeTab} feed right now.`}
+                </p>
+              </Card>
             )}
             
+            {/* Loading indicator */}
+            <div 
+              ref={loadingRef} 
+              className="flex justify-center items-center py-4"
+            >
+              {loading && <Loader2 className="w-6 h-6 text-primary animate-spin" />}
+            </div>
+            
             {/* No more posts indicator */}
-            {!hasMore && posts.length > 0 && (
+            {!hasMore && posts.length > 0 && !loading && (
               <div className="text-center py-4 text-muted-foreground">
                 <p>No more posts to load</p>
               </div>
-            )}
-            
-            {/* Empty state */}
-            {!hasMore && posts.length === 0 && !loading && (
-              <Card className="p-6 text-center">
-                <h3 className="text-xl font-medium mb-2">No posts yet</h3>
-                <p className="text-muted-foreground mb-4">
-                  Be the first to create a post in your feed!
-                </p>
-                <Button onClick={() => document.getElementById('create-post-textarea')?.focus()}>
-                  Create Post
-                </Button>
-              </Card>
             )}
           </div>
         </TabsContent>
@@ -257,57 +293,54 @@ const FeedPage = () => {
         <TabsContent value="global" className="space-y-6 animate-fade-in">
           <div className="space-y-6">
             {/* API fetched posts */}
-            {posts.map(post => (
-              <PostComponent
-                key={`api-post-${post.code}`}
-                username={post.handle}
-                community={post.community}
-                timeAgo={post.timeAgo}
-                content={post.body}
-                roarCount={post.upvotes}
-                commentCount={post.comments}
-                shareCount={0}
-                images={post.images.length > 0 ? post.images : post.image_url ? [post.image_url] : undefined}
-                roared={post.roar === 1}
-                postCode={post.code}
-                onRoar={() => handleRoar(post.code, post.roar)}
-                isMirror={post.is_mirror === 1}
-                mirrorData={post.is_mirror === 1 ? {
-                  quote: post.mirror_quote || '',
-                  originalAuthor: post.original_author || '',
-                  originalCommunity: post.original_community || '',
-                  originalBody: post.original_body || '',
-                  originalTimeAgo: post.original_created_on || '',
-                  originalAvatar: post.original_author_avatar || ''
-                } : undefined}
-              />
-            ))}
-            
-            {/* Loading indicator */}
-            {hasMore && (
-              <div 
-                ref={loadingRef} 
-                className="flex justify-center items-center py-4"
-              >
-                {loading && <Loader2 className="w-6 h-6 text-primary animate-spin" />}
-              </div>
-            )}
-            
-            {/* No more posts indicator */}
-            {!hasMore && posts.length > 0 && (
-              <div className="text-center py-4 text-muted-foreground">
-                <p>No more posts to load</p>
-              </div>
-            )}
-            
-            {/* Empty state */}
-            {!hasMore && posts.length === 0 && !loading && (
+            {posts.length > 0 ? (
+              posts.map(post => (
+                <PostComponent
+                  key={`api-post-${post.code}`}
+                  username={post.handle}
+                  community={post.community}
+                  timeAgo={post.timeAgo}
+                  content={post.body}
+                  roarCount={post.upvotes}
+                  commentCount={post.comments}
+                  shareCount={0}
+                  images={post.images?.length > 0 ? post.images : post.image_url ? [post.image_url] : undefined}
+                  roared={post.roar === 1}
+                  postCode={post.code}
+                  onRoar={() => handleRoar(post.code, post.roar)}
+                  isMirror={post.is_mirror === 1}
+                  mirrorData={post.is_mirror === 1 ? {
+                    quote: post.mirror_quote || '',
+                    originalAuthor: post.original_author || '',
+                    originalCommunity: post.original_community || '',
+                    originalBody: post.original_body || '',
+                    originalTimeAgo: post.original_created_on || '',
+                    originalAvatar: post.original_author_avatar || ''
+                  } : undefined}
+                />
+              ))
+            ) : !loading && (
               <Card className="p-6 text-center">
-                <h3 className="text-xl font-medium mb-2">No posts in the global feed</h3>
+                <h3 className="text-lg font-medium mb-2">No posts in the global feed</h3>
                 <p className="text-muted-foreground">
                   Check back later for new content
                 </p>
               </Card>
+            )}
+            
+            {/* Loading indicator */}
+            <div 
+              ref={loadingRef} 
+              className="flex justify-center items-center py-4"
+            >
+              {loading && <Loader2 className="w-6 h-6 text-primary animate-spin" />}
+            </div>
+            
+            {/* No more posts indicator */}
+            {!hasMore && posts.length > 0 && !loading && (
+              <div className="text-center py-4 text-muted-foreground">
+                <p>No more posts to load</p>
+              </div>
             )}
           </div>
         </TabsContent>
@@ -315,57 +348,54 @@ const FeedPage = () => {
         <TabsContent value="trending" className="space-y-6 animate-fade-in">
           <div className="space-y-6">
             {/* API fetched posts */}
-            {posts.map(post => (
-              <PostComponent
-                key={`api-post-${post.code}`}
-                username={post.handle}
-                community={post.community}
-                timeAgo={post.timeAgo}
-                content={post.body}
-                roarCount={post.upvotes}
-                commentCount={post.comments}
-                shareCount={0}
-                images={post.images.length > 0 ? post.images : post.image_url ? [post.image_url] : undefined}
-                roared={post.roar === 1}
-                postCode={post.code}
-                onRoar={() => handleRoar(post.code, post.roar)}
-                isMirror={post.is_mirror === 1}
-                mirrorData={post.is_mirror === 1 ? {
-                  quote: post.mirror_quote || '',
-                  originalAuthor: post.original_author || '',
-                  originalCommunity: post.original_community || '',
-                  originalBody: post.original_body || '',
-                  originalTimeAgo: post.original_created_on || '',
-                  originalAvatar: post.original_author_avatar || ''
-                } : undefined}
-              />
-            ))}
-            
-            {/* Loading indicator */}
-            {hasMore && (
-              <div 
-                ref={loadingRef} 
-                className="flex justify-center items-center py-4"
-              >
-                {loading && <Loader2 className="w-6 h-6 text-primary animate-spin" />}
-              </div>
-            )}
-            
-            {/* No more posts indicator */}
-            {!hasMore && posts.length > 0 && (
-              <div className="text-center py-4 text-muted-foreground">
-                <p>No more posts to load</p>
-              </div>
-            )}
-            
-            {/* Empty state */}
-            {!hasMore && posts.length === 0 && !loading && (
+            {posts.length > 0 ? (
+              posts.map(post => (
+                <PostComponent
+                  key={`api-post-${post.code}`}
+                  username={post.handle}
+                  community={post.community}
+                  timeAgo={post.timeAgo}
+                  content={post.body}
+                  roarCount={post.upvotes}
+                  commentCount={post.comments}
+                  shareCount={0}
+                  images={post.images?.length > 0 ? post.images : post.image_url ? [post.image_url] : undefined}
+                  roared={post.roar === 1}
+                  postCode={post.code}
+                  onRoar={() => handleRoar(post.code, post.roar)}
+                  isMirror={post.is_mirror === 1}
+                  mirrorData={post.is_mirror === 1 ? {
+                    quote: post.mirror_quote || '',
+                    originalAuthor: post.original_author || '',
+                    originalCommunity: post.original_community || '',
+                    originalBody: post.original_body || '',
+                    originalTimeAgo: post.original_created_on || '',
+                    originalAvatar: post.original_author_avatar || ''
+                  } : undefined}
+                />
+              ))
+            ) : !loading && (
               <Card className="p-6 text-center">
-                <h3 className="text-xl font-medium mb-2">No trending posts right now</h3>
+                <h3 className="text-lg font-medium mb-2">No trending posts right now</h3>
                 <p className="text-muted-foreground">
                   Check back later for trending content
                 </p>
               </Card>
+            )}
+            
+            {/* Loading indicator */}
+            <div 
+              ref={loadingRef} 
+              className="flex justify-center items-center py-4"
+            >
+              {loading && <Loader2 className="w-6 h-6 text-primary animate-spin" />}
+            </div>
+            
+            {/* No more posts indicator */}
+            {!hasMore && posts.length > 0 && !loading && (
+              <div className="text-center py-4 text-muted-foreground">
+                <p>No more posts to load</p>
+              </div>
             )}
           </div>
         </TabsContent>

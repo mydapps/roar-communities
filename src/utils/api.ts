@@ -77,6 +77,9 @@ export const fetchPosts = async (options: {
       url += '&trending=1';
     }
     
+    console.log(`Fetching posts from: ${url}`);
+    console.log(`Using user key: ${userKey.substring(0, 5)}...`);
+    
     // Make the API request
     const response = await fetch(url, {
       method: 'GET',
@@ -85,12 +88,19 @@ export const fetchPosts = async (options: {
       },
     });
     
+    console.log(`API response status: ${response.status}`);
+    
     if (!response.ok) {
       const errorText = await response.text();
+      console.error(`Failed response body: ${errorText}`);
       throw new Error(`Failed to fetch posts: ${errorText}`);
     }
     
-    return await response.json();
+    const data = await response.json();
+    console.log(`Fetched ${data.length} posts successfully`);
+    console.log('Sample post:', data.length > 0 ? data[0] : 'No posts');
+    
+    return data;
   } catch (error) {
     console.error('Error fetching posts:', error);
     toast.error('Failed to load posts. Please try again.');
@@ -106,9 +116,11 @@ export const toggleRoar = async (postCode: string): Promise<boolean> => {
     const userKey = localStorage.getItem('dapps_user_key');
     
     if (!userKey) {
-      console.error('No user key found');
+      console.error('No user key found for roar toggle');
       return false;
     }
+    
+    console.log(`Toggling roar for post: ${postCode}`);
     
     const response = await fetch(`${API_BASE_URL}/toggle_roar`, {
       method: 'POST',
@@ -119,12 +131,16 @@ export const toggleRoar = async (postCode: string): Promise<boolean> => {
       body: JSON.stringify({ post_code: postCode })
     });
     
+    console.log(`Roar toggle API response status: ${response.status}`);
+    
     if (!response.ok) {
       const errorText = await response.text();
+      console.error(`Failed roar toggle response: ${errorText}`);
       throw new Error(`Failed to toggle roar: ${errorText}`);
     }
     
     const result = await response.json();
+    console.log('Roar toggle result:', result);
     return result.success === true;
   } catch (error) {
     console.error('Error toggling roar:', error);
