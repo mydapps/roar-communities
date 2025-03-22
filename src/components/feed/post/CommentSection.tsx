@@ -87,10 +87,20 @@ const CommentItem = ({
     return '@' + name.split('.')[0];
   };
   
+  // Fix the avatar URL
+  const getAvatarUrl = (avatarPath: string) => {
+    // If the path already includes the full URL, return just the avatar ID
+    if (avatarPath.includes('https://img.dapps.co/avatar/')) {
+      const parts = avatarPath.split('https://img.dapps.co/avatar/');
+      return parts[parts.length - 1].replace('.svg.svg', '.svg');
+    }
+    return avatarPath;
+  };
+  
   return (
     <div key={comment.id} className="flex gap-3 w-full mb-4">
       <Avatar className="h-8 w-8 flex-shrink-0">
-        <AvatarImage src={`https://img.dapps.co/avatar/${comment.avatar_url}.svg`} />
+        <AvatarImage src={`https://img.dapps.co/avatar/${getAvatarUrl(comment.avatar_url)}`} />
         <AvatarFallback>{comment.handle[0].toUpperCase()}</AvatarFallback>
       </Avatar>
       <div className="flex-1">
@@ -166,7 +176,7 @@ export const CommentSection = ({ comments: initialComments, postCode, onAddComme
       id: tempId,
       uid: 0,
       handle: userHandle,
-      avatar_url: userAvatar,
+      avatar_url: userAvatar, // Already storing just the ID
       content: newComment,
       created_on: new Date().toISOString(),
       time_ago: 'just now',
@@ -316,7 +326,7 @@ export const CommentSection = ({ comments: initialComments, postCode, onAddComme
     return '@' + name.split('.')[0];
   };
   
-  // Get user avatar from localStorage
+  // Get user avatar from localStorage - don't need to transform it
   const userAvatar = localStorage.getItem('dapps_user_avatar') || 'default';
   
   return (

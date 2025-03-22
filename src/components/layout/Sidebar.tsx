@@ -84,7 +84,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
               <NavItem to="/account" icon={<Settings className="h-5 w-5" />} label="Account" />
             </nav>
 
-            <div className="mt-8 space-y-2 sticky top-0">
+            <div className="mt-8 space-y-2">
               <div className="px-4 py-2">
                 <h4 className="text-sm font-medium text-muted-foreground mb-3">My Communities</h4>
                 <div className="space-y-1">
@@ -95,7 +95,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
               </div>
             </div>
             
-            <div className="mt-8 px-4 sticky top-0">
+            <div className="mt-8 px-4">
               <Button className="w-full" size="sm">
                 Create Community
               </Button>

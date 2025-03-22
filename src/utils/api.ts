@@ -126,13 +126,13 @@ export const toggleRoar = async (postCode: string): Promise<boolean> => {
     
     console.log(`Toggling roar for post: ${postCode}`);
     
-    const response = await fetch(`${API_BASE_URL}/toggle_roar`, {
+    const response = await fetch(`${API_BASE_URL}/roar_post`, {
       method: 'POST',
       headers: {
         'x-user-key': userKey,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ post_code: postCode })
+      body: JSON.stringify({ postCode })
     });
     
     console.log(`Roar toggle API response status: ${response.status}`);
@@ -145,7 +145,7 @@ export const toggleRoar = async (postCode: string): Promise<boolean> => {
     
     const result = await response.json();
     console.log('Roar toggle result:', result);
-    return result.success === true;
+    return result.status === "SUCCESS";
   } catch (error) {
     console.error('Error toggling roar:', error);
     toast.error('Failed to update interaction. Please try again.');
