@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
@@ -905,5 +906,26 @@ export const Post = ({
         )}
       </CardFooter>
 
-      {
+      {/* Image viewer modal */}
+      <Dialog open={imageViewerOpen} onOpenChange={setImageViewerOpen}>
+        <DialogContent className="max-w-4xl p-0 overflow-hidden bg-black/90 border-none">
+          <div className="relative w-full">
+            <DialogClose className="absolute right-4 top-4 z-10">
+              <Button variant="ghost" size="icon" className="h-8 w-8 bg-black/50 text-white rounded-full hover:bg-black/70">
+                <X className="h-4 w-4" />
+              </Button>
+            </DialogClose>
+            {selectedImage && (
+              <img 
+                src={selectedImage} 
+                alt="Full size" 
+                className="w-full max-h-[80vh] object-contain"
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </Card>
+  );
+};
 
