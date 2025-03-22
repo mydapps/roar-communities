@@ -49,11 +49,11 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         />
       )}
 
-      {/* Sidebar - IMPORTANT: removed sticky positioning */}
+      {/* Sidebar - position changed to be part of normal flow instead of fixed */}
       <aside
         className={cn(
-          "fixed md:static top-0 left-0 z-40 md:z-0 h-full w-[280px] border-r bg-card transition-transform duration-300 ease-in-out",
-          isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+          "md:relative md:h-auto w-[280px] border-r bg-card transition-transform duration-300 ease-in-out",
+          isOpen ? "fixed top-0 left-0 z-40 h-full translate-x-0" : "fixed top-0 -translate-x-full md:translate-x-0 md:relative h-full left-0 z-40"
         )}
       >
         <div className="flex h-16 items-center justify-between px-4 md:hidden">
@@ -63,7 +63,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
           </Button>
         </div>
         
-        <ScrollArea className="h-[calc(100vh-4rem)] md:h-screen pb-10">
+        <ScrollArea className="h-[calc(100vh-4rem)] md:h-[calc(100vh-4rem)] pb-10">
           <div className="px-3 py-4">
             <nav className="space-y-1">
               <NavItem to="/feed" icon={<Home className="h-5 w-5" />} label="Feed" />

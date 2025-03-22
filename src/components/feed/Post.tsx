@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { Loader2 } from 'lucide-react';
 
 // Import sub-components
 import { ImageCarousel } from './post/ImageCarousel';
@@ -67,6 +68,7 @@ export const Post = ({
   const [localRoared, setLocalRoared] = useState(roared);
   const [localRoarCount, setLocalRoarCount] = useState(roarCount);
   const [showComments, setShowComments] = useState(false);
+  const [loadingComments, setLoadingComments] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [comments, setComments] = useState<{id: string, user: string, text: string, timeAgo: string}[]>([]);
   const [mirrorSheetOpen, setMirrorSheetOpen] = useState(false);
@@ -96,14 +98,16 @@ export const Post = ({
 
   const handleCommentToggle = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent post navigation
-    setShowComments(!showComments);
     
-    if (comments.length === 0) {
-      setComments([
-        { id: '1', user: 'sarah', text: 'This is amazing! Thanks for sharing.', timeAgo: '5m' },
-        { id: '2', user: 'alex', text: 'I had a similar experience last week.', timeAgo: '12m' },
-      ]);
+    if (!showComments) {
+      setLoadingComments(true);
+      // Set timeout to simulate loading
+      setTimeout(() => {
+        setLoadingComments(false);
+      }, 1000);
     }
+    
+    setShowComments(!showComments);
   };
 
   const handleAddComment = (text: string) => {
@@ -160,6 +164,13 @@ export const Post = ({
     }
   };
 
+  const handleShareSuccess = (platform: string) => {
+    // Close share sheet after a delay to show success state
+    setTimeout(() => {
+      setShareSheetOpen(false);
+    }, 2000);
+  };
+
   const postId = useRef(postCode || Array.from({length: 6}, () => 
     Math.floor(Math.random() * 36).toString(36)).join('')
   ).current;
@@ -206,7 +217,9 @@ export const Post = ({
         
         {images && images.length > 0 && (
           <div className="mt-3 relative" data-media-element="true">
-            <ImageCarousel images={images} onImageClick={handleImageClick} />
+            <AspectRatio ratio={16/9} className="overflow-hidden rounded-md">
+              <ImageCarousel images={images} onImageClick={handleImageClick} />
+            </AspectRatio>
           </div>
         )}
         
@@ -256,15 +269,23 @@ export const Post = ({
             video={video}
             postCode={postCode}
             community={community}
+            onShareSuccess={handleShareSuccess}
           />
         </div>
         
         {showComments && (
           <div onClick={(e) => e.stopPropagation()} className="w-full">
-            <CommentSection 
-              comments={comments}
-              onAddComment={handleAddComment}
-            />
+            {loadingComments ? (
+              <div className="w-full py-8 flex justify-center">
+                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+              </div>
+            ) : (
+              <CommentSection 
+                comments={comments}
+                postCode={postCode || ''}
+                onAddComment={handleAddComment}
+              />
+            )}
           </div>
         )}
       </CardFooter>

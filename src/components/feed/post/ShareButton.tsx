@@ -1,12 +1,16 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Share2 } from 'lucide-react';
-import { isMobile } from '@/utils/responsive';
-import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter, SheetClose } from '@/components/ui/sheet';
-import { Drawer, DrawerTrigger, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter, DrawerClose } from '@/components/ui/drawer';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+  SheetClose,
+} from '@/components/ui/sheet';
+import { ShareIcon } from 'lucide-react';
 import { ShareContent } from './ShareContent';
-import { useToast } from '@/hooks/use-toast';
 
 interface ShareButtonProps {
   open: boolean;
@@ -18,6 +22,7 @@ interface ShareButtonProps {
   video?: string;
   postCode?: string;
   community?: string;
+  onShareSuccess?: (platform: string) => void;
 }
 
 export const ShareButton = ({ 
@@ -26,58 +31,48 @@ export const ShareButton = ({
   username, 
   timeAgo, 
   content, 
-  images, 
+  images,
   video,
   postCode,
-  community
+  community,
+  onShareSuccess
 }: ShareButtonProps) => {
-  const mobile = isMobile();
-  const { toast } = useToast();
+  const [shareCount, setShareCount] = useState(0);
+  
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent post navigation
+    onOpenChange(true);
+  };
   
   const handleClose = () => {
     onOpenChange(false);
   };
   
-  const handleShareClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onOpenChange(true);
-  };
-  
-  // Prevent post navigation when clicking share button
-  const handleButtonClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-  };
-  
   const handleShareSuccess = (platform: string) => {
-    // Don't close the modal/drawer automatically on share
-    toast({
-      title: "Shared successfully",
-      description: `Your post was shared on ${platform}`,
-    });
+    setShareCount(prev => prev + 1);
+    if (onShareSuccess) {
+      onShareSuccess(platform);
+    }
   };
   
-  if (mobile) {
-    return (
-      <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerTrigger asChild>
-          <Button 
-            variant="ghost" 
-            size="sm"
-            className="gap-2 hover:text-green-500 hover:bg-green-500/10"
-            onClick={handleButtonClick}
-          >
-            <Share2 className="h-4 w-4" />
-            <span>Share</span>
-          </Button>
-        </DrawerTrigger>
-        <DrawerContent className="max-h-[90vh]">
-          <DrawerHeader className="border-b">
-            <DrawerTitle>Share Post</DrawerTitle>
-            <DrawerDescription>
-              Share this post with others
-            </DrawerDescription>
-          </DrawerHeader>
-          
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetTrigger asChild>
+        <Button 
+          variant="ghost" 
+          size="sm"
+          onClick={handleClick}
+          className="gap-2 hover:text-blue-500 hover:bg-blue-500/10"
+        >
+          <ShareIcon className="h-4 w-4" />
+          {shareCount > 0 && <span>{shareCount}</span>}
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="bottom" className="h-[90vh] sm:max-w-md sm:h-[85vh] mx-auto p-0 overflow-auto">
+        <SheetHeader className="p-4 text-left border-b sticky top-0 bg-background z-10">
+          <SheetTitle>Share Post</SheetTitle>
+        </SheetHeader>
+        <div className="overflow-auto">
           <ShareContent 
             username={username}
             timeAgo={timeAgo}
@@ -89,55 +84,8 @@ export const ShareButton = ({
             onClose={handleClose}
             onShareSuccess={handleShareSuccess}
           />
-          
-          <DrawerFooter className="border-t p-4">
-            <DrawerClose asChild>
-              <Button variant="outline" className="w-full">Cancel</Button>
-            </DrawerClose>
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
-    );
-  }
-  
-  return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetTrigger asChild>
-        <Button 
-          variant="ghost" 
-          size="sm"
-          className="gap-2 hover:text-green-500 hover:bg-green-500/10"
-          onClick={handleButtonClick}
-        >
-          <Share2 className="h-4 w-4" />
-          <span>Share</span>
-        </Button>
-      </SheetTrigger>
-      <SheetContent side="right" className="sm:max-w-md">
-        <SheetHeader>
-          <SheetTitle>Share Post</SheetTitle>
-          <SheetDescription>
-            Share this post with others
-          </SheetDescription>
-        </SheetHeader>
-        
-        <ShareContent 
-          username={username}
-          timeAgo={timeAgo}
-          content={content}
-          images={images}
-          video={video}
-          postCode={postCode}
-          community={community}
-          onClose={handleClose}
-          onShareSuccess={handleShareSuccess}
-        />
-        
-        <SheetFooter className="mt-6">
-          <SheetClose asChild>
-            <Button variant="outline" className="w-full">Cancel</Button>
-          </SheetClose>
-        </SheetFooter>
+        </div>
+        <SheetClose className="absolute top-4 right-4" />
       </SheetContent>
     </Sheet>
   );
