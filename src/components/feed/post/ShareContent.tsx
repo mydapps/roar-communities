@@ -15,6 +15,7 @@ interface ShareContentProps {
   postCode?: string;
   community?: string;
   onClose: () => void;
+  onShareSuccess?: (platform: string) => void;
 }
 
 const truncateText = (text: string, maxLength: number = 100) => {
@@ -30,7 +31,8 @@ export const ShareContent = ({
   video, 
   postCode,
   community,
-  onClose 
+  onClose,
+  onShareSuccess
 }: ShareContentProps) => {
   const { toast } = useToast();
   const formatUsername = (name: string) => {
@@ -62,9 +64,13 @@ export const ShareContent = ({
         description: platform === 'copy' ? "Link copied to clipboard" : `Post shared on ${platform}`
       });
       
-      setTimeout(() => {
-        onClose();
-      }, 500);
+      // Call the onShareSuccess callback if provided
+      if (onShareSuccess) {
+        onShareSuccess(platform);
+      }
+      
+      // Don't close immediately to give feedback to the user
+      // The parent component will handle closing after showing feedback
     } else {
       toast({
         title: "Sharing failed",
