@@ -121,7 +121,7 @@ const PrivyAuthProvider = ({ children }: PrivyAuthProviderProps) => {
         appearance: {
           theme: 'light',
           accentColor: '#31bcc3',
-          logo: 'https://dapps.co/icon-128x128.png',
+          logo: 'https://dapps.co/logo1.png',
         },
         embeddedWallets: {
           noPromptOnSignature: true,
