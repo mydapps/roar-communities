@@ -35,14 +35,19 @@ const MeowButton = ({
     e.preventDefault();
     e.stopPropagation();
     
-    setMeowWavesAnimation(true);
-    setMeowAnimating(true);
-    setMeowTextAnimating(true);
+    // Only show animation when adding a meow, not removing it
+    if (!comment.has_meowed) {
+      setMeowWavesAnimation(true);
+      setMeowAnimating(true);
+      setMeowTextAnimating(true);
+      
+      setTimeout(() => setMeowWavesAnimation(false), 1000);
+      setTimeout(() => setMeowAnimating(false), 1200);
+      setTimeout(() => setMeowTextAnimating(false), 1500);
+    }
     
-    setTimeout(() => onMeow(comment.id), 10);
-    setTimeout(() => setMeowWavesAnimation(false), 1000);
-    setTimeout(() => setMeowAnimating(false), 1200);
-    setTimeout(() => setMeowTextAnimating(false), 1500);
+    // Call the onMeow handler
+    onMeow(comment.id);
   };
   
   return (
@@ -85,7 +90,7 @@ const CommentItem = ({
   return (
     <div key={comment.id} className="flex gap-3 w-full mb-4">
       <Avatar className="h-8 w-8 flex-shrink-0">
-        <AvatarImage src={comment.avatar_url || `https://api.dicebear.com/7.x/personas/svg?seed=${comment.handle}`} />
+        <AvatarImage src={`https://img.dapps.co/avatar/${comment.avatar_url}.svg`} />
         <AvatarFallback>{comment.handle[0].toUpperCase()}</AvatarFallback>
       </Avatar>
       <div className="flex-1">
@@ -150,15 +155,18 @@ export const CommentSection = ({ comments: initialComments, postCode, onAddComme
     e.preventDefault();
     if (!newComment.trim()) return;
     
+    // Get user avatar from localStorage
+    const userAvatar = localStorage.getItem('dapps_user_avatar') || 'default';
+    const userHandle = localStorage.getItem('dapps_user_handle') || 'you';
+    
     // Optimistically add the comment locally first for better UX
     const tempId = Date.now();
-    const userHandle = localStorage.getItem('dapps_user_handle') || 'you';
     
     const tempComment: Reply = {
       id: tempId,
       uid: 0,
       handle: userHandle,
-      avatar_url: `https://api.dicebear.com/7.x/personas/svg?seed=${userHandle}`,
+      avatar_url: userAvatar,
       content: newComment,
       created_on: new Date().toISOString(),
       time_ago: 'just now',
@@ -167,7 +175,8 @@ export const CommentSection = ({ comments: initialComments, postCode, onAddComme
       has_meowed: false,
     };
     
-    setApiComments(prev => [tempComment, ...prev]);
+    // Add new comment at the bottom (after existing comments)
+    setApiComments(prev => [...prev, tempComment]);
     setNewComment('');
     setSubmittingComment(true);
     
@@ -184,6 +193,7 @@ export const CommentSection = ({ comments: initialComments, postCode, onAddComme
                 id: response.reply_id,
                 time_ago: 'just now',
                 created_on: response.created_on,
+                avatar_url: response.avatar_url,
               }
             : comment
         ));
@@ -306,6 +316,9 @@ export const CommentSection = ({ comments: initialComments, postCode, onAddComme
     return '@' + name.split('.')[0];
   };
   
+  // Get user avatar from localStorage
+  const userAvatar = localStorage.getItem('dapps_user_avatar') || 'default';
+  
   return (
     <div className="space-y-4 mt-4 w-full">
       <h3 className="font-medium text-lg">Comments ({loading ? '...' : apiComments.length})</h3>
@@ -329,7 +342,7 @@ export const CommentSection = ({ comments: initialComments, postCode, onAddComme
       <form onSubmit={handleSubmit} className="mt-4 w-full">
         <div className="flex gap-3 w-full">
           <Avatar className="h-8 w-8 flex-shrink-0">
-            <AvatarImage src="https://api.dicebear.com/7.x/personas/svg?seed=you" />
+            <AvatarImage src={`https://img.dapps.co/avatar/${userAvatar}.svg`} />
             <AvatarFallback>Y</AvatarFallback>
           </Avatar>
           <div className="flex-1 space-y-2 w-full">

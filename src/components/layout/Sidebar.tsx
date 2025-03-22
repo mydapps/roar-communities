@@ -64,8 +64,8 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         </div>
         
         <ScrollArea className="h-[calc(100vh-4rem)] md:h-[calc(100vh-4rem)] pb-10 sticky top-16">
-          <div className="px-3 py-4">
-            <nav className="space-y-1">
+          <div className="px-3 py-4 sticky top-0">
+            <nav className="space-y-1 sticky top-0">
               <NavItem to="/feed" icon={<Home className="h-5 w-5" />} label="Feed" />
               <NavItem to="/search" icon={<Search className="h-5 w-5" />} label="Search" />
               <NavItem to="/communities" icon={<Users className="h-5 w-5" />} label="Communities" />
@@ -84,7 +84,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
               <NavItem to="/account" icon={<Settings className="h-5 w-5" />} label="Account" />
             </nav>
 
-            <div className="mt-8 space-y-2">
+            <div className="mt-8 space-y-2 sticky top-0">
               <div className="px-4 py-2">
                 <h4 className="text-sm font-medium text-muted-foreground mb-3">My Communities</h4>
                 <div className="space-y-1">
@@ -95,7 +95,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
               </div>
             </div>
             
-            <div className="mt-8 px-4">
+            <div className="mt-8 px-4 sticky top-0">
               <Button className="w-full" size="sm">
                 Create Community
               </Button>

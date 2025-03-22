@@ -6,9 +6,10 @@ interface RoarButtonProps {
   count: number;
   active: boolean;
   onClick: () => void;
+  postCode?: string;
 }
 
-export const RoarButton = ({ count, active, onClick }: RoarButtonProps) => {
+export const RoarButton = ({ count, active, onClick, postCode }: RoarButtonProps) => {
   const [localActive, setLocalActive] = useState(active);
   const [localCount, setLocalCount] = useState(count);
   const [roarAnimation, setRoarAnimation] = useState(false);
@@ -20,9 +21,11 @@ export const RoarButton = ({ count, active, onClick }: RoarButtonProps) => {
     setLocalCount(count);
   }, [active, count]);
 
-  const handleClick = () => {
+  const handleClick = async () => {
+    // Call the parent component's onClick handler
     onClick();
     
+    // Only animate when adding a roar, not removing it
     if (!localActive) {
       setRoarWavesAnimation(true);
       setTimeout(() => setRoarAnimation(true), 50);
@@ -31,6 +34,37 @@ export const RoarButton = ({ count, active, onClick }: RoarButtonProps) => {
       setTimeout(() => setRoarWavesAnimation(false), 1500);
       setTimeout(() => setRoarAnimation(false), 1800);
       setTimeout(() => setRoarTextAnimation(false), 2000);
+    }
+    
+    // If postCode is provided, perform the API call
+    if (postCode) {
+      try {
+        const userKey = localStorage.getItem('dapps_user_key');
+        
+        if (!userKey) {
+          console.error('No user key found for roaring a post');
+          return;
+        }
+        
+        const response = await fetch('https://api.dapps.co/roar_post', {
+          method: 'POST',
+          headers: {
+            'x-user-key': userKey,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ postCode })
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to roar post: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('Roar response:', data);
+      } catch (error) {
+        console.error('Error roaring post:', error);
+        // No need to revert the UI state since the parent component handles it
+      }
     }
   };
 
