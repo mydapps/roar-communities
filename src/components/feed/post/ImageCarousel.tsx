@@ -7,28 +7,41 @@ import { Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext
 interface ImageCarouselProps {
   images: string[];
   onImageClick: (image: string) => void;
+  fullscreen?: boolean;
+  initialIndex?: number;
 }
 
-export const ImageCarousel = ({ images, onImageClick }: ImageCarouselProps) => {
-  const [emblaRef, emblaApi] = useEmblaCarousel();
-  const [activeDotIndex, setActiveDotIndex] = useState(0);
+export const ImageCarousel = ({ 
+  images, 
+  onImageClick, 
+  fullscreen = false,
+  initialIndex = 0
+}: ImageCarouselProps) => {
+  const options = fullscreen ? { startIndex: initialIndex } : {};
+  const [emblaRef, emblaApi] = useEmblaCarousel(options);
+  const [activeDotIndex, setActiveDotIndex] = useState(initialIndex);
 
   useEffect(() => {
     if (emblaApi) {
       emblaApi.on('select', () => {
         setActiveDotIndex(emblaApi.selectedScrollSnap());
       });
+      
+      // Set initial slide if specified
+      if (initialIndex > 0 && initialIndex < images.length) {
+        emblaApi.scrollTo(initialIndex);
+      }
     }
-  }, [emblaApi]);
+  }, [emblaApi, initialIndex, images.length]);
 
   if (images.length === 1) {
     return (
-      <div onClick={() => onImageClick(images[0])}>
+      <div onClick={() => onImageClick(images[0])} data-media-element="true">
         <AspectRatio ratio={16/9} className="overflow-hidden rounded-md">
           <img 
             src={images[0]} 
             alt="Post attachment" 
-            className="w-full h-full object-cover cursor-pointer" 
+            className={`w-full h-full ${fullscreen ? 'object-contain' : 'object-cover'} cursor-pointer`} 
           />
         </AspectRatio>
       </div>
@@ -46,7 +59,7 @@ export const ImageCarousel = ({ images, onImageClick }: ImageCarouselProps) => {
                   <img 
                     src={img} 
                     alt={`Post attachment ${index + 1}`} 
-                    className="w-full h-full object-cover cursor-pointer" 
+                    className={`w-full h-full ${fullscreen ? 'object-contain' : 'object-cover'} cursor-pointer`} 
                   />
                 </AspectRatio>
               </div>

@@ -5,7 +5,6 @@ import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
-import { MessageCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -18,6 +17,7 @@ import { MirrorButton } from './post/MirrorButton';
 import { ShareButton } from './post/ShareButton';
 import { IpfsButton } from './post/IpfsButton';
 import { MirrorPostContent } from './post/MirrorPostContent';
+import { CommentSection } from './post/CommentSection';
 
 export interface PostProps {
   username: string;
@@ -68,13 +68,13 @@ export const Post = ({
   const [localRoarCount, setLocalRoarCount] = useState(roarCount);
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState('');
-  const [comments, setComments] = useState<{user: string, text: string, timeAgo: string}[]>([]);
+  const [comments, setComments] = useState<{id: string, user: string, text: string, timeAgo: string}[]>([]);
   const [mirrorSheetOpen, setMirrorSheetOpen] = useState(false);
   const [selectedCommunity, setSelectedCommunity] = useState<string | null>(null);
   const [ipfsSheetOpen, setIpfsSheetOpen] = useState(false);
   const [shareSheetOpen, setShareSheetOpen] = useState(false);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const isMobile = useIsMobile();
   
   const { toast } = useToast();
@@ -99,49 +99,23 @@ export const Post = ({
     
     if (comments.length === 0) {
       setComments([
-        { user: 'sarah', text: 'This is amazing! Thanks for sharing.', timeAgo: '5m' },
-        { user: 'alex', text: 'I had a similar experience last week.', timeAgo: '12m' },
+        { id: '1', user: 'sarah', text: 'This is amazing! Thanks for sharing.', timeAgo: '5m' },
+        { id: '2', user: 'alex', text: 'I had a similar experience last week.', timeAgo: '12m' },
       ]);
     }
   };
 
-  const handleAddComment = () => {
-    if (newComment.trim()) {
+  const handleAddComment = (text: string) => {
+    if (text.trim()) {
+      const newId = `comment-${Date.now()}`;
       setComments([
         ...comments,
-        { user: 'you', text: newComment, timeAgo: 'just now' }
+        { id: newId, user: 'you', text, timeAgo: 'just now' }
       ]);
-      setNewComment('');
-    }
-  };
-
-  const handleShare = async (platform: string) => {
-    setShareSheetOpen(false);
-    
-    const shareData = {
-      title: `${username}'s post on Lion's Roar`,
-      text: content,
-      url: window.location.href,
-    };
-    
-    if (platform === 'Web Share API' && navigator.share) {
-      try {
-        await navigator.share(shareData);
-        toast({
-          title: "Shared successfully",
-          description: "Your post has been shared",
-        });
-      } catch (error) {
-        console.error("Error sharing:", error);
-      }
-    } else if (platform === 'Copy Link') {
-      navigator.clipboard.writeText(window.location.href);
       toast({
-        title: "Copied to clipboard",
-        description: "Link has been copied to clipboard",
+        title: "Comment added",
+        description: "Your comment has been added to the post"
       });
-    } else {
-      console.log(`Sharing to ${platform}`);
     }
   };
 
@@ -161,8 +135,13 @@ export const Post = ({
   };
 
   const handleImageClick = (imageSrc: string) => {
-    setSelectedImage(imageSrc);
-    setImageViewerOpen(true);
+    if (images) {
+      const index = images.findIndex(img => img === imageSrc);
+      if (index !== -1) {
+        setSelectedImageIndex(index);
+        setImageViewerOpen(true);
+      }
+    }
   };
 
   const handlePostClick = (e: React.MouseEvent) => {
@@ -240,46 +219,59 @@ export const Post = ({
           </div>
         )}
       </CardContent>
-      <CardFooter className="pt-0 flex justify-between">
-        <div className="flex items-center gap-1.5">
-          <RoarButton 
-            count={localRoarCount} 
-            active={localRoared} 
-            onClick={handleRoar} 
-          />
+      <CardFooter className="pt-0 flex justify-between flex-col">
+        <div className="flex justify-between w-full mb-3">
+          <div className="flex items-center gap-1.5">
+            <RoarButton 
+              count={localRoarCount} 
+              active={localRoared} 
+              onClick={handleRoar} 
+            />
+            
+            <CommentButton count={commentCount} onClick={handleCommentToggle} />
+            
+            <MirrorButton 
+              open={mirrorSheetOpen} 
+              onOpenChange={setMirrorSheetOpen} 
+              selectedCommunity={selectedCommunity} 
+              onMirror={handleMirror}
+              username={username}
+              timeAgo={timeAgo}
+              content={content}
+              images={images}
+              video={video}
+            />
+          </div>
           
-          <CommentButton count={commentCount} onClick={handleCommentToggle} />
-          
-          <MirrorButton 
-            open={mirrorSheetOpen} 
-            onOpenChange={setMirrorSheetOpen} 
-            selectedCommunity={selectedCommunity} 
-            onMirror={handleMirror}
+          <ShareButton 
+            open={shareSheetOpen} 
+            onOpenChange={setShareSheetOpen} 
             username={username}
             timeAgo={timeAgo}
             content={content}
             images={images}
             video={video}
+            postCode={postCode}
+            community={community}
           />
         </div>
         
-        <ShareButton 
-          open={shareSheetOpen} 
-          onOpenChange={setShareSheetOpen} 
-          onShare={handleShare}
-          username={username}
-          timeAgo={timeAgo}
-          content={content}
-          images={images}
-          video={video}
-        />
+        {showComments && (
+          <CommentSection 
+            comments={comments}
+            onAddComment={handleAddComment}
+          />
+        )}
       </CardFooter>
 
-      <ImageViewer 
-        image={selectedImage} 
-        open={imageViewerOpen} 
-        onOpenChange={setImageViewerOpen} 
-      />
+      {images && images.length > 0 && (
+        <ImageViewer 
+          images={images} 
+          selectedImageIndex={selectedImageIndex}
+          open={imageViewerOpen} 
+          onOpenChange={setImageViewerOpen} 
+        />
+      )}
     </Card>
   );
 };

@@ -1,17 +1,19 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogClose } from '@/components/ui/dialog';
+import { ImageCarousel } from './ImageCarousel';
 
 interface ImageViewerProps {
-  image: string | null;
+  images: string[];
+  selectedImageIndex: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export const ImageViewer = ({ image, open, onOpenChange }: ImageViewerProps) => {
-  if (!image) return null;
+export const ImageViewer = ({ images, selectedImageIndex, open, onOpenChange }: ImageViewerProps) => {
+  if (!images || images.length === 0) return null;
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -22,11 +24,14 @@ export const ImageViewer = ({ image, open, onOpenChange }: ImageViewerProps) => 
               <X className="h-4 w-4" />
             </Button>
           </DialogClose>
-          <img 
-            src={image} 
-            alt="Full size" 
-            className="w-full max-h-[80vh] object-contain"
-          />
+          <div className="max-h-[80vh]">
+            <ImageCarousel 
+              images={images} 
+              onImageClick={() => {}} 
+              fullscreen={true}
+              initialIndex={selectedImageIndex}
+            />
+          </div>
         </div>
       </DialogContent>
     </Dialog>

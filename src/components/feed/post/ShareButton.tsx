@@ -6,29 +6,36 @@ import { isMobile } from '@/utils/responsive';
 import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter, SheetClose } from '@/components/ui/sheet';
 import { Drawer, DrawerTrigger, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter, DrawerClose } from '@/components/ui/drawer';
 import { ShareContent } from './ShareContent';
+import { useToast } from '@/hooks/use-toast';
 
 interface ShareButtonProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onShare: (platform: string) => void;
   username: string;
   timeAgo: string;
   content: string;
   images?: string[];
   video?: string;
+  postCode?: string;
+  community?: string;
 }
 
 export const ShareButton = ({ 
   open, 
   onOpenChange, 
-  onShare, 
   username, 
   timeAgo, 
   content, 
   images, 
-  video 
+  video,
+  postCode,
+  community
 }: ShareButtonProps) => {
   const mobile = isMobile();
+  
+  const handleClose = () => {
+    onOpenChange(false);
+  };
   
   if (mobile) {
     return (
@@ -57,7 +64,9 @@ export const ShareButton = ({
             content={content}
             images={images}
             video={video}
-            onShare={onShare}
+            postCode={postCode}
+            community={community}
+            onClose={handleClose}
           />
           
           <DrawerFooter className="border-t p-4">
@@ -96,7 +105,9 @@ export const ShareButton = ({
           content={content}
           images={images}
           video={video}
-          onShare={onShare}
+          postCode={postCode}
+          community={community}
+          onClose={handleClose}
         />
         
         <SheetFooter className="mt-6">

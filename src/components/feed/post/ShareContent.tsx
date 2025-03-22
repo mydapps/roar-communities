@@ -3,6 +3,8 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Share2, Copy } from 'lucide-react';
+import { shareToSocialMedia, SharePlatform } from '@/utils/shareUtils';
+import { useToast } from '@/hooks/use-toast';
 
 interface ShareContentProps {
   username: string;
@@ -10,12 +12,66 @@ interface ShareContentProps {
   content: string;
   images?: string[];
   video?: string;
-  onShare: (platform: string) => void;
+  postCode?: string;
+  community?: string;
+  onClose: () => void;
 }
 
-export const ShareContent = ({ username, timeAgo, content, images, video, onShare }: ShareContentProps) => {
+const truncateText = (text: string, maxLength: number = 100) => {
+  if (text.length <= maxLength) return text;
+  return text.substring(0, maxLength) + '...';
+};
+
+export const ShareContent = ({ 
+  username, 
+  timeAgo, 
+  content, 
+  images, 
+  video, 
+  postCode,
+  community,
+  onClose 
+}: ShareContentProps) => {
+  const { toast } = useToast();
   const formatUsername = (name: string) => {
     return '@' + name.split('.')[0];
+  };
+  
+  const getShareUrl = () => {
+    const baseUrl = window.location.origin;
+    if (community && postCode) {
+      return `${baseUrl}/c/${community.toLowerCase().replace(/\s+/g, '-')}/${postCode}`;
+    }
+    return window.location.href;
+  };
+  
+  const handleShare = async (platform: SharePlatform) => {
+    const shareUrl = getShareUrl();
+    const shareTitle = `${formatUsername(username)}'s post on Lion's Roar`;
+    const shareText = truncateText(content, 100);
+    
+    const success = await shareToSocialMedia(platform, {
+      url: shareUrl,
+      title: shareTitle,
+      text: shareText
+    });
+    
+    if (success) {
+      toast({
+        title: "Shared successfully",
+        description: platform === 'copy' ? "Link copied to clipboard" : `Post shared on ${platform}`
+      });
+      
+      setTimeout(() => {
+        onClose();
+      }, 500);
+    } else {
+      toast({
+        title: "Sharing failed",
+        description: "Could not share the post",
+        variant: "destructive"
+      });
+    }
   };
   
   return (
@@ -32,7 +88,7 @@ export const ShareContent = ({ username, timeAgo, content, images, video, onShar
               <span className="text-muted-foreground text-sm mx-1">·</span>
               <span className="text-muted-foreground text-sm">{timeAgo}</span>
             </div>
-            <p className="text-sm mt-1">{content}</p>
+            <p className="text-sm mt-1">{truncateText(content, 150)}</p>
           </div>
         </div>
         
@@ -67,7 +123,7 @@ export const ShareContent = ({ username, timeAgo, content, images, video, onShar
             <Button 
               variant="outline" 
               className="flex flex-col h-20 gap-1 items-center justify-center" 
-              onClick={() => onShare('Web Share API')}
+              onClick={() => handleShare('native')}
             >
               <div className="w-8 h-8 flex items-center justify-center rounded-full bg-primary/10">
                 <Share2 className="h-4 w-4 text-primary" />
@@ -78,7 +134,7 @@ export const ShareContent = ({ username, timeAgo, content, images, video, onShar
           <Button 
             variant="outline" 
             className="flex flex-col h-20 gap-1 items-center justify-center" 
-            onClick={() => onShare('Twitter')}
+            onClick={() => handleShare('twitter')}
           >
             <div className="w-8 h-8 flex items-center justify-center rounded-full bg-[#1DA1F2]/10">
               <svg width="20" height="20" viewBox="0 0 24 24" className="text-[#1DA1F2]">
@@ -91,20 +147,20 @@ export const ShareContent = ({ username, timeAgo, content, images, video, onShar
           <Button 
             variant="outline" 
             className="flex flex-col h-20 gap-1 items-center justify-center" 
-            onClick={() => onShare('WhatsApp')}
+            onClick={() => handleShare('facebook')}
           >
-            <div className="w-8 h-8 flex items-center justify-center rounded-full bg-[#25D366]/10">
-              <svg width="20" height="20" viewBox="0 0 24 24" className="text-[#25D366]">
-                <path fill="currentColor" d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+            <div className="w-8 h-8 flex items-center justify-center rounded-full bg-[#1877F2]/10">
+              <svg width="20" height="20" viewBox="0 0 24 24" className="text-[#1877F2]">
+                <path fill="currentColor" d="M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12c0 4.84 3.44 8.87 8 9.8V15H8v-3h2V9.5C10 7.57 11.57 6 13.5 6H16v3h-2c-.55 0-1 .45-1 1v2h3v3h-3v6.95c5.05-.5 9-4.76 9-9.95z" />
               </svg>
             </div>
-            <span className="text-xs">WhatsApp</span>
+            <span className="text-xs">Facebook</span>
           </Button>
           
           <Button 
             variant="outline" 
             className="flex flex-col h-20 gap-1 items-center justify-center" 
-            onClick={() => onShare('Farcaster')}
+            onClick={() => handleShare('farcaster')}
           >
             <div className="w-8 h-8 flex items-center justify-center rounded-full bg-[#855DCD]/10">
               <svg width="20" height="20" viewBox="0 0 24 24" className="text-[#855DCD]">
@@ -117,7 +173,20 @@ export const ShareContent = ({ username, timeAgo, content, images, video, onShar
           <Button 
             variant="outline" 
             className="flex flex-col h-20 gap-1 items-center justify-center" 
-            onClick={() => onShare('Copy Link')}
+            onClick={() => handleShare('telegram')}
+          >
+            <div className="w-8 h-8 flex items-center justify-center rounded-full bg-[#0088cc]/10">
+              <svg width="20" height="20" viewBox="0 0 24 24" className="text-[#0088cc]">
+                <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.05-.2-.06-.06-.17-.04-.25-.02-.11.02-1.84 1.17-5.21 3.42-.49.33-.94.5-1.35.48-.44-.02-1.3-.25-1.93-.46-.78-.26-1.39-.4-1.34-.85.03-.22.32-.45.88-.68 3.44-1.57 5.75-2.58 6.9-3.06 3.27-1.36 3.96-1.6 4.4-1.6.1 0 .32.02.45.17.13.13.18.35.14.66z" />
+              </svg>
+            </div>
+            <span className="text-xs">Telegram</span>
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            className="flex flex-col h-20 gap-1 items-center justify-center" 
+            onClick={() => handleShare('copy')}
           >
             <div className="w-8 h-8 flex items-center justify-center rounded-full bg-muted">
               <Copy className="h-4 w-4 text-foreground" />
