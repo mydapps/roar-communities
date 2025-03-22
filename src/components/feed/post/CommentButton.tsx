@@ -5,7 +5,7 @@ import { MessageCircle } from 'lucide-react';
 
 interface CommentButtonProps {
   count: number;
-  onClick: () => void;
+  onClick: (e: React.MouseEvent) => void;  // Updated to accept MouseEvent parameter
 }
 
 export const CommentButton = ({ count, onClick }: CommentButtonProps) => {
