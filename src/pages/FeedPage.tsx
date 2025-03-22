@@ -22,6 +22,7 @@ const FeedPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const observer = useRef<IntersectionObserver | null>(null);
   const loadingRef = useRef<HTMLDivElement>(null);
+  const isLoadingRef = useRef<boolean>(false);
   
   const isMobile = useIsMobile();
   const navigate = useNavigate();
@@ -59,15 +60,17 @@ const FeedPage = () => {
 
   // Fetch posts based on active tab
   const loadPosts = useCallback(async (page: number, resetExisting = false) => {
-    if (loading) {
+    if (isLoadingRef.current) {
       console.log('Already loading posts, skipping fetch request');
       return;
     }
     
     console.log(`Loading posts for tab "${activeTab}", page ${page}, resetExisting=${resetExisting}`);
     setLoading(true);
+    isLoadingRef.current = true;
+    
     try {
-      let fetchedPosts: PostType[];
+      let fetchedPosts: PostType[] = [];
       
       if (activeTab === 'following') {
         console.log('Fetching personal/following posts');
@@ -100,8 +103,9 @@ const FeedPage = () => {
       console.error('Error loading posts:', error);
     } finally {
       setLoading(false);
+      isLoadingRef.current = false;
     }
-  }, [activeTab, loading]);
+  }, [activeTab]);
 
   // Initial posts load when tab changes
   useEffect(() => {
@@ -114,16 +118,21 @@ const FeedPage = () => {
 
   // Set up intersection observer for infinite scrolling
   useEffect(() => {
+    // Cleanup any previous observer
+    if (observer.current) {
+      observer.current.disconnect();
+    }
+    
     console.log('Setting up intersection observer for infinite scrolling');
     const options = {
       root: null,
-      rootMargin: '0px',
+      rootMargin: '200px',
       threshold: 0.1,
     };
     
     observer.current = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting && hasMore && !loading) {
-        console.log(`Loading element is visible. hasMore=${hasMore}, loading=${loading}. Loading page ${currentPage}`);
+      if (entries[0].isIntersecting && hasMore && !isLoadingRef.current) {
+        console.log(`Loading element is visible. hasMore=${hasMore}, loading=${isLoadingRef.current}. Loading page ${currentPage}`);
         loadPosts(currentPage);
       }
     }, options);
@@ -141,7 +150,7 @@ const FeedPage = () => {
         observer.current.disconnect();
       }
     };
-  }, [currentPage, hasMore, loading, loadPosts]);
+  }, [currentPage, hasMore, loadPosts]);
 
   // Handle toggling roar (upvote) status
   const handleRoar = async (postCode: string, currentRoarStatus: number) => {

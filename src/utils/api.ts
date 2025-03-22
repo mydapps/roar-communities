@@ -65,6 +65,7 @@ export const fetchPosts = async (options: {
     
     if (!userKey) {
       console.error('No user key found');
+      toast.error('Authentication required. Please log in again.');
       return [];
     }
     
@@ -78,7 +79,6 @@ export const fetchPosts = async (options: {
     }
     
     console.log(`Fetching posts from: ${url}`);
-    console.log(`Using user key: ${userKey.substring(0, 5)}...`);
     
     // Make the API request
     const response = await fetch(url, {
@@ -98,7 +98,11 @@ export const fetchPosts = async (options: {
     
     const data = await response.json();
     console.log(`Fetched ${data.length} posts successfully`);
-    console.log('Sample post:', data.length > 0 ? data[0] : 'No posts');
+    if (data.length > 0) {
+      console.log('First post:', JSON.stringify(data[0], null, 2));
+    } else {
+      console.log('No posts returned from API');
+    }
     
     return data;
   } catch (error) {
