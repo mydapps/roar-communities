@@ -141,10 +141,21 @@ const FeedPage = () => {
 
   const handleRoar = async (postCode: string, currentRoarStatus: number) => {
     console.log(`Toggling roar for post ${postCode}, current status: ${currentRoarStatus}`);
+    
+    setPosts(prevPosts => prevPosts.map(post => 
+      post.code === postCode 
+        ? { 
+            ...post, 
+            roar: post.roar === 1 ? 0 : 1,
+            upvotes: post.roar === 1 ? post.upvotes - 1 : post.upvotes + 1 
+          } 
+        : post
+    ));
+    
     const success = await toggleRoar(postCode);
     
-    if (success) {
-      console.log('Roar toggle successful, updating UI');
+    if (!success) {
+      console.log('Roar toggle failed, reverting UI');
       setPosts(prevPosts => prevPosts.map(post => 
         post.code === postCode 
           ? { 

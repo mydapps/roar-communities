@@ -85,35 +85,20 @@ export const Post = ({
   
   const ipfsHash = ipfs || postCode || `Qm${Array.from({length: 44}, () => Math.floor(Math.random() * 16).toString(16)).join('')}`;
 
+  useEffect(() => {
+    setLocalRoared(roared);
+    setLocalRoarCount(roarCount);
+  }, [roared, roarCount]);
+
   const handleRoar = async () => {
     if (onRoar) {
-      onRoar();
-    } else {
-      // Toggle local state immediately for better UX
+      // Update local state immediately for better UX
       const newRoaredState = !localRoared;
       setLocalRoared(newRoaredState);
       setLocalRoarCount(prev => newRoaredState ? prev + 1 : prev - 1);
-
-      if (postCode) {
-        try {
-          const success = await toggleRoar(postCode);
-          if (!success) {
-            // Revert the optimistic update if the API call fails
-            setLocalRoared(!newRoaredState);
-            setLocalRoarCount(prev => newRoaredState ? prev - 1 : prev + 1);
-            toast({
-              title: "Error",
-              description: "Failed to update roar status. Please try again.",
-              variant: "destructive"
-            });
-          }
-        } catch (error) {
-          // Revert the optimistic update on error
-          setLocalRoared(!newRoaredState);
-          setLocalRoarCount(prev => newRoaredState ? prev - 1 : prev + 1);
-          console.error("Error during roar:", error);
-        }
-      }
+      
+      // Then call the parent handler for API interaction
+      onRoar();
     }
   };
 
@@ -199,9 +184,6 @@ export const Post = ({
     }, 2000);
   };
   
-  // Use avatar prop if available, otherwise fallback to username
-  const userAvatar = avatar || username;
-
   const postId = useRef(postCode || Array.from({length: 6}, () => 
     Math.floor(Math.random() * 36).toString(36)).join('')
   ).current;
@@ -216,7 +198,7 @@ export const Post = ({
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-3">
             <Avatar className="h-12 w-12 border-2 border-primary/20 hover:border-primary/50 transition-colors">
-              <AvatarImage src={`https://img.dapps.co/avatar/${userAvatar}.svg`} />
+              <AvatarImage src={`https://img.dapps.co/avatar/${avatar}.svg`} />
               <AvatarFallback>{username[0].toUpperCase()}</AvatarFallback>
             </Avatar>
             <div className="flex flex-col">
@@ -336,36 +318,4 @@ export const Post = ({
       )}
     </Card>
   );
-};
-
-const toggleRoar = async (postCode: string): Promise<boolean> => {
-  try {
-    const userKey = localStorage.getItem('dapps_user_key');
-    
-    if (!userKey) {
-      console.error('No user key found for roar toggle');
-      return false;
-    }
-    
-    console.log(`Toggling roar for post: ${postCode}`);
-    
-    const response = await fetch('https://api.dapps.co/roar_post', {
-      method: 'POST',
-      headers: {
-        'x-user-key': userKey,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ postCode })
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to toggle roar: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    return data.status === "SUCCESS";
-  } catch (error) {
-    console.error('Error toggling roar:', error);
-    return false;
-  }
 };

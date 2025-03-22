@@ -63,45 +63,47 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
           </Button>
         </div>
         
-        <ScrollArea className="flex-1 h-full pb-10 overflow-y-auto sticky top-0">
-          <div className="sticky top-0 px-3 py-4 h-full flex flex-col">
-            <nav className="space-y-1">
-              <NavItem to="/feed" icon={<Home className="h-5 w-5" />} label="Feed" />
-              <NavItem to="/search" icon={<Search className="h-5 w-5" />} label="Search" />
-              <NavItem to="/communities" icon={<Users className="h-5 w-5" />} label="Communities" />
-              <NavItem to="/my-shares" icon={<Wallet className="h-5 w-5" />} label="My Shares" />
-              <NavItem 
-                to="/referral" 
-                icon={
-                  <div className="relative">
-                    <Gift className="h-5 w-5 text-primary" />
-                    <Sparkles className="h-3 w-3 absolute -top-1 -right-1 text-primary" />
-                  </div>
-                } 
-                label="Share the Love" 
-                className="font-medium"
-              />
-              <NavItem to="/account" icon={<Settings className="h-5 w-5" />} label="Account" />
-            </nav>
+        <div className="flex-1 flex flex-col h-full overflow-hidden">
+          <ScrollArea className="flex-1 h-full px-3 py-4">
+            <div className="space-y-1 sticky top-0">
+              <nav className="space-y-1">
+                <NavItem to="/feed" icon={<Home className="h-5 w-5" />} label="Feed" />
+                <NavItem to="/search" icon={<Search className="h-5 w-5" />} label="Search" />
+                <NavItem to="/communities" icon={<Users className="h-5 w-5" />} label="Communities" />
+                <NavItem to="/my-shares" icon={<Wallet className="h-5 w-5" />} label="My Shares" />
+                <NavItem 
+                  to="/referral" 
+                  icon={
+                    <div className="relative">
+                      <Gift className="h-5 w-5 text-primary" />
+                      <Sparkles className="h-3 w-3 absolute -top-1 -right-1 text-primary" />
+                    </div>
+                  } 
+                  label="Share the Love" 
+                  className="font-medium"
+                />
+                <NavItem to="/account" icon={<Settings className="h-5 w-5" />} label="Account" />
+              </nav>
 
-            <div className="mt-8 space-y-2 flex-grow">
-              <div className="px-4 py-2">
-                <h4 className="text-sm font-medium text-muted-foreground mb-3">My Communities</h4>
-                <div className="space-y-1">
-                  <CommunityItem name="Ethereum Devs" img="https://github.com/shadcn.png" />
-                  <CommunityItem name="DeFi Explorers" img="https://github.com/shadcn.png" />
-                  <CommunityItem name="NFT Creators" img="https://github.com/shadcn.png" />
+              <div className="mt-8 space-y-2">
+                <div className="py-2">
+                  <h4 className="text-sm font-medium text-muted-foreground mb-3">My Communities</h4>
+                  <div className="space-y-1">
+                    <CommunityItem name="Ethereum Devs" img="https://github.com/shadcn.png" />
+                    <CommunityItem name="DeFi Explorers" img="https://github.com/shadcn.png" />
+                    <CommunityItem name="NFT Creators" img="https://github.com/shadcn.png" />
+                  </div>
                 </div>
               </div>
+              
+              <div className="mt-8 py-4">
+                <Button className="w-full" size="sm">
+                  Create Community
+                </Button>
+              </div>
             </div>
-            
-            <div className="mt-auto px-4 py-4">
-              <Button className="w-full" size="sm">
-                Create Community
-              </Button>
-            </div>
-          </div>
-        </ScrollArea>
+          </ScrollArea>
+        </div>
       </aside>
     </>
   );

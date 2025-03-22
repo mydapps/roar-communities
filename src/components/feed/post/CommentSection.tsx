@@ -43,6 +43,11 @@ const MeowButton = ({
       setTimeout(() => setMeowWavesAnimation(false), 1000);
       setTimeout(() => setMeowAnimating(false), 1200);
       setTimeout(() => setMeowTextAnimating(false), 1500);
+    } else {
+      // Immediately update visual state when unmeowing
+      setMeowWavesAnimation(false);
+      setMeowAnimating(false);
+      setMeowTextAnimating(false);
     }
     
     // Call the onMeow handler

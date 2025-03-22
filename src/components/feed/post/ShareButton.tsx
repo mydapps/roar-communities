@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -37,7 +37,6 @@ export const ShareButton = ({
   community,
   onShareSuccess
 }: ShareButtonProps) => {
-  const [shareCount, setShareCount] = useState(0);
   
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent post navigation
@@ -46,13 +45,6 @@ export const ShareButton = ({
   
   const handleClose = () => {
     onOpenChange(false);
-  };
-  
-  const handleShareSuccess = (platform: string) => {
-    setShareCount(prev => prev + 1);
-    if (onShareSuccess) {
-      onShareSuccess(platform);
-    }
   };
   
   return (
@@ -65,7 +57,6 @@ export const ShareButton = ({
           className="gap-2 hover:text-blue-500 hover:bg-blue-500/10"
         >
           <ShareIcon className="h-4 w-4" />
-          {shareCount > 0 && <span>{shareCount}</span>}
         </Button>
       </SheetTrigger>
       <SheetContent side="bottom" className="h-[90vh] sm:max-w-md sm:h-[85vh] mx-auto p-0 overflow-auto">
@@ -82,7 +73,7 @@ export const ShareButton = ({
             postCode={postCode}
             community={community}
             onClose={handleClose}
-            onShareSuccess={handleShareSuccess}
+            onShareSuccess={onShareSuccess}
           />
         </div>
         <SheetClose className="absolute top-4 right-4" />
