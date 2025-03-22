@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
@@ -55,7 +54,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogFooter
+  DialogFooter,
+  DialogClose
 } from "@/components/ui/dialog";
 import { 
   Drawer,
@@ -71,6 +71,7 @@ import { Toggle } from '@/components/ui/toggle';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { useIsMobile } from '@/hooks/use-mobile';
+import { AspectRatio } from '@/components/ui/aspect-ratio';
 
 export interface PostProps {
   username: string;
@@ -95,6 +96,7 @@ export interface PostProps {
     originalTimeAgo: string;
     originalAvatar: string;
   };
+  ipfs?: string;
 }
 
 export const Post = ({ 
@@ -112,7 +114,8 @@ export const Post = ({
   roared = false,
   onRoar,
   isMirror = false,
-  mirrorData
+  mirrorData,
+  ipfs
 }: PostProps) => {
   const navigate = useNavigate();
   const [localRoared, setLocalRoared] = useState(roared);
@@ -130,6 +133,8 @@ export const Post = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [ipfsSheetOpen, setIpfsSheetOpen] = useState(false);
   const [shareSheetOpen, setShareSheetOpen] = useState(false);
+  const [imageViewerOpen, setImageViewerOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const isMobile = useIsMobile();
   
   const { toast } = useToast();
@@ -142,7 +147,7 @@ export const Post = ({
     setLocalRoarCount(roarCount);
   }, [roared, roarCount]);
 
-  const ipfsHash = postCode || `Qm${Array.from({length: 44}, () => Math.floor(Math.random() * 16).toString(16)).join('')}`;
+  const ipfsHash = ipfs || postCode || `Qm${Array.from({length: 44}, () => Math.floor(Math.random() * 16).toString(16)).join('')}`;
 
   useEffect(() => {
     if (emblaApi) {
@@ -245,6 +250,12 @@ export const Post = ({
 
   const formatUsername = (name: string) => {
     return '@' + name.split('.')[0];
+  };
+
+  const handleImageClick = (e: React.MouseEvent, imageSrc: string) => {
+    e.stopPropagation();
+    setSelectedImage(imageSrc);
+    setImageViewerOpen(true);
   };
 
   const communities = [
@@ -510,7 +521,8 @@ export const Post = ({
   const handlePostClick = (e: React.MouseEvent) => {
     if (disableNavigation || 
         (e.target as HTMLElement).closest('button') || 
-        (e.target as HTMLElement).closest('a')) {
+        (e.target as HTMLElement).closest('a') ||
+        (e.target as HTMLElement).closest('[data-media-element="true"]')) {
       return;
     }
     
@@ -523,7 +535,6 @@ export const Post = ({
     Math.floor(Math.random() * 36).toString(36)).join('')
   ).current;
 
-  // Render mirror post content
   const renderMirrorPost = () => {
     if (!isMirror || !mirrorData) return null;
     
@@ -662,29 +673,34 @@ export const Post = ({
       <CardContent className="pb-3">
         <p className="text-sm mt-2">{content}</p>
         
-        {/* Render the mirrored content if this is a mirror post */}
         {renderMirrorPost()}
         
         {images && images.length > 0 && (
-          <div className="mt-3 relative">
+          <div className="mt-3 relative" data-media-element="true">
             {images.length === 1 ? (
-              <img 
-                src={images[0]} 
-                alt={`Post attachment`} 
-                className="rounded-md w-full h-auto object-cover max-h-[300px]" 
-              />
+              <div onClick={(e) => handleImageClick(e, images[0])}>
+                <AspectRatio ratio={16/9} className="overflow-hidden rounded-md">
+                  <img 
+                    src={images[0]} 
+                    alt={`Post attachment`} 
+                    className="w-full h-full object-cover cursor-pointer" 
+                  />
+                </AspectRatio>
+              </div>
             ) : (
               <div className="relative">
                 <Carousel className="w-full" ref={emblaRef}>
                   <CarouselContent>
                     {images.map((img, index) => (
                       <CarouselItem key={index}>
-                        <div className="p-1">
-                          <img 
-                            src={img} 
-                            alt={`Post attachment ${index + 1}`} 
-                            className="rounded-md w-full h-auto object-cover max-h-[300px]" 
-                          />
+                        <div className="p-1" onClick={(e) => handleImageClick(e, img)} data-media-element="true">
+                          <AspectRatio ratio={16/9} className="overflow-hidden rounded-md">
+                            <img 
+                              src={img} 
+                              alt={`Post attachment ${index + 1}`} 
+                              className="w-full h-full object-cover cursor-pointer" 
+                            />
+                          </AspectRatio>
                         </div>
                       </CarouselItem>
                     ))}
@@ -708,12 +724,14 @@ export const Post = ({
         )}
         
         {video && (
-          <div className="mt-3">
-            <video 
-              src={video} 
-              controls 
-              className="rounded-md w-full max-h-[300px]"
-            />
+          <div className="mt-3" data-media-element="true">
+            <AspectRatio ratio={16/9} className="overflow-hidden rounded-md">
+              <video 
+                src={video} 
+                controls 
+                className="w-full h-full object-cover"
+              />
+            </AspectRatio>
           </div>
         )}
       </CardContent>
@@ -886,6 +904,6 @@ export const Post = ({
           </Sheet>
         )}
       </CardFooter>
-    </Card>
-  );
-};
+
+      {
+

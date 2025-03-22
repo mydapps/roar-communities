@@ -20,7 +20,7 @@ export interface Post {
   body_shrunk: number;
   upvotes: number;
   comments: number;
-  roar: number;
+  roar: number; // 1 if user has already roared this post, 0 if not
   ipfs: string;
   engagement: number;
   roarable: number;

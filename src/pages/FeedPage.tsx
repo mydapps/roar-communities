@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -28,10 +27,8 @@ const FeedPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Check authentication
   useEffect(() => {
     console.log('FeedPage mounted - Checking auth status');
-    // Check if user key exists
     const userKey = localStorage.getItem('dapps_user_key');
     if (!userKey) {
       console.log('No user key found, redirecting to login');
@@ -40,14 +37,12 @@ const FeedPage = () => {
       return;
     }
     
-    // Temporary for testing - log user authentication data
     console.log('User authentication data:');
     console.log('- User key:', userKey ? `${userKey.substring(0, 5)}...` : 'None');
     console.log('- User ID:', localStorage.getItem('dapps_user_id'));
     console.log('- User registered:', localStorage.getItem('dapps_user_registered'));
     console.log('- User handle:', localStorage.getItem('dapps_user_handle'));
     
-    // Check if user is registered - only redirect if explicitly set to "0"
     const isRegistered = localStorage.getItem('dapps_user_registered');
     console.log('FeedPage - Registration status:', isRegistered);
     
@@ -58,7 +53,6 @@ const FeedPage = () => {
     }
   }, [navigate]);
 
-  // Fetch posts based on active tab
   const loadPosts = useCallback(async (page: number, resetExisting = false) => {
     if (isLoadingRef.current) {
       console.log('Already loading posts, skipping fetch request');
@@ -89,10 +83,7 @@ const FeedPage = () => {
         console.log('No more posts available, setting hasMore=false');
         setHasMore(false);
       } else {
-        // Update page for the next request
         setCurrentPage(page + 1);
-        
-        // Update posts state
         setPosts(prev => {
           const newPosts = resetExisting ? fetchedPosts : [...prev, ...fetchedPosts];
           console.log(`Total posts now: ${newPosts.length}`);
@@ -107,7 +98,6 @@ const FeedPage = () => {
     }
   }, [activeTab]);
 
-  // Initial posts load when tab changes
   useEffect(() => {
     console.log(`Tab changed to "${activeTab}" - resetting posts and loading page 1`);
     setPosts([]);
@@ -116,9 +106,7 @@ const FeedPage = () => {
     loadPosts(1, true);
   }, [activeTab, loadPosts]);
 
-  // Set up intersection observer for infinite scrolling
   useEffect(() => {
-    // Cleanup any previous observer
     if (observer.current) {
       observer.current.disconnect();
     }
@@ -152,14 +140,12 @@ const FeedPage = () => {
     };
   }, [currentPage, hasMore, loadPosts]);
 
-  // Handle toggling roar (upvote) status
   const handleRoar = async (postCode: string, currentRoarStatus: number) => {
     console.log(`Toggling roar for post ${postCode}, current status: ${currentRoarStatus}`);
     const success = await toggleRoar(postCode);
     
     if (success) {
       console.log('Roar toggle successful, updating UI');
-      // Update local state to reflect the change immediately
       setPosts(prevPosts => prevPosts.map(post => 
         post.code === postCode 
           ? { 
@@ -228,7 +214,6 @@ const FeedPage = () => {
           </Card>
           
           <div className="space-y-6">
-            {/* User created posts at the top */}
             {userPosts.map((post, index) => (
               <PostComponent 
                 key={`user-post-${index}`}
@@ -244,7 +229,6 @@ const FeedPage = () => {
               />
             ))}
             
-            {/* API fetched posts */}
             {posts.length > 0 ? (
               posts.map(post => (
                 <PostComponent
@@ -261,6 +245,7 @@ const FeedPage = () => {
                   postCode={post.code}
                   onRoar={() => handleRoar(post.code, post.roar)}
                   isMirror={post.is_mirror === 1}
+                  ipfs={post.ipfs}
                   mirrorData={post.is_mirror === 1 ? {
                     quote: post.mirror_quote || '',
                     originalAuthor: post.original_author || '',
@@ -282,7 +267,6 @@ const FeedPage = () => {
               </Card>
             )}
             
-            {/* Loading indicator */}
             <div 
               ref={loadingRef} 
               className="flex justify-center items-center py-4"
@@ -290,7 +274,6 @@ const FeedPage = () => {
               {loading && <Loader2 className="w-6 h-6 text-primary animate-spin" />}
             </div>
             
-            {/* No more posts indicator */}
             {!hasMore && posts.length > 0 && !loading && (
               <div className="text-center py-4 text-muted-foreground">
                 <p>No more posts to load</p>
@@ -301,7 +284,6 @@ const FeedPage = () => {
   
         <TabsContent value="global" className="space-y-6 animate-fade-in">
           <div className="space-y-6">
-            {/* API fetched posts */}
             {posts.length > 0 ? (
               posts.map(post => (
                 <PostComponent
@@ -318,6 +300,7 @@ const FeedPage = () => {
                   postCode={post.code}
                   onRoar={() => handleRoar(post.code, post.roar)}
                   isMirror={post.is_mirror === 1}
+                  ipfs={post.ipfs}
                   mirrorData={post.is_mirror === 1 ? {
                     quote: post.mirror_quote || '',
                     originalAuthor: post.original_author || '',
@@ -337,7 +320,6 @@ const FeedPage = () => {
               </Card>
             )}
             
-            {/* Loading indicator */}
             <div 
               ref={loadingRef} 
               className="flex justify-center items-center py-4"
@@ -345,7 +327,6 @@ const FeedPage = () => {
               {loading && <Loader2 className="w-6 h-6 text-primary animate-spin" />}
             </div>
             
-            {/* No more posts indicator */}
             {!hasMore && posts.length > 0 && !loading && (
               <div className="text-center py-4 text-muted-foreground">
                 <p>No more posts to load</p>
@@ -356,7 +337,6 @@ const FeedPage = () => {
   
         <TabsContent value="trending" className="space-y-6 animate-fade-in">
           <div className="space-y-6">
-            {/* API fetched posts */}
             {posts.length > 0 ? (
               posts.map(post => (
                 <PostComponent
@@ -373,6 +353,7 @@ const FeedPage = () => {
                   postCode={post.code}
                   onRoar={() => handleRoar(post.code, post.roar)}
                   isMirror={post.is_mirror === 1}
+                  ipfs={post.ipfs}
                   mirrorData={post.is_mirror === 1 ? {
                     quote: post.mirror_quote || '',
                     originalAuthor: post.original_author || '',
@@ -392,7 +373,6 @@ const FeedPage = () => {
               </Card>
             )}
             
-            {/* Loading indicator */}
             <div 
               ref={loadingRef} 
               className="flex justify-center items-center py-4"
@@ -400,7 +380,6 @@ const FeedPage = () => {
               {loading && <Loader2 className="w-6 h-6 text-primary animate-spin" />}
             </div>
             
-            {/* No more posts indicator */}
             {!hasMore && posts.length > 0 && !loading && (
               <div className="text-center py-4 text-muted-foreground">
                 <p>No more posts to load</p>
@@ -413,7 +392,6 @@ const FeedPage = () => {
   );
 };
 
-// Enhanced Community Badge component
 export const CommunityBadge = ({ name }: { name: string }) => {
   const slug = name.toLowerCase().replace(/\s+/g, '-');
   
