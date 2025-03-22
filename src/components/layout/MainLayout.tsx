@@ -22,11 +22,11 @@ const MainLayout = () => {
   };
   
   return (
-    <div className="min-h-screen flex flex-col bg-background overflow-hidden">
+    <div className="min-h-screen flex flex-col bg-background">
       <div className="fixed top-0 left-0 right-0 z-50">
         <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
       </div>
-      <div className="flex flex-1 overflow-hidden pt-16"> {/* Added pt-16 to account for fixed navbar */}
+      <div className="flex flex-1 pt-16"> {/* Added pt-16 to account for fixed navbar */}
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         <PullToRefresh 
           onRefresh={handleRefresh}
@@ -39,7 +39,7 @@ const MainLayout = () => {
           </main>
         </PullToRefresh>
       </div>
-      <MobileBottomNav />
+      {isMobile && <MobileBottomNav />}
     </div>
   );
 };

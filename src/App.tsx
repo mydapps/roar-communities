@@ -30,7 +30,7 @@ function App() {
           <Route path="avatar-handle" element={<AvatarHandlePage />} />
           
           {/* Routes with main layout */}
-          <Route path="/" element={<MainLayout />}>
+          <Route element={<MainLayout />}>
             <Route path="feed" element={<FeedPage />} />
             <Route path="communities" element={<CommunitiesPage />} />
             <Route path="c/:id" element={<CommunityPage />} />
