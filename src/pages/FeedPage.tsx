@@ -5,12 +5,11 @@ import { Post as PostComponent } from '@/components/feed/Post';
 import CreatePostCard from '@/components/feed/CreatePostCard';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Sparkles, Flame, Clock, Globe, ShieldCheck, Loader2 } from 'lucide-react';
+import { Sparkles, Flame, Clock, Globe, Loader2 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Link, useNavigate } from 'react-router-dom';
 import { fetchPosts, Post as PostType, toggleRoar } from '@/utils/api';
 import { useToast } from '@/hooks/use-toast';
-import { ScrollArea } from '@/components/ui/scroll-area';
 
 const FeedPage = () => {
   const [userPosts, setUserPosts] = useState<any[]>([]);
