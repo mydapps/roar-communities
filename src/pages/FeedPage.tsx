@@ -1,19 +1,33 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Post } from '@/components/feed/Post';
+import { Post as PostComponent } from '@/components/feed/Post';
 import CreatePostCard from '@/components/feed/CreatePostCard';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Sparkles, Flame, Clock, Globe, ShieldCheck } from 'lucide-react';
+import { Sparkles, Flame, Clock, Globe, ShieldCheck, Loader2 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Link, useNavigate } from 'react-router-dom';
+import { fetchPosts, Post as PostType, toggleRoar } from '@/utils/api';
+import { useToast } from '@/hooks/use-toast';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const FeedPage = () => {
   const [userPosts, setUserPosts] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'following' | 'global' | 'trending'>('following');
+  const [posts, setPosts] = useState<PostType[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const observer = useRef<IntersectionObserver | null>(null);
+  const loadingRef = useRef<HTMLDivElement>(null);
+  
   const isMobile = useIsMobile();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
+  // Check authentication
   useEffect(() => {
     // Check if user key exists
     const userKey = localStorage.getItem('dapps_user_key');
@@ -35,13 +49,101 @@ const FeedPage = () => {
     }
   }, [navigate]);
 
+  // Fetch posts based on active tab
+  const loadPosts = useCallback(async (page: number, resetExisting = false) => {
+    if (loading) return;
+    
+    setLoading(true);
+    try {
+      let fetchedPosts: PostType[];
+      
+      if (activeTab === 'following') {
+        fetchedPosts = await fetchPosts({ page, personal: true });
+      } else if (activeTab === 'global') {
+        fetchedPosts = await fetchPosts({ page });
+      } else {
+        fetchedPosts = await fetchPosts({ page, trending: true });
+      }
+      
+      if (fetchedPosts.length === 0) {
+        setHasMore(false);
+      } else {
+        // Update page for the next request
+        setCurrentPage(page + 1);
+        
+        // Update posts state
+        setPosts(prev => resetExisting ? fetchedPosts : [...prev, ...fetchedPosts]);
+      }
+    } catch (error) {
+      console.error('Error loading posts:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [activeTab, loading]);
+
+  // Initial posts load when tab changes
+  useEffect(() => {
+    setPosts([]);
+    setCurrentPage(1);
+    setHasMore(true);
+    loadPosts(1, true);
+  }, [activeTab, loadPosts]);
+
+  // Set up intersection observer for infinite scrolling
+  useEffect(() => {
+    const options = {
+      root: null,
+      rootMargin: '0px',
+      threshold: 0.1,
+    };
+    
+    observer.current = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && hasMore && !loading) {
+        loadPosts(currentPage);
+      }
+    }, options);
+    
+    if (loadingRef.current) {
+      observer.current.observe(loadingRef.current);
+    }
+    
+    return () => {
+      if (observer.current) {
+        observer.current.disconnect();
+      }
+    };
+  }, [currentPage, hasMore, loading, loadPosts]);
+
+  // Handle toggling roar (upvote) status
+  const handleRoar = async (postCode: string, currentRoarStatus: number) => {
+    const success = await toggleRoar(postCode);
+    
+    if (success) {
+      // Update local state to reflect the change immediately
+      setPosts(prevPosts => prevPosts.map(post => 
+        post.code === postCode 
+          ? { 
+              ...post, 
+              roar: post.roar === 1 ? 0 : 1,
+              upvotes: post.roar === 1 ? post.upvotes - 1 : post.upvotes + 1 
+            } 
+          : post
+      ));
+    }
+  };
+
   const handlePostCreated = (newPost: any) => {
     setUserPosts([newPost, ...userPosts]);
   };
 
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="following" className="w-full">
+      <Tabs 
+        defaultValue="following" 
+        className="w-full"
+        value={activeTab}
+        onValueChange={(value) => setActiveTab(value as 'following' | 'global' | 'trending')}
+      >
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold">Feed</h1>
@@ -79,7 +181,7 @@ const FeedPage = () => {
           <div className="space-y-6">
             {/* User created posts at the top */}
             {userPosts.map((post, index) => (
-              <Post 
+              <PostComponent 
                 key={`user-post-${index}`}
                 username={post.username}
                 community={post.community}
@@ -93,51 +195,178 @@ const FeedPage = () => {
               />
             ))}
             
-            {/* Default posts */}
-            <PostsList />
+            {/* API fetched posts */}
+            {posts.map(post => (
+              <PostComponent
+                key={`api-post-${post.code}`}
+                username={post.handle}
+                community={post.community}
+                timeAgo={post.timeAgo}
+                content={post.body}
+                roarCount={post.upvotes}
+                commentCount={post.comments}
+                shareCount={0}
+                images={post.images.length > 0 ? post.images : post.image_url ? [post.image_url] : undefined}
+                roared={post.roar === 1}
+                postCode={post.code}
+                onRoar={() => handleRoar(post.code, post.roar)}
+                isMirror={post.is_mirror === 1}
+                mirrorData={post.is_mirror === 1 ? {
+                  quote: post.mirror_quote || '',
+                  originalAuthor: post.original_author || '',
+                  originalCommunity: post.original_community || '',
+                  originalBody: post.original_body || '',
+                  originalTimeAgo: post.original_created_on || '',
+                  originalAvatar: post.original_author_avatar || ''
+                } : undefined}
+              />
+            ))}
+            
+            {/* Loading indicator */}
+            {hasMore && (
+              <div 
+                ref={loadingRef} 
+                className="flex justify-center items-center py-4"
+              >
+                {loading && <Loader2 className="w-6 h-6 text-primary animate-spin" />}
+              </div>
+            )}
+            
+            {/* No more posts indicator */}
+            {!hasMore && posts.length > 0 && (
+              <div className="text-center py-4 text-muted-foreground">
+                <p>No more posts to load</p>
+              </div>
+            )}
+            
+            {/* Empty state */}
+            {!hasMore && posts.length === 0 && !loading && (
+              <Card className="p-6 text-center">
+                <h3 className="text-xl font-medium mb-2">No posts yet</h3>
+                <p className="text-muted-foreground mb-4">
+                  Be the first to create a post in your feed!
+                </p>
+                <Button onClick={() => document.getElementById('create-post-textarea')?.focus()}>
+                  Create Post
+                </Button>
+              </Card>
+            )}
           </div>
         </TabsContent>
   
         <TabsContent value="global" className="space-y-6 animate-fade-in">
           <div className="space-y-6">
-            <Card className="bg-gradient-to-br from-blue-500/5 to-purple-500/5 border-blue-500/20">
-              <CardContent className="pt-6">
-                <h2 className="text-xl font-semibold mb-3 flex items-center gap-2">
-                  <Globe className="h-5 w-5 text-blue-500" />
-                  Discover posts from all communities
-                </h2>
-                <CreatePostCard onPostCreated={handlePostCreated} />
-              </CardContent>
-            </Card>
-            <PostsList globalFeed={true} />
-            {userPosts.map((post, index) => (
-              <Post 
-                key={`user-post-global-${index}`}
-                username={post.username}
+            {/* API fetched posts */}
+            {posts.map(post => (
+              <PostComponent
+                key={`api-post-${post.code}`}
+                username={post.handle}
                 community={post.community}
                 timeAgo={post.timeAgo}
-                content={post.content}
-                roarCount={post.roarCount}
-                commentCount={post.commentCount}
-                shareCount={post.shareCount}
-                images={post.images}
-                video={post.video}
+                content={post.body}
+                roarCount={post.upvotes}
+                commentCount={post.comments}
+                shareCount={0}
+                images={post.images.length > 0 ? post.images : post.image_url ? [post.image_url] : undefined}
+                roared={post.roar === 1}
+                postCode={post.code}
+                onRoar={() => handleRoar(post.code, post.roar)}
+                isMirror={post.is_mirror === 1}
+                mirrorData={post.is_mirror === 1 ? {
+                  quote: post.mirror_quote || '',
+                  originalAuthor: post.original_author || '',
+                  originalCommunity: post.original_community || '',
+                  originalBody: post.original_body || '',
+                  originalTimeAgo: post.original_created_on || '',
+                  originalAvatar: post.original_author_avatar || ''
+                } : undefined}
               />
             ))}
+            
+            {/* Loading indicator */}
+            {hasMore && (
+              <div 
+                ref={loadingRef} 
+                className="flex justify-center items-center py-4"
+              >
+                {loading && <Loader2 className="w-6 h-6 text-primary animate-spin" />}
+              </div>
+            )}
+            
+            {/* No more posts indicator */}
+            {!hasMore && posts.length > 0 && (
+              <div className="text-center py-4 text-muted-foreground">
+                <p>No more posts to load</p>
+              </div>
+            )}
+            
+            {/* Empty state */}
+            {!hasMore && posts.length === 0 && !loading && (
+              <Card className="p-6 text-center">
+                <h3 className="text-xl font-medium mb-2">No posts in the global feed</h3>
+                <p className="text-muted-foreground">
+                  Check back later for new content
+                </p>
+              </Card>
+            )}
           </div>
         </TabsContent>
   
         <TabsContent value="trending" className="space-y-6 animate-fade-in">
           <div className="space-y-6">
-            <Card className="bg-gradient-to-br from-amber-500/5 to-red-500/5 border-amber-500/20">
-              <CardContent className="pt-6">
-                <h2 className="text-xl font-semibold mb-3 flex items-center gap-2">
-                  <Flame className="h-5 w-5 text-amber-500" />
-                  Popular posts gaining traction
-                </h2>
-              </CardContent>
-            </Card>
-            <PostsList trendingOnly={true} />
+            {/* API fetched posts */}
+            {posts.map(post => (
+              <PostComponent
+                key={`api-post-${post.code}`}
+                username={post.handle}
+                community={post.community}
+                timeAgo={post.timeAgo}
+                content={post.body}
+                roarCount={post.upvotes}
+                commentCount={post.comments}
+                shareCount={0}
+                images={post.images.length > 0 ? post.images : post.image_url ? [post.image_url] : undefined}
+                roared={post.roar === 1}
+                postCode={post.code}
+                onRoar={() => handleRoar(post.code, post.roar)}
+                isMirror={post.is_mirror === 1}
+                mirrorData={post.is_mirror === 1 ? {
+                  quote: post.mirror_quote || '',
+                  originalAuthor: post.original_author || '',
+                  originalCommunity: post.original_community || '',
+                  originalBody: post.original_body || '',
+                  originalTimeAgo: post.original_created_on || '',
+                  originalAvatar: post.original_author_avatar || ''
+                } : undefined}
+              />
+            ))}
+            
+            {/* Loading indicator */}
+            {hasMore && (
+              <div 
+                ref={loadingRef} 
+                className="flex justify-center items-center py-4"
+              >
+                {loading && <Loader2 className="w-6 h-6 text-primary animate-spin" />}
+              </div>
+            )}
+            
+            {/* No more posts indicator */}
+            {!hasMore && posts.length > 0 && (
+              <div className="text-center py-4 text-muted-foreground">
+                <p>No more posts to load</p>
+              </div>
+            )}
+            
+            {/* Empty state */}
+            {!hasMore && posts.length === 0 && !loading && (
+              <Card className="p-6 text-center">
+                <h3 className="text-xl font-medium mb-2">No trending posts right now</h3>
+                <p className="text-muted-foreground">
+                  Check back later for trending content
+                </p>
+              </Card>
+            )}
           </div>
         </TabsContent>
       </Tabs>
@@ -159,134 +388,6 @@ export const CommunityBadge = ({ name }: { name: string }) => {
         <span className="relative z-10">{name}</span>
       </Badge>
     </Link>
-  );
-};
-
-const PostsList = ({ trendingOnly = false, globalFeed = false }: { trendingOnly?: boolean, globalFeed?: boolean }) => {
-  // Sample posts with different types of media
-  const posts = [
-    {
-      username: "alice",
-      community: "Ethereum Devs",
-      timeAgo: "2h",
-      content: "Just deployed my first smart contract on Ethereum. The gas fees were surprisingly reasonable!",
-      roarCount: 24,
-      commentCount: 5,
-      shareCount: 2,
-    },
-    {
-      username: "bob",
-      community: "DeFi Explorers",
-      timeAgo: "5h",
-      content: "Check out this new UI for our DeFi platform. What do you think?",
-      roarCount: 42,
-      commentCount: 12,
-      shareCount: 7,
-      images: [
-        "https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=800",
-        "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=800",
-      ]
-    },
-    {
-      username: "charlie",
-      community: "Solana Builders",
-      timeAgo: "1d",
-      content: "The throughput on Solana is amazing for our new DApp. We're handling thousands of transactions per second with minimal costs.",
-      roarCount: 67,
-      commentCount: 23,
-      shareCount: 15,
-      video: "https://assets.mixkit.co/videos/preview/mixkit-software-developer-working-on-code-screen-close-up-27013-large.mp4"
-    },
-    {
-      username: "diana",
-      community: "Web3 Gaming",
-      timeAgo: "6h",
-      content: "Just finished designing these assets for our blockchain game. What do you think of the color scheme?",
-      roarCount: 83,
-      commentCount: 31,
-      shareCount: 19,
-      images: [
-        "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800",
-        "https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=800",
-        "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=800",
-      ]
-    },
-    {
-      username: "eric",
-      community: "NFT Creators",
-      timeAgo: "3d",
-      content: "My latest NFT collection is going live tomorrow! Here's a sneak peek at some of the art.",
-      roarCount: 103,
-      commentCount: 42,
-      shareCount: 29,
-      images: [
-        "https://images.unsplash.com/photo-1578632767115-351597cf2477?w=800",
-      ]
-    },
-    {
-      username: "frank",
-      community: "DAO Governance",
-      timeAgo: "4h",
-      content: "We're voting on a new proposal to allocate funds for community developers. This could be huge for ecosystem growth!",
-      roarCount: 72,
-      commentCount: 26,
-      shareCount: 13,
-    },
-    {
-      username: "sophia",
-      community: "Web3 Gaming",
-      timeAgo: "1d",
-      content: "Our game just hit 100k daily active users! Thanks to everyone who supported us through the beta.",
-      roarCount: 156,
-      commentCount: 47,
-      shareCount: 39,
-      images: [
-        "https://images.unsplash.com/photo-1511512578047-dfb367046420?w=800",
-        "https://images.unsplash.com/photo-1511882150382-421056c89033?w=800",
-      ],
-    },
-    {
-      username: "tyler",
-      community: "Ethereum Devs",
-      timeAgo: "5h",
-      content: "I made a visualization of Ethereum's transaction volume over the past year. The growth is insane!",
-      roarCount: 92,
-      commentCount: 31,
-      shareCount: 18,
-      video: "https://assets.mixkit.co/videos/preview/mixkit-digital-animation-of-a-city-growing-on-a-orange-background-31652-large.mp4",
-    },
-  ];
-
-  // Filter posts based on options
-  let postsToShow = [...posts];
-  
-  if (trendingOnly) {
-    postsToShow = postsToShow.sort((a, b) => b.roarCount - a.roarCount).slice(0, 4);
-  } else if (globalFeed) {
-    // Shuffle the posts for global feed
-    postsToShow = postsToShow
-      .map(value => ({ value, sort: Math.random() }))
-      .sort((a, b) => a.sort - b.sort)
-      .map(({ value }) => value);
-  }
-
-  return (
-    <div className="space-y-6">
-      {postsToShow.map((post, index) => (
-        <Post 
-          key={`sample-post-${index}`}
-          username={post.username}
-          community={post.community}
-          timeAgo={post.timeAgo}
-          content={post.content}
-          roarCount={post.roarCount}
-          commentCount={post.commentCount}
-          shareCount={post.shareCount}
-          images={post.images}
-          video={post.video}
-        />
-      ))}
-    </div>
   );
 };
 

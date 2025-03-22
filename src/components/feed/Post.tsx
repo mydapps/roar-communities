@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
@@ -82,6 +83,18 @@ export interface PostProps {
   images?: string[];
   video?: string;
   disableNavigation?: boolean;
+  postCode?: string;
+  roared?: boolean;
+  onRoar?: () => void;
+  isMirror?: boolean;
+  mirrorData?: {
+    quote: string;
+    originalAuthor: string;
+    originalCommunity: string;
+    originalBody: string;
+    originalTimeAgo: string;
+    originalAvatar: string;
+  };
 }
 
 export const Post = ({ 
@@ -94,10 +107,15 @@ export const Post = ({
   shareCount,
   images,
   video,
-  disableNavigation = false
+  disableNavigation = false,
+  postCode,
+  roared = false,
+  onRoar,
+  isMirror = false,
+  mirrorData
 }: PostProps) => {
   const navigate = useNavigate();
-  const [roared, setRoared] = useState(false);
+  const [localRoared, setLocalRoared] = useState(roared);
   const [localRoarCount, setLocalRoarCount] = useState(roarCount);
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState('');
@@ -118,7 +136,13 @@ export const Post = ({
   
   const [emblaRef, emblaApi] = useEmblaCarousel();
 
-  const ipfsHash = `Qm${Array.from({length: 44}, () => Math.floor(Math.random() * 16).toString(16)).join('')}`;
+  // Update local state when prop changes
+  useEffect(() => {
+    setLocalRoared(roared);
+    setLocalRoarCount(roarCount);
+  }, [roared, roarCount]);
+
+  const ipfsHash = postCode || `Qm${Array.from({length: 44}, () => Math.floor(Math.random() * 16).toString(16)).join('')}`;
 
   useEffect(() => {
     if (emblaApi) {
@@ -129,20 +153,24 @@ export const Post = ({
   }, [emblaApi]);
   
   const handleRoar = () => {
-    if (roared) {
-      setLocalRoarCount(prev => prev - 1);
+    if (onRoar) {
+      onRoar();
     } else {
-      setLocalRoarCount(prev => prev + 1);
-      
-      setRoarWavesAnimation(true);
-      setTimeout(() => setRoarAnimation(true), 50);
-      setTimeout(() => setRoarTextAnimation(true), 100);
-      
-      setTimeout(() => setRoarWavesAnimation(false), 1500);
-      setTimeout(() => setRoarAnimation(false), 1800);
-      setTimeout(() => setRoarTextAnimation(false), 2000);
+      if (localRoared) {
+        setLocalRoarCount(prev => prev - 1);
+      } else {
+        setLocalRoarCount(prev => prev + 1);
+        
+        setRoarWavesAnimation(true);
+        setTimeout(() => setRoarAnimation(true), 50);
+        setTimeout(() => setRoarTextAnimation(true), 100);
+        
+        setTimeout(() => setRoarWavesAnimation(false), 1500);
+        setTimeout(() => setRoarAnimation(false), 1800);
+        setTimeout(() => setRoarTextAnimation(false), 2000);
+      }
+      setLocalRoared(!localRoared);
     }
-    setRoared(!roared);
   };
 
   const handleCommentToggle = () => {
@@ -486,14 +514,48 @@ export const Post = ({
       return;
     }
     
-    if (community) {
-      navigate(`/c/${community}/${postId}`);
+    if (community && postCode) {
+      navigate(`/c/${community.toLowerCase().replace(/\s+/g, '-')}/${postCode}`);
     }
   };
 
-  const postId = useRef(Array.from({length: 6}, () => 
+  const postId = useRef(postCode || Array.from({length: 6}, () => 
     Math.floor(Math.random() * 36).toString(36)).join('')
   ).current;
+
+  // Render mirror post content
+  const renderMirrorPost = () => {
+    if (!isMirror || !mirrorData) return null;
+    
+    return (
+      <div className="mt-3 border rounded-md p-3 bg-muted/30">
+        <div className="text-sm text-muted-foreground mb-2">
+          {mirrorData.quote && mirrorData.quote.trim() !== "" ? (
+            <p className="italic">{mirrorData.quote}</p>
+          ) : (
+            <p>Mirrored from {mirrorData.originalCommunity}</p>
+          )}
+        </div>
+        
+        <div className="flex items-start gap-2">
+          <Avatar className="h-6 w-6">
+            <AvatarImage src={`https://api.dicebear.com/7.x/personas/svg?seed=${mirrorData.originalAvatar}`} />
+            <AvatarFallback>{mirrorData.originalAuthor[0].toUpperCase()}</AvatarFallback>
+          </Avatar>
+          
+          <div>
+            <div className="flex items-center gap-1">
+              <span className="font-medium text-sm">{formatUsername(mirrorData.originalAuthor)}</span>
+              <span className="text-muted-foreground text-xs mx-1">·</span>
+              <span className="text-muted-foreground text-xs">{mirrorData.originalTimeAgo}</span>
+            </div>
+            
+            <p className="text-sm mt-1">{mirrorData.originalBody}</p>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <Card 
@@ -600,6 +662,9 @@ export const Post = ({
       <CardContent className="pb-3">
         <p className="text-sm mt-2">{content}</p>
         
+        {/* Render the mirrored content if this is a mirror post */}
+        {renderMirrorPost()}
+        
         {images && images.length > 0 && (
           <div className="mt-3 relative">
             {images.length === 1 ? (
@@ -658,7 +723,7 @@ export const Post = ({
             variant="ghost" 
             size="sm" 
             onClick={handleRoar}
-            className={`gap-2 hover:text-primary hover:bg-primary/10 ${roared ? 'text-primary' : ''}`}
+            className={`gap-2 hover:text-primary hover:bg-primary/10 ${localRoared ? 'text-primary' : ''}`}
           >
             <div className="relative">
               <span className={`text-xl transition-transform ${roarAnimation ? 'scale-150' : ''}`} role="img" aria-label="lion">🦁</span>
@@ -824,4 +889,3 @@ export const Post = ({
     </Card>
   );
 };
-
