@@ -94,7 +94,8 @@ export const Post = ({
     }
   };
 
-  const handleCommentToggle = () => {
+  const handleCommentToggle = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent post navigation
     setShowComments(!showComments);
     
     if (comments.length === 0) {
@@ -148,7 +149,9 @@ export const Post = ({
     if (disableNavigation || 
         (e.target as HTMLElement).closest('button') || 
         (e.target as HTMLElement).closest('a') ||
-        (e.target as HTMLElement).closest('[data-media-element="true"]')) {
+        (e.target as HTMLElement).closest('[data-media-element="true"]') ||
+        (e.target as HTMLElement).closest('form') ||
+        showComments) {
       return;
     }
     
@@ -257,10 +260,12 @@ export const Post = ({
         </div>
         
         {showComments && (
-          <CommentSection 
-            comments={comments}
-            onAddComment={handleAddComment}
-          />
+          <div onClick={(e) => e.stopPropagation()} className="w-full">
+            <CommentSection 
+              comments={comments}
+              onAddComment={handleAddComment}
+            />
+          </div>
         )}
       </CardFooter>
 

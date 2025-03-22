@@ -49,10 +49,10 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         />
       )}
 
-      {/* Sidebar - removed sticky and changed to relative position on desktop */}
+      {/* Sidebar - IMPORTANT: removed sticky positioning */}
       <aside
         className={cn(
-          "fixed md:relative top-0 left-0 z-40 md:z-0 h-full w-[280px] border-r bg-card transition-transform duration-300 ease-in-out",
+          "fixed md:static top-0 left-0 z-40 md:z-0 h-full w-[280px] border-r bg-card transition-transform duration-300 ease-in-out",
           isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         )}
       >

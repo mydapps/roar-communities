@@ -32,9 +32,28 @@ export const ShareButton = ({
   community
 }: ShareButtonProps) => {
   const mobile = isMobile();
+  const { toast } = useToast();
   
   const handleClose = () => {
     onOpenChange(false);
+  };
+  
+  const handleShareClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onOpenChange(true);
+  };
+  
+  // Prevent post navigation when clicking share button
+  const handleButtonClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+  
+  const handleShareSuccess = (platform: string) => {
+    // Don't close the modal/drawer automatically on share
+    toast({
+      title: "Shared successfully",
+      description: `Your post was shared on ${platform}`,
+    });
   };
   
   if (mobile) {
@@ -45,6 +64,7 @@ export const ShareButton = ({
             variant="ghost" 
             size="sm"
             className="gap-2 hover:text-green-500 hover:bg-green-500/10"
+            onClick={handleButtonClick}
           >
             <Share2 className="h-4 w-4" />
             <span>Share</span>
@@ -67,6 +87,7 @@ export const ShareButton = ({
             postCode={postCode}
             community={community}
             onClose={handleClose}
+            onShareSuccess={handleShareSuccess}
           />
           
           <DrawerFooter className="border-t p-4">
@@ -86,6 +107,7 @@ export const ShareButton = ({
           variant="ghost" 
           size="sm"
           className="gap-2 hover:text-green-500 hover:bg-green-500/10"
+          onClick={handleButtonClick}
         >
           <Share2 className="h-4 w-4" />
           <span>Share</span>
@@ -108,6 +130,7 @@ export const ShareButton = ({
           postCode={postCode}
           community={community}
           onClose={handleClose}
+          onShareSuccess={handleShareSuccess}
         />
         
         <SheetFooter className="mt-6">

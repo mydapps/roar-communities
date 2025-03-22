@@ -34,18 +34,18 @@ export const CommentSection = ({ comments, onAddComment }: CommentSectionProps) 
   };
   
   return (
-    <div className="space-y-4 mt-4">
+    <div className="space-y-4 mt-4 w-full">
       <h3 className="font-medium text-lg">Comments ({comments.length})</h3>
       
       {comments.length > 0 ? (
-        <div className="space-y-4">
+        <div className="space-y-4 w-full">
           {comments.map((comment) => (
-            <div key={comment.id} className="flex gap-3">
-              <Avatar className="h-8 w-8">
+            <div key={comment.id} className="flex gap-3 w-full">
+              <Avatar className="h-8 w-8 flex-shrink-0">
                 <AvatarImage src={`https://api.dicebear.com/7.x/personas/svg?seed=${comment.user}`} />
                 <AvatarFallback>{comment.user[0].toUpperCase()}</AvatarFallback>
               </Avatar>
-              <div>
+              <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="font-medium text-sm">
                     {comment.user === 'you' ? 'you' : formatUsername(comment.user)}
@@ -59,21 +59,21 @@ export const CommentSection = ({ comments, onAddComment }: CommentSectionProps) 
           ))}
         </div>
       ) : (
-        <Card className="p-4 text-center">
+        <Card className="p-4 text-center w-full">
           <p className="text-muted-foreground text-sm">No comments yet. Be the first to comment!</p>
         </Card>
       )}
       
-      <form onSubmit={handleSubmit} className="mt-4">
-        <div className="flex gap-3">
-          <Avatar className="h-8 w-8">
+      <form onSubmit={handleSubmit} className="mt-4 w-full">
+        <div className="flex gap-3 w-full">
+          <Avatar className="h-8 w-8 flex-shrink-0">
             <AvatarImage src="https://api.dicebear.com/7.x/personas/svg?seed=you" />
             <AvatarFallback>Y</AvatarFallback>
           </Avatar>
-          <div className="flex-1 space-y-2">
+          <div className="flex-1 space-y-2 w-full">
             <Textarea 
               placeholder="Write a comment..." 
-              className="min-h-[80px] resize-none"
+              className="min-h-[80px] resize-none w-full"
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
             />
