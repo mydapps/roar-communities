@@ -63,7 +63,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
           </Button>
         </div>
         
-        <ScrollArea className="h-[calc(100vh-4rem)] md:h-[calc(100vh-4rem)] pb-10">
+        <ScrollArea className="h-[calc(100vh-4rem)] md:h-[calc(100vh-4rem)] pb-10 sticky top-16">
           <div className="px-3 py-4">
             <nav className="space-y-1">
               <NavItem to="/feed" icon={<Home className="h-5 w-5" />} label="Feed" />
