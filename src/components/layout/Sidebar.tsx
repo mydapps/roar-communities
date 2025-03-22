@@ -52,20 +52,20 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
       {/* Sidebar - position changed to be part of normal flow instead of fixed */}
       <aside
         className={cn(
-          "md:relative md:h-auto w-[280px] border-r bg-card transition-transform duration-300 ease-in-out",
+          "md:relative md:h-auto w-[280px] border-r bg-card transition-transform duration-300 ease-in-out flex flex-col h-screen",
           isOpen ? "fixed top-0 left-0 z-40 h-full translate-x-0" : "fixed top-0 -translate-x-full md:translate-x-0 md:relative h-full left-0 z-40"
         )}
       >
-        <div className="flex h-16 items-center justify-between px-4 md:hidden">
+        <div className="flex h-16 items-center justify-between px-4 md:hidden shrink-0">
           <span className="font-display text-xl font-bold text-primary">dapps.co</span>
           <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="h-5 w-5" />
           </Button>
         </div>
         
-        <ScrollArea className="h-[calc(100vh-4rem)] md:h-[calc(100vh-4rem)] pb-10 sticky top-16">
-          <div className="px-3 py-4 sticky top-0">
-            <nav className="space-y-1 sticky top-0">
+        <ScrollArea className="flex-1 h-full pb-10 overflow-y-auto sticky top-0">
+          <div className="sticky top-0 px-3 py-4 h-full flex flex-col">
+            <nav className="space-y-1">
               <NavItem to="/feed" icon={<Home className="h-5 w-5" />} label="Feed" />
               <NavItem to="/search" icon={<Search className="h-5 w-5" />} label="Search" />
               <NavItem to="/communities" icon={<Users className="h-5 w-5" />} label="Communities" />
@@ -84,7 +84,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
               <NavItem to="/account" icon={<Settings className="h-5 w-5" />} label="Account" />
             </nav>
 
-            <div className="mt-8 space-y-2">
+            <div className="mt-8 space-y-2 flex-grow">
               <div className="px-4 py-2">
                 <h4 className="text-sm font-medium text-muted-foreground mb-3">My Communities</h4>
                 <div className="space-y-1">
@@ -95,7 +95,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
               </div>
             </div>
             
-            <div className="mt-8 px-4">
+            <div className="mt-auto px-4 py-4">
               <Button className="w-full" size="sm">
                 Create Community
               </Button>

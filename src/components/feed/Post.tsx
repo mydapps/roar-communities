@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
@@ -43,6 +44,7 @@ export interface PostProps {
     originalAvatar: string;
   };
   ipfs?: string;
+  avatar?: string;
 }
 
 export const Post = ({ 
@@ -61,7 +63,8 @@ export const Post = ({
   onRoar,
   isMirror = false,
   mirrorData,
-  ipfs
+  ipfs,
+  avatar
 }: PostProps) => {
   const navigate = useNavigate();
   const [localRoared, setLocalRoared] = useState(roared);
@@ -82,16 +85,35 @@ export const Post = ({
   
   const ipfsHash = ipfs || postCode || `Qm${Array.from({length: 44}, () => Math.floor(Math.random() * 16).toString(16)).join('')}`;
 
-  const handleRoar = () => {
+  const handleRoar = async () => {
     if (onRoar) {
       onRoar();
     } else {
-      if (localRoared) {
-        setLocalRoarCount(prev => prev - 1);
-      } else {
-        setLocalRoarCount(prev => prev + 1);
+      // Toggle local state immediately for better UX
+      const newRoaredState = !localRoared;
+      setLocalRoared(newRoaredState);
+      setLocalRoarCount(prev => newRoaredState ? prev + 1 : prev - 1);
+
+      if (postCode) {
+        try {
+          const success = await toggleRoar(postCode);
+          if (!success) {
+            // Revert the optimistic update if the API call fails
+            setLocalRoared(!newRoaredState);
+            setLocalRoarCount(prev => newRoaredState ? prev - 1 : prev + 1);
+            toast({
+              title: "Error",
+              description: "Failed to update roar status. Please try again.",
+              variant: "destructive"
+            });
+          }
+        } catch (error) {
+          // Revert the optimistic update on error
+          setLocalRoared(!newRoaredState);
+          setLocalRoarCount(prev => newRoaredState ? prev - 1 : prev + 1);
+          console.error("Error during roar:", error);
+        }
       }
-      setLocalRoared(!localRoared);
     }
   };
 
@@ -148,6 +170,13 @@ export const Post = ({
     }
   };
 
+  const handleCommunityClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (community) {
+      navigate(`/c/${community.toLowerCase().replace(/\s+/g, '-')}`);
+    }
+  };
+
   const handlePostClick = (e: React.MouseEvent) => {
     if (disableNavigation || 
         (e.target as HTMLElement).closest('button') || 
@@ -169,6 +198,9 @@ export const Post = ({
       setShareSheetOpen(false);
     }, 2000);
   };
+  
+  // Use avatar prop if available, otherwise fallback to username
+  const userAvatar = avatar || username;
 
   const postId = useRef(postCode || Array.from({length: 6}, () => 
     Math.floor(Math.random() * 36).toString(36)).join('')
@@ -184,7 +216,7 @@ export const Post = ({
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-3">
             <Avatar className="h-12 w-12 border-2 border-primary/20 hover:border-primary/50 transition-colors">
-              <AvatarImage src={`https://img.dapps.co/avatar/${username}.svg`} />
+              <AvatarImage src={`https://img.dapps.co/avatar/${userAvatar}.svg`} />
               <AvatarFallback>{username[0].toUpperCase()}</AvatarFallback>
             </Avatar>
             <div className="flex flex-col">
@@ -194,7 +226,11 @@ export const Post = ({
                 <span className="text-muted-foreground text-sm">{timeAgo}</span>
               </div>
               {community && (
-                <Badge variant="outline" className="mt-1 w-fit bg-secondary/30 hover:bg-secondary/50 transition-colors">
+                <Badge 
+                  variant="outline" 
+                  className="mt-1 w-fit bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer"
+                  onClick={handleCommunityClick}
+                >
                   <span className="text-xs">{community}</span>
                 </Badge>
               )}
@@ -300,4 +336,36 @@ export const Post = ({
       )}
     </Card>
   );
+};
+
+const toggleRoar = async (postCode: string): Promise<boolean> => {
+  try {
+    const userKey = localStorage.getItem('dapps_user_key');
+    
+    if (!userKey) {
+      console.error('No user key found for roar toggle');
+      return false;
+    }
+    
+    console.log(`Toggling roar for post: ${postCode}`);
+    
+    const response = await fetch('https://api.dapps.co/roar_post', {
+      method: 'POST',
+      headers: {
+        'x-user-key': userKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ postCode })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to toggle roar: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data.status === "SUCCESS";
+  } catch (error) {
+    console.error('Error toggling roar:', error);
+    return false;
+  }
 };

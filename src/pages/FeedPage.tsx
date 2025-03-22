@@ -233,6 +233,7 @@ const FeedPage = () => {
                 <PostComponent
                   key={`api-post-${post.code}`}
                   username={post.handle}
+                  avatar={post.avatar}
                   community={post.community}
                   timeAgo={post.timeAgo}
                   content={post.body}
@@ -288,6 +289,7 @@ const FeedPage = () => {
                 <PostComponent
                   key={`api-post-${post.code}`}
                   username={post.handle}
+                  avatar={post.avatar}
                   community={post.community}
                   timeAgo={post.timeAgo}
                   content={post.body}
@@ -341,6 +343,7 @@ const FeedPage = () => {
                 <PostComponent
                   key={`api-post-${post.code}`}
                   username={post.handle}
+                  avatar={post.avatar}
                   community={post.community}
                   timeAgo={post.timeAgo}
                   content={post.body}

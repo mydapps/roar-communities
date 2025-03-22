@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -68,7 +67,7 @@ const MeowButton = ({
           </div>
         )}
       </div>
-      <span className={`${comment.has_meowed || meowTextAnimating ? 'text-amber-500 font-medium' : ''}`}>
+      <span className={comment.has_meowed ? 'text-amber-500 font-medium' : ''}>
         {meowTextAnimating ? "Meow!" : comment.meow_count}
       </span>
     </Button>
