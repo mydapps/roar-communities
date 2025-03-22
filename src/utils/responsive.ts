@@ -7,3 +7,10 @@ export const isMobile = (): boolean => {
   // Use media query for more reliable detection
   return window.innerWidth < 768;
 };
+
+export const isTablet = (): boolean => {
+  // Check if it's client-side
+  if (typeof window === 'undefined') return false;
+  
+  return window.innerWidth >= 768 && window.innerWidth < 1024;
+};
