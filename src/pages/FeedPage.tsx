@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Post } from '@/components/feed/Post';
 import CreatePostCard from '@/components/feed/CreatePostCard';
@@ -15,7 +14,6 @@ const FeedPage = () => {
   const [showScrollToTop, setShowScrollToTop] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0); // Used to force refresh
   
-  // Function to load posts
   const loadPosts = useCallback(async (pageNum: number, replace = false) => {
     setLoading(true);
     setError(null);
@@ -41,12 +39,10 @@ const FeedPage = () => {
     }
   }, []);
   
-  // Load initial posts
   useEffect(() => {
     loadPosts(1, true);
   }, [loadPosts, refreshKey]);
   
-  // Handle scroll to show/hide scroll to top button
   useEffect(() => {
     const handleScroll = () => {
       setShowScrollToTop(window.scrollY > 500);
@@ -56,9 +52,7 @@ const FeedPage = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
   
-  // Set up mirror event listener
   useEffect(() => {
-    // When a post is mirrored, refresh the feed
     const cleanup = setupMirrorListener(() => {
       setRefreshKey(prev => prev + 1); // Force a refresh
     });
