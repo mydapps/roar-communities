@@ -28,8 +28,10 @@ const MainLayout = () => {
       </div>
       
       {/* Main content area - modified for proper sidebar scrolling */}
-      <div className="flex flex-1 md:h-[calc(100vh-64px)]"> 
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <div className="flex flex-1">
+        <div className="hidden md:block"> 
+          <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        </div>
         
         <div className="flex-1 overflow-auto">
           <PullToRefresh 

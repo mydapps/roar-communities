@@ -12,7 +12,6 @@ import {
   Sparkles
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 
 interface SidebarProps {
@@ -49,11 +48,11 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         />
       )}
 
-      {/* Sidebar - position changed to be part of normal flow instead of fixed */}
+      {/* Sidebar - position changed to make it scroll with the page on desktop */}
       <aside
         className={cn(
-          "md:relative w-[280px] border-r bg-card z-40",
-          "flex flex-col md:h-screen max-h-screen",
+          "w-[280px] border-r bg-card z-30",
+          "md:sticky md:top-16 md:h-[calc(100vh-64px)] md:self-start",
           isOpen ? "fixed top-0 left-0 h-full translate-x-0" : "fixed top-0 -translate-x-full md:translate-x-0 h-full left-0"
         )}
       >
@@ -65,8 +64,8 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
           </Button>
         </div>
         
-        {/* Main content - made scrollable */}
-        <div className="flex-1 overflow-y-auto">
+        {/* Main content area */}
+        <div className="h-[calc(100vh-64px)] overflow-y-auto pb-6">
           <div className="px-3 py-4 space-y-8">
             {/* Navigation links */}
             <nav className="space-y-1">
