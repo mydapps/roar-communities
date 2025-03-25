@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Post } from '@/components/feed/Post';
-import { CreatePostCard } from '@/components/feed/CreatePostCard';
+import CreatePostCard from '@/components/feed/CreatePostCard';
 import { Button } from '@/components/ui/button';
 import { ArrowDown, ArrowUp, Loader2 } from 'lucide-react';
 import { fetchPosts, setupMirrorListener } from '@/utils/api';
