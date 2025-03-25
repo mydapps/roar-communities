@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
@@ -9,7 +8,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Loader2 } from 'lucide-react';
 
-// Import sub-components
 import { ImageCarousel } from './post/ImageCarousel';
 import { ImageViewer } from './post/ImageViewer';
 import { RoarButton } from './post/RoarButton';
@@ -92,22 +90,18 @@ export const Post = ({
 
   const handleRoar = async () => {
     if (onRoar) {
-      // Update local state immediately for better UX
       const newRoaredState = !localRoared;
       setLocalRoared(newRoaredState);
       setLocalRoarCount(prev => newRoaredState ? prev + 1 : prev - 1);
       
-      // Then call the parent handler for API interaction
       onRoar();
     }
   };
 
   const handleCommentToggle = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent post navigation
-    
+    e.stopPropagation();
     if (!showComments) {
       setLoadingComments(true);
-      // Set timeout to simulate loading
       setTimeout(() => {
         setLoadingComments(false);
       }, 1000);
@@ -178,7 +172,6 @@ export const Post = ({
   };
 
   const handleShareSuccess = (platform: string) => {
-    // Close share sheet after a delay to show success state
     setTimeout(() => {
       setShareSheetOpen(false);
     }, 2000);
@@ -267,13 +260,12 @@ export const Post = ({
             <MirrorButton 
               open={mirrorSheetOpen} 
               onOpenChange={setMirrorSheetOpen} 
-              selectedCommunity={selectedCommunity} 
-              onMirror={handleMirror}
               username={username}
               timeAgo={timeAgo}
               content={content}
               images={images}
               video={video}
+              postCode={postCode}
             />
           </div>
           
