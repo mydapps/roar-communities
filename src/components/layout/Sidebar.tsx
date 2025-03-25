@@ -64,8 +64,8 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         </div>
         
         <div className="flex-1 flex flex-col h-full overflow-hidden">
-          <ScrollArea className="flex-1 h-full px-3 py-4">
-            <div className="space-y-1 sticky top-0">
+          <ScrollArea className="flex-1 h-full">
+            <div className="sticky top-0 px-3 py-4">
               <nav className="space-y-1">
                 <NavItem to="/feed" icon={<Home className="h-5 w-5" />} label="Feed" />
                 <NavItem to="/search" icon={<Search className="h-5 w-5" />} label="Search" />
