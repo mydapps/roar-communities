@@ -1,5 +1,6 @@
 
 import { toast } from 'sonner';
+import { POST_MIRRORED_EVENT } from '@/components/feed/post/MirrorButton';
 
 /**
  * Base API URL for all requests
@@ -48,6 +49,17 @@ export interface Post {
   original_author_avatar?: string;
   original_created_on?: string;
 }
+
+/**
+ * Setup event listener for post mirroring
+ * This triggers a callback when a post is mirrored
+ */
+export const setupMirrorListener = (callback: () => void) => {
+  document.addEventListener(POST_MIRRORED_EVENT, callback);
+  return () => {
+    document.removeEventListener(POST_MIRRORED_EVENT, callback);
+  };
+};
 
 /**
  * Fetch posts with pagination and filter options

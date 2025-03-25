@@ -77,7 +77,12 @@ export const MirrorContent = ({
       const data = await response.json();
       
       if (data.success && data.communities) {
-        setCommunities(data.communities);
+        setCommunities(data.communities.map((community: any) => ({
+          name: community.name,
+          membersCount: community.membersCount,
+          image: community.image,
+          description: community.description
+        })));
       } else {
         throw new Error('Invalid response format');
       }
@@ -97,7 +102,7 @@ export const MirrorContent = ({
   // Initial load of personal communities
   useEffect(() => {
     fetchCommunities();
-  }, [toast]);
+  }, []);
   
   // Handle search query changes
   useEffect(() => {
@@ -230,7 +235,9 @@ export const MirrorContent = ({
                         </Avatar>
                         <div>
                           <p className="text-sm font-medium">{community.name}</p>
-                          <p className="text-xs text-muted-foreground">{community.membersCount.toLocaleString()} members</p>
+                          <p className="text-xs text-muted-foreground">
+                            {community.membersCount.toLocaleString()} members
+                          </p>
                         </div>
                       </div>
                       {selectedCommunity === community.name && (

@@ -19,6 +19,9 @@ interface MirrorButtonProps {
   postCode?: string;
 }
 
+// Create a custom event for post mirroring
+const POST_MIRRORED_EVENT = 'post-mirrored';
+
 export const MirrorButton = ({ 
   open, 
   onOpenChange, 
@@ -98,6 +101,17 @@ export const MirrorButton = ({
         onOpenChange(false);
         setSelectedCommunity(null);
         setQuoteText('');
+        
+        // Dispatch a custom event to notify that a post was mirrored
+        // This will be used to refresh the feed
+        const mirroredEvent = new CustomEvent(POST_MIRRORED_EVENT, {
+          detail: {
+            originalPostCode: postCode,
+            mirroredPostCode: data.mirroredPostCode || '',
+            communityTo: selectedCommunity
+          }
+        });
+        document.dispatchEvent(mirroredEvent);
       } else {
         throw new Error(data.message || 'Failed to mirror post');
       }
@@ -233,3 +247,6 @@ export const MirrorButton = ({
     </Sheet>
   );
 };
+
+// Export the event name for other components to listen to
+export { POST_MIRRORED_EVENT };
