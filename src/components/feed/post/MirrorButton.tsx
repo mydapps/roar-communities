@@ -48,7 +48,11 @@ export const MirrorButton = ({
     setQuoteText(quote);
   };
   
-  const handleMirror = async () => {
+  const handleMirror = async (e: React.MouseEvent) => {
+    // Prevent any navigation
+    e.preventDefault();
+    e.stopPropagation();
+    
     if (!selectedCommunity || !postCode) {
       return;
     }
@@ -123,7 +127,7 @@ export const MirrorButton = ({
             <span>Mirror</span>
           </Button>
         </DrawerTrigger>
-        <DrawerContent className="max-h-[90vh]">
+        <DrawerContent className="max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
           <DrawerHeader className="border-b">
             <DrawerTitle>Mirror Post</DrawerTitle>
             <DrawerDescription>
@@ -145,7 +149,7 @@ export const MirrorButton = ({
           
           <DrawerFooter className="flex-row justify-between gap-2 p-4 border-t">
             <DrawerClose asChild>
-              <Button variant="outline">Cancel</Button>
+              <Button variant="outline" onClick={(e) => e.stopPropagation()}>Cancel</Button>
             </DrawerClose>
             <Button 
               onClick={handleMirror}
@@ -183,7 +187,7 @@ export const MirrorButton = ({
           <span>Mirror</span>
         </Button>
       </SheetTrigger>
-      <SheetContent side="right" className="sm:max-w-md">
+      <SheetContent side="right" className="sm:max-w-md" onClick={(e) => e.stopPropagation()}>
         <SheetHeader>
           <SheetTitle>Mirror Post</SheetTitle>
           <SheetDescription>
@@ -205,7 +209,7 @@ export const MirrorButton = ({
         
         <SheetFooter className="flex flex-row justify-between gap-2 mt-6">
           <SheetClose asChild>
-            <Button variant="outline">Cancel</Button>
+            <Button variant="outline" onClick={(e) => e.stopPropagation()}>Cancel</Button>
           </SheetClose>
           <Button 
             onClick={handleMirror}

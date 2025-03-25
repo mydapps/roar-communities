@@ -42,67 +42,89 @@ export const MirrorContent = ({
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   
-  useEffect(() => {
-    const fetchCommunities = async () => {
-      setLoading(true);
-      setError(null);
-      
-      try {
-        const userKey = localStorage.getItem('dapps_user_key');
-        
-        if (!userKey) {
-          setError("Authentication required. Please log in again.");
-          return;
-        }
-        
-        const response = await fetch('https://api.dapps.co/get_communities?page=1&limit=20&personal=1', {
-          method: 'GET',
-          headers: {
-            'x-user-key': userKey
-          }
-        });
-        
-        if (!response.ok) {
-          throw new Error(`Failed to fetch communities: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        
-        if (data.success && data.communities) {
-          setCommunities(data.communities);
-        } else {
-          throw new Error('Invalid response format');
-        }
-      } catch (err) {
-        console.error('Error fetching communities:', err);
-        setError("Failed to load communities. Please try again.");
-        toast({
-          title: "Error",
-          description: "Failed to load your communities. Please try again.",
-          variant: "destructive"
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Function to fetch communities - supports both personal and search modes
+  const fetchCommunities = async (search?: string) => {
+    setLoading(true);
+    setError(null);
     
+    try {
+      const userKey = localStorage.getItem('dapps_user_key');
+      
+      if (!userKey) {
+        setError("Authentication required. Please log in again.");
+        return;
+      }
+      
+      // Build the API URL based on whether we're searching or getting personal communities
+      let url = 'https://api.dapps.co/get_communities?page=1&limit=20';
+      if (search && search.trim()) {
+        url += `&search=${encodeURIComponent(search.trim())}`;
+      } else {
+        url += '&personal=1';
+      }
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'x-user-key': userKey
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch communities: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.success && data.communities) {
+        setCommunities(data.communities);
+      } else {
+        throw new Error('Invalid response format');
+      }
+    } catch (err) {
+      console.error('Error fetching communities:', err);
+      setError("Failed to load communities. Please try again.");
+      toast({
+        title: "Error",
+        description: "Failed to load communities. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Initial load of personal communities
+  useEffect(() => {
     fetchCommunities();
   }, [toast]);
+  
+  // Handle search query changes
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      if (searchQuery.trim().length >= 2) {
+        fetchCommunities(searchQuery);
+      } else if (searchQuery.trim().length === 0) {
+        fetchCommunities(); // Load personal communities when search is cleared
+      }
+    }, 500);
+    
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
   
   const formatUsername = (name: string) => {
     return '@' + name.split('.')[0];
   };
 
-  const filteredCommunities = communities.filter(
-    community => community.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // We'll display all communities from the API
+  const displayedCommunities = communities;
 
   return (
     <>
       <div className="p-4 border-b">
         <div className="flex items-start gap-3 mb-2">
           <Avatar className="h-10 w-10">
-            <AvatarImage src={`https://api.dicebear.com/7.x/personas/svg?seed=${username}`} />
+            <AvatarImage src={`https://img.dapps.co/avatar/${username}.svg`} />
             <AvatarFallback>{username[0].toUpperCase()}</AvatarFallback>
           </Avatar>
           <div className="flex-1">
@@ -151,6 +173,7 @@ export const MirrorContent = ({
             value={quoteText}
             onChange={(e) => onQuoteChange(e.target.value)}
             maxLength={280}
+            onClick={(e) => e.stopPropagation()} // Stop event propagation
           />
           <div className="text-xs text-muted-foreground text-right mt-1">
             {quoteText.length}/280
@@ -168,6 +191,7 @@ export const MirrorContent = ({
                 className="pl-9"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onClick={(e) => e.stopPropagation()} // Stop event propagation
               />
             </div>
           </div>
@@ -182,9 +206,9 @@ export const MirrorContent = ({
             </div>
           ) : (
             <div className="max-h-[30vh] overflow-y-auto">
-              {filteredCommunities.length > 0 ? (
+              {displayedCommunities.length > 0 ? (
                 <div className="space-y-2">
-                  {filteredCommunities.map((community) => (
+                  {displayedCommunities.map((community) => (
                     <div 
                       key={community.name}
                       className={`flex items-center justify-between p-3 rounded-md transition-colors ${
@@ -192,7 +216,10 @@ export const MirrorContent = ({
                           ? 'bg-primary/10 border border-primary/30' 
                           : 'hover:bg-muted/50 border border-transparent'
                       }`}
-                      onClick={() => onCommunitySelect(community.name)}
+                      onClick={(e) => {
+                        e.stopPropagation(); // Stop event propagation
+                        onCommunitySelect(community.name);
+                      }}
                     >
                       <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
