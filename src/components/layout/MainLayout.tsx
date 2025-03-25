@@ -26,12 +26,15 @@ const MainLayout = () => {
       <div className="sticky top-0 z-50">
         <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
       </div>
-      <div className="flex flex-1 overflow-hidden"> 
+      
+      {/* Main content area - modified for proper sidebar scrolling */}
+      <div className="flex flex-1 md:h-[calc(100vh-64px)]"> 
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        
         <div className="flex-1 overflow-auto">
           <PullToRefresh 
             onRefresh={handleRefresh}
-            className="transition-all duration-300 ease-in-out"
+            className="transition-all duration-300 ease-in-out h-full"
           >
             <main className={isMobile ? "pb-16" : ""}>
               <div className="container py-6 px-4 sm:px-6 max-w-5xl mx-auto animate-fade-in">
@@ -41,6 +44,7 @@ const MainLayout = () => {
           </PullToRefresh>
         </div>
       </div>
+      
       {isMobile && <MobileBottomNav />}
     </div>
   );
