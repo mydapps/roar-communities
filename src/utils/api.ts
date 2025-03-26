@@ -92,9 +92,10 @@ export const fetchCommunities = async (options: {
   search?: string;
   page?: number;
   limit?: number;
+  category?: string;
 }): Promise<Community[]> => {
   try {
-    const { personal, search, page = 1, limit = 10 } = options;
+    const { personal, search, page = 1, limit = 10, category } = options;
     
     // Get user API key from local storage
     const userKey = localStorage.getItem('dapps_user_key');
@@ -109,6 +110,9 @@ export const fetchCommunities = async (options: {
     let url = `${API_BASE_URL}/get_communities?page=${page}&limit=${limit}`;
     if (personal) {
       url += '&personal=1';
+    }
+    if (category) {
+      url += `&category=${encodeURIComponent(category)}`;
     }
     if (search && search.trim() !== '') {
       url += `&search=${encodeURIComponent(search.trim())}`;
@@ -134,12 +138,17 @@ export const fetchCommunities = async (options: {
     
     const data = await response.json();
     console.log(`Communities API response structure:`, Object.keys(data));
+    console.log(`Success property:`, data.success);
     
     let communities: Community[] = [];
     
-    if (data.communities && Array.isArray(data.communities)) {
+    if (data.success && data.communities && Array.isArray(data.communities)) {
       // New API format
-      console.log(`Fetched ${data.communities.length} communities successfully`);
+      console.log(`Found communities array with length: ${data.communities.length}`);
+      if (data.communities.length > 0) {
+        console.log('First community data sample:', data.communities[0]);
+      }
+      
       communities = data.communities.map((community: any) => ({
         name: community.name || 'Unknown Community',
         description: community.description || '',
@@ -170,7 +179,7 @@ export const fetchCommunities = async (options: {
       throw new Error('Invalid response format');
     }
     
-    console.log('Parsed communities:', communities.map(c => ({ name: c.name, members: c.membersCount })));
+    console.log('Transformed communities:', communities.length);
     return communities;
   } catch (error) {
     console.error('Error fetching communities:', error);
@@ -308,20 +317,26 @@ export const mirrorPost = async (params: {
     
     console.log(`Mirroring post:`, params);
     
+    // Use the exact field names expected by the API
+    const requestBody = {
+      post_code: postCode,
+      community_to: communityTo,
+      quote_text: quoteText?.trim() || undefined
+    };
+    
+    console.log(`Request payload:`, JSON.stringify(requestBody));
+    
     const response = await fetch(`${API_BASE_URL}/mirror_post`, {
       method: 'POST',
       headers: {
         'x-user-key': userKey,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        post_code: postCode,
-        community_to: communityTo,
-        quote_text: quoteText?.trim() || undefined
-      })
+      body: JSON.stringify(requestBody)
     });
     
-    console.log(`Mirror API response status: ${response.status}`);
+    console.log(`Response status: ${response.status}`);
+    console.log(`Response content-type: ${response.headers.get("content-type")}`);
     
     if (!response.ok) {
       const contentType = response.headers.get("content-type");

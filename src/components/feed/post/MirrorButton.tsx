@@ -7,6 +7,7 @@ import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetDescri
 import { Drawer, DrawerTrigger, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter, DrawerClose } from '@/components/ui/drawer';
 import { MirrorContent } from './MirrorContent';
 import { useToast } from '@/hooks/use-toast';
+import { mirrorPost } from '@/utils/api';
 
 // Create a custom event for post mirroring
 export const POST_MIRRORED_EVENT = 'post-mirrored';
@@ -97,74 +98,32 @@ export const MirrorButton = ({
         return;
       }
       
-      console.log("Mirroring post:", {
-        postCode,
+      // Using the proper parameter names as expected by the API
+      const success = await mirrorPost({
+        postCode: postCode, 
         communityTo: selectedCommunity,
         quoteText: quoteText.trim() || undefined
       });
       
-      const requestBody = {
-        post_code: postCode,
-        community_to: selectedCommunity,
-        quote_text: quoteText.trim() || undefined
-      };
-      
-      console.log("Request payload:", JSON.stringify(requestBody));
-      
-      const response = await fetch('https://api.dapps.co/mirror_post', {
-        method: 'POST',
-        headers: {
-          'x-user-key': userKey,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(requestBody)
-      });
-      
-      const contentType = response.headers.get("content-type");
-      console.log("Response status:", response.status);
-      console.log("Response content-type:", contentType);
-      
-      if (!response.ok) {
-        let errorMessage = `Error ${response.status}: ${response.statusText}`;
-        if (contentType && contentType.indexOf("application/json") !== -1) {
-          const errorData = await response.json();
-          console.error("Mirror API error response (JSON):", errorData);
-          errorMessage = errorData.message || errorMessage;
-        } else {
-          const errorText = await response.text();
-          console.error("Mirror API error response (text):", errorText);
-        }
-        throw new Error(errorMessage);
-      }
-      
-      // Check if response is JSON
-      if (contentType && contentType.indexOf("application/json") !== -1) {
-        const data = await response.json();
-        console.log("Mirror API response:", data);
+      if (success) {
+        toast({
+          title: "Success!",
+          description: `Post mirrored to ${selectedCommunity}`,
+        });
+        onOpenChange(false);
+        setSelectedCommunity(null);
+        setQuoteText('');
         
-        if (data.status === "SUCCESS") {
-          toast({
-            title: "Success!",
-            description: `Post mirrored to ${selectedCommunity}`,
-          });
-          onOpenChange(false);
-          setSelectedCommunity(null);
-          setQuoteText('');
-          
-          // Dispatch a custom event to notify that a post was mirrored
-          const mirroredEvent = new CustomEvent(POST_MIRRORED_EVENT, {
-            detail: {
-              originalPostCode: postCode,
-              mirroredPostCode: data.mirroredPostCode || '',
-              communityTo: selectedCommunity
-            }
-          });
-          document.dispatchEvent(mirroredEvent);
-        } else {
-          throw new Error(data.message || 'Failed to mirror post');
-        }
+        // Dispatch a custom event to notify that a post was mirrored
+        const mirroredEvent = new CustomEvent(POST_MIRRORED_EVENT, {
+          detail: {
+            originalPostCode: postCode,
+            communityTo: selectedCommunity
+          }
+        });
+        document.dispatchEvent(mirroredEvent);
       } else {
-        throw new Error("Invalid response format from server");
+        throw new Error('Failed to mirror post');
       }
     } catch (error) {
       console.error('Error mirroring post:', error);

@@ -7,6 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { Check, Loader2, Search } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from 'sonner';
+import { fetchCommunities, Community } from '@/utils/api';
 
 interface MirrorContentProps {
   username: string;
@@ -18,14 +19,6 @@ interface MirrorContentProps {
   quoteText: string;
   images?: string[];
   video?: string;
-}
-
-interface Community {
-  name: string;
-  description?: string;
-  image?: string;
-  membersCount: number;
-  userAvatars?: string[];
 }
 
 export const MirrorContent = ({
@@ -44,90 +37,46 @@ export const MirrorContent = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
   const mobile = useIsMobile();
   
-  const fetchCommunities = async (searchTerm?: string) => {
+  // Load user communities on initial mount
+  useEffect(() => {
+    console.log("MirrorContent mounted, fetching communities...");
+    loadCommunities();
+  }, []);
+  
+  const loadCommunities = async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const userKey = localStorage.getItem('dapps_user_key');
-      if (!userKey) {
-        setError('Authentication required. Please log in again.');
-        toast.error('Authentication required. Please log in again.');
-        return;
-      }
-      
-      let url = 'https://api.dapps.co/get_communities?personal=1';
-      if (searchTerm && searchTerm.trim() !== '') {
-        url = `https://api.dapps.co/get_communities?search=${encodeURIComponent(searchTerm.trim())}`;
-      }
-      
-      console.log('Fetching communities from:', url);
-      console.log('Using user key:', userKey.substring(0, 5) + '...');
-      
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'x-user-key': userKey
-        }
+      console.log('Fetching user communities...');
+      const userCommunities = await fetchCommunities({ 
+        personal: true,
+        limit: 20
       });
       
-      console.log('API response status:', response.status);
+      console.log(`Fetched ${userCommunities.length} user communities`);
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('API error response:', errorText);
-        throw new Error(`Failed to fetch communities: ${response.statusText}`);
-      }
-      
-      const responseData = await response.json();
-      console.log('API response data structure:', Object.keys(responseData));
-      console.log('Success property:', responseData.success);
-      
-      // Check if the response has the expected structure with communities array
-      if (responseData && responseData.communities && Array.isArray(responseData.communities)) {
-        console.log('Found communities array with length:', responseData.communities.length);
-        console.log('First community data sample:', responseData.communities[0]);
-        
-        const transformedData: Community[] = responseData.communities.map((community: any) => {
-          console.log('Processing community:', community.name);
-          return {
-            name: community.name || 'Unknown Community',
-            description: community.description || '',
-            image: community.image || '',
-            membersCount: parseInt(community.membersCount || '0', 10),
-            userAvatars: Array.isArray(community.userAvatars) ? community.userAvatars : []
-          };
+      if (userCommunities.length === 0) {
+        // If user is not part of any communities, fetch popular ones
+        console.log('No user communities found, fetching popular communities...');
+        const popularCommunities = await fetchCommunities({ 
+          limit: 20
         });
         
-        console.log('Transformed communities:', transformedData.length);
-        setCommunities(transformedData);
-        setFilteredCommunities(transformedData);
-      } else if (Array.isArray(responseData)) {
-        // Fallback for old API format
-        console.log('Using fallback format - array response with length:', responseData.length);
-        const transformedData: Community[] = responseData.map((community: any) => ({
-          name: community.name || 'Unknown Community',
-          description: community.description || '',
-          image: community.image || '',
-          membersCount: parseInt(community.membersCount || '0', 10),
-          userAvatars: Array.isArray(community.userAvatars) ? community.userAvatars : []
-        }));
-        
-        console.log('Transformed communities (fallback):', transformedData.length);
-        setCommunities(transformedData);
-        setFilteredCommunities(transformedData);
+        console.log(`Fetched ${popularCommunities.length} popular communities`);
+        setCommunities(popularCommunities);
+        setFilteredCommunities(popularCommunities);
       } else {
-        // If the structure is completely unexpected
-        console.error('Invalid API response structure:', responseData);
-        throw new Error('Invalid community data structure received from API');
+        setCommunities(userCommunities);
+        setFilteredCommunities(userCommunities);
       }
     } catch (error) {
-      console.error('Error fetching communities:', error);
+      console.error('Error loading communities:', error);
       setError('Failed to load communities. Please try again.');
-      toast.error('Failed to load communities. Please try again.');
-      // Set empty arrays to prevent null/undefined errors
       setCommunities([]);
       setFilteredCommunities([]);
     } finally {
@@ -135,39 +84,72 @@ export const MirrorContent = ({
     }
   };
   
-  useEffect(() => {
-    // Load communities on initial mount
-    console.log('MirrorContent mounted, fetching communities...');
-    fetchCommunities();
-  }, []);
-  
-  useEffect(() => {
-    // When search query is updated, either filter the existing communities
-    // or fetch new ones if we're doing a server-side search
-    console.log('Search query changed:', searchQuery);
-    
-    if (searchQuery.trim() === '') {
-      console.log('Empty search, showing all communities:', communities.length);
-      setFilteredCommunities(communities);
-    } else {
-      // For short queries, filter client-side
-      if (searchQuery.length < 3) {
-        console.log('Short search, filtering client-side');
-        const filtered = communities.filter(community => 
-          community.name.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-        console.log('Filtered communities:', filtered.length);
-        setFilteredCommunities(filtered);
-      } else {
-        // For longer queries, search on the server
-        console.log('Longer search, fetching from server');
-        fetchCommunities(searchQuery);
-      }
-    }
-  }, [searchQuery, communities]);
-  
+  // Handle search only when the input changes, with debounce
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
+    const query = e.target.value;
+    setSearchQuery(query);
+    
+    // Clear previous timeout to implement debounce
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+    
+    if (query.trim() === '') {
+      // If search is cleared, show all loaded communities immediately
+      setIsSearching(false);
+      setFilteredCommunities(communities);
+      return;
+    }
+    
+    // Set a flag to indicate searching is in progress
+    setIsSearching(true);
+    
+    // Set a timeout to execute the search after a delay (debounce)
+    const timeout = setTimeout(() => {
+      executeSearch(query);
+    }, 500); // 500ms debounce
+    
+    setSearchTimeout(timeout as unknown as NodeJS.Timeout);
+  };
+  
+  const executeSearch = async (query: string) => {
+    console.log(`Executing search for: "${query}"`);
+    
+    try {
+      setLoading(true);
+      
+      // For longer queries, search on the server
+      if (query.length >= 2) {
+        console.log('Searching communities from server...');
+        const searchResults = await fetchCommunities({
+          search: query,
+          limit: 20
+        });
+        
+        console.log(`Search returned ${searchResults.length} communities`);
+        setFilteredCommunities(searchResults);
+      } else {
+        // For very short queries, filter client-side for better responsiveness
+        console.log('Filtering communities client-side...');
+        const filtered = communities.filter(community => 
+          community.name.toLowerCase().includes(query.toLowerCase())
+        );
+        console.log(`Filtered to ${filtered.length} communities`);
+        setFilteredCommunities(filtered);
+      }
+    } catch (error) {
+      console.error('Error searching communities:', error);
+      toast.error('Error searching communities. Please try again.');
+      
+      // Fallback to client-side filtering on error
+      const filtered = communities.filter(community => 
+        community.name.toLowerCase().includes(query.toLowerCase())
+      );
+      setFilteredCommunities(filtered);
+    } finally {
+      setLoading(false);
+      setIsSearching(false);
+    }
   };
   
   const handleQuoteChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -187,8 +169,18 @@ export const MirrorContent = ({
     }
   };
   
+  // Display number with appropriate formatting
+  const formatMemberCount = (count: number): string => {
+    if (count >= 1000000) {
+      return `${(count / 1000000).toFixed(1)}M`;
+    } else if (count >= 1000) {
+      return `${(count / 1000).toFixed(1)}K`;
+    }
+    return count.toString();
+  };
+  
   return (
-    <div className={`flex flex-col gap-4 ${mobile ? 'pb-16' : ''} p-4 overflow-y-auto`}>
+    <div className={`flex flex-col gap-4 ${mobile ? 'pb-28' : ''} p-4 overflow-y-auto`}>
       {/* Original post display */}
       <div className="rounded-md border p-3 bg-muted/30">
         <div className="flex items-center mb-2">
@@ -261,7 +253,9 @@ export const MirrorContent = ({
           ) : filteredCommunities.length === 0 ? (
             <div className="p-6 text-center">
               <p className="text-muted-foreground">No communities found</p>
-              <p className="text-xs text-muted-foreground mt-1">Try a different search term</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {isSearching ? 'Searching...' : 'Try a different search term'}
+              </p>
             </div>
           ) : (
             filteredCommunities.map((community, index) => (
@@ -287,7 +281,9 @@ export const MirrorContent = ({
                 </div>
                 <div className="flex-1">
                   <div className="font-medium text-sm">{community.name}</div>
-                  <div className="text-xs text-muted-foreground">{community.membersCount || 0} members</div>
+                  <div className="text-xs text-muted-foreground">
+                    {formatMemberCount(community.membersCount || 0)} members
+                  </div>
                 </div>
                 {selectedCommunity === community.name && (
                   <Check className="h-5 w-5 text-primary" />
