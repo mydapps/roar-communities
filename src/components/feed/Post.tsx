@@ -41,6 +41,7 @@ export interface PostProps {
     originalBody: string;
     originalTimeAgo: string;
     originalAvatar: string;
+    originalImages?: string[];
   };
   ipfs?: string;
   avatar?: string;
