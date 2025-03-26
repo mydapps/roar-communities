@@ -44,6 +44,7 @@ export const MirrorButton = ({
   };
   
   const handleCommunitySelect = (community: string | null) => {
+    console.log("Community selected in MirrorButton:", community);
     setSelectedCommunity(community);
   };
   
@@ -56,10 +57,26 @@ export const MirrorButton = ({
     e.preventDefault();
     e.stopPropagation();
     
-    if (!selectedCommunity || !postCode) {
+    console.log("Mirror request details:", {
+      postCode,
+      selectedCommunity,
+      quoteText: quoteText.trim()
+    });
+    
+    if (!selectedCommunity) {
       toast({
         title: "Error",
         description: "Please select a community to mirror to",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!postCode) {
+      console.error("Missing postCode in mirror request");
+      toast({
+        title: "Error",
+        description: "Unable to mirror this post: missing post identifier",
         variant: "destructive"
       });
       return;
@@ -86,24 +103,32 @@ export const MirrorButton = ({
         quoteText: quoteText.trim() || undefined
       });
       
+      const requestBody = {
+        post_code: postCode,
+        community_to: selectedCommunity,
+        quote_text: quoteText.trim() || undefined
+      };
+      
+      console.log("Request payload:", JSON.stringify(requestBody));
+      
       const response = await fetch('https://api.dapps.co/mirror_post', {
         method: 'POST',
         headers: {
           'x-user-key': userKey,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          post_code: postCode,
-          community_to: selectedCommunity,
-          quote_text: quoteText.trim() || undefined
-        })
+        body: JSON.stringify(requestBody)
       });
       
       const contentType = response.headers.get("content-type");
+      console.log("Response status:", response.status);
+      console.log("Response content-type:", contentType);
+      
       if (!response.ok) {
         let errorMessage = `Error ${response.status}: ${response.statusText}`;
         if (contentType && contentType.indexOf("application/json") !== -1) {
           const errorData = await response.json();
+          console.error("Mirror API error response (JSON):", errorData);
           errorMessage = errorData.message || errorMessage;
         } else {
           const errorText = await response.text();

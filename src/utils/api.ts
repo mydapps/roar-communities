@@ -52,6 +52,28 @@ export interface Post {
 }
 
 /**
+ * Interface for community data
+ */
+export interface Community {
+  name: string;
+  description?: string;
+  image?: string;
+  type?: string;
+  sharePrice?: {
+    buyPrice: number;
+    sellPrice: number;
+  };
+  userShares?: number;
+  isAdmin?: number;
+  membersCount: number;
+  usdPrice?: number;
+  marketCap?: string;
+  last7Prices?: number[];
+  userAvatars?: string[];
+  metaUserInfo?: number;
+}
+
+/**
  * Setup event listener for post mirroring
  * This triggers a callback when a post is mirrored
  */
@@ -60,6 +82,101 @@ export const setupMirrorListener = (callback: () => void) => {
   return () => {
     document.removeEventListener(POST_MIRRORED_EVENT, callback);
   };
+};
+
+/**
+ * Fetch communities with optional search query
+ */
+export const fetchCommunities = async (options: {
+  personal?: boolean;
+  search?: string;
+  page?: number;
+  limit?: number;
+}): Promise<Community[]> => {
+  try {
+    const { personal, search, page = 1, limit = 10 } = options;
+    
+    // Get user API key from local storage
+    const userKey = localStorage.getItem('dapps_user_key');
+    
+    if (!userKey) {
+      console.error('No user key found for fetching communities');
+      toast.error('Authentication required. Please log in again.');
+      return [];
+    }
+    
+    // Construct API URL based on options
+    let url = `${API_BASE_URL}/get_communities?page=${page}&limit=${limit}`;
+    if (personal) {
+      url += '&personal=1';
+    }
+    if (search && search.trim() !== '') {
+      url += `&search=${encodeURIComponent(search.trim())}`;
+    }
+    
+    console.log(`Fetching communities from: ${url}`);
+    
+    // Make the API request
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'x-user-key': userKey,
+      },
+    });
+    
+    console.log(`Communities API response status: ${response.status}`);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Failed response body: ${errorText}`);
+      throw new Error(`Failed to fetch communities: ${errorText}`);
+    }
+    
+    const data = await response.json();
+    console.log(`Communities API response structure:`, Object.keys(data));
+    
+    let communities: Community[] = [];
+    
+    if (data.communities && Array.isArray(data.communities)) {
+      // New API format
+      console.log(`Fetched ${data.communities.length} communities successfully`);
+      communities = data.communities.map((community: any) => ({
+        name: community.name || 'Unknown Community',
+        description: community.description || '',
+        image: community.image || '',
+        type: community.type || 'General',
+        sharePrice: community.sharePrice,
+        userShares: community.userShares,
+        isAdmin: community.isAdmin,
+        membersCount: parseInt(String(community.membersCount || '0'), 10),
+        usdPrice: community.usdPrice,
+        marketCap: community.marketCap,
+        last7Prices: community.last7Prices,
+        userAvatars: community.userAvatars,
+        metaUserInfo: community.metaUserInfo
+      }));
+    } else if (Array.isArray(data)) {
+      // Old API format
+      console.log(`Fetched ${data.length} communities successfully (old format)`);
+      communities = data.map((community: any) => ({
+        name: community.name || 'Unknown Community',
+        description: community.description || '',
+        image: community.image || '',
+        membersCount: parseInt(String(community.membersCount || '0'), 10),
+        userAvatars: community.userAvatars || []
+      }));
+    } else {
+      console.error('Unexpected API response format:', data);
+      throw new Error('Invalid response format');
+    }
+    
+    console.log('Parsed communities:', communities.map(c => ({ name: c.name, members: c.membersCount })));
+    return communities;
+  } catch (error) {
+    console.error('Error fetching communities:', error);
+    toast.error('Failed to load communities. Please try again.');
+    return [];
+  }
 };
 
 /**
@@ -163,5 +280,71 @@ export const toggleRoar = async (postCode: string): Promise<boolean> => {
     console.error('Error toggling roar:', error);
     toast.error('Failed to update interaction. Please try again.');
     return false;
+  }
+};
+
+/**
+ * Mirror a post to another community
+ */
+export const mirrorPost = async (params: {
+  postCode: string;
+  communityTo: string;
+  quoteText?: string;
+}): Promise<boolean> => {
+  try {
+    const { postCode, communityTo, quoteText } = params;
+
+    if (!postCode || !communityTo) {
+      console.error('Missing required parameters for mirroring post');
+      throw new Error('Post code and destination community are required');
+    }
+
+    const userKey = localStorage.getItem('dapps_user_key');
+    
+    if (!userKey) {
+      console.error('No user key found');
+      throw new Error('Authentication required. Please log in again.');
+    }
+    
+    console.log(`Mirroring post:`, params);
+    
+    const response = await fetch(`${API_BASE_URL}/mirror_post`, {
+      method: 'POST',
+      headers: {
+        'x-user-key': userKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        post_code: postCode,
+        community_to: communityTo,
+        quote_text: quoteText?.trim() || undefined
+      })
+    });
+    
+    console.log(`Mirror API response status: ${response.status}`);
+    
+    if (!response.ok) {
+      const contentType = response.headers.get("content-type");
+      let errorMessage = `Error ${response.status}: ${response.statusText}`;
+      
+      if (contentType && contentType.indexOf("application/json") !== -1) {
+        const errorData = await response.json();
+        console.error('Mirror API error response (JSON):', errorData);
+        errorMessage = errorData.message || errorMessage;
+      } else {
+        const errorText = await response.text();
+        console.error('Mirror API error response (text):', errorText);
+      }
+      
+      throw new Error(errorMessage);
+    }
+    
+    const data = await response.json();
+    console.log('Mirror API response:', data);
+    
+    return data.status === "SUCCESS";
+  } catch (error) {
+    console.error('Error mirroring post:', error);
+    throw error;
   }
 };

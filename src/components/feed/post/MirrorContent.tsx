@@ -64,6 +64,8 @@ export const MirrorContent = ({
       }
       
       console.log('Fetching communities from:', url);
+      console.log('Using user key:', userKey.substring(0, 5) + '...');
+      
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -71,27 +73,40 @@ export const MirrorContent = ({
         }
       });
       
+      console.log('API response status:', response.status);
+      
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API error response:', errorText);
         throw new Error(`Failed to fetch communities: ${response.statusText}`);
       }
       
       const responseData = await response.json();
-      console.log('Fetched communities data:', responseData);
+      console.log('API response data structure:', Object.keys(responseData));
+      console.log('Success property:', responseData.success);
       
       // Check if the response has the expected structure with communities array
       if (responseData && responseData.communities && Array.isArray(responseData.communities)) {
-        const transformedData: Community[] = responseData.communities.map((community: any) => ({
-          name: community.name || 'Unknown Community',
-          description: community.description || '',
-          image: community.image || '',
-          membersCount: parseInt(community.membersCount || '0', 10),
-          userAvatars: Array.isArray(community.userAvatars) ? community.userAvatars : []
-        }));
+        console.log('Found communities array with length:', responseData.communities.length);
+        console.log('First community data sample:', responseData.communities[0]);
         
+        const transformedData: Community[] = responseData.communities.map((community: any) => {
+          console.log('Processing community:', community.name);
+          return {
+            name: community.name || 'Unknown Community',
+            description: community.description || '',
+            image: community.image || '',
+            membersCount: parseInt(community.membersCount || '0', 10),
+            userAvatars: Array.isArray(community.userAvatars) ? community.userAvatars : []
+          };
+        });
+        
+        console.log('Transformed communities:', transformedData.length);
         setCommunities(transformedData);
         setFilteredCommunities(transformedData);
       } else if (Array.isArray(responseData)) {
         // Fallback for old API format
+        console.log('Using fallback format - array response with length:', responseData.length);
         const transformedData: Community[] = responseData.map((community: any) => ({
           name: community.name || 'Unknown Community',
           description: community.description || '',
@@ -100,10 +115,12 @@ export const MirrorContent = ({
           userAvatars: Array.isArray(community.userAvatars) ? community.userAvatars : []
         }));
         
+        console.log('Transformed communities (fallback):', transformedData.length);
         setCommunities(transformedData);
         setFilteredCommunities(transformedData);
       } else {
         // If the structure is completely unexpected
+        console.error('Invalid API response structure:', responseData);
         throw new Error('Invalid community data structure received from API');
       }
     } catch (error) {
@@ -120,27 +137,34 @@ export const MirrorContent = ({
   
   useEffect(() => {
     // Load communities on initial mount
+    console.log('MirrorContent mounted, fetching communities...');
     fetchCommunities();
   }, []);
   
   useEffect(() => {
     // When search query is updated, either filter the existing communities
     // or fetch new ones if we're doing a server-side search
+    console.log('Search query changed:', searchQuery);
+    
     if (searchQuery.trim() === '') {
+      console.log('Empty search, showing all communities:', communities.length);
       setFilteredCommunities(communities);
     } else {
       // For short queries, filter client-side
       if (searchQuery.length < 3) {
+        console.log('Short search, filtering client-side');
         const filtered = communities.filter(community => 
           community.name.toLowerCase().includes(searchQuery.toLowerCase())
         );
+        console.log('Filtered communities:', filtered.length);
         setFilteredCommunities(filtered);
       } else {
         // For longer queries, search on the server
+        console.log('Longer search, fetching from server');
         fetchCommunities(searchQuery);
       }
     }
-  }, [searchQuery]);
+  }, [searchQuery, communities]);
   
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
@@ -151,9 +175,14 @@ export const MirrorContent = ({
   };
   
   const handleCommunitySelect = (communityName: string) => {
+    console.log('Community selected:', communityName);
+    console.log('Previously selected community:', selectedCommunity);
+    
     if (selectedCommunity === communityName) {
+      console.log('Deselecting community');
       onCommunitySelect(null);
     } else {
+      console.log('Selecting new community');
       onCommunitySelect(communityName);
     }
   };

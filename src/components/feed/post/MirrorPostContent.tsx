@@ -20,6 +20,13 @@ export const MirrorPostContent = ({ mirrorData }: MirrorPostContentProps) => {
     return '@' + name.split('.')[0];
   };
   
+  console.log("Rendering mirrored post with data:", {
+    author: mirrorData.originalAuthor,
+    hasQuote: !!mirrorData.quote,
+    hasImages: mirrorData.originalImages?.length > 0,
+    imageCount: mirrorData.originalImages?.length
+  });
+  
   return (
     <div className="mt-3 border rounded-md p-3 bg-muted/30 overflow-hidden">
       {mirrorData.quote && mirrorData.quote.trim() !== "" && (
