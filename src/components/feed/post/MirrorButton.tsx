@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Repeat2 } from 'lucide-react';
@@ -19,7 +20,7 @@ interface MirrorButtonProps {
 }
 
 // Create a custom event for post mirroring
-export const POST_MIRRORED_EVENT = 'post-mirrored';
+const POST_MIRRORED_EVENT = 'post-mirrored';
 
 export const MirrorButton = ({ 
   open, 
