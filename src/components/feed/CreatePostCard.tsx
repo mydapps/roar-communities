@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -11,7 +10,6 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { MentionInput } from '@/components/ui/mention-input';
 
-// Available communities for linking
 const COMMUNITIES = [
   "Ethereum Devs", 
   "DeFi Explorers", 
@@ -34,7 +32,6 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // Filter communities based on search input
   const [communitySearch, setCommunitySearch] = useState('');
   const filteredCommunities = COMMUNITIES.filter(c => 
     c.toLowerCase().includes(communitySearch.toLowerCase())
@@ -47,7 +44,6 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      // For demo purposes, we'll use placeholder URLs
       const placeholderImages = [
         "https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=800",
         "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=800",
@@ -55,25 +51,21 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
         "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800",
       ];
       
-      // Limit to max 4 images
       const newImages = [...selectedImages];
       for (let i = 0; i < Math.min(e.target.files.length, 4 - selectedImages.length); i++) {
         newImages.push(placeholderImages[i % placeholderImages.length]);
       }
       
       setSelectedImages(newImages);
-      // Clear any video if images are selected
       setSelectedVideo(null);
     }
   };
 
   const handleVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      // For demo purposes, we'll use a placeholder video URL
       const placeholderVideo = "https://assets.mixkit.co/videos/preview/mixkit-software-developer-working-on-code-screen-close-up-27013-large.mp4";
       
       setSelectedVideo(placeholderVideo);
-      // Clear any images if video is selected
       setSelectedImages([]);
     }
   };
@@ -93,7 +85,6 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
     
     setIsSubmitting(true);
     
-    // Create new post object
     const newPost = {
       username: "you",
       community: selectedCommunity || undefined,
@@ -106,11 +97,9 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
       video: selectedVideo || undefined
     };
     
-    // Simulate network delay
     setTimeout(() => {
       onPostCreated(newPost);
       
-      // Reset form
       setContent('');
       setSelectedCommunity('');
       setSelectedImages([]);
@@ -126,9 +115,9 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
 
   return (
     <Card className="border border-border/40 shadow-sm hover:shadow-md transition-all duration-300">
-      <CardContent className="pt-6">
-        <div className="flex gap-4">
-          <Avatar className="h-10 w-10 border-2 border-primary/20 hover:border-primary/50 transition-colors">
+      <CardContent className="pt-6 pb-4">
+        <div className="flex gap-3">
+          <Avatar className="h-10 w-10 mt-1 border-2 border-primary/20 hover:border-primary/50 transition-colors">
             <AvatarImage src="https://api.dicebear.com/7.x/personas/svg?seed=you" />
             <AvatarFallback>YO</AvatarFallback>
           </Avatar>
@@ -158,7 +147,6 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
               />
             </div>
             
-            {/* Display selected media */}
             {selectedImages.length > 0 && (
               <div className="mt-3 grid grid-cols-2 gap-2 animate-fade-in">
                 {selectedImages.map((img, idx) => (
@@ -199,10 +187,8 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
               </div>
             )}
             
-            {/* Action buttons - reorganized layout */}
             {(isExpanded || content || selectedImages.length > 0 || selectedVideo) && (
               <div className="mt-3 animate-fade-in">
-                {/* Media buttons */}
                 <div className="flex justify-between items-center mb-3">
                   <div className="flex items-center gap-2">
                     <Label htmlFor="image-upload" className="cursor-pointer">
@@ -251,9 +237,7 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
 
                 <Separator className="my-3" />
                 
-                {/* Post button and community selection */}
                 <div className="flex items-center justify-between">
-                  {/* Community button */}
                   {!selectedCommunity ? (
                     <Dialog open={showCommunityDialog} onOpenChange={setShowCommunityDialog}>
                       <DialogTrigger asChild>
@@ -312,7 +296,6 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
                     </Badge>
                   )}
                   
-                  {/* Post button */}
                   <Button 
                     onClick={handleSubmit} 
                     disabled={isSubmitting || !content.trim()}

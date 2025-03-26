@@ -20,17 +20,13 @@ export const MirrorPostContent = ({ mirrorData }: MirrorPostContentProps) => {
   
   return (
     <div className="mt-3 border rounded-md p-3 bg-muted/30">
-      <div className="text-sm text-muted-foreground mb-2">
-        {mirrorData.quote && mirrorData.quote.trim() !== "" ? (
-          <p className="italic">{mirrorData.quote}</p>
-        ) : (
-          <p>Mirrored from {mirrorData.originalCommunity}</p>
-        )}
-      </div>
+      {mirrorData.quote && mirrorData.quote.trim() !== "" && (
+        <p className="italic text-sm mb-3">{mirrorData.quote}</p>
+      )}
       
       <div className="flex items-start gap-2">
         <Avatar className="h-6 w-6">
-          <AvatarImage src={`https://api.dicebear.com/7.x/personas/svg?seed=${mirrorData.originalAvatar}`} />
+          <AvatarImage src={`https://img.dapps.co/avatar/${mirrorData.originalAvatar}.svg`} />
           <AvatarFallback>{mirrorData.originalAuthor[0].toUpperCase()}</AvatarFallback>
         </Avatar>
         
@@ -44,6 +40,12 @@ export const MirrorPostContent = ({ mirrorData }: MirrorPostContentProps) => {
           <p className="text-sm mt-1">{mirrorData.originalBody}</p>
         </div>
       </div>
+      
+      {!mirrorData.quote || mirrorData.quote.trim() === "" ? (
+        <div className="text-xs text-muted-foreground mt-2">
+          Mirrored from {mirrorData.originalCommunity}
+        </div>
+      ) : null}
     </div>
   );
 };

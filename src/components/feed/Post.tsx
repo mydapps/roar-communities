@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
@@ -191,7 +192,7 @@ export const Post = ({
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-3">
             <Avatar className="h-12 w-12 border-2 border-primary/20 hover:border-primary/50 transition-colors">
-              <AvatarImage src={`https://img.dapps.co/avatar/${avatar}.svg`} />
+              <AvatarImage src={avatar ? `https://img.dapps.co/avatar/${avatar}.svg` : undefined} />
               <AvatarFallback>{username[0].toUpperCase()}</AvatarFallback>
             </Avatar>
             <div className="flex flex-col">
