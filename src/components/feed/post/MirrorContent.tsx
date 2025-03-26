@@ -46,70 +46,101 @@ export const MirrorContent = ({
   const [error, setError] = useState<string | null>(null);
   const mobile = useIsMobile();
   
-  useEffect(() => {
-    const fetchCommunities = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const userKey = localStorage.getItem('dapps_user_key');
-        if (!userKey) {
-          setError('Authentication required. Please log in again.');
-          toast.error('Authentication required. Please log in again.');
-          return;
+  const fetchCommunities = async (searchTerm?: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const userKey = localStorage.getItem('dapps_user_key');
+      if (!userKey) {
+        setError('Authentication required. Please log in again.');
+        toast.error('Authentication required. Please log in again.');
+        return;
+      }
+      
+      let url = 'https://api.dapps.co/get_communities?personal=1';
+      if (searchTerm && searchTerm.trim() !== '') {
+        url = `https://api.dapps.co/get_communities?search=${encodeURIComponent(searchTerm.trim())}`;
+      }
+      
+      console.log('Fetching communities from:', url);
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'x-user-key': userKey
         }
-        
-        console.log('Fetching communities...');
-        const response = await fetch('https://api.dapps.co/get_communities?personal=1', {
-          method: 'GET',
-          headers: {
-            'x-user-key': userKey
-          }
-        });
-        
-        if (!response.ok) {
-          throw new Error(`Failed to fetch communities: ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        console.log('Fetched communities:', data);
-        
-        // Transform the data to match our Community interface
-        const transformedData: Community[] = Array.isArray(data) ? data.map((community: any) => ({
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch communities: ${response.statusText}`);
+      }
+      
+      const responseData = await response.json();
+      console.log('Fetched communities data:', responseData);
+      
+      // Check if the response has the expected structure with communities array
+      if (responseData && responseData.communities && Array.isArray(responseData.communities)) {
+        const transformedData: Community[] = responseData.communities.map((community: any) => ({
           name: community.name || 'Unknown Community',
           description: community.description || '',
           image: community.image || '',
           membersCount: parseInt(community.membersCount || '0', 10),
           userAvatars: Array.isArray(community.userAvatars) ? community.userAvatars : []
-        })) : [];
+        }));
         
         setCommunities(transformedData);
         setFilteredCommunities(transformedData);
-      } catch (error) {
-        console.error('Error fetching communities:', error);
-        setError('Failed to load communities. Please try again.');
-        toast.error('Failed to load communities. Please try again.');
-        // Set empty arrays to prevent null/undefined errors
-        setCommunities([]);
-        setFilteredCommunities([]);
-      } finally {
-        setLoading(false);
+      } else if (Array.isArray(responseData)) {
+        // Fallback for old API format
+        const transformedData: Community[] = responseData.map((community: any) => ({
+          name: community.name || 'Unknown Community',
+          description: community.description || '',
+          image: community.image || '',
+          membersCount: parseInt(community.membersCount || '0', 10),
+          userAvatars: Array.isArray(community.userAvatars) ? community.userAvatars : []
+        }));
+        
+        setCommunities(transformedData);
+        setFilteredCommunities(transformedData);
+      } else {
+        // If the structure is completely unexpected
+        throw new Error('Invalid community data structure received from API');
       }
-    };
-    
+    } catch (error) {
+      console.error('Error fetching communities:', error);
+      setError('Failed to load communities. Please try again.');
+      toast.error('Failed to load communities. Please try again.');
+      // Set empty arrays to prevent null/undefined errors
+      setCommunities([]);
+      setFilteredCommunities([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  useEffect(() => {
+    // Load communities on initial mount
     fetchCommunities();
   }, []);
   
   useEffect(() => {
+    // When search query is updated, either filter the existing communities
+    // or fetch new ones if we're doing a server-side search
     if (searchQuery.trim() === '') {
       setFilteredCommunities(communities);
     } else {
-      const filtered = communities.filter(community => 
-        community.name.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      setFilteredCommunities(filtered);
+      // For short queries, filter client-side
+      if (searchQuery.length < 3) {
+        const filtered = communities.filter(community => 
+          community.name.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+        setFilteredCommunities(filtered);
+      } else {
+        // For longer queries, search on the server
+        fetchCommunities(searchQuery);
+      }
     }
-  }, [searchQuery, communities]);
+  }, [searchQuery]);
   
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);

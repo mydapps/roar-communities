@@ -188,7 +188,7 @@ export const MirrorButton = ({
             quoteText={quoteText}
           />
           
-          <DrawerFooter className="flex-row justify-between gap-2 p-4 border-t">
+          <DrawerFooter className="flex-row justify-between gap-2 p-4 border-t bg-background sticky bottom-0 left-0 right-0 z-10">
             <DrawerClose asChild>
               <Button variant="outline" onClick={(e) => e.stopPropagation()}>Cancel</Button>
             </DrawerClose>
@@ -248,7 +248,7 @@ export const MirrorButton = ({
           quoteText={quoteText}
         />
         
-        <SheetFooter className="flex flex-row justify-between gap-2 mt-6">
+        <SheetFooter className="flex flex-row justify-between gap-2 mt-6 sticky bottom-4 z-10">
           <SheetClose asChild>
             <Button variant="outline" onClick={(e) => e.stopPropagation()}>Cancel</Button>
           </SheetClose>
