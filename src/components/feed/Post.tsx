@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
@@ -42,6 +41,7 @@ export interface PostProps {
     originalTimeAgo: string;
     originalAvatar: string;
     originalImages?: string[];
+    originalTitle?: string;
   };
   ipfs?: string;
   avatar?: string;
@@ -229,7 +229,7 @@ export const Post = ({
           <MirrorPostContent 
             mirrorData={{
               ...mirrorData,
-              originalImages: images
+              originalImages: mirrorData.originalImages || []
             }} 
           />
         )}

@@ -127,13 +127,13 @@ const FeedPage = () => {
               avatar={post.avatar || ''}
               community={post.community}
               timeAgo={post.timeAgo}
-              content={post.body}
+              content={post.is_mirror === 1 ? (post.mirror_quote || '') : post.body}
               roarCount={post.upvotes}
               commentCount={post.reply_count}
               shareCount={0}
               postCode={post.code}
               roared={post.roar === 1}
-              images={post.multiple_images === 1 ? post.images : (post.image === 1 ? [post.image_url] : undefined)}
+              images={!post.is_mirror && post.multiple_images === 1 ? post.images : (!post.is_mirror && post.image === 1 ? [post.image_url] : undefined)}
               isMirror={post.is_mirror === 1}
               mirrorData={post.is_mirror === 1 ? {
                 quote: post.mirror_quote || '',
@@ -142,7 +142,8 @@ const FeedPage = () => {
                 originalBody: post.original_body || '',
                 originalTimeAgo: post.original_created_on || '',
                 originalAvatar: post.original_author_avatar || '',
-                originalImages: post.original_images || []
+                originalImages: post.original_images || [],
+                originalTitle: post.original_title || ''
               } : undefined}
               ipfs={post.ipfs}
             />

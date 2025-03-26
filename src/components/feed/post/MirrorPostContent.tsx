@@ -12,6 +12,7 @@ interface MirrorPostContentProps {
     originalTimeAgo: string;
     originalAvatar: string;
     originalImages?: string[];
+    originalTitle?: string;
   };
 }
 
@@ -24,15 +25,12 @@ export const MirrorPostContent = ({ mirrorData }: MirrorPostContentProps) => {
     author: mirrorData.originalAuthor,
     hasQuote: !!mirrorData.quote,
     hasImages: mirrorData.originalImages?.length > 0,
-    imageCount: mirrorData.originalImages?.length
+    imageCount: mirrorData.originalImages?.length,
+    originalTitle: mirrorData.originalTitle
   });
   
   return (
     <div className="mt-3 border rounded-md p-3 bg-muted/30 overflow-hidden">
-      {mirrorData.quote && mirrorData.quote.trim() !== "" && (
-        <p className="italic text-sm mb-3 break-words">{mirrorData.quote}</p>
-      )}
-      
       <div className="flex items-start gap-2">
         <Avatar className="h-6 w-6 flex-shrink-0">
           <AvatarImage src={`https://img.dapps.co/avatar/${mirrorData.originalAvatar}.svg`} />
@@ -44,7 +42,13 @@ export const MirrorPostContent = ({ mirrorData }: MirrorPostContentProps) => {
             <span className="font-medium text-sm truncate">{formatUsername(mirrorData.originalAuthor)}</span>
             <span className="text-muted-foreground text-xs mx-1">·</span>
             <span className="text-muted-foreground text-xs">{mirrorData.originalTimeAgo}</span>
+            <span className="text-muted-foreground text-xs mx-1">·</span>
+            <span className="text-muted-foreground text-xs">{mirrorData.originalCommunity}</span>
           </div>
+          
+          {mirrorData.originalTitle && (
+            <p className="text-sm font-semibold mt-1 break-words">{mirrorData.originalTitle}</p>
+          )}
           
           <p className="text-sm mt-1 break-words">{mirrorData.originalBody}</p>
           
@@ -67,12 +71,6 @@ export const MirrorPostContent = ({ mirrorData }: MirrorPostContentProps) => {
           )}
         </div>
       </div>
-      
-      {!mirrorData.quote || mirrorData.quote.trim() === "" ? (
-        <div className="text-xs text-muted-foreground mt-2">
-          Mirrored from {mirrorData.originalCommunity}
-        </div>
-      ) : null}
     </div>
   );
 };
