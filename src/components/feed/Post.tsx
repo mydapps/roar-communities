@@ -222,11 +222,18 @@ export const Post = ({
         </div>
       </CardHeader>
       <CardContent className="pb-3">
-        <p className="text-sm mt-2">{content}</p>
+        <p className="text-sm mt-2 break-words">{content}</p>
         
-        {isMirror && mirrorData && <MirrorPostContent mirrorData={mirrorData} />}
+        {isMirror && mirrorData && (
+          <MirrorPostContent 
+            mirrorData={{
+              ...mirrorData,
+              originalImages: images
+            }} 
+          />
+        )}
         
-        {images && images.length > 0 && (
+        {!isMirror && images && images.length > 0 && (
           <div className="mt-3 relative" data-media-element="true">
             <AspectRatio ratio={16/9} className="overflow-hidden rounded-md">
               <ImageCarousel images={images} onImageClick={handleImageClick} />
@@ -234,7 +241,7 @@ export const Post = ({
           </div>
         )}
         
-        {video && (
+        {!isMirror && video && (
           <div className="mt-3" data-media-element="true">
             <AspectRatio ratio={16/9} className="overflow-hidden rounded-md">
               <video 

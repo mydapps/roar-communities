@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -114,7 +115,7 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
   };
 
   return (
-    <Card className="border border-border/40 shadow-sm hover:shadow-md transition-all duration-300">
+    <Card className="border border-border/40 shadow-sm hover:shadow-md transition-all duration-300 mt-4">
       <CardContent className="pt-6 pb-4">
         <div className="flex gap-3">
           <Avatar className="h-10 w-10 mt-1 border-2 border-primary/20 hover:border-primary/50 transition-colors">

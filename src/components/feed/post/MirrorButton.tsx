@@ -20,7 +20,7 @@ interface MirrorButtonProps {
 }
 
 // Create a custom event for post mirroring
-const POST_MIRRORED_EVENT = 'post-mirrored';
+export const POST_MIRRORED_EVENT = 'post-mirrored';
 
 export const MirrorButton = ({ 
   open, 
@@ -74,6 +74,12 @@ export const MirrorButton = ({
         return;
       }
       
+      console.log("Mirroring post:", {
+        postCode,
+        communityTo: selectedCommunity,
+        quoteText: quoteText.trim() || undefined
+      });
+      
       const response = await fetch('https://api.dapps.co/mirror_post', {
         method: 'POST',
         headers: {
@@ -81,17 +87,20 @@ export const MirrorButton = ({
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          postCode: postCode,
-          communityTo: selectedCommunity,
-          quoteText: quoteText.trim() || undefined
+          post_code: postCode, // Changed from postCode to post_code to match API expectations
+          community_to: selectedCommunity, // Changed from communityTo to community_to
+          quote_text: quoteText.trim() || undefined // Changed from quoteText to quote_text
         })
       });
       
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Mirror API error response:", errorText);
         throw new Error(`Failed to mirror post: ${response.status}`);
       }
       
       const data = await response.json();
+      console.log("Mirror API response:", data);
       
       if (data.status === "SUCCESS") {
         toast({

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Post } from '@/components/feed/Post';
 import CreatePostCard from '@/components/feed/CreatePostCard';
@@ -97,7 +98,7 @@ const FeedPage = () => {
           <Post
             key={`${post.code}-${refreshKey}`}
             username={post.handle}
-            avatar={post.avatar}
+            avatar={post.avatar || ''}
             community={post.community}
             timeAgo={post.timeAgo}
             content={post.body}
@@ -114,7 +115,8 @@ const FeedPage = () => {
               originalCommunity: post.original_community || '',
               originalBody: post.original_body || '',
               originalTimeAgo: post.original_created_on || '',
-              originalAvatar: post.original_author_avatar || ''
+              originalAvatar: post.original_author_avatar || '',
+              originalImages: post.original_images || []
             } : undefined}
             ipfs={post.ipfs}
           />
