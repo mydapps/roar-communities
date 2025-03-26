@@ -18,11 +18,6 @@ const FeedPage = () => {
   const loadingRef = useRef<HTMLDivElement>(null);
   
   const loadPosts = useCallback(async (pageNum: number, replace = false) => {
-    if (loading) return;
-    
-    setLoading(true);
-    setError(null);
-    
     try {
       const fetchedPosts = await fetchPosts({ 
         page: pageNum,
@@ -42,10 +37,11 @@ const FeedPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [loading]);
+  }, []);
   
+  // Initial load
   useEffect(() => {
-    setLoading(true); // Set loading first
+    setLoading(true);
     loadPosts(1, true);
   }, [loadPosts, refreshKey]);
   
@@ -123,53 +119,53 @@ const FeedPage = () => {
       )}
       
       <div className="space-y-4 mt-6">
-        {posts.map((post) => (
-          <Post
-            key={`${post.code}-${refreshKey}`}
-            username={post.handle}
-            avatar={post.avatar || ''}
-            community={post.community}
-            timeAgo={post.timeAgo}
-            content={post.body}
-            roarCount={post.upvotes}
-            commentCount={post.reply_count}
-            shareCount={0}
-            postCode={post.code}
-            roared={post.roar === 1}
-            images={post.multiple_images === 1 ? post.images : (post.image === 1 ? [post.image_url] : undefined)}
-            isMirror={post.is_mirror === 1}
-            mirrorData={post.is_mirror === 1 ? {
-              quote: post.mirror_quote || '',
-              originalAuthor: post.original_author || '',
-              originalCommunity: post.original_community || '',
-              originalBody: post.original_body || '',
-              originalTimeAgo: post.original_created_on || '',
-              originalAvatar: post.original_author_avatar || '',
-              originalImages: post.original_images || []
-            } : undefined}
-            ipfs={post.ipfs}
-          />
-        ))}
-        
-        {!error && (
-          <div 
-            className="flex justify-center py-8"
-            ref={loadingRef}
-          >
-            {loading && <Loader2 className="h-8 w-8 text-primary animate-spin" />}
-            
-            {!loading && posts.length === 0 && (
-              <div className="text-center py-8 border rounded-lg bg-background/50 w-full">
-                <p className="text-muted-foreground">No posts found</p>
-                <p className="text-sm text-muted-foreground mt-1">Join some communities to see posts here</p>
-              </div>
-            )}
-            
-            {!loading && !hasMore && posts.length > 0 && (
-              <p className="text-sm text-muted-foreground">You've reached the end</p>
-            )}
-          </div>
+        {posts.length > 0 ? (
+          posts.map((post) => (
+            <Post
+              key={`${post.code}-${refreshKey}`}
+              username={post.handle}
+              avatar={post.avatar || ''}
+              community={post.community}
+              timeAgo={post.timeAgo}
+              content={post.body}
+              roarCount={post.upvotes}
+              commentCount={post.reply_count}
+              shareCount={0}
+              postCode={post.code}
+              roared={post.roar === 1}
+              images={post.multiple_images === 1 ? post.images : (post.image === 1 ? [post.image_url] : undefined)}
+              isMirror={post.is_mirror === 1}
+              mirrorData={post.is_mirror === 1 ? {
+                quote: post.mirror_quote || '',
+                originalAuthor: post.original_author || '',
+                originalCommunity: post.original_community || '',
+                originalBody: post.original_body || '',
+                originalTimeAgo: post.original_created_on || '',
+                originalAvatar: post.original_author_avatar || '',
+                originalImages: post.original_images || []
+              } : undefined}
+              ipfs={post.ipfs}
+            />
+          ))
+        ) : (
+          !loading && !error && (
+            <div className="text-center py-8 border rounded-lg bg-background/50 w-full">
+              <p className="text-muted-foreground">No posts found</p>
+              <p className="text-sm text-muted-foreground mt-1">Join some communities to see posts here</p>
+            </div>
+          )
         )}
+        
+        <div 
+          className="flex justify-center py-8"
+          ref={loadingRef}
+        >
+          {loading && <Loader2 className="h-8 w-8 text-primary animate-spin" />}
+          
+          {!loading && !hasMore && posts.length > 0 && (
+            <p className="text-sm text-muted-foreground">You've reached the end</p>
+          )}
+        </div>
       </div>
       
       {showScrollToTop && (

@@ -1,264 +1,219 @@
 
 import React, { useState, useEffect } from 'react';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Search, CheckCircle2, Loader2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-
-interface Community {
-  name: string;
-  membersCount: number;
-  image: string;
-  description: string;
-}
+import { Separator } from '@/components/ui/separator';
+import { Check, Loader2, Search } from 'lucide-react';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { toast } from 'sonner';
 
 interface MirrorContentProps {
   username: string;
   timeAgo: string;
   content: string;
-  images?: string[];
-  video?: string;
   onCommunitySelect: (community: string | null) => void;
   onQuoteChange: (quote: string) => void;
   selectedCommunity: string | null;
   quoteText: string;
+  images?: string[];
+  video?: string;
 }
 
-export const MirrorContent = ({ 
-  username, 
-  timeAgo, 
-  content, 
-  images, 
-  video,
+interface Community {
+  name: string;
+  image: string;
+  description: string;
+  membersCount: number;
+}
+
+export const MirrorContent = ({
+  username,
+  timeAgo,
+  content,
   onCommunitySelect,
   onQuoteChange,
   selectedCommunity,
-  quoteText
+  quoteText,
+  images,
+  video
 }: MirrorContentProps) => {
-  const [searchQuery, setSearchQuery] = useState("");
   const [communities, setCommunities] = useState<Community[]>([]);
+  const [filteredCommunities, setFilteredCommunities] = useState<Community[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const { toast } = useToast();
+  const mobile = useIsMobile();
   
-  // Function to fetch communities - supports both personal and search modes
-  const fetchCommunities = async (search?: string) => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const userKey = localStorage.getItem('dapps_user_key');
-      
-      if (!userKey) {
-        setError("Authentication required. Please log in again.");
-        return;
-      }
-      
-      // Build the API URL based on whether we're searching or getting personal communities
-      let url = 'https://api.dapps.co/get_communities?page=1&limit=20';
-      if (search && search.trim()) {
-        url += `&search=${encodeURIComponent(search.trim())}`;
-      } else {
-        url += '&personal=1';
-      }
-      
-      console.log(`Fetching communities from: ${url}`);
-      
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'x-user-key': userKey
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch communities: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log("Communities API response:", data);
-      
-      if (data.success && data.communities) {
-        setCommunities(data.communities.map((community: any) => ({
-          name: community.name,
-          membersCount: community.membersCount || 0,
-          image: community.image,
-          description: community.description
-        })));
-      } else {
-        throw new Error('Invalid response format');
-      }
-    } catch (err) {
-      console.error('Error fetching communities:', err);
-      setError("Failed to load communities. Please try again.");
-      toast({
-        title: "Error",
-        description: "Failed to load communities. Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-  // Initial load of personal communities
   useEffect(() => {
+    const fetchCommunities = async () => {
+      try {
+        setLoading(true);
+        
+        const userKey = localStorage.getItem('dapps_user_key');
+        if (!userKey) {
+          toast.error('Authentication required. Please log in again.');
+          return;
+        }
+        
+        const response = await fetch('https://api.dapps.co/get_communities?personal=1', {
+          method: 'GET',
+          headers: {
+            'x-user-key': userKey
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch communities: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('Fetched communities:', data);
+        
+        setCommunities(data);
+        setFilteredCommunities(data);
+      } catch (error) {
+        console.error('Error fetching communities:', error);
+        toast.error('Failed to load communities. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
     fetchCommunities();
   }, []);
   
-  // Handle search query changes
   useEffect(() => {
-    const handler = setTimeout(() => {
-      if (searchQuery.trim().length >= 2) {
-        fetchCommunities(searchQuery);
-      } else if (searchQuery.trim().length === 0) {
-        fetchCommunities(); // Load personal communities when search is cleared
-      }
-    }, 500);
-    
-    return () => clearTimeout(handler);
-  }, [searchQuery]);
+    if (searchQuery.trim() === '') {
+      setFilteredCommunities(communities);
+    } else {
+      const filtered = communities.filter(community => 
+        community.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setFilteredCommunities(filtered);
+    }
+  }, [searchQuery, communities]);
   
-  const formatUsername = (name: string) => {
-    return '@' + name.split('.')[0];
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
   };
-
-  // We'll display all communities from the API
-  const displayedCommunities = communities;
-
+  
+  const handleQuoteChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    onQuoteChange(e.target.value);
+  };
+  
+  const handleCommunitySelect = (communityName: string) => {
+    if (selectedCommunity === communityName) {
+      onCommunitySelect(null);
+    } else {
+      onCommunitySelect(communityName);
+    }
+  };
+  
   return (
-    <>
-      <div className="p-4 border-b">
-        <div className="flex items-start gap-3 mb-2">
-          <Avatar className="h-10 w-10">
-            <AvatarImage src={`https://img.dapps.co/avatar/${username}.svg`} />
-            <AvatarFallback>{username[0].toUpperCase()}</AvatarFallback>
-          </Avatar>
-          <div className="flex-1">
-            <div className="flex items-center gap-1">
-              <span className="font-medium">{formatUsername(username)}</span>
-              <span className="text-muted-foreground text-sm mx-1">·</span>
-              <span className="text-muted-foreground text-sm">{timeAgo}</span>
-            </div>
-            <p className="text-sm mt-1">{content}</p>
+    <div className={`flex flex-col gap-4 ${mobile ? 'pb-16' : ''} p-4 overflow-y-auto`}>
+      {/* Original post display */}
+      <div className="rounded-md border p-3 bg-muted/30">
+        <div className="flex items-center mb-2">
+          <div className="flex flex-col">
+            <span className="font-medium text-sm">@{username}</span>
+            <span className="text-xs text-muted-foreground">{timeAgo}</span>
           </div>
         </div>
-        
-        {(images?.length || video) && (
-          <div className="ml-12 mt-2">
-            {images && images.length > 0 && (
-              <img 
-                src={images[0]} 
-                alt="First image" 
-                className="rounded-md h-20 w-auto object-cover"
-              />
-            )}
-            {video && (
-              <video 
-                src={video} 
-                className="rounded-md h-20 w-auto object-cover"
-              />
-            )}
-            {images && images.length > 1 && (
-              <span className="text-xs text-muted-foreground mt-1 block">
-                +{images.length - 1} more {images.length === 2 ? 'image' : 'images'}
-              </span>
+        <p className="text-sm line-clamp-3 text-muted-foreground">{content}</p>
+        {(images && images.length > 0) ? (
+          <div className="mt-2 rounded overflow-hidden h-20 w-20 bg-muted">
+            <img 
+              src={images[0]} 
+              alt="Post attachment" 
+              className="h-full w-full object-cover"
+            />
+            {images.length > 1 && (
+              <div className="bg-background/80 text-xs px-1 py-0.5 rounded-sm absolute bottom-1 right-1">
+                +{images.length - 1}
+              </div>
             )}
           </div>
-        )}
+        ) : video ? (
+          <div className="mt-2 rounded overflow-hidden h-20 bg-muted">
+            <video 
+              src={video} 
+              className="h-full w-auto"
+            />
+          </div>
+        ) : null}
       </div>
       
-      <div className="p-4 space-y-4">
-        <div>
-          <label htmlFor="quote-text" className="block text-sm font-medium mb-2">
-            Add your thoughts (optional)
-          </label>
-          <Textarea 
-            id="quote-text"
-            placeholder="Add a comment..."
-            className="w-full resize-none"
-            value={quoteText}
-            onChange={(e) => onQuoteChange(e.target.value)}
-            maxLength={280}
-            onClick={(e) => e.stopPropagation()} // Stop event propagation
+      {/* Quote input */}
+      <div className="grid gap-2">
+        <Label htmlFor="quote">Your Quote (Optional)</Label>
+        <Textarea 
+          id="quote" 
+          placeholder="Add your thoughts about this post..."
+          className="min-h-24"
+          value={quoteText}
+          onChange={handleQuoteChange}
+        />
+      </div>
+      
+      <Separator className="my-1" />
+      
+      {/* Community selection */}
+      <div className="grid gap-3">
+        <Label>Select a Community</Label>
+        <div className="relative">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search communities"
+            value={searchQuery}
+            onChange={handleSearchChange}
+            className="pl-9"
           />
-          <div className="text-xs text-muted-foreground text-right mt-1">
-            {quoteText.length}/280
-          </div>
         </div>
         
-        <h3 className="text-sm font-medium">Select a community to mirror to</h3>
-        <div className="space-y-4">
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search communities..."
-                className="pl-9"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onClick={(e) => e.stopPropagation()} // Stop event propagation
-              />
-            </div>
-          </div>
-          
+        <div className="rounded-md border divide-y max-h-72 overflow-y-auto">
           {loading ? (
-            <div className="flex justify-center items-center py-8">
-              <Loader2 className="h-8 w-8 text-primary animate-spin" />
+            <div className="flex justify-center items-center p-6">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
-          ) : error ? (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <p className="text-muted-foreground">{error}</p>
+          ) : filteredCommunities.length === 0 ? (
+            <div className="p-6 text-center">
+              <p className="text-muted-foreground">No communities found</p>
+              <p className="text-xs text-muted-foreground mt-1">Try a different search term</p>
             </div>
           ) : (
-            <div className="max-h-[30vh] overflow-y-auto">
-              {displayedCommunities.length > 0 ? (
-                <div className="space-y-2">
-                  {displayedCommunities.map((community) => (
-                    <div 
-                      key={community.name}
-                      className={`flex items-center justify-between p-3 rounded-md transition-colors ${
-                        selectedCommunity === community.name 
-                          ? 'bg-primary/10 border border-primary/30' 
-                          : 'hover:bg-muted/50 border border-transparent'
-                      }`}
-                      onClick={(e) => {
-                        e.stopPropagation(); // Stop event propagation
-                        onCommunitySelect(community.name);
-                      }}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={community.image} />
-                          <AvatarFallback>
-                            {community.name.substring(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="text-sm font-medium">{community.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {community.membersCount.toLocaleString()} members
-                          </p>
-                        </div>
-                      </div>
-                      {selectedCommunity === community.name && (
-                        <CheckCircle2 className="h-5 w-5 text-primary" />
-                      )}
+            filteredCommunities.map((community, index) => (
+              <div 
+                key={index}
+                className={`p-2.5 cursor-pointer hover:bg-muted/50 transition-colors flex items-center gap-3 ${
+                  selectedCommunity === community.name ? 'bg-primary/10' : ''
+                }`}
+                onClick={() => handleCommunitySelect(community.name)}
+              >
+                <div className="h-10 w-10 rounded-md bg-muted overflow-hidden">
+                  {community.image ? (
+                    <img 
+                      src={community.image} 
+                      alt={community.name} 
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="h-full w-full flex items-center justify-center bg-primary/10 text-primary font-medium">
+                      {community.name.substring(0, 1).toUpperCase()}
                     </div>
-                  ))}
+                  )}
                 </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <p className="text-muted-foreground">No communities found</p>
-                  <p className="text-xs text-muted-foreground mt-1">Try a different search term</p>
+                <div className="flex-1">
+                  <div className="font-medium text-sm">{community.name}</div>
+                  <div className="text-xs text-muted-foreground">{community.membersCount} members</div>
                 </div>
-              )}
-            </div>
+                {selectedCommunity === community.name && (
+                  <Check className="h-5 w-5 text-primary" />
+                )}
+              </div>
+            ))
           )}
         </div>
       </div>
-    </>
+    </div>
   );
 };

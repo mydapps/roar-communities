@@ -48,6 +48,7 @@ export interface Post {
   original_author?: string;
   original_author_avatar?: string;
   original_created_on?: string;
+  original_images?: string[];
 }
 
 /**
