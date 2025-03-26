@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Post } from '@/components/feed/Post';
 import CreatePostCard from '@/components/feed/CreatePostCard';
 import { Button } from '@/components/ui/button';
-import { ArrowDown, ArrowUp, Loader2 } from 'lucide-react';
+import { ArrowUp, Loader2 } from 'lucide-react';
 import { fetchPosts, setupMirrorListener } from '@/utils/api';
 
 const FeedPage = () => {
@@ -13,8 +14,12 @@ const FeedPage = () => {
   const [hasMore, setHasMore] = useState(true);
   const [showScrollToTop, setShowScrollToTop] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0); // Used to force refresh
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const loadingRef = useRef<HTMLDivElement>(null);
   
   const loadPosts = useCallback(async (pageNum: number, replace = false) => {
+    if (loading) return;
+    
     setLoading(true);
     setError(null);
     
@@ -37,9 +42,10 @@ const FeedPage = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loading]);
   
   useEffect(() => {
+    setLoading(true); // Set loading first
     loadPosts(1, true);
   }, [loadPosts, refreshKey]);
   
@@ -60,12 +66,36 @@ const FeedPage = () => {
     return cleanup;
   }, []);
   
-  const handleLoadMore = () => {
-    if (!loading && hasMore) {
-      setPage(prev => prev + 1);
-      loadPosts(page + 1);
+  useEffect(() => {
+    // Setup the intersection observer for infinite scrolling
+    if (observerRef.current) {
+      observerRef.current.disconnect();
     }
-  };
+    
+    const handleObserver = (entries: IntersectionObserverEntry[]) => {
+      const [entry] = entries;
+      if (entry?.isIntersecting && hasMore && !loading) {
+        setPage(prev => prev + 1);
+        loadPosts(page + 1);
+      }
+    };
+    
+    observerRef.current = new IntersectionObserver(handleObserver, {
+      root: null,
+      rootMargin: '100px',
+      threshold: 0.1
+    });
+    
+    if (loadingRef.current && hasMore) {
+      observerRef.current.observe(loadingRef.current);
+    }
+    
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
+    };
+  }, [hasMore, loading, page, loadPosts]);
   
   const handleRefresh = () => {
     setPage(1);
@@ -121,30 +151,23 @@ const FeedPage = () => {
           />
         ))}
         
-        {loading && (
-          <div className="flex justify-center py-8">
-            <Loader2 className="h-8 w-8 text-primary animate-spin" />
-          </div>
-        )}
-        
-        {!loading && posts.length === 0 && (
-          <div className="text-center py-8 border rounded-lg bg-background/50">
-            <p className="text-muted-foreground">No posts found</p>
-            <p className="text-sm text-muted-foreground mt-1">Join some communities to see posts here</p>
-          </div>
-        )}
-        
-        {!loading && hasMore && (
-          <div className="flex justify-center pt-4">
-            <Button onClick={handleLoadMore} variant="outline" className="w-full">
-              Load More
-            </Button>
-          </div>
-        )}
-        
-        {!loading && !hasMore && posts.length > 0 && (
-          <div className="text-center py-4">
-            <p className="text-sm text-muted-foreground">You've reached the end</p>
+        {!error && (
+          <div 
+            className="flex justify-center py-8"
+            ref={loadingRef}
+          >
+            {loading && <Loader2 className="h-8 w-8 text-primary animate-spin" />}
+            
+            {!loading && posts.length === 0 && (
+              <div className="text-center py-8 border rounded-lg bg-background/50 w-full">
+                <p className="text-muted-foreground">No posts found</p>
+                <p className="text-sm text-muted-foreground mt-1">Join some communities to see posts here</p>
+              </div>
+            )}
+            
+            {!loading && !hasMore && posts.length > 0 && (
+              <p className="text-sm text-muted-foreground">You've reached the end</p>
+            )}
           </div>
         )}
       </div>

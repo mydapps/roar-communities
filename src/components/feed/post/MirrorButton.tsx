@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Repeat2 } from 'lucide-react';
@@ -7,6 +6,9 @@ import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetDescri
 import { Drawer, DrawerTrigger, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter, DrawerClose } from '@/components/ui/drawer';
 import { MirrorContent } from './MirrorContent';
 import { useToast } from '@/hooks/use-toast';
+
+// Create a custom event for post mirroring
+export const POST_MIRRORED_EVENT = 'post-mirrored';
 
 interface MirrorButtonProps {
   open: boolean;
@@ -18,9 +20,6 @@ interface MirrorButtonProps {
   video?: string;
   postCode?: string;
 }
-
-// Create a custom event for post mirroring
-const POST_MIRRORED_EVENT = 'post-mirrored';
 
 export const MirrorButton = ({ 
   open, 
@@ -256,6 +255,3 @@ export const MirrorButton = ({
     </Sheet>
   );
 };
-
-// Export the event name for other components to listen to
-export { POST_MIRRORED_EVENT };

@@ -63,6 +63,8 @@ export const MirrorContent = ({
         url += '&personal=1';
       }
       
+      console.log(`Fetching communities from: ${url}`);
+      
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -75,11 +77,12 @@ export const MirrorContent = ({
       }
       
       const data = await response.json();
+      console.log("Communities API response:", data);
       
       if (data.success && data.communities) {
         setCommunities(data.communities.map((community: any) => ({
           name: community.name,
-          membersCount: community.membersCount,
+          membersCount: community.membersCount || 0,
           image: community.image,
           description: community.description
         })));
