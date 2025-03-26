@@ -317,11 +317,11 @@ export const mirrorPost = async (params: {
     
     console.log(`Mirroring post:`, params);
     
-    // Use the exact field names expected by the API
+    // Use the exact field names expected by the API (postCode instead of post_code)
     const requestBody = {
-      post_code: postCode,
-      community_to: communityTo,
-      quote_text: quoteText?.trim() || undefined
+      postCode,
+      communityTo,
+      quoteText: quoteText?.trim() || undefined
     };
     
     console.log(`Request payload:`, JSON.stringify(requestBody));
