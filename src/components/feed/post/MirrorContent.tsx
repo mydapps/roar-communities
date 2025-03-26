@@ -22,9 +22,10 @@ interface MirrorContentProps {
 
 interface Community {
   name: string;
-  image: string;
-  description: string;
+  description?: string;
+  image?: string;
   membersCount: number;
+  userAvatars?: string[];
 }
 
 export const MirrorContent = ({
@@ -42,19 +43,23 @@ export const MirrorContent = ({
   const [filteredCommunities, setFilteredCommunities] = useState<Community[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const mobile = useIsMobile();
   
   useEffect(() => {
     const fetchCommunities = async () => {
       try {
         setLoading(true);
+        setError(null);
         
         const userKey = localStorage.getItem('dapps_user_key');
         if (!userKey) {
+          setError('Authentication required. Please log in again.');
           toast.error('Authentication required. Please log in again.');
           return;
         }
         
+        console.log('Fetching communities...');
         const response = await fetch('https://api.dapps.co/get_communities?personal=1', {
           method: 'GET',
           headers: {
@@ -69,11 +74,24 @@ export const MirrorContent = ({
         const data = await response.json();
         console.log('Fetched communities:', data);
         
-        setCommunities(data);
-        setFilteredCommunities(data);
+        // Transform the data to match our Community interface
+        const transformedData: Community[] = Array.isArray(data) ? data.map((community: any) => ({
+          name: community.name || 'Unknown Community',
+          description: community.description || '',
+          image: community.image || '',
+          membersCount: parseInt(community.membersCount || '0', 10),
+          userAvatars: Array.isArray(community.userAvatars) ? community.userAvatars : []
+        })) : [];
+        
+        setCommunities(transformedData);
+        setFilteredCommunities(transformedData);
       } catch (error) {
         console.error('Error fetching communities:', error);
+        setError('Failed to load communities. Please try again.');
         toast.error('Failed to load communities. Please try again.');
+        // Set empty arrays to prevent null/undefined errors
+        setCommunities([]);
+        setFilteredCommunities([]);
       } finally {
         setLoading(false);
       }
@@ -175,6 +193,11 @@ export const MirrorContent = ({
             <div className="flex justify-center items-center p-6">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
             </div>
+          ) : error ? (
+            <div className="p-6 text-center">
+              <p className="text-muted-foreground">{error}</p>
+              <p className="text-xs text-muted-foreground mt-1">Please try again later</p>
+            </div>
           ) : filteredCommunities.length === 0 ? (
             <div className="p-6 text-center">
               <p className="text-muted-foreground">No communities found</p>
@@ -204,7 +227,7 @@ export const MirrorContent = ({
                 </div>
                 <div className="flex-1">
                   <div className="font-medium text-sm">{community.name}</div>
-                  <div className="text-xs text-muted-foreground">{community.membersCount} members</div>
+                  <div className="text-xs text-muted-foreground">{community.membersCount || 0} members</div>
                 </div>
                 {selectedCommunity === community.name && (
                   <Check className="h-5 w-5 text-primary" />

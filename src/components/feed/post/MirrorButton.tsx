@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Repeat2 } from 'lucide-react';
@@ -56,6 +57,11 @@ export const MirrorButton = ({
     e.stopPropagation();
     
     if (!selectedCommunity || !postCode) {
+      toast({
+        title: "Error",
+        description: "Please select a community to mirror to",
+        variant: "destructive"
+      });
       return;
     }
     
@@ -70,6 +76,7 @@ export const MirrorButton = ({
           description: "You need to be logged in to mirror posts",
           variant: "destructive"
         });
+        setMirroring(false);
         return;
       }
       
@@ -86,48 +93,59 @@ export const MirrorButton = ({
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          post_code: postCode, // Changed from postCode to post_code to match API expectations
-          community_to: selectedCommunity, // Changed from communityTo to community_to
-          quote_text: quoteText.trim() || undefined // Changed from quoteText to quote_text
+          post_code: postCode,
+          community_to: selectedCommunity,
+          quote_text: quoteText.trim() || undefined
         })
       });
       
+      const contentType = response.headers.get("content-type");
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Mirror API error response:", errorText);
-        throw new Error(`Failed to mirror post: ${response.status}`);
+        let errorMessage = `Error ${response.status}: ${response.statusText}`;
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } else {
+          const errorText = await response.text();
+          console.error("Mirror API error response (text):", errorText);
+        }
+        throw new Error(errorMessage);
       }
       
-      const data = await response.json();
-      console.log("Mirror API response:", data);
-      
-      if (data.status === "SUCCESS") {
-        toast({
-          title: "Success!",
-          description: `Post mirrored to ${selectedCommunity}`,
-        });
-        onOpenChange(false);
-        setSelectedCommunity(null);
-        setQuoteText('');
+      // Check if response is JSON
+      if (contentType && contentType.indexOf("application/json") !== -1) {
+        const data = await response.json();
+        console.log("Mirror API response:", data);
         
-        // Dispatch a custom event to notify that a post was mirrored
-        // This will be used to refresh the feed
-        const mirroredEvent = new CustomEvent(POST_MIRRORED_EVENT, {
-          detail: {
-            originalPostCode: postCode,
-            mirroredPostCode: data.mirroredPostCode || '',
-            communityTo: selectedCommunity
-          }
-        });
-        document.dispatchEvent(mirroredEvent);
+        if (data.status === "SUCCESS") {
+          toast({
+            title: "Success!",
+            description: `Post mirrored to ${selectedCommunity}`,
+          });
+          onOpenChange(false);
+          setSelectedCommunity(null);
+          setQuoteText('');
+          
+          // Dispatch a custom event to notify that a post was mirrored
+          const mirroredEvent = new CustomEvent(POST_MIRRORED_EVENT, {
+            detail: {
+              originalPostCode: postCode,
+              mirroredPostCode: data.mirroredPostCode || '',
+              communityTo: selectedCommunity
+            }
+          });
+          document.dispatchEvent(mirroredEvent);
+        } else {
+          throw new Error(data.message || 'Failed to mirror post');
+        }
       } else {
-        throw new Error(data.message || 'Failed to mirror post');
+        throw new Error("Invalid response format from server");
       }
     } catch (error) {
       console.error('Error mirroring post:', error);
       toast({
         title: "Error",
-        description: "Failed to mirror post. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to mirror post. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -135,6 +153,7 @@ export const MirrorButton = ({
     }
   };
   
+  // Render component based on device type
   if (mobile) {
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
