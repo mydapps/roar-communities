@@ -21,7 +21,7 @@ export const MirrorPostContent = ({ mirrorData }: MirrorPostContentProps) => {
   };
   
   return (
-    <div className="mt-3 border rounded-md p-3 bg-muted/30">
+    <div className="mt-3 border rounded-md p-3 bg-muted/30 overflow-hidden">
       {mirrorData.quote && mirrorData.quote.trim() !== "" && (
         <p className="italic text-sm mb-3 break-words">{mirrorData.quote}</p>
       )}

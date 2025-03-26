@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Post } from '@/components/feed/Post';
 import CreatePostCard from '@/components/feed/CreatePostCard';
@@ -81,7 +80,7 @@ const FeedPage = () => {
   };
   
   return (
-    <div className="max-w-2xl mx-auto pt-4 pb-20 px-4">
+    <div className="max-w-2xl mx-auto pt-8 pb-20 px-4">
       <CreatePostCard onPostCreated={handleRefresh} />
       
       {error && (
