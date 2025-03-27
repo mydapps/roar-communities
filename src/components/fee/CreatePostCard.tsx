@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { MentionInput } from '@/components/ui/mention-input';
 import { toast } from 'sonner';
-import { CommunitySelector } from './CommunitySelector';
+import { CommunitySelector } from '@/components/feed/CommunitySelector';
 import { MediaUpload, MediaPreview, MediaUploadResponse } from '@/components/ui/media-upload';
 import { createPost } from '@/utils/api';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -24,7 +24,6 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
   const [error, setError] = useState<string | null>(null);
   const [userAvatar, setUserAvatar] = useState('');
   
-  // Get user avatar on mount
   useEffect(() => {
     const storedAvatar = localStorage.getItem('dapps_user_avatar');
     console.log("Retrieved user avatar from localStorage:", storedAvatar);
@@ -50,7 +49,6 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
       return;
     }
     
-    // Validate media type
     if (media.type !== 'image' && media.type !== 'video') {
       console.error("Invalid media type:", media.type);
       toast.error('Invalid media type received');
@@ -92,11 +90,9 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
     setError(null);
     
     try {
-      // Prepare the media URLs
       const mediaUrls = uploadedMedia.map(media => media.url);
       console.log("Media URLs for post:", mediaUrls);
       
-      // Create the post
       const postData = {
         body: content,
         community: selectedCommunity || undefined,
@@ -109,12 +105,10 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
       console.log("Post creation result:", success);
       
       if (success) {
-        // Trigger confetti effect for dopamine hit
         triggerConfetti();
         
         toast.success('Post created successfully!');
         
-        // Create a local representation of the post for UI purposes
         const newPost = {
           handle: "you",
           avatar: localStorage.getItem('dapps_user_avatar') || '',
@@ -132,10 +126,8 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
         
         console.log("Sending new post to feed:", JSON.stringify(newPost));
         
-        // Notify parent component about the new post
         onPostCreated(newPost);
         
-        // Reset form
         setContent('');
         setSelectedCommunity('');
         setUploadedMedia([]);
@@ -144,7 +136,6 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
     } catch (error: any) {
       console.error('Error creating post:', error);
       
-      // Handle specific error messages from API
       const errorMessage = error.message || 'Failed to create post. Please try again.';
       console.log("Error message:", errorMessage);
       

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 
+// Define clear interfaces for media upload response
 export interface MediaUploadResponse {
   success: boolean;
   url: string;
@@ -39,14 +40,12 @@ export function MediaUpload({
   const [progress, setProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const acceptAttribute = (() => {
-    switch (acceptedTypes) {
-      case 'image': return 'image/*';
-      case 'video': return 'video/*';
-      case 'both': 
-      default: return 'image/*,video/*';
-    }
-  })();
+  // Determine accept attribute based on acceptedTypes
+  const acceptAttribute = acceptedTypes === 'image' 
+    ? 'image/*' 
+    : acceptedTypes === 'video' 
+      ? 'video/*' 
+      : 'image/*,video/*';
   
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -55,50 +54,51 @@ export function MediaUpload({
       return;
     }
     
-    console.log("File selected:", files[0].name, "type:", files[0].type, "size:", files[0].size);
+    const file = files[0];
+    console.log("File selected:", file.name, "type:", file.type, "size:", file.size);
     
     // Reset file input value so the same file can be uploaded again if needed
     e.target.value = '';
     
-    const file = files[0];
+    // Validate file type
     const isImage = file.type.startsWith('image/');
     const isVideo = file.type.startsWith('video/');
     
-    console.log("File type validation - isImage:", isImage, "isVideo:", isVideo);
-    
     if (!isImage && !isVideo) {
+      console.log("File type not supported:", file.type);
       toast.error('Only images and videos are supported');
-      console.error("File type not supported:", file.type);
       return;
     }
     
-    if (file.size > 50 * 1024 * 1024) { // 50MB limit
+    // Validate file size (50MB limit)
+    if (file.size > 50 * 1024 * 1024) {
+      console.log("File too large:", file.size);
       toast.error('File size exceeds the 50MB limit');
-      console.error("File too large:", file.size);
       return;
     }
+    
+    // Start upload process
+    setUploading(true);
+    setProgress(10);
     
     try {
-      setUploading(true);
-      setProgress(10); // Start progress at 10%
-      console.log("Starting upload process...");
-      
+      // Prepare form data
       const formData = new FormData();
       formData.append('media', file);
       
+      // Get user authentication key
       const userKey = localStorage.getItem('dapps_user_key');
-      console.log("User key exists:", !!userKey);
-      
       if (!userKey) {
+        console.log("No user key found");
         toast.error('Authentication required. Please log in again.');
-        console.error("No user key found in localStorage");
         setUploading(false);
         return;
       }
       
-      // Create an XMLHttpRequest to track upload progress
+      // Create XMLHttpRequest for progress tracking
       const xhr = new XMLHttpRequest();
       
+      // Track upload progress
       xhr.upload.addEventListener('progress', (event) => {
         if (event.lengthComputable) {
           const percentComplete = Math.round((event.loaded / event.total) * 90) + 10;
@@ -107,49 +107,38 @@ export function MediaUpload({
         }
       });
       
+      // Handle response
       xhr.addEventListener('load', () => {
-        console.log("XHR load event triggered, status:", xhr.status);
+        console.log("Upload completed, status:", xhr.status);
+        
         if (xhr.status >= 200 && xhr.status < 300) {
           setProgress(100);
+          
           try {
-            console.log("Raw response:", xhr.responseText);
-            const response = JSON.parse(xhr.responseText);
-            console.log("Parsed response:", response);
+            // Parse response
+            const responseText = xhr.responseText;
+            console.log("Raw response:", responseText);
             
-            // Log detailed response properties
-            console.log("Response success:", response.success);
-            console.log("Response type:", response.type);
-            console.log("Response url:", response.url);
-            
-            // Validate response before proceeding
-            if (!response) {
-              console.error("Response is null or undefined");
+            if (!responseText) {
               throw new Error('Empty response from server');
             }
             
+            const response = JSON.parse(responseText);
+            console.log("Parsed response:", response);
+            
+            if (!response) {
+              throw new Error('Invalid response format');
+            }
+            
             if (response.success !== true) {
-              console.error("Response success flag is not true:", response.success);
               throw new Error('Upload was not successful');
             }
             
-            // Create a valid type from the response or file type
-            let mediaType: 'image' | 'video' = isImage ? 'image' : 'video';
+            // Determine media type
+            const mediaType: 'image' | 'video' = isImage ? 'image' : 'video';
             
-            // If response has a type property and it's valid, use it instead
-            if (response.type === 'image' || response.type === 'video') {
-              mediaType = response.type;
-              console.log("Using type from response:", mediaType);
-            } else {
-              console.log("Response type missing or invalid, using file-based type:", mediaType);
-            }
-            
-            if (!response.url) {
-              console.error("Response url is missing");
-              throw new Error('Response missing media URL');
-            }
-            
-            // Ensure all required fields are present and properly formatted
-            const validatedMedia: MediaUploadResponse = {
+            // Create a valid media response object
+            const mediaResponse: MediaUploadResponse = {
               success: true,
               url: response.url || '',
               type: mediaType,
@@ -157,7 +146,7 @@ export function MediaUpload({
               displayUrl: response.displayUrl || response.url || '',
               markdown: response.markdown || '',
               isProcessing: response.isProcessing || false,
-              fileInfo: response.fileInfo || {
+              fileInfo: {
                 name: file.name,
                 originalName: file.name,
                 size: file.size,
@@ -165,45 +154,48 @@ export function MediaUpload({
               }
             };
             
-            console.log("Calling onMediaUploaded with validated media:", validatedMedia);
+            console.log("Sending media response to parent:", mediaResponse);
             
-            // Call the callback with the validated response
-            onMediaUploaded(validatedMedia);
+            // Call the callback with media data
+            onMediaUploaded(mediaResponse);
             
-            // Reset after upload
+            // Reset upload state
             setTimeout(() => {
               setUploading(false);
               setProgress(0);
             }, 500);
+            
           } catch (error) {
-            console.error('Error parsing response:', error, xhr.responseText);
-            toast.error('Error processing server response. Please try again.');
+            console.error('Error processing response:', error);
+            toast.error('Error processing server response');
             setUploading(false);
           }
         } else {
-          console.error('Upload failed with status:', xhr.status);
-          console.error('Response text:', xhr.responseText);
+          // Handle error response
+          console.error('Upload failed with status:', xhr.status, xhr.responseText);
           toast.error('Upload failed. Please try again.');
           setUploading(false);
         }
       });
       
+      // Handle network errors
       xhr.addEventListener('error', () => {
-        console.error('XHR error during upload');
+        console.error('Network error during upload');
         toast.error('Connection error. Please try again.');
         setUploading(false);
       });
       
+      // Handle aborted uploads
       xhr.addEventListener('abort', () => {
         console.log('Upload aborted');
         toast.info('Upload cancelled');
         setUploading(false);
       });
       
-      console.log("Opening XHR connection to https://api.dapps.co/upload_media");
+      // Send the request
+      console.log("Sending upload request to https://api.dapps.co/upload_media");
       xhr.open('POST', 'https://api.dapps.co/upload_media');
       xhr.setRequestHeader('x-user-key', userKey);
-      console.log("Sending file...");
       xhr.send(formData);
       
     } catch (error) {
@@ -269,31 +261,31 @@ interface MediaPreviewProps {
 }
 
 export function MediaPreview({ media, onRemove }: MediaPreviewProps) {
-  console.log("MediaPreview - Received media object:", media);
+  // Log received media data
+  console.log("MediaPreview received:", media);
   
-  // Guard against invalid media object
-  if (!media) {
-    console.error("MediaPreview received null or undefined media object");
+  // Safety check
+  if (!media || typeof media !== 'object') {
+    console.error("Invalid media object received:", media);
     return null;
   }
   
-  if (!media.type) {
-    console.error("MediaPreview: media object is missing type property:", media);
+  // Validate media type
+  if (!media.type || !['image', 'video'].includes(media.type)) {
+    console.error("Media has invalid type:", media.type);
     return null;
   }
   
+  // Validate media URL
   if (!media.url) {
-    console.error("MediaPreview: media object is missing url property:", media);
+    console.error("Media missing URL:", media);
     return null;
   }
   
-  console.log("MediaPreview - Valid media with type:", media.type, "and url:", media.url);
-  
-  const isImage = media.type === 'image';
-  
+  // Render media preview based on type
   return (
     <div className="relative group rounded-md overflow-hidden border">
-      {isImage ? (
+      {media.type === 'image' ? (
         <AspectRatio ratio={16/9}>
           <img 
             src={media.displayUrl || media.url} 
@@ -323,10 +315,7 @@ export function MediaPreview({ media, onRemove }: MediaPreviewProps) {
         variant="destructive"
         size="icon"
         className="h-6 w-6 absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
-        onClick={() => {
-          console.log("Removing media:", media);
-          onRemove();
-        }}
+        onClick={onRemove}
       >
         <XIcon className="h-3 w-3" />
       </Button>
