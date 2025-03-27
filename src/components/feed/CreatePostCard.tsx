@@ -43,26 +43,34 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
   };
 
   const handleMediaUploaded = (media: MediaUploadResponse) => {
-    console.log("Media uploaded callback received:", media);
+    console.log("Media uploaded callback received with:", JSON.stringify(media));
     
-    // Additional validation to ensure media object is valid
+    // Extensive validation to ensure media object is valid
     if (!media) {
       console.error("Media object is null or undefined");
       toast.error('Invalid media response from server');
       return;
     }
     
+    if (typeof media !== 'object') {
+      console.error("Media is not an object:", typeof media);
+      toast.error('Invalid media type from server');
+      return;
+    }
+    
     if (!media.type) {
-      console.error("Media object missing type property:", media);
+      console.error("Media object missing type property:", JSON.stringify(media));
       toast.error('Invalid media type in server response');
       return;
     }
     
     if (!media.url) {
-      console.error("Media object missing url property:", media);
+      console.error("Media object missing url property:", JSON.stringify(media));
       toast.error('Invalid media URL in server response');
       return;
     }
+    
+    console.log("Media validation passed. Type:", media.type, "URL:", media.url);
     
     // If we already have 4 media items or if we have a video (only one video allowed)
     if (uploadedMedia.length >= 4 || (media.type === 'video' && uploadedMedia.length > 0)) {
@@ -88,20 +96,20 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
       return;
     }
     
-    console.log("Adding media to uploadedMedia state:", media);
+    console.log("Adding media to uploadedMedia state:", JSON.stringify(media));
     setUploadedMedia(prev => {
       const newState = [...prev, media];
-      console.log("New uploadedMedia state:", newState);
+      console.log("New uploadedMedia state:", JSON.stringify(newState));
       return newState;
     });
     toast.success(`${media.type === 'image' ? 'Image' : 'Video'} uploaded successfully`);
   };
 
   const removeMedia = (index: number) => {
-    console.log("Removing media at index:", index);
+    console.log("Removing media at index:", index, "Current media:", JSON.stringify(uploadedMedia));
     setUploadedMedia(prev => {
       const newState = prev.filter((_, i) => i !== index);
-      console.log("New uploadedMedia state after removal:", newState);
+      console.log("New uploadedMedia state after removal:", JSON.stringify(newState));
       return newState;
     });
   };
@@ -163,7 +171,7 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
           multiple_images: uploadedMedia.filter(m => m.type === 'image').length > 1 ? 1 : 0
         };
         
-        console.log("Sending new post to feed:", newPost);
+        console.log("Sending new post to feed:", JSON.stringify(newPost));
         
         // Notify parent component about the new post
         onPostCreated(newPost);
@@ -178,13 +186,16 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
       console.error('Error creating post:', error);
       
       // Handle specific error messages from API
-      if (error.message && error.message.includes('too short')) {
+      const errorMessage = error.message || 'Failed to create post. Please try again.';
+      console.log("Error message:", errorMessage);
+      
+      if (errorMessage.includes('too short')) {
         setError('Your post is too short! Please add more content.');
       } else {
-        setError(error.message || 'Failed to create post. Please try again.');
+        setError(errorMessage);
       }
       
-      toast.error(error.message || 'Failed to create post');
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

@@ -50,7 +50,10 @@ export function MediaUpload({
   
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (!files || files.length === 0) return;
+    if (!files || files.length === 0) {
+      console.log("No files selected");
+      return;
+    }
     
     console.log("File selected:", files[0].name, "type:", files[0].type, "size:", files[0].size);
     
@@ -60,6 +63,8 @@ export function MediaUpload({
     const file = files[0];
     const isImage = file.type.startsWith('image/');
     const isVideo = file.type.startsWith('video/');
+    
+    console.log("File type validation - isImage:", isImage, "isVideo:", isVideo);
     
     if (!isImage && !isVideo) {
       toast.error('Only images and videos are supported');
@@ -132,9 +137,32 @@ export function MediaUpload({
               throw new Error('Response missing media type');
             }
             
+            if (!response.url) {
+              console.error("Response url is missing");
+              throw new Error('Response missing media URL');
+            }
+            
+            // Ensure all required fields are present and properly formatted
+            const validatedMedia: MediaUploadResponse = {
+              success: true,
+              url: response.url || '',
+              type: response.type === 'image' || response.type === 'video' ? response.type : 'image',
+              originalUrl: response.originalUrl || response.url || '',
+              displayUrl: response.displayUrl || response.url || '',
+              markdown: response.markdown || '',
+              isProcessing: response.isProcessing || false,
+              fileInfo: response.fileInfo || {
+                name: file.name,
+                originalName: file.name,
+                size: file.size,
+                type: file.type
+              }
+            };
+            
+            console.log("Calling onMediaUploaded with validated media:", validatedMedia);
+            
             // Call the callback with the validated response
-            console.log("Calling onMediaUploaded with validated response");
-            onMediaUploaded(response);
+            onMediaUploaded(validatedMedia);
             
             // Reset after upload
             setTimeout(() => {
@@ -235,6 +263,8 @@ interface MediaPreviewProps {
 }
 
 export function MediaPreview({ media, onRemove }: MediaPreviewProps) {
+  console.log("MediaPreview - Received media object:", media);
+  
   // Guard against invalid media object
   if (!media) {
     console.error("MediaPreview received null or undefined media object");
@@ -246,6 +276,13 @@ export function MediaPreview({ media, onRemove }: MediaPreviewProps) {
     return null;
   }
   
+  if (!media.url) {
+    console.error("MediaPreview: media object is missing url property:", media);
+    return null;
+  }
+  
+  console.log("MediaPreview - Valid media with type:", media.type, "and url:", media.url);
+  
   const isImage = media.type === 'image';
   
   return (
@@ -253,13 +290,14 @@ export function MediaPreview({ media, onRemove }: MediaPreviewProps) {
       {isImage ? (
         <AspectRatio ratio={16/9}>
           <img 
-            src={media.displayUrl} 
+            src={media.displayUrl || media.url} 
             alt="Uploaded content" 
             className="w-full h-full object-cover" 
             onError={(e) => {
-              console.error("Error loading image:", media.displayUrl);
+              console.error("Error loading image:", media.displayUrl || media.url);
               e.currentTarget.src = "https://placehold.co/400x225?text=Error+Loading+Image";
             }}
+            onLoad={() => console.log("Image loaded successfully:", media.displayUrl || media.url)}
           />
         </AspectRatio>
       ) : (
@@ -279,10 +317,14 @@ export function MediaPreview({ media, onRemove }: MediaPreviewProps) {
         variant="destructive"
         size="icon"
         className="h-6 w-6 absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
-        onClick={onRemove}
+        onClick={() => {
+          console.log("Removing media:", media);
+          onRemove();
+        }}
       >
         <XIcon className="h-3 w-3" />
       </Button>
     </div>
   );
 }
+
