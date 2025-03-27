@@ -389,7 +389,7 @@ export const createPost = async (params: {
   body: string;
   community?: string;
   mediaUrls?: string[];
-}): Promise<boolean> => {
+}): Promise<boolean | any> => {
   try {
     const { body, community, mediaUrls } = params;
 
@@ -450,7 +450,8 @@ export const createPost = async (params: {
     const data = await response.json();
     console.log('Create post API response:', data);
     
-    return data.success === true;
+    // Return the raw response if it has a status property, otherwise return boolean success
+    return data.status === "SUCCESS" ? data : (data.success === true);
   } catch (error) {
     console.error('Error creating post:', error);
     throw error;

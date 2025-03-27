@@ -33,7 +33,7 @@ interface MediaUploadProps {
 export function MediaUpload({
   onMediaUploaded,
   disabled = false,
-  maxFiles = 4,
+  maxFiles = 30, // Increased to 30 per requirement
   acceptedTypes = 'both'
 }: MediaUploadProps) {
   const [uploading, setUploading] = useState(false);
@@ -55,7 +55,7 @@ export function MediaUpload({
     }
     
     const file = files[0];
-    console.log("File selected:", file.name, "type:", file.type, "size:", file.size);
+    console.log(`File selected: ${file.name} type: ${file.type} size: ${file.size}`);
     
     // Reset file input value so the same file can be uploaded again if needed
     e.target.value = '';
@@ -126,20 +126,17 @@ export function MediaUpload({
             const response = JSON.parse(responseText);
             console.log("Parsed response:", response);
             
+            // Validate response structure
             if (!response) {
               throw new Error('Invalid response format');
-            }
-            
-            if (response.success !== true) {
-              throw new Error('Upload was not successful');
             }
             
             // Determine media type
             const mediaType: 'image' | 'video' = isImage ? 'image' : 'video';
             
-            // Create a valid media response object
+            // Create a valid media response object with defaults for missing fields
             const mediaResponse: MediaUploadResponse = {
-              success: true,
+              success: response.success === true,
               url: response.url || '',
               type: mediaType,
               originalUrl: response.originalUrl || response.url || '',

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -24,6 +25,7 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
   const [error, setError] = useState<string | null>(null);
   const [userAvatar, setUserAvatar] = useState('');
   
+  // Get user avatar on mount
   useEffect(() => {
     const storedAvatar = localStorage.getItem('dapps_user_avatar');
     console.log("Retrieved user avatar from localStorage:", storedAvatar);
@@ -43,23 +45,27 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
   const handleMediaUploaded = (media: MediaUploadResponse) => {
     console.log("Media uploaded callback received with:", JSON.stringify(media));
     
-    if (!media || !media.type || !media.url) {
-      console.error("Invalid media response:", media);
+    // Validate media object
+    if (!media || typeof media !== 'object') {
+      console.error("Invalid media object received:", media);
       toast.error('Invalid media response from server');
       return;
     }
     
-    if (media.type !== 'image' && media.type !== 'video') {
-      console.error("Invalid media type:", media.type);
-      toast.error('Invalid media type received');
+    if (!media.type || !media.url) {
+      console.error("Media missing required properties:", media);
+      toast.error('Invalid media data received from server');
       return;
     }
     
+    // Add media to state - no restrictions on number of uploads
     setUploadedMedia(prev => {
       const newState = [...prev, media];
       console.log("New uploadedMedia state:", JSON.stringify(newState));
       return newState;
     });
+    
+    toast.success(`${media.type === 'image' ? 'Image' : 'Video'} uploaded successfully`);
   };
 
   const removeMedia = (index: number) => {
@@ -90,9 +96,11 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
     setError(null);
     
     try {
+      // Prepare the media URLs
       const mediaUrls = uploadedMedia.map(media => media.url);
       console.log("Media URLs for post:", mediaUrls);
       
+      // Create the post
       const postData = {
         body: content,
         community: selectedCommunity || undefined,
@@ -101,14 +109,17 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
       
       console.log('Creating post with data:', postData);
       
-      const success = await createPost(postData);
-      console.log("Post creation result:", success);
+      const response = await createPost(postData);
+      console.log("Post creation result:", response);
       
-      if (success) {
+      // Fix: Check for SUCCESS status in the response
+      if (response === true || (typeof response === 'object' && response.status === 'SUCCESS')) {
+        // Trigger confetti effect for dopamine hit
         triggerConfetti();
         
         toast.success('Post created successfully!');
         
+        // Create a local representation of the post for UI purposes
         const newPost = {
           handle: "you",
           avatar: localStorage.getItem('dapps_user_avatar') || '',
@@ -126,16 +137,21 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
         
         console.log("Sending new post to feed:", JSON.stringify(newPost));
         
+        // Notify parent component about the new post
         onPostCreated(newPost);
         
+        // Reset form
         setContent('');
         setSelectedCommunity('');
         setUploadedMedia([]);
         setIsExpanded(false);
+      } else {
+        throw new Error('Failed to create post');
       }
     } catch (error: any) {
       console.error('Error creating post:', error);
       
+      // Handle specific error messages from API
       const errorMessage = error.message || 'Failed to create post. Please try again.';
       console.log("Error message:", errorMessage);
       
@@ -196,7 +212,7 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
             )}
             
             {uploadedMedia.length > 0 && (
-              <div className={`mt-3 grid ${uploadedMedia.some(m => m.type === 'video') ? 'grid-cols-1' : 'grid-cols-2'} gap-2 animate-fade-in`}>
+              <div className="mt-3 grid grid-cols-2 gap-2 animate-fade-in">
                 {uploadedMedia.map((media, idx) => (
                   <MediaPreview 
                     key={idx} 
@@ -212,16 +228,16 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
                 <div className="flex flex-wrap gap-2 mb-3">
                   <MediaUpload 
                     onMediaUploaded={handleMediaUploaded}
-                    disabled={isSubmitting || uploadedMedia.some(m => m.type === 'video')}
+                    disabled={isSubmitting}
                     acceptedTypes="image"
-                    maxFiles={4}
+                    maxFiles={30}
                   />
                   
                   <MediaUpload 
                     onMediaUploaded={handleMediaUploaded}
-                    disabled={isSubmitting || uploadedMedia.length > 0}
+                    disabled={isSubmitting}
                     acceptedTypes="video"
-                    maxFiles={1}
+                    maxFiles={30}
                   />
                 </div>
 
