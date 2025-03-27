@@ -100,10 +100,11 @@ export function MediaUpload({
             const response = JSON.parse(xhr.responseText);
             
             // Validate response before proceeding
-            if (!response || typeof response.type === 'undefined') {
+            if (!response || response.success !== true || !response.type) {
               throw new Error('Invalid response format from server');
             }
             
+            // Call the callback with the validated response
             onMediaUploaded(response);
             
             // Reset after upload
@@ -203,7 +204,7 @@ interface MediaPreviewProps {
 
 export function MediaPreview({ media, onRemove }: MediaPreviewProps) {
   // Guard against invalid media object
-  if (!media || typeof media.type === 'undefined') {
+  if (!media || !media.type) {
     return null;
   }
   

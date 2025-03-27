@@ -99,6 +99,7 @@ const FeedPage = () => {
   };
   
   const handleNewPost = (newPost: any) => {
+    console.log('New post created:', newPost);
     // Add the new post to the top of the posts list
     setPosts(prevPosts => [newPost, ...prevPosts]);
   };

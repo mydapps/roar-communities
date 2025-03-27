@@ -40,7 +40,8 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
   };
 
   const handleMediaUploaded = (media: MediaUploadResponse) => {
-    if (!media || typeof media.type === 'undefined') {
+    // Additional validation to ensure media object is valid
+    if (!media || !media.type || !media.url) {
       toast.error('Invalid media response from server');
       return;
     }
@@ -96,11 +97,15 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
       const mediaUrls = uploadedMedia.map(media => media.url);
       
       // Create the post
-      const success = await createPost({
+      const postData = {
         body: content,
         community: selectedCommunity || undefined,
         mediaUrls: mediaUrls.length > 0 ? mediaUrls : undefined
-      });
+      };
+      
+      console.log('Creating post with data:', postData);
+      
+      const success = await createPost(postData);
       
       if (success) {
         // Trigger confetti effect for dopamine hit
@@ -111,6 +116,7 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
         // Create a local representation of the post for UI purposes
         const newPost = {
           handle: "you",
+          avatar: localStorage.getItem('dapps_user_avatar') || '',
           community: selectedCommunity || undefined,
           timeAgo: "just now",
           body: content,
@@ -123,6 +129,7 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
           multiple_images: uploadedMedia.filter(m => m.type === 'image').length > 1 ? 1 : 0
         };
         
+        // Notify parent component about the new post
         onPostCreated(newPost);
         
         // Reset form
@@ -133,7 +140,14 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
       }
     } catch (error: any) {
       console.error('Error creating post:', error);
-      setError(error.message || 'Failed to create post. Please try again.');
+      
+      // Handle specific error messages from API
+      if (error.message && error.message.includes('too short')) {
+        setError('Your post is too short! Please add more content.');
+      } else {
+        setError(error.message || 'Failed to create post. Please try again.');
+      }
+      
       toast.error(error.message || 'Failed to create post');
     } finally {
       setIsSubmitting(false);
@@ -149,7 +163,7 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
       <CardContent className="pt-6 pb-4">
         <div className="flex gap-3">
           <Avatar className="h-10 w-10 mt-1 border-2 border-primary/20 hover:border-primary/50 transition-colors">
-            <AvatarImage src={userAvatar || "https://api.dicebear.com/7.x/personas/svg?seed=you"} />
+            <AvatarImage src={userAvatar} />
             <AvatarFallback>YO</AvatarFallback>
           </Avatar>
           <div className="flex-1">
