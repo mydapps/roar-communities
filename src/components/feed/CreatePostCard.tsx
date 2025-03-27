@@ -4,107 +4,87 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { ImageIcon, VideoIcon, LinkIcon, XIcon, SendIcon, SearchIcon } from 'lucide-react';
+import { XIcon, SendIcon, LinkIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { MentionInput } from '@/components/ui/mention-input';
-
-const COMMUNITIES = [
-  "Ethereum Devs", 
-  "DeFi Explorers", 
-  "Solana Builders", 
-  "Web3 Gaming", 
-  "NFT Creators",
-  "DAO Governance",
-  "Zero Knowledge",
-  "Layer 2 Solutions",
-  "Metaverse Architects",
-  "Governance Models"
-];
+import { toast } from 'sonner';
+import { CommunitySelector } from './CommunitySelector';
+import { MediaUpload, MediaPreview, MediaUploadResponse } from '@/components/ui/media-upload';
 
 const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void }) => {
   const [content, setContent] = useState('');
   const [selectedCommunity, setSelectedCommunity] = useState('');
   const [showCommunityDialog, setShowCommunityDialog] = useState(false);
-  const [selectedImages, setSelectedImages] = useState<string[]>([]);
-  const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
+  const [uploadedMedia, setUploadedMedia] = useState<MediaUploadResponse[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-
-  const [communitySearch, setCommunitySearch] = useState('');
-  const filteredCommunities = COMMUNITIES.filter(c => 
-    c.toLowerCase().includes(communitySearch.toLowerCase())
-  );
 
   const handleCommunitySelect = (community: string) => {
     setSelectedCommunity(community);
     setShowCommunityDialog(false);
+    toast.success(`Selected community: ${community}`);
   };
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const placeholderImages = [
-        "https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=800",
-        "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=800",
-        "https://images.unsplash.com/photo-1518770660439-4636190af475?w=800",
-        "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800",
-      ];
-      
-      const newImages = [...selectedImages];
-      for (let i = 0; i < Math.min(e.target.files.length, 4 - selectedImages.length); i++) {
-        newImages.push(placeholderImages[i % placeholderImages.length]);
-      }
-      
-      setSelectedImages(newImages);
-      setSelectedVideo(null);
+  const handleMediaUploaded = (media: MediaUploadResponse) => {
+    // If we already have 4 media items or if we have a video (only one video allowed)
+    if (uploadedMedia.length >= 4 || (media.type === 'video' && uploadedMedia.length > 0)) {
+      toast.error(media.type === 'video' 
+        ? 'Only one video can be uploaded per post' 
+        : 'Maximum of 4 media items allowed');
+      return;
     }
-  };
-
-  const handleVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const placeholderVideo = "https://assets.mixkit.co/videos/preview/mixkit-software-developer-working-on-code-screen-close-up-27013-large.mp4";
-      
-      setSelectedVideo(placeholderVideo);
-      setSelectedImages([]);
+    
+    // If we're uploading a video, clear any existing media
+    if (media.type === 'video' && uploadedMedia.some(m => m.type === 'image')) {
+      setUploadedMedia([media]);
+      toast.info('Previous images removed as video was uploaded');
+      return;
     }
+    
+    // If we already have a video, don't allow images
+    if (media.type === 'image' && uploadedMedia.some(m => m.type === 'video')) {
+      toast.error('Cannot add images when a video is already uploaded');
+      return;
+    }
+    
+    setUploadedMedia(prev => [...prev, media]);
+    toast.success(`${media.type === 'image' ? 'Image' : 'Video'} uploaded successfully`);
   };
 
-  const removeImage = (index: number) => {
-    setSelectedImages(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const removeVideo = () => {
-    setSelectedVideo(null);
+  const removeMedia = (index: number) => {
+    setUploadedMedia(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = () => {
     if (!content.trim()) {
+      toast.error('Please enter some content for your post');
       return;
     }
     
     setIsSubmitting(true);
     
-    const newPost = {
-      username: "you",
-      community: selectedCommunity || undefined,
-      timeAgo: "just now",
-      content,
-      roarCount: 0,
-      commentCount: 0,
-      shareCount: 0,
-      images: selectedImages.length > 0 ? selectedImages : undefined,
-      video: selectedVideo || undefined
-    };
-    
+    // In a real implementation, this would be an API call
     setTimeout(() => {
+      const newPost = {
+        username: "you",
+        community: selectedCommunity || undefined,
+        timeAgo: "just now",
+        content,
+        roarCount: 0,
+        commentCount: 0,
+        shareCount: 0,
+        images: uploadedMedia.filter(m => m.type === 'image').map(m => m.url),
+        video: uploadedMedia.find(m => m.type === 'video')?.url
+      };
+      
+      toast.success('Post created successfully!');
       onPostCreated(newPost);
       
+      // Reset form
       setContent('');
       setSelectedCommunity('');
-      setSelectedImages([]);
-      setSelectedVideo(null);
+      setUploadedMedia([]);
       setIsSubmitting(false);
       setIsExpanded(false);
     }, 500);
@@ -148,92 +128,34 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
               />
             </div>
             
-            {selectedImages.length > 0 && (
-              <div className="mt-3 grid grid-cols-2 gap-2 animate-fade-in">
-                {selectedImages.map((img, idx) => (
-                  <div key={idx} className="relative group">
-                    <img 
-                      src={img} 
-                      alt={`Attachment ${idx + 1}`} 
-                      className="h-20 w-full object-cover rounded-md" 
-                    />
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      className="h-6 w-6 absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => removeImage(idx)}
-                    >
-                      <XIcon className="h-3 w-3" />
-                    </Button>
-                  </div>
+            {uploadedMedia.length > 0 && (
+              <div className={`mt-3 grid ${uploadedMedia.some(m => m.type === 'video') ? 'grid-cols-1' : 'grid-cols-2'} gap-2 animate-fade-in`}>
+                {uploadedMedia.map((media, idx) => (
+                  <MediaPreview 
+                    key={idx} 
+                    media={media} 
+                    onRemove={() => removeMedia(idx)} 
+                  />
                 ))}
               </div>
             )}
-
-            {selectedVideo && (
-              <div className="mt-3 relative group animate-fade-in">
-                <video 
-                  src={selectedVideo} 
-                  className="w-full h-32 object-cover rounded-md" 
-                  controls
-                />
-                <Button
-                  variant="destructive"
-                  size="icon"
-                  className="h-6 w-6 absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                  onClick={removeVideo}
-                >
-                  <XIcon className="h-3 w-3" />
-                </Button>
-              </div>
-            )}
             
-            {(isExpanded || content || selectedImages.length > 0 || selectedVideo) && (
+            {(isExpanded || content || uploadedMedia.length > 0) && (
               <div className="mt-3 animate-fade-in">
-                <div className="flex justify-between items-center mb-3">
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor="image-upload" className="cursor-pointer">
-                      <Button variant="outline" size="sm" className="cursor-pointer gap-1.5" type="button" asChild>
-                        <span>
-                          <ImageIcon className="h-4 w-4" />
-                          <span>Images</span>
-                        </span>
-                      </Button>
-                      <Input
-                        id="image-upload"
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        className="hidden"
-                        onChange={handleImageSelect}
-                        disabled={selectedImages.length >= 4 || !!selectedVideo}
-                      />
-                    </Label>
-                    
-                    <Label htmlFor="video-upload" className="cursor-pointer">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="cursor-pointer gap-1.5" 
-                        type="button"
-                        disabled={selectedImages.length > 0}
-                        asChild
-                      >
-                        <span>
-                          <VideoIcon className="h-4 w-4" />
-                          <span>Video</span>
-                        </span>
-                      </Button>
-                      <Input
-                        id="video-upload"
-                        type="file"
-                        accept="video/*"
-                        className="hidden"
-                        onChange={handleVideoSelect}
-                        disabled={selectedImages.length > 0 || !!selectedVideo}
-                      />
-                    </Label>
-                  </div>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  <MediaUpload 
+                    onMediaUploaded={handleMediaUploaded}
+                    disabled={isSubmitting || uploadedMedia.some(m => m.type === 'video')}
+                    acceptedTypes="image"
+                    maxFiles={4}
+                  />
+                  
+                  <MediaUpload 
+                    onMediaUploaded={handleMediaUploaded}
+                    disabled={isSubmitting || uploadedMedia.length > 0}
+                    acceptedTypes="video"
+                    maxFiles={1}
+                  />
                 </div>
 
                 <Separator className="my-3" />
@@ -256,37 +178,10 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
                           <DialogTitle>Link a Community</DialogTitle>
                         </DialogHeader>
                         <div className="space-y-4 py-2">
-                          <div className="space-y-2">
-                            <div className="relative">
-                              <SearchIcon className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                              <Input
-                                id="community-search"
-                                placeholder="Search communities..."
-                                value={communitySearch}
-                                onChange={(e) => setCommunitySearch(e.target.value)}
-                                className="pl-8"
-                              />
-                            </div>
-                          </div>
-                          <div className="max-h-60 overflow-y-auto space-y-1 rounded-md border p-1">
-                            {filteredCommunities.length === 0 ? (
-                              <div className="py-6 text-center text-muted-foreground">
-                                No communities found
-                              </div>
-                            ) : (
-                              filteredCommunities.map((community) => (
-                                <Button
-                                  key={community}
-                                  variant="ghost"
-                                  className="w-full justify-start text-left"
-                                  onClick={() => handleCommunitySelect(community)}
-                                >
-                                  <Badge variant="outline" className="mr-2 bg-muted/50">{community[0]}</Badge>
-                                  {community}
-                                </Button>
-                              ))
-                            )}
-                          </div>
+                          <CommunitySelector 
+                            onSelect={handleCommunitySelect}
+                            selectedCommunity={selectedCommunity} 
+                          />
                         </div>
                       </DialogContent>
                     </Dialog>
