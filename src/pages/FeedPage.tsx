@@ -98,6 +98,11 @@ const FeedPage = () => {
     setRefreshKey(prev => prev + 1); // Force a refresh
   };
   
+  const handleNewPost = (newPost: any) => {
+    // Add the new post to the top of the posts list
+    setPosts(prevPosts => [newPost, ...prevPosts]);
+  };
+  
   const scrollToTop = () => {
     window.scrollTo({
       top: 0,
@@ -107,7 +112,7 @@ const FeedPage = () => {
   
   return (
     <div className="max-w-2xl mx-auto pt-8 pb-20 px-4">
-      <CreatePostCard onPostCreated={handleRefresh} />
+      <CreatePostCard onPostCreated={handleNewPost} />
       
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mt-4">
@@ -120,9 +125,9 @@ const FeedPage = () => {
       
       <div className="space-y-4 mt-6">
         {posts.length > 0 ? (
-          posts.map((post) => (
+          posts.map((post, index) => (
             <Post
-              key={`${post.code}-${refreshKey}`}
+              key={post.code ? `${post.code}-${refreshKey}` : `new-post-${index}-${Date.now()}`}
               username={post.handle}
               avatar={post.avatar || ''}
               community={post.community}

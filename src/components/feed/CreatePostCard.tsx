@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,8 @@ import { toast } from 'sonner';
 import { CommunitySelector } from './CommunitySelector';
 import { MediaUpload, MediaPreview, MediaUploadResponse } from '@/components/ui/media-upload';
 import { createPost } from '@/utils/api';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import confetti from 'canvas-confetti';
 
 const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void }) => {
   const [content, setContent] = useState('');
@@ -20,6 +22,16 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
   const [uploadedMedia, setUploadedMedia] = useState<MediaUploadResponse[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [userAvatar, setUserAvatar] = useState('');
+  
+  // Get user avatar on mount
+  useEffect(() => {
+    const storedAvatar = localStorage.getItem('dapps_user_avatar');
+    if (storedAvatar) {
+      setUserAvatar(`https://img.dapps.co/avatar/${storedAvatar}.svg`);
+    }
+  }, []);
 
   const handleCommunitySelect = (community: string) => {
     setSelectedCommunity(community);
@@ -28,6 +40,11 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
   };
 
   const handleMediaUploaded = (media: MediaUploadResponse) => {
+    if (!media || typeof media.type === 'undefined') {
+      toast.error('Invalid media response from server');
+      return;
+    }
+    
     // If we already have 4 media items or if we have a video (only one video allowed)
     if (uploadedMedia.length >= 4 || (media.type === 'video' && uploadedMedia.length > 0)) {
       toast.error(media.type === 'video' 
@@ -57,13 +74,22 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
     setUploadedMedia(prev => prev.filter((_, i) => i !== index));
   };
 
+  const triggerConfetti = () => {
+    confetti({
+      particleCount: 100,
+      spread: 70,
+      origin: { y: 0.6 }
+    });
+  };
+
   const handleSubmit = async () => {
     if (!content.trim()) {
-      toast.error('Please enter some content for your post');
+      setError('Please enter some content for your post');
       return;
     }
     
     setIsSubmitting(true);
+    setError(null);
     
     try {
       // Prepare the media URLs
@@ -77,6 +103,9 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
       });
       
       if (success) {
+        // Trigger confetti effect for dopamine hit
+        triggerConfetti();
+        
         toast.success('Post created successfully!');
         
         // Create a local representation of the post for UI purposes
@@ -102,9 +131,10 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
         setUploadedMedia([]);
         setIsExpanded(false);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating post:', error);
-      toast.error('Failed to create post. Please try again.');
+      setError(error.message || 'Failed to create post. Please try again.');
+      toast.error(error.message || 'Failed to create post');
     } finally {
       setIsSubmitting(false);
     }
@@ -119,7 +149,7 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
       <CardContent className="pt-6 pb-4">
         <div className="flex gap-3">
           <Avatar className="h-10 w-10 mt-1 border-2 border-primary/20 hover:border-primary/50 transition-colors">
-            <AvatarImage src="https://api.dicebear.com/7.x/personas/svg?seed=you" />
+            <AvatarImage src={userAvatar || "https://api.dicebear.com/7.x/personas/svg?seed=you"} />
             <AvatarFallback>YO</AvatarFallback>
           </Avatar>
           <div className="flex-1">
@@ -147,6 +177,12 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
                 minHeight="80px"
               />
             </div>
+            
+            {error && (
+              <Alert variant="destructive" className="mt-2 py-2 animate-fade-in">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
             
             {uploadedMedia.length > 0 && (
               <div className={`mt-3 grid ${uploadedMedia.some(m => m.type === 'video') ? 'grid-cols-1' : 'grid-cols-2'} gap-2 animate-fade-in`}>

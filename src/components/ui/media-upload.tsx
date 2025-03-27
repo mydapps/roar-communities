@@ -14,6 +14,12 @@ export interface MediaUploadResponse {
   displayUrl: string;
   markdown: string;
   isProcessing: boolean;
+  fileInfo?: {
+    name: string;
+    originalName: string;
+    size: number;
+    type: string;
+  };
 }
 
 interface MediaUploadProps {
@@ -90,14 +96,26 @@ export function MediaUpload({
       xhr.addEventListener('load', () => {
         if (xhr.status >= 200 && xhr.status < 300) {
           setProgress(100);
-          const response: MediaUploadResponse = JSON.parse(xhr.responseText);
-          onMediaUploaded(response);
-          
-          // Reset after upload
-          setTimeout(() => {
+          try {
+            const response = JSON.parse(xhr.responseText);
+            
+            // Validate response before proceeding
+            if (!response || typeof response.type === 'undefined') {
+              throw new Error('Invalid response format from server');
+            }
+            
+            onMediaUploaded(response);
+            
+            // Reset after upload
+            setTimeout(() => {
+              setUploading(false);
+              setProgress(0);
+            }, 500);
+          } catch (error) {
+            console.error('Error parsing response:', error, xhr.responseText);
+            toast.error('Error processing server response. Please try again.');
             setUploading(false);
-            setProgress(0);
-          }, 500);
+          }
         } else {
           console.error('Upload failed:', xhr.responseText);
           toast.error('Upload failed. Please try again.');
@@ -184,6 +202,11 @@ interface MediaPreviewProps {
 }
 
 export function MediaPreview({ media, onRemove }: MediaPreviewProps) {
+  // Guard against invalid media object
+  if (!media || typeof media.type === 'undefined') {
+    return null;
+  }
+  
   const isImage = media.type === 'image';
   
   return (
