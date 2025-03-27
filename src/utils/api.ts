@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 import { POST_MIRRORED_EVENT } from '@/components/feed/post/MirrorButton';
 
@@ -71,6 +70,25 @@ export interface Community {
   last7Prices?: number[];
   userAvatars?: string[];
   metaUserInfo?: number;
+}
+
+/**
+ * Interface for media upload response
+ */
+export interface MediaUploadResponse {
+  success: boolean;
+  url: string;
+  type: 'image' | 'video';
+  originalUrl: string;
+  displayUrl: string;
+  markdown: string;
+  isProcessing: boolean;
+  fileInfo?: {
+    name: string;
+    originalName: string;
+    size: number;
+    type: string;
+  };
 }
 
 /**
@@ -360,6 +378,81 @@ export const mirrorPost = async (params: {
     return data.status === "SUCCESS";
   } catch (error) {
     console.error('Error mirroring post:', error);
+    throw error;
+  }
+};
+
+/**
+ * Create a new post in a community
+ */
+export const createPost = async (params: {
+  body: string;
+  community?: string;
+  mediaUrls?: string[];
+}): Promise<boolean> => {
+  try {
+    const { body, community, mediaUrls } = params;
+
+    if (!body || body.trim() === '') {
+      throw new Error('Post content is required');
+    }
+
+    const userKey = localStorage.getItem('dapps_user_key');
+    
+    if (!userKey) {
+      console.error('No user key found');
+      throw new Error('Authentication required. Please log in again.');
+    }
+    
+    console.log('Creating post:', params);
+    
+    const requestBody: Record<string, any> = {
+      body: body.trim()
+    };
+    
+    if (community) {
+      requestBody.community = community;
+    }
+    
+    if (mediaUrls && mediaUrls.length > 0) {
+      requestBody.mediaUrls = mediaUrls;
+    }
+    
+    console.log('Request payload:', JSON.stringify(requestBody));
+    
+    const response = await fetch(`${API_BASE_URL}/create_post`, {
+      method: 'POST',
+      headers: {
+        'x-user-key': userKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(requestBody)
+    });
+    
+    console.log(`Response status: ${response.status}`);
+    
+    if (!response.ok) {
+      const contentType = response.headers.get("content-type");
+      let errorMessage = `Error ${response.status}: ${response.statusText}`;
+      
+      if (contentType && contentType.indexOf("application/json") !== -1) {
+        const errorData = await response.json();
+        console.error('Create post API error response (JSON):', errorData);
+        errorMessage = errorData.message || errorMessage;
+      } else {
+        const errorText = await response.text();
+        console.error('Create post API error response (text):', errorText);
+      }
+      
+      throw new Error(errorMessage);
+    }
+    
+    const data = await response.json();
+    console.log('Create post API response:', data);
+    
+    return data.success === true;
+  } catch (error) {
+    console.error('Error creating post:', error);
     throw error;
   }
 };

@@ -11,6 +11,7 @@ import { MentionInput } from '@/components/ui/mention-input';
 import { toast } from 'sonner';
 import { CommunitySelector } from './CommunitySelector';
 import { MediaUpload, MediaPreview, MediaUploadResponse } from '@/components/ui/media-upload';
+import { createPost } from '@/utils/api';
 
 const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void }) => {
   const [content, setContent] = useState('');
@@ -56,7 +57,7 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
     setUploadedMedia(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!content.trim()) {
       toast.error('Please enter some content for your post');
       return;
@@ -64,30 +65,49 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
     
     setIsSubmitting(true);
     
-    // In a real implementation, this would be an API call
-    setTimeout(() => {
-      const newPost = {
-        username: "you",
+    try {
+      // Prepare the media URLs
+      const mediaUrls = uploadedMedia.map(media => media.url);
+      
+      // Create the post
+      const success = await createPost({
+        body: content,
         community: selectedCommunity || undefined,
-        timeAgo: "just now",
-        content,
-        roarCount: 0,
-        commentCount: 0,
-        shareCount: 0,
-        images: uploadedMedia.filter(m => m.type === 'image').map(m => m.url),
-        video: uploadedMedia.find(m => m.type === 'video')?.url
-      };
+        mediaUrls: mediaUrls.length > 0 ? mediaUrls : undefined
+      });
       
-      toast.success('Post created successfully!');
-      onPostCreated(newPost);
-      
-      // Reset form
-      setContent('');
-      setSelectedCommunity('');
-      setUploadedMedia([]);
+      if (success) {
+        toast.success('Post created successfully!');
+        
+        // Create a local representation of the post for UI purposes
+        const newPost = {
+          handle: "you",
+          community: selectedCommunity || undefined,
+          timeAgo: "just now",
+          body: content,
+          upvotes: 0,
+          reply_count: 0,
+          roar: 0,
+          images: uploadedMedia.filter(m => m.type === 'image').map(m => m.url),
+          image: uploadedMedia.filter(m => m.type === 'image').length > 0 ? 1 : 0,
+          image_url: uploadedMedia.filter(m => m.type === 'image')[0]?.url,
+          multiple_images: uploadedMedia.filter(m => m.type === 'image').length > 1 ? 1 : 0
+        };
+        
+        onPostCreated(newPost);
+        
+        // Reset form
+        setContent('');
+        setSelectedCommunity('');
+        setUploadedMedia([]);
+        setIsExpanded(false);
+      }
+    } catch (error) {
+      console.error('Error creating post:', error);
+      toast.error('Failed to create post. Please try again.');
+    } finally {
       setIsSubmitting(false);
-      setIsExpanded(false);
-    }, 500);
+    }
   };
 
   const handleFocus = () => {
