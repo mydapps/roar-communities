@@ -132,9 +132,15 @@ export function MediaUpload({
               throw new Error('Upload was not successful');
             }
             
-            if (!response.type) {
-              console.error("Response type is missing");
-              throw new Error('Response missing media type');
+            // Create a valid type from the response or file type
+            let mediaType: 'image' | 'video' = isImage ? 'image' : 'video';
+            
+            // If response has a type property and it's valid, use it instead
+            if (response.type === 'image' || response.type === 'video') {
+              mediaType = response.type;
+              console.log("Using type from response:", mediaType);
+            } else {
+              console.log("Response type missing or invalid, using file-based type:", mediaType);
             }
             
             if (!response.url) {
@@ -146,7 +152,7 @@ export function MediaUpload({
             const validatedMedia: MediaUploadResponse = {
               success: true,
               url: response.url || '',
-              type: response.type === 'image' || response.type === 'video' ? response.type : 'image',
+              type: mediaType,
               originalUrl: response.originalUrl || response.url || '',
               displayUrl: response.displayUrl || response.url || '',
               markdown: response.markdown || '',
@@ -327,4 +333,3 @@ export function MediaPreview({ media, onRemove }: MediaPreviewProps) {
     </div>
   );
 }
-
