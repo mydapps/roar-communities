@@ -52,6 +52,8 @@ export function MediaUpload({
     const files = e.target.files;
     if (!files || files.length === 0) return;
     
+    console.log("File selected:", files[0].name, "type:", files[0].type, "size:", files[0].size);
+    
     // Reset file input value so the same file can be uploaded again if needed
     e.target.value = '';
     
@@ -61,24 +63,30 @@ export function MediaUpload({
     
     if (!isImage && !isVideo) {
       toast.error('Only images and videos are supported');
+      console.error("File type not supported:", file.type);
       return;
     }
     
     if (file.size > 50 * 1024 * 1024) { // 50MB limit
       toast.error('File size exceeds the 50MB limit');
+      console.error("File too large:", file.size);
       return;
     }
     
     try {
       setUploading(true);
       setProgress(10); // Start progress at 10%
+      console.log("Starting upload process...");
       
       const formData = new FormData();
       formData.append('media', file);
       
       const userKey = localStorage.getItem('dapps_user_key');
+      console.log("User key exists:", !!userKey);
+      
       if (!userKey) {
         toast.error('Authentication required. Please log in again.');
+        console.error("No user key found in localStorage");
         setUploading(false);
         return;
       }
@@ -89,22 +97,43 @@ export function MediaUpload({
       xhr.upload.addEventListener('progress', (event) => {
         if (event.lengthComputable) {
           const percentComplete = Math.round((event.loaded / event.total) * 90) + 10;
+          console.log(`Upload progress: ${percentComplete}%`);
           setProgress(percentComplete);
         }
       });
       
       xhr.addEventListener('load', () => {
+        console.log("XHR load event triggered, status:", xhr.status);
         if (xhr.status >= 200 && xhr.status < 300) {
           setProgress(100);
           try {
+            console.log("Raw response:", xhr.responseText);
             const response = JSON.parse(xhr.responseText);
+            console.log("Parsed response:", response);
+            
+            // Log detailed response properties
+            console.log("Response success:", response.success);
+            console.log("Response type:", response.type);
+            console.log("Response url:", response.url);
             
             // Validate response before proceeding
-            if (!response || response.success !== true || !response.type) {
-              throw new Error('Invalid response format from server');
+            if (!response) {
+              console.error("Response is null or undefined");
+              throw new Error('Empty response from server');
+            }
+            
+            if (response.success !== true) {
+              console.error("Response success flag is not true:", response.success);
+              throw new Error('Upload was not successful');
+            }
+            
+            if (!response.type) {
+              console.error("Response type is missing");
+              throw new Error('Response missing media type');
             }
             
             // Call the callback with the validated response
+            console.log("Calling onMediaUploaded with validated response");
             onMediaUploaded(response);
             
             // Reset after upload
@@ -118,7 +147,8 @@ export function MediaUpload({
             setUploading(false);
           }
         } else {
-          console.error('Upload failed:', xhr.responseText);
+          console.error('Upload failed with status:', xhr.status);
+          console.error('Response text:', xhr.responseText);
           toast.error('Upload failed. Please try again.');
           setUploading(false);
         }
@@ -136,8 +166,10 @@ export function MediaUpload({
         setUploading(false);
       });
       
+      console.log("Opening XHR connection to https://api.dapps.co/upload_media");
       xhr.open('POST', 'https://api.dapps.co/upload_media');
       xhr.setRequestHeader('x-user-key', userKey);
+      console.log("Sending file...");
       xhr.send(formData);
       
     } catch (error) {
@@ -204,7 +236,13 @@ interface MediaPreviewProps {
 
 export function MediaPreview({ media, onRemove }: MediaPreviewProps) {
   // Guard against invalid media object
-  if (!media || !media.type) {
+  if (!media) {
+    console.error("MediaPreview received null or undefined media object");
+    return null;
+  }
+  
+  if (!media.type) {
+    console.error("MediaPreview: media object is missing type property:", media);
     return null;
   }
   
@@ -218,6 +256,10 @@ export function MediaPreview({ media, onRemove }: MediaPreviewProps) {
             src={media.displayUrl} 
             alt="Uploaded content" 
             className="w-full h-full object-cover" 
+            onError={(e) => {
+              console.error("Error loading image:", media.displayUrl);
+              e.currentTarget.src = "https://placehold.co/400x225?text=Error+Loading+Image";
+            }}
           />
         </AspectRatio>
       ) : (
@@ -226,6 +268,9 @@ export function MediaPreview({ media, onRemove }: MediaPreviewProps) {
             src={media.url} 
             className="w-full h-full object-cover" 
             controls
+            onError={(e) => {
+              console.error("Error loading video:", media.url);
+            }}
           />
         </AspectRatio>
       )}

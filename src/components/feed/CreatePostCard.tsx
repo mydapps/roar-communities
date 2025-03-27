@@ -28,8 +28,11 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
   // Get user avatar on mount
   useEffect(() => {
     const storedAvatar = localStorage.getItem('dapps_user_avatar');
+    console.log("Retrieved user avatar from localStorage:", storedAvatar);
     if (storedAvatar) {
-      setUserAvatar(`https://img.dapps.co/avatar/${storedAvatar}.svg`);
+      const avatarUrl = `https://img.dapps.co/avatar/${storedAvatar}.svg`;
+      console.log("Setting user avatar URL:", avatarUrl);
+      setUserAvatar(avatarUrl);
     }
   }, []);
 
@@ -40,14 +43,30 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
   };
 
   const handleMediaUploaded = (media: MediaUploadResponse) => {
+    console.log("Media uploaded callback received:", media);
+    
     // Additional validation to ensure media object is valid
-    if (!media || !media.type || !media.url) {
+    if (!media) {
+      console.error("Media object is null or undefined");
       toast.error('Invalid media response from server');
+      return;
+    }
+    
+    if (!media.type) {
+      console.error("Media object missing type property:", media);
+      toast.error('Invalid media type in server response');
+      return;
+    }
+    
+    if (!media.url) {
+      console.error("Media object missing url property:", media);
+      toast.error('Invalid media URL in server response');
       return;
     }
     
     // If we already have 4 media items or if we have a video (only one video allowed)
     if (uploadedMedia.length >= 4 || (media.type === 'video' && uploadedMedia.length > 0)) {
+      console.log("Media limit reached or trying to add video when media already exists");
       toast.error(media.type === 'video' 
         ? 'Only one video can be uploaded per post' 
         : 'Maximum of 4 media items allowed');
@@ -56,6 +75,7 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
     
     // If we're uploading a video, clear any existing media
     if (media.type === 'video' && uploadedMedia.some(m => m.type === 'image')) {
+      console.log("Clearing existing images as video was uploaded");
       setUploadedMedia([media]);
       toast.info('Previous images removed as video was uploaded');
       return;
@@ -63,19 +83,31 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
     
     // If we already have a video, don't allow images
     if (media.type === 'image' && uploadedMedia.some(m => m.type === 'video')) {
+      console.log("Cannot add images when video already exists");
       toast.error('Cannot add images when a video is already uploaded');
       return;
     }
     
-    setUploadedMedia(prev => [...prev, media]);
+    console.log("Adding media to uploadedMedia state:", media);
+    setUploadedMedia(prev => {
+      const newState = [...prev, media];
+      console.log("New uploadedMedia state:", newState);
+      return newState;
+    });
     toast.success(`${media.type === 'image' ? 'Image' : 'Video'} uploaded successfully`);
   };
 
   const removeMedia = (index: number) => {
-    setUploadedMedia(prev => prev.filter((_, i) => i !== index));
+    console.log("Removing media at index:", index);
+    setUploadedMedia(prev => {
+      const newState = prev.filter((_, i) => i !== index);
+      console.log("New uploadedMedia state after removal:", newState);
+      return newState;
+    });
   };
 
   const triggerConfetti = () => {
+    console.log("Triggering confetti effect");
     confetti({
       particleCount: 100,
       spread: 70,
@@ -95,6 +127,7 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
     try {
       // Prepare the media URLs
       const mediaUrls = uploadedMedia.map(media => media.url);
+      console.log("Media URLs for post:", mediaUrls);
       
       // Create the post
       const postData = {
@@ -106,6 +139,7 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
       console.log('Creating post with data:', postData);
       
       const success = await createPost(postData);
+      console.log("Post creation result:", success);
       
       if (success) {
         // Trigger confetti effect for dopamine hit
@@ -128,6 +162,8 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
           image_url: uploadedMedia.filter(m => m.type === 'image')[0]?.url,
           multiple_images: uploadedMedia.filter(m => m.type === 'image').length > 1 ? 1 : 0
         };
+        
+        console.log("Sending new post to feed:", newPost);
         
         // Notify parent component about the new post
         onPostCreated(newPost);
