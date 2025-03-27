@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -100,7 +99,6 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
       
       if (mediaUrls.length > 0) {
         mediaUrls.forEach(url => {
-          // Format each media URL with Markdown image syntax
           fullBody += ` ![](${url})`;
         });
       }
