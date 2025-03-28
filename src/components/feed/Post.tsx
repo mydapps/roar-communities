@@ -260,8 +260,12 @@ export const Post = ({
       return;
     }
     
-    if (community && postCode) {
-      navigate(`/c/${community.toLowerCase().replace(/\s+/g, '-')}/${postCode}`);
+    if (postCode) {
+      if (community) {
+        navigate(`/c/${community.toLowerCase().replace(/\s+/g, '-')}/${postCode}`);
+      } else {
+        navigate(`/post/${postCode}`);
+      }
     }
   };
 

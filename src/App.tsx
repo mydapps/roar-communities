@@ -7,6 +7,7 @@ import FeedPage from '@/pages/FeedPage';
 import CommunitiesPage from '@/pages/CommunitiesPage';
 import CommunityPage from '@/pages/CommunityPage';
 import PostPage from '@/pages/PostPage';
+import DetailedPostPage from '@/pages/DetailedPostPage';
 import MySharesPage from '@/pages/MySharesPage';
 import AccountPage from '@/pages/AccountPage';
 import SearchPage from '@/pages/SearchPage';
@@ -34,7 +35,8 @@ function App() {
             <Route path="feed" element={<FeedPage />} />
             <Route path="communities" element={<CommunitiesPage />} />
             <Route path="c/:id" element={<CommunityPage />} />
-            <Route path="c/:communityId/:postId" element={<PostPage />} />
+            <Route path="c/:communityId/:postId" element={<DetailedPostPage />} />
+            <Route path="post/:postId" element={<DetailedPostPage />} />
             <Route path="u/:username" element={<AccountPage />} />
             <Route path="my-shares" element={<MySharesPage />} />
             <Route path="account" element={<AccountPage />} />
