@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/sheet';
 import { ShareIcon } from 'lucide-react';
 import { ShareContent } from './ShareContent';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ShareButtonProps {
   open: boolean;
@@ -37,6 +38,7 @@ export const ShareButton = ({
   community,
   onShareSuccess
 }: ShareButtonProps) => {
+  const isMobile = useIsMobile();
   
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent post navigation
@@ -59,7 +61,7 @@ export const ShareButton = ({
           <ShareIcon className="h-4 w-4" />
         </Button>
       </SheetTrigger>
-      <SheetContent side="bottom" className="h-[90vh] sm:max-w-md sm:h-[85vh] mx-auto p-0 overflow-auto">
+      <SheetContent side={isMobile ? "bottom" : "right"} className={isMobile ? "h-[90vh] sm:max-w-md sm:h-[85vh] mx-auto p-0 overflow-auto" : "sm:max-w-md p-0 overflow-auto"}>
         <SheetHeader className="p-4 text-left border-b sticky top-0 bg-background z-10">
           <SheetTitle>Share Post</SheetTitle>
         </SheetHeader>

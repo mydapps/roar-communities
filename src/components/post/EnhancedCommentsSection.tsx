@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { RefreshCw, Send, Loader2 } from 'lucide-react';
+import { Send, Loader2 } from 'lucide-react';
 import { fetchReplies, toggleMeow, createReply, CommentReply } from '@/utils/commentApi';
 import { toast } from 'sonner';
 import { EnhancedCommentItem } from './EnhancedCommentItem';
@@ -11,12 +12,14 @@ interface EnhancedCommentsSectionProps {
   postCode: string;
   initialReplies?: CommentReply[];
   initialReplyCount?: number;
+  postAuthorHandle?: string;
 }
 
 export const EnhancedCommentsSection = ({
   postCode,
   initialReplies = [],
-  initialReplyCount = 0
+  initialReplyCount = 0,
+  postAuthorHandle
 }: EnhancedCommentsSectionProps) => {
   const [replies, setReplies] = useState<CommentReply[]>(initialReplies);
   const [replyCount, setReplyCount] = useState(initialReplyCount);
@@ -40,12 +43,6 @@ export const EnhancedCommentsSection = ({
       setLoading(false);
     }
   }, [postCode]);
-
-  const handleRefresh = () => {
-    if (!loading) {
-      loadComments();
-    }
-  };
 
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -217,16 +214,6 @@ export const EnhancedCommentsSection = ({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">Comments ({replyCount})</h2>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={handleRefresh}
-          disabled={loading}
-          className="gap-1.5"
-        >
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          <span>Refresh</span>
-        </Button>
       </div>
       
       <form onSubmit={handleAddComment} className="flex gap-3 bg-muted/20 p-4 rounded-lg border border-border/40">
@@ -276,6 +263,7 @@ export const EnhancedCommentsSection = ({
                 level={1}
                 onToggleMeow={handleToggleMeow}
                 onAddReply={handleAddReply}
+                postAuthorHandle={postAuthorHandle}
               />
             </div>
           ))}

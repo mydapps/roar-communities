@@ -13,7 +13,6 @@ import { ImageCarousel } from './post/ImageCarousel';
 import { MediaCarousel } from './post/MediaCarousel';
 import { ImageViewer } from './post/ImageViewer';
 import { RoarButton } from './post/RoarButton';
-import { CommentButton } from './post/CommentButton';
 import { MirrorButton } from './post/MirrorButton';
 import { ShareButton } from './post/ShareButton';
 import { IpfsButton } from './post/IpfsButton';
@@ -198,40 +197,12 @@ export const Post = ({
     }
   };
 
-  const handleCommentToggle = (e: React.MouseEvent) => {
+  const handleUserProfileClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!showComments) {
-      setLoadingComments(true);
-      setTimeout(() => {
-        setLoadingComments(false);
-      }, 1000);
-    }
-    
-    setShowComments(!showComments);
+    navigate(`/u/${username.split('.')[0]}`);
   };
 
-  const handleAddComment = (text: string) => {
-    if (text.trim()) {
-      const newId = `comment-${Date.now()}`;
-      setComments([
-        ...comments,
-        { id: newId, user: 'you', text, timeAgo: 'just now' }
-      ]);
-      toast({
-        title: "Comment added",
-        description: "Your comment has been added to the post"
-      });
-    }
-  };
-
-  const handleMirror = () => {
-    if (selectedCommunity) {
-      setMirrorSheetOpen(false);
-      setSelectedCommunity(null);
-    }
-  };
-
-  const verifyOnIpfs = () => {
+  const handleVerifyOnIpfs = () => {
     window.open(`https://ipfs.io/ipfs/${ipfsHash}`, '_blank');
   };
 
@@ -294,13 +265,21 @@ export const Post = ({
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-3">
-            <Avatar className="h-12 w-12 border-2 border-primary/20 hover:border-primary/50 transition-colors">
+            <Avatar 
+              className="h-12 w-12 border-2 border-primary/20 hover:border-primary/50 transition-colors cursor-pointer"
+              onClick={handleUserProfileClick}
+            >
               <AvatarImage src={avatar ? `https://img.dapps.co/avatar/${avatar}.svg` : undefined} />
               <AvatarFallback>{username[0].toUpperCase()}</AvatarFallback>
             </Avatar>
             <div className="flex flex-col">
               <div className="flex items-center gap-1">
-                <span className="font-medium text-foreground">{formatUsername(username)}</span>
+                <span 
+                  className="font-medium text-foreground cursor-pointer hover:underline"
+                  onClick={handleUserProfileClick}
+                >
+                  {formatUsername(username)}
+                </span>
                 <span className="text-muted-foreground text-sm mx-1">·</span>
                 <span className="text-muted-foreground text-sm">{timeAgo}</span>
               </div>
@@ -320,7 +299,7 @@ export const Post = ({
             open={ipfsSheetOpen} 
             onOpenChange={setIpfsSheetOpen} 
             ipfsHash={ipfsHash} 
-            onVerify={verifyOnIpfs} 
+            onVerify={handleVerifyOnIpfs} 
           />
         </div>
       </CardHeader>
@@ -354,8 +333,6 @@ export const Post = ({
               onClick={handleRoar}
               postCode={postCode}
             />
-            
-            <CommentButton count={commentCount} onClick={handleCommentToggle} />
             
             <MirrorButton 
               open={mirrorSheetOpen} 

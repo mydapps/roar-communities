@@ -178,7 +178,10 @@ const DetailedPostPage = () => {
       ? post.body.substring(0, 150) + '...' 
       : post.body;
   
-  const ogImage = post.featured_image || (post.images && post.images.length > 0 ? post.images[0] : '');
+  const ogImage = post.featured_image || (post.images && post.images.length > 0 && post.images[0] !== 'https://dapps.co/dapps.png' ? post.images[0] : '');
+  
+  // Filter out default dapps logo from images
+  const filteredImages = post.images?.filter(img => img !== 'https://dapps.co/dapps.png');
   
   // Get canonical URL
   const getCanonicalUrl = () => {
@@ -245,7 +248,7 @@ const DetailedPostPage = () => {
                 <>
                   <BreadcrumbItem>
                     <BreadcrumbLink asChild>
-                      <Link to={`/${post.author.handle.split('.')[0]}`}>
+                      <Link to={`/u/${post.author.handle.split('.')[0]}`}>
                         {post.author.handle.split('.')[0]}
                       </Link>
                     </BreadcrumbLink>
@@ -275,7 +278,7 @@ const DetailedPostPage = () => {
           postCode={post.code}
           roared={post.has_upvoted}
           onRoar={handleRoar}
-          images={post.images || (post.featured_image ? [post.featured_image] : undefined)}
+          images={filteredImages}
           isMirror={post.is_mirror}
           mirrorData={post.is_mirror ? {
             quote: post.mirror_quote || '',
@@ -297,6 +300,7 @@ const DetailedPostPage = () => {
         postCode={post.code}
         initialReplies={replies}
         initialReplyCount={replyCount}
+        postAuthorHandle={post.author.handle}
       />
     </div>
   );

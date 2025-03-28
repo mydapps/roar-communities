@@ -5,10 +5,13 @@ import { MessageCircle } from 'lucide-react';
 
 interface CommentButtonProps {
   count: number;
-  onClick: (e: React.MouseEvent) => void;  // Updated to accept MouseEvent parameter
+  onClick: (e: React.MouseEvent) => void;
+  hidden?: boolean;
 }
 
-export const CommentButton = ({ count, onClick }: CommentButtonProps) => {
+export const CommentButton = ({ count, onClick, hidden = false }: CommentButtonProps) => {
+  if (hidden) return null;
+  
   return (
     <Button 
       variant="ghost" 

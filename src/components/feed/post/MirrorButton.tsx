@@ -8,6 +8,7 @@ import { Drawer, DrawerTrigger, DrawerContent, DrawerHeader, DrawerTitle, Drawer
 import { MirrorContent } from './MirrorContent';
 import { useToast } from '@/hooks/use-toast';
 import { mirrorPost } from '@/utils/api';
+import { toast } from 'sonner';
 
 // Create a custom event for post mirroring
 export const POST_MIRRORED_EVENT = 'post-mirrored';
@@ -37,7 +38,7 @@ export const MirrorButton = ({
   const [selectedCommunity, setSelectedCommunity] = useState<string | null>(null);
   const [quoteText, setQuoteText] = useState('');
   const [mirroring, setMirroring] = useState(false);
-  const { toast } = useToast();
+  const { toast: uiToast } = useToast();
   
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent post navigation
@@ -65,7 +66,7 @@ export const MirrorButton = ({
     });
     
     if (!selectedCommunity) {
-      toast({
+      uiToast({
         title: "Error",
         description: "Please select a community to mirror to",
         variant: "destructive"
@@ -75,7 +76,7 @@ export const MirrorButton = ({
     
     if (!postCode) {
       console.error("Missing postCode in mirror request");
-      toast({
+      uiToast({
         title: "Error",
         description: "Unable to mirror this post: missing post identifier",
         variant: "destructive"
@@ -89,7 +90,7 @@ export const MirrorButton = ({
       const userKey = localStorage.getItem('dapps_user_key');
       
       if (!userKey) {
-        toast({
+        uiToast({
           title: "Authentication Error",
           description: "You need to be logged in to mirror posts",
           variant: "destructive"
@@ -106,11 +107,15 @@ export const MirrorButton = ({
       });
       
       if (success) {
-        toast({
-          title: "Success!",
-          description: `Post mirrored to ${selectedCommunity}`,
-        });
+        // Close the mirror dialog first
         onOpenChange(false);
+        
+        // Then show toast notification
+        toast.success(`Post mirrored to ${selectedCommunity}`, {
+          description: "Your mirrored post has been published successfully",
+          duration: 5000,
+        });
+        
         setSelectedCommunity(null);
         setQuoteText('');
         
@@ -127,7 +132,7 @@ export const MirrorButton = ({
       }
     } catch (error) {
       console.error('Error mirroring post:', error);
-      toast({
+      uiToast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to mirror post. Please try again.",
         variant: "destructive"
