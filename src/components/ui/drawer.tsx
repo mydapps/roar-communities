@@ -4,21 +4,14 @@ import { Drawer as DrawerPrimitive } from "vaul"
 
 import { cn } from "@/lib/utils"
 
-// Define the DrawerProps interface correctly to include all required props
-interface DrawerProps extends Omit<React.ComponentProps<typeof DrawerPrimitive.Root>, "children"> {
-  children?: React.ReactNode;
-  direction?: "bottom" | "top";
-  shouldScaleBackground?: boolean;
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
-}
-
+// Use the correct props type for Drawer component
 const Drawer = ({
+  className,
   children,
   direction = "bottom",
   shouldScaleBackground = true,
   ...props
-}: DrawerProps) => (
+}: React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Root>) => (
   <DrawerPrimitive.Root
     direction={direction}
     shouldScaleBackground={shouldScaleBackground}
