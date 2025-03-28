@@ -1,5 +1,4 @@
-
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -82,22 +81,17 @@ export const Post = ({
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const isMobile = useIsMobile();
   
-  // Parse embedded media from content
   const [parsedContent, parsedImages, parsedVideos] = useMemo(() => {
-    // Regular expression to find markdown image syntax
     const mediaRegex = /!\[\]\((https:\/\/[^)]+)\)/g;
     const mediaUrls: string[] = [];
     let matches;
     
-    // Find all media URLs in the content
     while ((matches = mediaRegex.exec(content)) !== null) {
       mediaUrls.push(matches[1]);
     }
     
-    // Remove markdown images from content text
     const cleanedContent = content.replace(mediaRegex, '').trim();
     
-    // Separate images and videos
     const extractedImages: string[] = [];
     const extractedVideos: string[] = [];
     
@@ -112,7 +106,6 @@ export const Post = ({
     return [cleanedContent, extractedImages, extractedVideos];
   }, [content]);
   
-  // Combine explicitly provided images with ones extracted from content
   const allImages = useMemo(() => {
     const combinedImages = [...(images || [])];
     if (parsedImages.length > 0) {
@@ -223,9 +216,6 @@ export const Post = ({
     Math.floor(Math.random() * 36).toString(36)).join('')
   ).current;
 
-  // Added missing useMemo import 
-  const { useMemo } = React;
-
   return (
     <Card 
       className="border border-border/40 shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden animate-scale-in"
@@ -287,7 +277,6 @@ export const Post = ({
         
         {!isMirror && (parsedVideos && parsedVideos.length > 0 || video) && (
           <div className="mt-3 space-y-3" data-media-element="true">
-            {/* Display explicitly provided video */}
             {video && (
               <AspectRatio ratio={16/9} className="overflow-hidden rounded-md">
                 <video 
@@ -299,7 +288,6 @@ export const Post = ({
               </AspectRatio>
             )}
             
-            {/* Display videos extracted from content */}
             {parsedVideos && parsedVideos.map((videoUrl, index) => (
               <AspectRatio key={`video-${index}`} ratio={16/9} className="overflow-hidden rounded-md">
                 <video 
@@ -379,4 +367,3 @@ export const Post = ({
     </Card>
   );
 };
-
