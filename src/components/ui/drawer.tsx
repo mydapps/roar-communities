@@ -4,9 +4,7 @@ import { Drawer as DrawerPrimitive } from "vaul"
 
 import { cn } from "@/lib/utils"
 
-// Use the correct props type for Drawer component
 const Drawer = ({
-  className,
   children,
   direction = "bottom",
   shouldScaleBackground = true,
