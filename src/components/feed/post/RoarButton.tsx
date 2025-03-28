@@ -1,6 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { toggleRoar } from '@/utils/api';
+import { toast } from 'sonner';
 
 interface RoarButtonProps {
   count: number;
@@ -21,7 +23,7 @@ export const RoarButton = ({ count, active, onClick, postCode }: RoarButtonProps
     setLocalCount(count);
   }, [active, count]);
 
-  const handleClick = () => {
+  const handleClick = async () => {
     // Call the parent component's onClick handler
     onClick();
     
@@ -39,6 +41,25 @@ export const RoarButton = ({ count, active, onClick, postCode }: RoarButtonProps
       setTimeout(() => setRoarWavesAnimation(false), 1500);
       setTimeout(() => setRoarAnimation(false), 1800);
       setTimeout(() => setRoarTextAnimation(false), 2000);
+    }
+
+    // Send API request if postCode is available
+    if (postCode) {
+      try {
+        const success = await toggleRoar(postCode);
+        if (!success) {
+          // If API call fails, revert the local state
+          setLocalActive(!newRoarState);
+          setLocalCount(prev => !newRoarState ? prev + 1 : prev - 1);
+          toast.error("Failed to update roar status. Please try again.");
+        }
+      } catch (error) {
+        console.error("Error toggling roar:", error);
+        // Revert local state on error
+        setLocalActive(!newRoarState);
+        setLocalCount(prev => !newRoarState ? prev + 1 : prev - 1);
+        toast.error("Error updating roar status. Please try again.");
+      }
     }
   };
 

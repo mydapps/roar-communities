@@ -174,12 +174,21 @@ export const Post = ({
   }, [roared, roarCount]);
 
   const handleRoar = async () => {
-    if (onRoar) {
+    if (postCode) {
       const newRoaredState = !localRoared;
       setLocalRoared(newRoaredState);
       setLocalRoarCount(prev => newRoaredState ? prev + 1 : prev - 1);
       
-      onRoar();
+      if (onRoar) {
+        onRoar();
+      }
+    } else {
+      console.error("Cannot roar post: missing postCode");
+      toast({
+        title: "Error",
+        description: "Unable to roar this post. Missing post identifier.",
+        variant: "destructive"
+      });
     }
   };
 

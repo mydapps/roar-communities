@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Post } from '@/components/feed/Post';
 import CreatePostCard from '@/components/feed/CreatePostCard';
 import { Button } from '@/components/ui/button';
 import { ArrowUp, Loader2 } from 'lucide-react';
-import { fetchPosts, setupMirrorListener } from '@/utils/api';
+import { fetchPosts, setupMirrorListener, toggleRoar } from '@/utils/api';
+import { toast } from 'sonner';
 
 const FeedPage = () => {
   const [posts, setPosts] = useState<any[]>([]);
@@ -39,7 +39,6 @@ const FeedPage = () => {
     }
   }, []);
   
-  // Initial load
   useEffect(() => {
     setLoading(true);
     loadPosts(1, true);
@@ -63,7 +62,6 @@ const FeedPage = () => {
   }, []);
   
   useEffect(() => {
-    // Setup the intersection observer for infinite scrolling
     if (observerRef.current) {
       observerRef.current.disconnect();
     }
@@ -100,8 +98,25 @@ const FeedPage = () => {
   
   const handleNewPost = (newPost: any) => {
     console.log('New post created:', newPost);
-    // Add the new post to the top of the posts list
     setPosts(prevPosts => [newPost, ...prevPosts]);
+  };
+  
+  const handleRoar = async (postCode: string) => {
+    if (!postCode) {
+      console.error("Cannot roar post: missing postCode");
+      toast.error("Unable to update post. Missing identifier.");
+      return;
+    }
+    
+    try {
+      const success = await toggleRoar(postCode);
+      if (!success) {
+        toast.error("Failed to update post. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error toggling roar:", error);
+      toast.error("Error updating post. Please try again.");
+    }
   };
   
   const scrollToTop = () => {
@@ -139,6 +154,7 @@ const FeedPage = () => {
               shareCount={0}
               postCode={post.code}
               roared={post.roar === 1}
+              onRoar={() => handleRoar(post.code)}
               images={post.images || (post.image === 1 ? [post.image_url] : undefined)}
               isMirror={post.is_mirror === 1}
               mirrorData={post.is_mirror === 1 ? {
