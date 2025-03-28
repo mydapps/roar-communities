@@ -66,6 +66,7 @@ export const ShareButton = ({
             postCode={postCode}
             community={community}
             onShareSuccess={onShareSuccess}
+            onClose={() => onOpenChange(false)}
           />
         </DrawerContent>
       </Drawer>
@@ -98,6 +99,7 @@ export const ShareButton = ({
           postCode={postCode}
           community={community}
           onShareSuccess={onShareSuccess}
+          onClose={() => onOpenChange(false)}
         />
       </SheetContent>
     </Sheet>

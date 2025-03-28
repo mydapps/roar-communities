@@ -24,6 +24,24 @@ export interface Reply {
   replies?: Reply[];
 }
 
+export interface OriginalPost {
+  code: string;
+  community: string;
+  title: string;
+  body: string;
+  author: string;
+  author_avatar: string;
+  created_at: string;
+  time_ago: string;
+  media: {
+    image: number;
+    image_url: string;
+    multiple_images: number;
+    images: string[];
+    has_video: number;
+  };
+}
+
 export interface PostDetails {
   id: number;
   code: string;
@@ -39,7 +57,7 @@ export interface PostDetails {
   featured_image?: string;
   images?: string[];
   is_encrypted: boolean;
-  is_mirror: boolean;
+  is_mirror: number;
   original_post_code?: string;
   original_community?: string;
   original_title?: string;
@@ -48,8 +66,11 @@ export interface PostDetails {
   original_author_avatar?: string;
   original_created_on?: string;
   original_images?: string[];
-  can_interact: boolean;
-  pinned: boolean;
+  handle?: string;
+  avatar?: string;
+  timeAgo?: string;
+  can_interact: boolean | number;
+  pinned: boolean | number;
   multiple_images?: number;
   mirror_quote?: string;
 }
@@ -59,6 +80,7 @@ export interface PostResponse {
   post: PostDetails;
   replies: Reply[];
   reply_count: number;
+  original_post?: OriginalPost;
 }
 
 /**

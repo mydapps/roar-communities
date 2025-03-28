@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { fetchPost, PostDetails } from '@/utils/postApi';
+import { fetchPost, PostDetails, OriginalPost } from '@/utils/postApi';
 import { toggleRoar } from '@/utils/api';
 import { Post } from '@/components/feed/Post';
 import { EnhancedCommentsSection } from '@/components/post/EnhancedCommentsSection';
@@ -27,7 +27,7 @@ const DetailedPostPage = () => {
   const navigate = useNavigate();
   
   const [post, setPost] = useState<PostDetails | null>(null);
-  const [originalPost, setOriginalPost] = useState<any | null>(null);
+  const [originalPost, setOriginalPost] = useState<OriginalPost | null>(null);
   const [replies, setReplies] = useState<CommentReply[]>([]);
   const [replyCount, setReplyCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -295,10 +295,10 @@ const DetailedPostPage = () => {
       
       <div className="mb-8">
         <Post
-          username={post.author?.handle || post.handle}
-          avatar={post.author?.avatar || post.avatar}
+          username={post.author?.handle || (post.handle || '')}
+          avatar={post.author?.avatar || (post.avatar || '')}
           community={post.community || undefined}
-          timeAgo={post.time_ago || post.timeAgo}
+          timeAgo={post.time_ago || (post.timeAgo || '')}
           content={post.body}
           roarCount={post.upvotes}
           commentCount={replyCount}
@@ -319,7 +319,7 @@ const DetailedPostPage = () => {
         postCode={post.code}
         initialReplies={replies}
         initialReplyCount={replyCount}
-        postAuthorHandle={post.author?.handle || post.handle}
+        postAuthorHandle={post.author?.handle || (post.handle || '')}
       />
     </div>
   );
