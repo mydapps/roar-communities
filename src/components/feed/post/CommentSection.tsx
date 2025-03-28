@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Send, Cat, Loader2 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
-import { fetchReplies, toggleMeow, createReply, Reply } from '@/utils/commentApi';
+import { fetchReplies, toggleMeow, createReply, CommentReply } from '@/utils/commentApi';
 
 interface CommentSectionProps {
   comments: Array<{
@@ -23,7 +23,7 @@ const MeowButton = ({
   comment, 
   onMeow 
 }: { 
-  comment: Reply, 
+  comment: CommentReply, 
   onMeow: (commentId: number) => void 
 }) => {
   const [meowAnimating, setMeowAnimating] = useState(false);
@@ -84,7 +84,7 @@ const CommentItem = ({
   comment, 
   onMeow 
 }: { 
-  comment: Reply, 
+  comment: CommentReply, 
   onMeow: (commentId: number) => void 
 }) => {
   const formatUsername = (name: string) => {
@@ -137,7 +137,7 @@ const CommentItem = ({
 export const CommentSection = ({ comments: initialComments, postCode, onAddComment }: CommentSectionProps) => {
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(false);
-  const [apiComments, setApiComments] = useState<Reply[]>([]);
+  const [apiComments, setApiComments] = useState<CommentReply[]>([]);
   const [submittingComment, setSubmittingComment] = useState(false);
   
   // Load comments from API when the component mounts
@@ -176,7 +176,7 @@ export const CommentSection = ({ comments: initialComments, postCode, onAddComme
     // Optimistically add the comment locally first for better UX
     const tempId = Date.now();
     
-    const tempComment: Reply = {
+    const tempComment: CommentReply = {
       id: tempId,
       uid: 0,
       handle: userHandle,

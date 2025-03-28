@@ -1,9 +1,11 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { fetchPost, PostDetails, Reply, createReply } from '@/utils/postApi';
+import { fetchPost, PostDetails } from '@/utils/postApi';
 import { toggleRoar } from '@/utils/api';
 import { Post } from '@/components/feed/Post';
 import { EnhancedCommentsSection } from '@/components/post/EnhancedCommentsSection';
+import { CommentReply } from '@/components/post/EnhancedCommentItem';
 import { Helmet } from 'react-helmet-async';
 import { 
   Breadcrumb, 
@@ -19,7 +21,7 @@ import { AlertTriangle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
-import { CommentReply } from '@/components/post/EnhancedCommentItem';
+import { createReply } from '@/utils/commentApi';
 
 const DetailedPostPage = () => {
   const { communityId, postId, handle } = useParams<{ communityId?: string; postId: string; handle?: string }>();
@@ -43,7 +45,33 @@ const DetailedPostPage = () => {
       const data = await fetchPost(postId);
       
       setPost(data.post);
-      setReplies(data.replies || []);
+      // Convert replies to CommentReply format
+      const formattedReplies = data.replies?.map(reply => ({
+        id: reply.id,
+        uid: reply.user_id,
+        handle: reply.handle,
+        avatar_url: reply.avatar,
+        content: reply.content,
+        created_on: reply.created_at,
+        time_ago: reply.time_ago,
+        upvotes: reply.upvotes,
+        meow_count: reply.has_meowed ? 1 : 0,
+        has_meowed: reply.has_meowed,
+        sub_replies: reply.replies?.map(subReply => ({
+          id: subReply.id,
+          uid: subReply.user_id,
+          handle: subReply.handle,
+          avatar_url: subReply.avatar,
+          content: subReply.content,
+          created_on: subReply.created_at,
+          time_ago: subReply.time_ago,
+          upvotes: subReply.upvotes,
+          meow_count: subReply.has_meowed ? 1 : 0,
+          has_meowed: subReply.has_meowed
+        }))
+      })) || [];
+      
+      setReplies(formattedReplies as CommentReply[]);
       setReplyCount(data.reply_count || 0);
       
       if (data.post.community && !communityId) {
