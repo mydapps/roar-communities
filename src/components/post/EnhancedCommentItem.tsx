@@ -1,23 +1,9 @@
-
 import React, { useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Cat, Send, ChevronDown, Loader2 } from 'lucide-react';
-
-export interface CommentReply {
-  id: number;
-  uid: number;
-  handle: string;
-  avatar_url: string;
-  content: string;
-  created_on: string;
-  time_ago: string;
-  upvotes: number;
-  meow_count: number;
-  has_meowed: boolean;
-  sub_replies?: CommentReply[];
-}
+import { CommentReply } from '@/utils/commentApi';
 
 interface EnhancedCommentItemProps {
   comment: CommentReply;
@@ -37,13 +23,10 @@ export const EnhancedCommentItem = ({
   const [submitting, setSubmitting] = useState(false);
   const [showReplies, setShowReplies] = useState(true);
   
-  // Animation states for meow button
   const [meowAnimating, setMeowAnimating] = useState(false);
   const [meowWavesAnimation, setMeowWavesAnimation] = useState(false);
   
-  // Handle toggling the meow state with animation
   const handleToggleMeow = async () => {
-    // Only show animation when adding a meow, not removing it
     if (!comment.has_meowed) {
       setMeowWavesAnimation(true);
       setMeowAnimating(true);
@@ -52,11 +35,9 @@ export const EnhancedCommentItem = ({
       setTimeout(() => setMeowAnimating(false), 1300);
     }
     
-    // Call the parent handler
     await onToggleMeow(comment.id);
   };
   
-  // Handle submitting a reply
   const handleSubmitReply = async () => {
     if (!replyContent.trim() || submitting) return;
     
@@ -73,17 +54,13 @@ export const EnhancedCommentItem = ({
     }
   };
   
-  // Max nesting level is 3 (top-level comment + 2 levels of replies)
   const canReply = level < 3;
   
-  // Format username for display
   const formatUsername = (handle: string) => {
     return handle === 'you' ? 'you' : `@${handle.split('.')[0]}`;
   };
   
-  // Format avatar URL
   const getAvatarUrl = (avatarPath: string) => {
-    // If the path already includes the full URL, return just the avatar ID
     if (typeof avatarPath === 'string' && avatarPath.includes('https://img.dapps.co/avatar/')) {
       const parts = avatarPath.split('https://img.dapps.co/avatar/');
       return parts[parts.length - 1].replace('.svg.svg', '.svg');

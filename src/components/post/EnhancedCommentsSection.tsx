@@ -1,12 +1,11 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { RefreshCw, Send, Loader2 } from 'lucide-react';
-import { fetchReplies, toggleMeow, createReply } from '@/utils/commentApi';
+import { fetchReplies, toggleMeow, createReply, CommentReply } from '@/utils/commentApi';
 import { toast } from 'sonner';
-import { EnhancedCommentItem, CommentReply } from './EnhancedCommentItem';
+import { EnhancedCommentItem } from './EnhancedCommentItem';
 
 interface EnhancedCommentsSectionProps {
   postCode: string;
@@ -25,7 +24,6 @@ export const EnhancedCommentsSection = ({
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Load comments from API
   const loadComments = useCallback(async () => {
     setLoading(true);
     try {
@@ -43,14 +41,12 @@ export const EnhancedCommentsSection = ({
     }
   }, [postCode]);
 
-  // Handle refresh button click
   const handleRefresh = () => {
     if (!loading) {
       loadComments();
     }
   };
 
-  // Handle adding a new top-level comment
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -59,11 +55,9 @@ export const EnhancedCommentsSection = ({
     setSubmitting(true);
     
     try {
-      // Get user avatar and handle for optimistic update
       const userAvatar = localStorage.getItem('dapps_user_avatar') || 'default';
       const userHandle = localStorage.getItem('dapps_user_handle') || 'you';
       
-      // Create optimistic comment
       const tempId = Date.now();
       const optimisticComment: CommentReply = {
         id: tempId,
@@ -78,16 +72,13 @@ export const EnhancedCommentsSection = ({
         has_meowed: false
       };
       
-      // Add optimistic comment to the list
       setReplies(prev => [optimisticComment, ...prev]);
       setReplyCount(prev => prev + 1);
       setNewComment('');
       
-      // Make API call
       const response = await createReply(postCode, newComment);
       
       if (response.success) {
-        // Update the optimistic comment with real data
         setReplies(prev => 
           prev.map(reply => 
             reply.id === tempId 
@@ -103,7 +94,6 @@ export const EnhancedCommentsSection = ({
         
         toast.success('Comment added successfully');
       } else {
-        // Remove optimistic comment if API call fails
         setReplies(prev => prev.filter(reply => reply.id !== tempId));
         setReplyCount(prev => prev - 1);
         toast.error('Failed to add comment');
@@ -116,7 +106,6 @@ export const EnhancedCommentsSection = ({
     }
   };
 
-  // Handle adding a reply to a comment
   const handleAddReply = async (parentId: number, content: string) => {
     if (!content.trim()) return;
     
@@ -124,10 +113,8 @@ export const EnhancedCommentsSection = ({
       const userAvatar = localStorage.getItem('dapps_user_avatar') || 'default';
       const userHandle = localStorage.getItem('dapps_user_handle') || 'you';
       
-      // Generate temporary ID for optimistic update
       const tempId = Date.now();
       
-      // Create optimistic reply
       const optimisticReply: CommentReply = {
         id: tempId,
         uid: 0,
@@ -141,11 +128,9 @@ export const EnhancedCommentsSection = ({
         has_meowed: false
       };
       
-      // Add optimistic reply to the appropriate parent
       setReplies(prev => 
         prev.map(reply => {
           if (reply.id === parentId) {
-            // Add to parent's sub_replies
             return {
               ...reply,
               sub_replies: reply.sub_replies 
@@ -157,11 +142,9 @@ export const EnhancedCommentsSection = ({
         })
       );
       
-      // Make API call
       const response = await createReply(postCode, content, parentId);
       
       if (response.success) {
-        // Update the optimistic reply with real data
         setReplies(prev => 
           prev.map(reply => {
             if (reply.id === parentId && reply.sub_replies) {
@@ -191,20 +174,16 @@ export const EnhancedCommentsSection = ({
     }
   };
 
-  // Handle toggling meow on a comment
   const handleToggleMeow = async (commentId: number) => {
-    // Find the comment to update (could be a top-level comment or a reply)
     const updateReplies = (repliesList: CommentReply[]): CommentReply[] => {
       return repliesList.map(reply => {
         if (reply.id === commentId) {
-          // Update this reply
           return {
             ...reply,
             has_meowed: !reply.has_meowed,
             meow_count: reply.has_meowed ? reply.meow_count - 1 : reply.meow_count + 1
           };
         } else if (reply.sub_replies && reply.sub_replies.length > 0) {
-          // Look for the comment in sub_replies
           return {
             ...reply,
             sub_replies: updateReplies(reply.sub_replies)
@@ -214,29 +193,24 @@ export const EnhancedCommentsSection = ({
       });
     };
     
-    // Update optimistically
     setReplies(prev => updateReplies(prev));
     
-    // Make API call
     try {
       await toggleMeow(commentId);
     } catch (error) {
       console.error('Error toggling meow:', error);
       
-      // Revert changes if API call fails
       setReplies(prev => updateReplies(prev));
       toast.error('Failed to update meow. Please try again.');
     }
   };
 
-  // Load comments on initial render
   useEffect(() => {
     if (initialReplies.length === 0) {
       loadComments();
     }
   }, [initialReplies.length, loadComments]);
 
-  // Get user avatar from localStorage
   const userAvatar = localStorage.getItem('dapps_user_avatar') || 'default';
 
   return (

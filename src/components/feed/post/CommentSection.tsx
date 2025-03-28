@@ -18,7 +18,6 @@ interface CommentSectionProps {
   onAddComment: (text: string) => void;
 }
 
-// Helper component for the meow button to avoid state in map function
 const MeowButton = ({ 
   comment, 
   onMeow 
@@ -34,7 +33,6 @@ const MeowButton = ({
     e.preventDefault();
     e.stopPropagation();
     
-    // Only show animation when adding a meow, not removing it
     if (!comment.has_meowed) {
       setMeowWavesAnimation(true);
       setMeowAnimating(true);
@@ -44,13 +42,11 @@ const MeowButton = ({
       setTimeout(() => setMeowAnimating(false), 1200);
       setTimeout(() => setMeowTextAnimating(false), 1500);
     } else {
-      // Immediately update visual state when unmeowing
       setMeowWavesAnimation(false);
       setMeowAnimating(false);
       setMeowTextAnimating(false);
     }
     
-    // Call the onMeow handler
     onMeow(comment.id);
   };
   
@@ -79,7 +75,6 @@ const MeowButton = ({
   );
 };
 
-// Separate component for rendering a comment to avoid state in map function
 const CommentItem = ({ 
   comment, 
   onMeow 
@@ -91,9 +86,7 @@ const CommentItem = ({
     return '@' + name.split('.')[0];
   };
   
-  // Fix the avatar URL
   const getAvatarUrl = (avatarPath: string) => {
-    // If the path already includes the full URL, return just the avatar ID
     if (avatarPath.includes('https://img.dapps.co/avatar/')) {
       const parts = avatarPath.split('https://img.dapps.co/avatar/');
       return parts[parts.length - 1].replace('.svg.svg', '.svg');
@@ -121,7 +114,6 @@ const CommentItem = ({
           <MeowButton comment={comment} onMeow={onMeow} />
         </div>
         
-        {/* Render nested replies */}
         {comment.sub_replies && comment.sub_replies.length > 0 && (
           <div className="ml-4 mt-3 border-l-2 border-primary/10 pl-4 space-y-4">
             {comment.sub_replies.map(reply => (
@@ -140,7 +132,6 @@ export const CommentSection = ({ comments: initialComments, postCode, onAddComme
   const [apiComments, setApiComments] = useState<CommentReply[]>([]);
   const [submittingComment, setSubmittingComment] = useState(false);
   
-  // Load comments from API when the component mounts
   useEffect(() => {
     if (postCode) {
       loadCommentsFromApi();
@@ -169,18 +160,16 @@ export const CommentSection = ({ comments: initialComments, postCode, onAddComme
     e.preventDefault();
     if (!newComment.trim()) return;
     
-    // Get user avatar from localStorage
     const userAvatar = localStorage.getItem('dapps_user_avatar') || 'default';
     const userHandle = localStorage.getItem('dapps_user_handle') || 'you';
     
-    // Optimistically add the comment locally first for better UX
     const tempId = Date.now();
     
     const tempComment: CommentReply = {
       id: tempId,
       uid: 0,
       handle: userHandle,
-      avatar_url: userAvatar, // Already storing just the ID
+      avatar_url: userAvatar,
       content: newComment,
       created_on: new Date().toISOString(),
       time_ago: 'just now',
@@ -189,17 +178,14 @@ export const CommentSection = ({ comments: initialComments, postCode, onAddComme
       has_meowed: false,
     };
     
-    // Add new comment at the bottom (after existing comments)
     setApiComments(prev => [...prev, tempComment]);
     setNewComment('');
     setSubmittingComment(true);
     
-    // Then send to API in the background
     try {
       const response = await createReply(postCode, newComment);
       
       if (response.success) {
-        // Update the temporary comment with the real data
         setApiComments(prev => prev.map(comment => 
           comment.id === tempId 
             ? {
@@ -212,9 +198,7 @@ export const CommentSection = ({ comments: initialComments, postCode, onAddComme
             : comment
         ));
         
-        // Call the parent callback
         onAddComment(newComment);
-        
         toast.success('Comment added');
       }
     } catch (error) {
@@ -226,7 +210,6 @@ export const CommentSection = ({ comments: initialComments, postCode, onAddComme
   };
   
   const handleMeow = async (commentId: number) => {
-    // Optimistically update the UI first
     setApiComments(prev => prev.map(comment => {
       if (comment.id === commentId) {
         return {
@@ -236,7 +219,6 @@ export const CommentSection = ({ comments: initialComments, postCode, onAddComme
         };
       }
       
-      // Also handle nested replies
       if (comment.sub_replies && comment.sub_replies.length > 0) {
         return {
           ...comment,
@@ -256,12 +238,10 @@ export const CommentSection = ({ comments: initialComments, postCode, onAddComme
       return comment;
     }));
     
-    // Then call the API
     try {
       const response = await toggleMeow(commentId);
       
       if (response.success) {
-        // Update with the actual count from the server
         setApiComments(prev => prev.map(comment => {
           if (comment.id === commentId) {
             return {
@@ -270,7 +250,6 @@ export const CommentSection = ({ comments: initialComments, postCode, onAddComme
             };
           }
           
-          // Also handle nested replies
           if (comment.sub_replies && comment.sub_replies.length > 0) {
             return {
               ...comment,
@@ -292,7 +271,6 @@ export const CommentSection = ({ comments: initialComments, postCode, onAddComme
     } catch (error) {
       console.error('Error meowing comment:', error);
       
-      // Revert the optimistic update on error
       setApiComments(prev => prev.map(comment => {
         if (comment.id === commentId) {
           return {
@@ -302,7 +280,6 @@ export const CommentSection = ({ comments: initialComments, postCode, onAddComme
           };
         }
         
-        // Also handle nested replies
         if (comment.sub_replies && comment.sub_replies.length > 0) {
           return {
             ...comment,
@@ -330,7 +307,6 @@ export const CommentSection = ({ comments: initialComments, postCode, onAddComme
     return '@' + name.split('.')[0];
   };
   
-  // Get user avatar from localStorage - don't need to transform it
   const userAvatar = localStorage.getItem('dapps_user_avatar') || 'default';
   
   return (
