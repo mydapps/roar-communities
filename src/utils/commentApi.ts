@@ -49,7 +49,7 @@ export interface CreateReplyResponse {
 /**
  * Fetch replies for a post
  */
-export const fetchReplies = async (postCode: string, limit: number = 3): Promise<RepliesResponse> => {
+export const fetchReplies = async (postCode: string, limit: number = 10): Promise<RepliesResponse> => {
   try {
     const userKey = localStorage.getItem('dapps_user_key');
     
@@ -70,6 +70,7 @@ export const fetchReplies = async (postCode: string, limit: number = 3): Promise
     }
     
     const data = await response.json();
+    console.log('API Reply data:', data);
     return data;
   } catch (error) {
     console.error('Error fetching replies:', error);
@@ -146,6 +147,8 @@ export const createReply = async (postCode: string, content: string, parentId?: 
       payload.parentId = parentId;
     }
     
+    console.log('Creating reply with payload:', payload);
+    
     const response = await fetch(`${API_BASE_URL}/create_reply`, {
       method: 'POST',
       headers: {
@@ -160,6 +163,7 @@ export const createReply = async (postCode: string, content: string, parentId?: 
     }
     
     const data = await response.json();
+    console.log('Reply created:', data);
     return data;
   } catch (error) {
     console.error('Error creating reply:', error);

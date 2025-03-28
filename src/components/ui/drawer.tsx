@@ -4,14 +4,14 @@ import { Drawer as DrawerPrimitive } from "vaul"
 
 import { cn } from "@/lib/utils"
 
-const Drawer = React.forwardRef<
-  React.ElementRef<typeof DrawerPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Root>
->(({ children, ...props }, ref) => (
+const Drawer = ({
+  children,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Root>) => (
   <DrawerPrimitive.Root {...props}>
     {children}
   </DrawerPrimitive.Root>
-))
+)
 Drawer.displayName = "Drawer"
 
 const DrawerTrigger = DrawerPrimitive.Trigger

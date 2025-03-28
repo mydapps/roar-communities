@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -46,7 +45,7 @@ export const EnhancedCommentsSection = ({
     setLoading(true);
     
     try {
-      const response = await fetchReplies(postCode);
+      const response = await fetchReplies(postCode, 10);
       
       if (response.success) {
         setReplies(response.replies);
@@ -77,10 +76,34 @@ export const EnhancedCommentsSection = ({
     
     try {
       // Parent ID 0 means top-level comment
-      await createReply(postCode, newComment);
+      const response = await createReply(postCode, newComment);
       setNewComment('');
-      fetchComments(); // Refresh comments after submission
-      toast.success('Comment added successfully');
+      
+      // If the API returns the created reply, add it to the list immediately
+      // Otherwise, refresh the comments to show the new one
+      if (response.success) {
+        const newReply: CommentReply = {
+          id: response.reply_id,
+          uid: 0, // Will be set by the server
+          handle: response.handle || localStorage.getItem('dapps_user_handle') || 'you',
+          avatar_url: response.avatar_url || localStorage.getItem('dapps_user_avatar') || 'default',
+          content: newComment,
+          created_on: response.created_on,
+          time_ago: 'just now',
+          upvotes: 0,
+          meow_count: 0,
+          has_meowed: false,
+          sub_replies: []
+        };
+        
+        setReplies(prev => [newReply, ...prev]);
+        setReplyCount(prev => prev + 1);
+        toast.success('Comment added successfully');
+      } else {
+        // Fallback to refreshing the comments
+        fetchComments();
+        toast.success('Comment added successfully');
+      }
     } catch (error) {
       console.error('Error adding comment:', error);
       toast.error('Could not post your comment. Please try again.');
@@ -123,9 +146,55 @@ export const EnhancedCommentsSection = ({
     }
     
     try {
-      await createReply(postCode, content, parentId);
-      fetchComments(); // Refresh comments to show new reply
-      toast.success('Reply added successfully');
+      const response = await createReply(postCode, content, parentId);
+      
+      if (response.success) {
+        // Create a new reply object to add to the UI immediately
+        const newReply: CommentReply = {
+          id: response.reply_id,
+          uid: 0, // Will be set by the server
+          handle: response.handle || localStorage.getItem('dapps_user_handle') || 'you',
+          avatar_url: response.avatar_url || localStorage.getItem('dapps_user_avatar') || 'default',
+          content: content,
+          created_on: response.created_on,
+          time_ago: 'just now',
+          upvotes: 0,
+          meow_count: 0,
+          has_meowed: false
+        };
+        
+        // Update the replies state to include the new reply
+        setReplies(prevReplies => {
+          const addReplyToComment = (comments: CommentReply[]): CommentReply[] => {
+            return comments.map(comment => {
+              if (comment.id === parentId) {
+                return {
+                  ...comment,
+                  sub_replies: comment.sub_replies 
+                    ? [...comment.sub_replies, newReply] 
+                    : [newReply]
+                };
+              } else if (comment.sub_replies) {
+                return {
+                  ...comment,
+                  sub_replies: addReplyToComment(comment.sub_replies)
+                };
+              }
+              return comment;
+            });
+          };
+          
+          return addReplyToComment(prevReplies);
+        });
+        
+        setReplyCount(prev => prev + 1);
+        toast.success('Reply added successfully');
+      } else {
+        // Fallback to refreshing if something went wrong with adding the reply directly
+        fetchComments();
+        toast.success('Reply added successfully');
+      }
+      
       return Promise.resolve();
     } catch (error) {
       console.error('Error adding reply:', error);
