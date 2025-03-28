@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchPost, PostDetails, Reply, createReply } from '@/utils/postApi';
@@ -21,7 +20,7 @@ import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 
 const DetailedPostPage = () => {
-  const { communityId, postId } = useParams<{ communityId?: string; postId: string }>();
+  const { communityId, postId, handle } = useParams<{ communityId?: string; postId: string; handle?: string }>();
   const navigate = useNavigate();
   
   const [post, setPost] = useState<PostDetails | null>(null);
@@ -45,10 +44,16 @@ const DetailedPostPage = () => {
       setReplies(data.replies || []);
       setReplyCount(data.reply_count || 0);
       
-      // If the post has a community but we accessed it via /post/:postId,
+      // If the post has a community but we accessed it via /handle/:postId or /post/:postId,
       // redirect to the proper URL with community
       if (data.post.community && !communityId) {
         navigate(`/c/${data.post.community}/${data.post.code}`, { replace: true });
+      }
+      
+      // If the post doesn't have a community but we accessed it via /post/:postId,
+      // redirect to the proper URL with handle
+      if (!data.post.community && !handle && data.post.author && data.post.author.handle) {
+        navigate(`/${data.post.author.handle.split('.')[0]}/${data.post.code}`, { replace: true });
       }
     } catch (error) {
       console.error('Error loading post:', error);
@@ -56,12 +61,11 @@ const DetailedPostPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [postId, communityId, navigate]);
+  }, [postId, communityId, handle, navigate]);
   
-  // Load post on initial render and when refreshCount changes
   useEffect(() => {
     loadPost();
-  }, [loadPost, refreshCount]);
+  }, [loadPost]);
   
   const handleRefreshComments = useCallback(() => {
     if (refreshingComments) return;
@@ -105,7 +109,6 @@ const DetailedPostPage = () => {
     navigate(-1);
   };
   
-  // Render loading state
   if (loading) {
     return (
       <div className="max-w-2xl mx-auto pt-8 pb-20 px-4 space-y-6 animate-in fade-in">
@@ -119,7 +122,6 @@ const DetailedPostPage = () => {
     );
   }
   
-  // Render error state
   if (error || !post) {
     return (
       <div className="max-w-2xl mx-auto pt-8 pb-20 px-4">
@@ -137,7 +139,6 @@ const DetailedPostPage = () => {
     );
   }
   
-  // Format title for breadcrumb
   const truncateTitle = (text: string, maxLength = 30) => {
     if (!text || text.trim() === "") return "Untitled Post";
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;

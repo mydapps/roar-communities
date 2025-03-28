@@ -264,7 +264,7 @@ export const Post = ({
       if (community) {
         navigate(`/c/${community.toLowerCase().replace(/\s+/g, '-')}/${postCode}`);
       } else {
-        navigate(`/post/${postCode}`);
+        navigate(`/${username.split('.')[0]}/${postCode}`);
       }
     }
   };
