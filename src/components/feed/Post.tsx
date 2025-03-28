@@ -256,6 +256,21 @@ export const Post = ({
     Math.floor(Math.random() * 36).toString(36)).join('')
   ).current;
 
+  // Add the missing handleAddComment function
+  const handleAddComment = (text: string) => {
+    if (!text.trim()) return;
+    
+    const newCommentObj = {
+      id: `comment-${Date.now()}`,
+      user: 'You',
+      text: text,
+      timeAgo: 'just now'
+    };
+    
+    setComments(prev => [newCommentObj, ...prev]);
+    setNewComment('');
+  };
+
   return (
     <Card 
       className="border border-border/40 shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden animate-scale-in"
