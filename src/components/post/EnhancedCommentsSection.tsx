@@ -91,7 +91,36 @@ export const EnhancedCommentsSection = ({
   
   // Handle reply to a comment
   const handleReplyToComment = async (parentId: number, content: string) => {
-    if (!content.trim()) return;
+    if (!content.trim()) {
+      // If on mobile and no content is provided, we're just opening the drawer
+      if (isMobile) {
+        // Find the comment being replied to
+        const findComment = (comments: CommentReply[], id: number): CommentReply | undefined => {
+          for (const comment of comments) {
+            if (comment.id === id) return comment;
+            if (comment.sub_replies) {
+              const found = findComment(comment.sub_replies, id);
+              if (found) return found;
+            }
+          }
+          return undefined;
+        };
+        
+        const targetComment = findComment(replies, parentId);
+        if (targetComment) {
+          setReplyTarget({
+            id: parentId,
+            handle: targetComment.handle,
+            avatar: targetComment.avatar_url,
+            content: targetComment.content,
+            isPost: false
+          });
+          setDrawerOpen(true);
+        }
+        return Promise.resolve();
+      }
+      return Promise.resolve();
+    }
     
     try {
       await createReply(postCode, content, parentId);
@@ -242,14 +271,7 @@ export const EnhancedCommentsSection = ({
                 comment={reply}
                 postAuthorHandle={postAuthorHandle}
                 onMeowChange={handleMeowChange}
-                onReply={isMobile ? 
-                  // Fix this line to return a Promise
-                  (id, content) => {
-                    openReplyDrawer(id, reply.handle, reply.avatar_url, reply.content);
-                    return Promise.resolve();
-                  } : 
-                  handleReplyToComment
-                }
+                onReply={handleReplyToComment}
                 isMobile={isMobile}
               />
             </div>

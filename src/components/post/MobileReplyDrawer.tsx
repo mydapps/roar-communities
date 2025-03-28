@@ -51,7 +51,7 @@ export const MobileReplyDrawer: React.FC<MobileReplyDrawerProps> = ({
   };
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange} direction="bottom">
+    <Drawer open={open} onOpenChange={onOpenChange} direction="bottom" shouldScaleBackground={true}>
       <DrawerContent className="max-h-[85vh]">
         <DrawerHeader>
           <DrawerTitle className="flex items-center justify-between">
