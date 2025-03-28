@@ -15,6 +15,7 @@ interface EnhancedCommentItemProps {
   onMeowChange: (commentId: number, newState: boolean) => void;
   onReply: (parentId: number, content: string) => Promise<void>;
   isAuthorReplying?: boolean;
+  isMobile?: boolean;
 }
 
 export const EnhancedCommentItem = ({
@@ -24,7 +25,8 @@ export const EnhancedCommentItem = ({
   maxLevel = 3,
   onMeowChange,
   onReply,
-  isAuthorReplying = false
+  isAuthorReplying = false,
+  isMobile = false
 }: EnhancedCommentItemProps) => {
   const [isReplying, setIsReplying] = useState(false);
   const [replyContent, setReplyContent] = useState('');
@@ -57,6 +59,16 @@ export const EnhancedCommentItem = ({
       console.error('Error submitting reply:', error);
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const handleReplyClick = () => {
+    if (isMobile) {
+      // On mobile, just call onReply with empty content
+      // The actual reply content will be handled by the drawer
+      onReply(comment.id, '');
+    } else {
+      setIsReplying(!isReplying);
     }
   };
   
@@ -130,15 +142,15 @@ export const EnhancedCommentItem = ({
               <Button 
                 variant="ghost" 
                 size="sm" 
-                onClick={() => setIsReplying(!isReplying)}
+                onClick={handleReplyClick}
                 className="h-8 px-2 text-xs gap-1.5 rounded-full hover:bg-secondary/80"
               >
-                {isReplying ? 'Cancel' : 'Reply'}
+                {isReplying && !isMobile ? 'Cancel' : 'Reply'}
               </Button>
             )}
           </div>
           
-          {isReplying && (
+          {isReplying && !isMobile && (
             <form onSubmit={handleSubmitReply} className="mt-3 space-y-2">
               <Textarea 
                 placeholder={`Reply to ${formatUsername(comment.handle)}...`}
@@ -187,6 +199,7 @@ export const EnhancedCommentItem = ({
               onMeowChange={onMeowChange}
               onReply={onReply}
               isAuthorReplying={reply.handle === postAuthorHandle}
+              isMobile={isMobile}
             />
           ))}
         </div>

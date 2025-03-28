@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchPost, PostDetails, OriginalPost } from '@/utils/postApi';
@@ -21,10 +20,12 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import { createReply, type CommentReply } from '@/utils/commentApi';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const DetailedPostPage = () => {
   const { communityId, postId, handle } = useParams<{ communityId?: string; postId: string; handle?: string }>();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   
   const [post, setPost] = useState<PostDetails | null>(null);
   const [originalPost, setOriginalPost] = useState<OriginalPost | null>(null);
@@ -35,7 +36,6 @@ const DetailedPostPage = () => {
   const [refreshCount, setRefreshCount] = useState(0);
   const [refreshingComments, setRefreshingComments] = useState(false);
   
-  // Check if user is logged in
   const isLoggedIn = !!localStorage.getItem('dapps_user_key');
   
   const loadPost = useCallback(async () => {
@@ -52,7 +52,6 @@ const DetailedPostPage = () => {
         setOriginalPost(data.original_post);
       }
       
-      // Convert replies to CommentReply format
       const formattedReplies = data.replies?.map(reply => ({
         id: reply.id,
         uid: reply.user_id,
@@ -82,8 +81,6 @@ const DetailedPostPage = () => {
       setReplyCount(data.reply_count || 0);
       
       if (data.post && data.post.community && !communityId) {
-        // Don't use navigate with replace as it causes issues
-        // Only update URL if needed without forcing a redirect
         window.history.replaceState(
           null, 
           '', 
@@ -92,7 +89,6 @@ const DetailedPostPage = () => {
       }
       
       if (data.post && !data.post.community && !handle && data.post.author && data.post.author.handle) {
-        // Only update URL if needed without forcing a redirect
         window.history.replaceState(
           null,
           '',
@@ -176,8 +172,6 @@ const DetailedPostPage = () => {
     navigate('/index');
   };
   
-  // Handle encrypted posts for non-logged in users
-  // Properly check is_encrypted, which could be either a boolean or a number
   if (!loading && post && post.is_encrypted && !isLoggedIn) {
     return (
       <div className="max-w-2xl mx-auto pt-8 pb-20 px-4">
@@ -193,7 +187,6 @@ const DetailedPostPage = () => {
             <Button size="lg" onClick={navigateToLogin}>Login or Sign Up</Button>
           </div>
           
-          {/* Blurred post preview */}
           <div className="opacity-20 pointer-events-none filter blur-md">
             <div className="h-[300px] bg-card rounded-lg mb-8"></div>
             <div className="space-y-4">
@@ -255,10 +248,8 @@ const DetailedPostPage = () => {
   
   const ogImage = post.featured_image || (post.images && post.images.length > 0 && post.images[0] !== 'https://dapps.co/dapps.png' ? post.images[0] : '');
   
-  // Filter out default dapps logo from images
   const filteredImages = post.images?.filter(img => img !== 'https://dapps.co/dapps.png');
   
-  // Get canonical URL
   const getCanonicalUrl = () => {
     const baseUrl = window.location.origin;
     if (post.community) {
@@ -269,7 +260,6 @@ const DetailedPostPage = () => {
     return window.location.href;
   };
   
-  // Prepare mirror data if the post is a mirror
   const mirrorData = post.is_mirror === 1 ? {
     quote: post.mirror_quote || '',
     originalAuthor: post.original_author || '',
@@ -287,7 +277,6 @@ const DetailedPostPage = () => {
         <title>{displayTitle} | Dapps</title>
         <meta name="description" content={metaDescription} />
         
-        {/* Open Graph / Facebook */}
         <meta property="og:type" content="article" />
         <meta property="og:title" content={displayTitle} />
         <meta property="og:description" content={metaDescription} />
@@ -295,7 +284,6 @@ const DetailedPostPage = () => {
         <meta property="og:url" content={getCanonicalUrl()} />
         <meta property="og:site_name" content="Dapps" />
         
-        {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={displayTitle} />
         <meta name="twitter:description" content={metaDescription} />
@@ -303,7 +291,6 @@ const DetailedPostPage = () => {
         <meta name="twitter:site" content="@dapps_co" />
         {post.author && <meta name="twitter:creator" content={`@${post.author.handle.split('.')[0]}`} />}
         
-        {/* Additional SEO */}
         <meta name="author" content={post.author.handle} />
         {post.created_at && <meta name="article:published_time" content={post.created_at} />}
         {post.community && <meta name="article:section" content={post.community} />}
@@ -395,7 +382,6 @@ const DetailedPostPage = () => {
             <Button onClick={navigateToLogin}>Login or Sign Up</Button>
           </div>
           
-          {/* Blurred comments preview */}
           <div className="opacity-20 pointer-events-none filter blur-md">
             <div className="h-[200px] bg-card rounded-lg"></div>
           </div>
