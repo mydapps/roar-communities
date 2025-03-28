@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { 
   Card, 
@@ -30,7 +31,8 @@ import {
   DrawerHeader,
   DrawerTitle,
   DrawerDescription,
-  DrawerFooter
+  DrawerFooter,
+  DrawerTrigger
 } from "@/components/ui/drawer";
 import {
   Sheet,

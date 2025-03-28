@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { ShieldCheck, ExternalLink } from 'lucide-react';
 import { isMobile } from '@/utils/responsive';
 import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter, SheetClose } from '@/components/ui/sheet';
-import { Drawer, DrawerTrigger, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter, DrawerClose } from '@/components/ui/drawer';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter, DrawerClose, DrawerTrigger } from '@/components/ui/drawer';
 import { IpfsContent } from './IpfsContent';
 
 interface IpfsButtonProps {

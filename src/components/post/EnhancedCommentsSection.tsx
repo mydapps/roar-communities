@@ -243,7 +243,11 @@ export const EnhancedCommentsSection = ({
                 postAuthorHandle={postAuthorHandle}
                 onMeowChange={handleMeowChange}
                 onReply={isMobile ? 
-                  (id, _) => openReplyDrawer(id, reply.handle, reply.avatar_url, reply.content) : 
+                  // Fix this line to return a Promise
+                  (id, content) => {
+                    openReplyDrawer(id, reply.handle, reply.avatar_url, reply.content);
+                    return Promise.resolve();
+                  } : 
                   handleReplyToComment
                 }
                 isMobile={isMobile}

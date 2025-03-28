@@ -21,7 +21,8 @@ import {
   DrawerHeader, 
   DrawerTitle, 
   DrawerDescription,
-  DrawerFooter
+  DrawerFooter,
+  DrawerTrigger
 } from '@/components/ui/drawer';
 
 interface DepositSheetProps {

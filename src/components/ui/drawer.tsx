@@ -4,19 +4,22 @@ import { Drawer as DrawerPrimitive } from "vaul"
 
 import { cn } from "@/lib/utils"
 
-interface DrawerProps extends React.ComponentProps<typeof DrawerPrimitive.Root> {
-  direction?: "bottom" | "top";
-}
-
+// Define a proper interface that extends the correct properties
 const Drawer = ({
-  shouldScaleBackground = true,
+  children,
   direction = "bottom",
+  shouldScaleBackground = true,
   ...props
-}: DrawerProps) => (
+}: React.ComponentProps<typeof DrawerPrimitive.Root> & {
+  direction?: "bottom" | "top";
+  children?: React.ReactNode;
+}) => (
   <DrawerPrimitive.Root
     shouldScaleBackground={shouldScaleBackground}
     {...props}
-  />
+  >
+    {children}
+  </DrawerPrimitive.Root>
 )
 Drawer.displayName = "Drawer"
 

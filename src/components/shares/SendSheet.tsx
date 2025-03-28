@@ -11,7 +11,15 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } from '@/components/ui/drawer';
+import { 
+  Drawer, 
+  DrawerContent, 
+  DrawerHeader, 
+  DrawerTitle, 
+  DrawerDescription, 
+  DrawerFooter, 
+  DrawerTrigger 
+} from '@/components/ui/drawer';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useForm } from 'react-hook-form';
@@ -221,14 +229,14 @@ export const SendSheet = ({
   }
 
   // For mobile, use Drawer components
-  if (isMobile) {
+  if (isMobile && !isEmbedded) {
     return (
       <>
-        <Drawer open={open && !showSuccess} onOpenChange={(open) => {
-          if (!open) {
+        <Drawer open={open && !showSuccess} onOpenChange={(openValue) => {
+          if (!openValue) {
             setPreviewOpen(false);
           }
-          onOpenChange(open);
+          onOpenChange(openValue);
         }}>
           <DrawerContent className="max-h-[85vh]">
             <DrawerHeader>
