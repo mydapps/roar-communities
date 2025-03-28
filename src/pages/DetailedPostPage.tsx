@@ -1,9 +1,11 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchPost, PostDetails, Reply, createReply } from '@/utils/postApi';
 import { toggleRoar } from '@/utils/api';
 import { Post } from '@/components/feed/Post';
 import { CommentsSection } from '@/components/post/CommentsSection';
+import { Helmet } from 'react-helmet-async';
 import { 
   Breadcrumb, 
   BreadcrumbList, 
@@ -14,7 +16,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChevronLeft, AlertTriangle } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
@@ -97,7 +99,6 @@ const DetailedPostPage = () => {
       await createReply(post.code, content, parentId);
       // Refresh comments to show the new reply
       handleRefreshComments();
-      // Don't return a boolean value here, this function should return void
     } catch (error) {
       console.error('Error adding reply:', error);
       toast.error('Failed to post your comment. Please try again.');
@@ -150,9 +151,39 @@ const DetailedPostPage = () => {
       ? post.body.substring(0, 50) + '...' 
       : post.body || "Untitled Post";
   
+  // Create meta description for SEO
+  const metaDescription = post.title
+    ? `${post.title} - Posted by ${post.author.handle}`
+    : post.body.length > 150 
+      ? post.body.substring(0, 150) + '...' 
+      : post.body;
+  
+  // Get primary image for OG image if available
+  const ogImage = post.featured_image || (post.images && post.images.length > 0 ? post.images[0] : '');
+  
   return (
-    <div className="max-w-2xl mx-auto pt-8 pb-20 px-4 animate-in fade-in">
-      <div className="mb-6">
+    <div className="max-w-2xl mx-auto pt-16 pb-20 px-4 animate-in fade-in">
+      <Helmet>
+        <title>{displayTitle} | Dapps</title>
+        <meta name="description" content={metaDescription} />
+        
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="article" />
+        <meta property="og:title" content={displayTitle} />
+        <meta property="og:description" content={metaDescription} />
+        {ogImage && <meta property="og:image" content={ogImage} />}
+        
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={displayTitle} />
+        <meta name="twitter:description" content={metaDescription} />
+        {ogImage && <meta name="twitter:image" content={ogImage} />}
+        
+        {/* Canonical URL */}
+        <link rel="canonical" href={window.location.href} />
+      </Helmet>
+      
+      <div className="mb-8 mt-4">
         <ScrollArea className="w-full">
           <Breadcrumb>
             <BreadcrumbList>
@@ -163,7 +194,7 @@ const DetailedPostPage = () => {
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               
-              {post.community && (
+              {post.community ? (
                 <>
                   <BreadcrumbItem>
                     <BreadcrumbLink asChild>
@@ -172,7 +203,18 @@ const DetailedPostPage = () => {
                   </BreadcrumbItem>
                   <BreadcrumbSeparator />
                 </>
-              )}
+              ) : post.author && post.author.handle ? (
+                <>
+                  <BreadcrumbItem>
+                    <BreadcrumbLink asChild>
+                      <Link to={`/${post.author.handle.split('.')[0]}`}>
+                        {post.author.handle.split('.')[0]}
+                      </Link>
+                    </BreadcrumbLink>
+                  </BreadcrumbItem>
+                  <BreadcrumbSeparator />
+                </>
+              ) : null}
               
               <BreadcrumbItem>
                 <BreadcrumbPage>{truncateTitle(displayTitle)}</BreadcrumbPage>
@@ -212,13 +254,10 @@ const DetailedPostPage = () => {
         />
       </div>
       
-      <CommentsSection
+      <EnhancedCommentsSection
         postCode={post.code}
-        replies={replies}
-        replyCount={replyCount}
-        onAddReply={handleAddReply}
-        onRefresh={handleRefreshComments}
-        loading={refreshingComments}
+        initialReplies={replies}
+        initialReplyCount={replyCount}
       />
     </div>
   );
