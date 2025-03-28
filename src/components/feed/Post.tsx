@@ -1,22 +1,15 @@
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { AspectRatio } from '@/components/ui/aspect-ratio';
+import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Loader2 } from 'lucide-react';
 
-import { ImageCarousel } from './post/ImageCarousel';
-import { MediaCarousel } from './post/MediaCarousel';
-import { ImageViewer } from './post/ImageViewer';
-import { RoarButton } from './post/RoarButton';
-import { MirrorButton } from './post/MirrorButton';
-import { ShareButton } from './post/ShareButton';
-import { IpfsButton } from './post/IpfsButton';
-import { MirrorPostContent } from './post/MirrorPostContent';
+import { PostHeader } from './post/PostHeader';
+import { PostContent } from './post/PostContent';
+import { PostFooter } from './post/PostFooter';
+import { usePostMedia } from './post/usePostMedia';
 import { CommentSection } from './post/CommentSection';
 
 export interface PostProps {
@@ -84,90 +77,7 @@ export const Post = ({
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const isMobile = useIsMobile();
   
-  const [parsedContent, parsedImages, parsedVideos] = useMemo(() => {
-    const mediaRegex = /!\[\]\((https:\/\/[^)]+)\)/g;
-    const mediaUrls: string[] = [];
-    let matches;
-    
-    while ((matches = mediaRegex.exec(content)) !== null) {
-      mediaUrls.push(matches[1]);
-    }
-    
-    const cleanedContent = content.replace(mediaRegex, '').trim();
-    
-    const extractedImages: string[] = [];
-    const extractedVideos: string[] = [];
-    
-    mediaUrls.forEach(url => {
-      if (url.match(/\.(mp4|webm|ogg|mov)$/i)) {
-        extractedVideos.push(url);
-      } else {
-        extractedImages.push(url);
-      }
-    });
-    
-    return [cleanedContent, extractedImages, extractedVideos];
-  }, [content]);
-  
-  const [mediaImages, mediaVideos] = useMemo(() => {
-    if (!images || images.length === 0) return [[], []];
-    
-    const imgArray: string[] = [];
-    const vidArray: string[] = [];
-    
-    images.forEach(url => {
-      // Don't include dapps logo as an image
-      if (url === 'https://dapps.co/dapps.png') return;
-      
-      if (url.match(/\.(mp4|webm|ogg|mov)$/i) || url.includes('/video/')) {
-        vidArray.push(url);
-      } else {
-        imgArray.push(url);
-      }
-    });
-    
-    return [imgArray, vidArray];
-  }, [images]);
-  
-  const allMedia = useMemo(() => {
-    const media: { type: 'image' | 'video', url: string }[] = [];
-    
-    mediaImages.forEach(url => {
-      media.push({ type: 'image', url });
-    });
-    
-    mediaVideos.forEach(url => {
-      media.push({ type: 'video', url });
-    });
-    
-    if (video) {
-      media.push({ type: 'video', url: video });
-    }
-    
-    parsedImages.forEach(url => {
-      media.push({ type: 'image', url });
-    });
-    
-    parsedVideos.forEach(url => {
-      media.push({ type: 'video', url });
-    });
-    
-    return media.length > 0 ? media : undefined;
-  }, [mediaImages, mediaVideos, video, parsedImages, parsedVideos]);
-  
-  const allImages = useMemo(() => {
-    if (!allMedia) return undefined;
-    
-    const images = allMedia
-      .filter(item => item.type === 'image')
-      .map(item => item.url);
-      
-    return images.length > 0 ? images : undefined;
-  }, [allMedia]);
-  
-  const hasMedia = useMemo(() => {
-    return allMedia && allMedia.length > 0;
-  }, [allMedia]);
+  const { parsedContent, allMedia, allImages, hasMedia } = usePostMedia(content, images, video);
   
   const { toast } = useToast();
   
@@ -197,17 +107,8 @@ export const Post = ({
     }
   };
 
-  const handleUserProfileClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    navigate(`/u/${username.split('.')[0]}`);
-  };
-
   const handleVerifyOnIpfs = () => {
     window.open(`https://ipfs.io/ipfs/${ipfsHash}`, '_blank');
-  };
-
-  const formatUsername = (name: string) => {
-    return '@' + name.split('.')[0];
   };
 
   const handleImageClick = (imageSrc: string) => {
@@ -217,13 +118,6 @@ export const Post = ({
         setSelectedImageIndex(index);
         setImageViewerOpen(true);
       }
-    }
-  };
-
-  const handleCommunityClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (community) {
-      navigate(`/c/${community.toLowerCase().replace(/\s+/g, '-')}`);
     }
   };
 
@@ -256,7 +150,7 @@ export const Post = ({
     Math.floor(Math.random() * 36).toString(36)).join('')
   ).current;
 
-  // Add the missing handleAddComment function
+  // Add the handleAddComment function
   const handleAddComment = (text: string) => {
     if (!text.trim()) return;
     
@@ -277,104 +171,46 @@ export const Post = ({
       onClick={handlePostClick}
       style={{ cursor: disableNavigation ? 'default' : 'pointer' }}
     >
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-start">
-          <div className="flex items-center gap-3">
-            <Avatar 
-              className="h-12 w-12 border-2 border-primary/20 hover:border-primary/50 transition-colors cursor-pointer"
-              onClick={handleUserProfileClick}
-            >
-              <AvatarImage src={avatar ? `https://img.dapps.co/avatar/${avatar}.svg` : undefined} />
-              <AvatarFallback>{username[0].toUpperCase()}</AvatarFallback>
-            </Avatar>
-            <div className="flex flex-col">
-              <div className="flex items-center gap-1">
-                <span 
-                  className="font-medium text-foreground cursor-pointer hover:underline"
-                  onClick={handleUserProfileClick}
-                >
-                  {formatUsername(username)}
-                </span>
-                <span className="text-muted-foreground text-sm mx-1">·</span>
-                <span className="text-muted-foreground text-sm">{timeAgo}</span>
-              </div>
-              {community && (
-                <Badge 
-                  variant="outline" 
-                  className="mt-1 w-fit bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer"
-                  onClick={handleCommunityClick}
-                >
-                  <span className="text-xs">{community}</span>
-                </Badge>
-              )}
-            </div>
-          </div>
-          
-          <IpfsButton 
-            open={ipfsSheetOpen} 
-            onOpenChange={setIpfsSheetOpen} 
-            ipfsHash={ipfsHash} 
-            onVerify={handleVerifyOnIpfs} 
-          />
-        </div>
-      </CardHeader>
-      <CardContent className="pb-3">
-        {parsedContent && <p className="text-sm mt-2 break-words">{parsedContent}</p>}
-        
-        {isMirror && mirrorData && (
-          <MirrorPostContent 
-            mirrorData={{
-              ...mirrorData,
-              originalImages: mirrorData.originalImages || []
-            }} 
-          />
-        )}
-        
-        {!isMirror && hasMedia && (
-          <div className="mt-3">
-            <MediaCarousel 
-              media={allMedia!} 
-              onImageClick={handleImageClick} 
-            />
-          </div>
-        )}
-      </CardContent>
-      <CardFooter className="pt-0 flex justify-between flex-col">
-        <div className="flex justify-between w-full mb-3">
-          <div className="flex items-center gap-1.5">
-            <RoarButton 
-              count={localRoarCount} 
-              active={localRoared} 
-              onClick={handleRoar}
-              postCode={postCode}
-            />
-            
-            <MirrorButton 
-              open={mirrorSheetOpen} 
-              onOpenChange={setMirrorSheetOpen} 
-              username={username}
-              timeAgo={timeAgo}
-              content={content}
-              images={allImages}
-              video={video}
-              postCode={postCode}
-            />
-          </div>
-          
-          <ShareButton 
-            open={shareSheetOpen} 
-            onOpenChange={setShareSheetOpen} 
-            username={username}
-            timeAgo={timeAgo}
-            content={content}
-            images={allImages}
-            video={video}
-            postCode={postCode}
-            community={community}
-            onShareSuccess={handleShareSuccess}
-          />
-        </div>
-        
+      <PostHeader 
+        username={username}
+        community={community}
+        timeAgo={timeAgo}
+        avatar={avatar}
+        ipfsHash={ipfsHash}
+        onVerifyIpfs={handleVerifyOnIpfs}
+        ipfsSheetOpen={ipfsSheetOpen}
+        setIpfsSheetOpen={setIpfsSheetOpen}
+      />
+      
+      <PostContent 
+        content={parsedContent}
+        isMirror={isMirror}
+        mirrorData={mirrorData}
+        hasMedia={hasMedia}
+        allMedia={allMedia}
+        onImageClick={handleImageClick}
+      />
+      
+      <PostFooter
+        localRoared={localRoared}
+        localRoarCount={localRoarCount}
+        handleRoar={handleRoar}
+        postCode={postCode}
+        mirrorSheetOpen={mirrorSheetOpen}
+        setMirrorSheetOpen={setMirrorSheetOpen}
+        username={username}
+        timeAgo={timeAgo}
+        content={content}
+        allImages={allImages}
+        video={video}
+        shareSheetOpen={shareSheetOpen}
+        setShareSheetOpen={setShareSheetOpen}
+        community={community}
+        onShareSuccess={handleShareSuccess}
+        imageViewerOpen={imageViewerOpen}
+        setImageViewerOpen={setImageViewerOpen}
+        selectedImageIndex={selectedImageIndex}
+      >
         {!hideComments && showComments && (
           <div onClick={(e) => e.stopPropagation()} className="w-full">
             {loadingComments ? (
@@ -390,16 +226,7 @@ export const Post = ({
             )}
           </div>
         )}
-      </CardFooter>
-
-      {allImages && allImages.length > 0 && (
-        <ImageViewer 
-          images={allImages} 
-          selectedImageIndex={selectedImageIndex}
-          open={imageViewerOpen} 
-          onOpenChange={setImageViewerOpen} 
-        />
-      )}
+      </PostFooter>
     </Card>
   );
 };
