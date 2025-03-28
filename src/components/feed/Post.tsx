@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
@@ -81,6 +82,45 @@ export const Post = ({
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const isMobile = useIsMobile();
   
+  // Parse embedded media from content
+  const [parsedContent, parsedImages, parsedVideos] = useMemo(() => {
+    // Regular expression to find markdown image syntax
+    const mediaRegex = /!\[\]\((https:\/\/[^)]+)\)/g;
+    const mediaUrls: string[] = [];
+    let matches;
+    
+    // Find all media URLs in the content
+    while ((matches = mediaRegex.exec(content)) !== null) {
+      mediaUrls.push(matches[1]);
+    }
+    
+    // Remove markdown images from content text
+    const cleanedContent = content.replace(mediaRegex, '').trim();
+    
+    // Separate images and videos
+    const extractedImages: string[] = [];
+    const extractedVideos: string[] = [];
+    
+    mediaUrls.forEach(url => {
+      if (url.match(/\.(mp4|webm|ogg|mov)$/i)) {
+        extractedVideos.push(url);
+      } else {
+        extractedImages.push(url);
+      }
+    });
+    
+    return [cleanedContent, extractedImages, extractedVideos];
+  }, [content]);
+  
+  // Combine explicitly provided images with ones extracted from content
+  const allImages = useMemo(() => {
+    const combinedImages = [...(images || [])];
+    if (parsedImages.length > 0) {
+      combinedImages.push(...parsedImages);
+    }
+    return combinedImages.length > 0 ? combinedImages : undefined;
+  }, [images, parsedImages]);
+  
   const { toast } = useToast();
   
   const ipfsHash = ipfs || postCode || `Qm${Array.from({length: 44}, () => Math.floor(Math.random() * 16).toString(16)).join('')}`;
@@ -142,8 +182,8 @@ export const Post = ({
   };
 
   const handleImageClick = (imageSrc: string) => {
-    if (images) {
-      const index = images.findIndex(img => img === imageSrc);
+    if (allImages) {
+      const index = allImages.findIndex(img => img === imageSrc);
       if (index !== -1) {
         setSelectedImageIndex(index);
         setImageViewerOpen(true);
@@ -182,6 +222,9 @@ export const Post = ({
   const postId = useRef(postCode || Array.from({length: 6}, () => 
     Math.floor(Math.random() * 36).toString(36)).join('')
   ).current;
+
+  // Added missing useMemo import 
+  const { useMemo } = React;
 
   return (
     <Card 
@@ -223,7 +266,7 @@ export const Post = ({
         </div>
       </CardHeader>
       <CardContent className="pb-3">
-        <p className="text-sm mt-2 break-words">{content}</p>
+        {parsedContent && <p className="text-sm mt-2 break-words">{parsedContent}</p>}
         
         {isMirror && mirrorData && (
           <MirrorPostContent 
@@ -234,23 +277,39 @@ export const Post = ({
           />
         )}
         
-        {!isMirror && images && images.length > 0 && (
+        {!isMirror && allImages && allImages.length > 0 && (
           <div className="mt-3 relative" data-media-element="true">
             <AspectRatio ratio={16/9} className="overflow-hidden rounded-md">
-              <ImageCarousel images={images} onImageClick={handleImageClick} />
+              <ImageCarousel images={allImages} onImageClick={handleImageClick} />
             </AspectRatio>
           </div>
         )}
         
-        {!isMirror && video && (
-          <div className="mt-3" data-media-element="true">
-            <AspectRatio ratio={16/9} className="overflow-hidden rounded-md">
-              <video 
-                src={video} 
-                controls 
-                className="w-full h-full object-cover"
-              />
-            </AspectRatio>
+        {!isMirror && (parsedVideos && parsedVideos.length > 0 || video) && (
+          <div className="mt-3 space-y-3" data-media-element="true">
+            {/* Display explicitly provided video */}
+            {video && (
+              <AspectRatio ratio={16/9} className="overflow-hidden rounded-md">
+                <video 
+                  src={video} 
+                  controls 
+                  className="w-full h-full object-cover"
+                  preload="metadata"
+                />
+              </AspectRatio>
+            )}
+            
+            {/* Display videos extracted from content */}
+            {parsedVideos && parsedVideos.map((videoUrl, index) => (
+              <AspectRatio key={`video-${index}`} ratio={16/9} className="overflow-hidden rounded-md">
+                <video 
+                  src={videoUrl} 
+                  controls 
+                  className="w-full h-full object-cover"
+                  preload="metadata"
+                />
+              </AspectRatio>
+            ))}
           </div>
         )}
       </CardContent>
@@ -272,7 +331,7 @@ export const Post = ({
               username={username}
               timeAgo={timeAgo}
               content={content}
-              images={images}
+              images={allImages}
               video={video}
               postCode={postCode}
             />
@@ -284,7 +343,7 @@ export const Post = ({
             username={username}
             timeAgo={timeAgo}
             content={content}
-            images={images}
+            images={allImages}
             video={video}
             postCode={postCode}
             community={community}
@@ -309,9 +368,9 @@ export const Post = ({
         )}
       </CardFooter>
 
-      {images && images.length > 0 && (
+      {allImages && allImages.length > 0 && (
         <ImageViewer 
-          images={images} 
+          images={allImages} 
           selectedImageIndex={selectedImageIndex}
           open={imageViewerOpen} 
           onOpenChange={setImageViewerOpen} 
@@ -320,3 +379,4 @@ export const Post = ({
     </Card>
   );
 };
+

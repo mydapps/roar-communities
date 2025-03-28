@@ -1,3 +1,4 @@
+
 import { toast } from 'sonner';
 import { POST_MIRRORED_EVENT } from '@/components/feed/post/MirrorButton';
 
@@ -406,6 +407,7 @@ export const createPost = async (params: {
     
     console.log('Creating post:', params);
     
+    // Send the post body which already includes embedded media URLs
     const requestBody: Record<string, any> = {
       body: body.trim()
     };
@@ -414,7 +416,9 @@ export const createPost = async (params: {
       requestBody.community = community;
     }
     
-    if (mediaUrls && mediaUrls.length > 0) {
+    // Only include separate mediaUrls if specifically needed by the API
+    // Most cases this isn't needed since we now embed them in the body
+    if (mediaUrls && mediaUrls.length > 0 && !body.includes('![]')) {
       requestBody.mediaUrls = mediaUrls;
     }
     
