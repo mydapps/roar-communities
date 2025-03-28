@@ -5,7 +5,6 @@ import { fetchPost, PostDetails } from '@/utils/postApi';
 import { toggleRoar } from '@/utils/api';
 import { Post } from '@/components/feed/Post';
 import { EnhancedCommentsSection } from '@/components/post/EnhancedCommentsSection';
-import { CommentReply } from '@/components/post/EnhancedCommentItem';
 import { Helmet } from 'react-helmet-async';
 import { 
   Breadcrumb, 
@@ -21,7 +20,7 @@ import { AlertTriangle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
-import { createReply } from '@/utils/commentApi';
+import { createReply, type CommentReply } from '@/utils/commentApi';
 
 const DetailedPostPage = () => {
   const { communityId, postId, handle } = useParams<{ communityId?: string; postId: string; handle?: string }>();
@@ -181,23 +180,45 @@ const DetailedPostPage = () => {
   
   const ogImage = post.featured_image || (post.images && post.images.length > 0 ? post.images[0] : '');
   
+  // Get canonical URL
+  const getCanonicalUrl = () => {
+    const baseUrl = window.location.origin;
+    if (post.community) {
+      return `${baseUrl}/c/${post.community}/${post.code}`;
+    } else if (post.author && post.author.handle) {
+      return `${baseUrl}/${post.author.handle.split('.')[0]}/${post.code}`;
+    }
+    return window.location.href;
+  };
+  
   return (
     <div className="max-w-2xl mx-auto pt-16 pb-20 px-4 animate-in fade-in">
       <Helmet>
         <title>{displayTitle} | Dapps</title>
         <meta name="description" content={metaDescription} />
         
+        {/* Open Graph / Facebook */}
         <meta property="og:type" content="article" />
         <meta property="og:title" content={displayTitle} />
         <meta property="og:description" content={metaDescription} />
         {ogImage && <meta property="og:image" content={ogImage} />}
+        <meta property="og:url" content={getCanonicalUrl()} />
+        <meta property="og:site_name" content="Dapps" />
         
+        {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={displayTitle} />
         <meta name="twitter:description" content={metaDescription} />
         {ogImage && <meta name="twitter:image" content={ogImage} />}
+        <meta name="twitter:site" content="@dapps_co" />
+        {post.author && <meta name="twitter:creator" content={`@${post.author.handle.split('.')[0]}`} />}
         
-        <link rel="canonical" href={window.location.href} />
+        {/* Additional SEO */}
+        <meta name="author" content={post.author.handle} />
+        {post.created_at && <meta name="article:published_time" content={post.created_at} />}
+        {post.community && <meta name="article:section" content={post.community} />}
+        
+        <link rel="canonical" href={getCanonicalUrl()} />
       </Helmet>
       
       <div className="mb-8 mt-4">
@@ -268,12 +289,13 @@ const DetailedPostPage = () => {
           } : undefined}
           ipfs={post.ipfs}
           disableNavigation={true}
+          hideComments={true}
         />
       </div>
       
       <EnhancedCommentsSection
         postCode={post.code}
-        initialReplies={replies as CommentReply[]}
+        initialReplies={replies}
         initialReplyCount={replyCount}
       />
     </div>

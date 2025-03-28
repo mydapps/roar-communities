@@ -3,7 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Cat, Send, ChevronDown, Loader2 } from 'lucide-react';
-import { CommentReply } from '@/utils/commentApi';
+import { type CommentReply } from '@/utils/commentApi';
 
 interface EnhancedCommentItemProps {
   comment: CommentReply;
@@ -61,11 +61,18 @@ export const EnhancedCommentItem = ({
   };
   
   const getAvatarUrl = (avatarPath: string) => {
-    if (typeof avatarPath === 'string' && avatarPath.includes('https://img.dapps.co/avatar/')) {
+    if (!avatarPath) return '';
+    
+    if (avatarPath.endsWith('.svg')) {
+      return avatarPath;
+    }
+    
+    if (avatarPath.includes('https://img.dapps.co/avatar/')) {
       const parts = avatarPath.split('https://img.dapps.co/avatar/');
       return parts[parts.length - 1].replace('.svg.svg', '.svg');
     }
-    return avatarPath;
+    
+    return `${avatarPath}.svg`;
   };
   
   return (

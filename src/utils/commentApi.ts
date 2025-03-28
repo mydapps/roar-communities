@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 // Base API URL
 const API_BASE_URL = 'https://api.dapps.co';
 
-export interface CommentReply {
+export type CommentReply = {
   id: number;
   uid: number;
   handle: string;

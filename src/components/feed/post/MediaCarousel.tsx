@@ -23,6 +23,11 @@ export const MediaCarousel = ({
   fullscreen = false,
   initialIndex = 0
 }: MediaCarouselProps) => {
+  // If there are no media items, don't render anything
+  if (!media || media.length === 0) {
+    return null;
+  }
+  
   const options = fullscreen ? { startIndex: initialIndex } : {};
   const [emblaRef, emblaApi] = useEmblaCarousel(options);
   const [activeDotIndex, setActiveDotIndex] = useState(initialIndex);

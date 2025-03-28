@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
@@ -46,6 +47,7 @@ export interface PostProps {
   };
   ipfs?: string;
   avatar?: string;
+  hideComments?: boolean;
 }
 
 export const Post = ({ 
@@ -65,7 +67,8 @@ export const Post = ({
   isMirror = false,
   mirrorData,
   ipfs,
-  avatar
+  avatar,
+  hideComments = false
 }: PostProps) => {
   const navigate = useNavigate();
   const [localRoared, setLocalRoared] = useState(roared);
@@ -114,6 +117,9 @@ export const Post = ({
     const vidArray: string[] = [];
     
     images.forEach(url => {
+      // Don't include dapps logo as an image
+      if (url === 'https://dapps.co/dapps.png') return;
+      
       if (url.match(/\.(mp4|webm|ogg|mov)$/i) || url.includes('/video/')) {
         vidArray.push(url);
       } else {
@@ -377,7 +383,7 @@ export const Post = ({
           />
         </div>
         
-        {showComments && (
+        {!hideComments && showComments && (
           <div onClick={(e) => e.stopPropagation()} className="w-full">
             {loadingComments ? (
               <div className="w-full py-8 flex justify-center">
