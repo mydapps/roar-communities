@@ -4,15 +4,15 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Send, Loader2 } from 'lucide-react';
-import { fetchReplies, toggleMeow, createReply, CommentReply } from '@/utils/commentApi';
-import { toast } from 'sonner';
 import { EnhancedCommentItem } from './EnhancedCommentItem';
+import { createReply, fetchReplies, toggleMeow, CommentReply } from '@/utils/commentApi';
+import { toast } from 'sonner';
 
 interface EnhancedCommentsSectionProps {
   postCode: string;
   initialReplies?: CommentReply[];
   initialReplyCount?: number;
-  postAuthorHandle?: string;
+  postAuthorHandle: string;
 }
 
 export const EnhancedCommentsSection = ({
@@ -21,202 +21,111 @@ export const EnhancedCommentsSection = ({
   initialReplyCount = 0,
   postAuthorHandle
 }: EnhancedCommentsSectionProps) => {
+  const [newComment, setNewComment] = useState('');
   const [replies, setReplies] = useState<CommentReply[]>(initialReplies);
   const [replyCount, setReplyCount] = useState(initialReplyCount);
-  const [newComment, setNewComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const loadComments = useCallback(async () => {
-    setLoading(true);
+  const loadReplies = useCallback(async () => {
     try {
+      setLoading(true);
+      
       const response = await fetchReplies(postCode);
       
-      if (response.success && response.replies) {
-        setReplies(response.replies as unknown as CommentReply[]);
-        setReplyCount(response.total_count || response.replies.length);
+      if (response.success) {
+        setReplies(response.replies);
+        setReplyCount(response.total_count);
       }
     } catch (error) {
-      console.error('Error loading comments:', error);
-      toast.error('Failed to load comments. Please try again.');
+      console.error('Error loading replies:', error);
+      toast.error('Failed to load comments. Please try again later.');
     } finally {
       setLoading(false);
     }
   }, [postCode]);
 
-  const handleAddComment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!newComment.trim() || submitting) return;
+  useEffect(() => {
+    if (initialReplies.length === 0) {
+      loadReplies();
+    }
+  }, [initialReplies.length, loadReplies]);
+
+  const handleAddReply = async (parentId: number = 0, content: string) => {
+    if (!content.trim()) return;
     
     setSubmitting(true);
     
     try {
-      const userAvatar = localStorage.getItem('dapps_user_avatar') || 'default';
-      const userHandle = localStorage.getItem('dapps_user_handle') || 'you';
+      await createReply(postCode, content, parentId);
       
-      const tempId = Date.now();
-      const optimisticComment: CommentReply = {
-        id: tempId,
-        uid: 0,
-        handle: userHandle,
-        avatar_url: userAvatar,
-        content: newComment,
-        created_on: new Date().toISOString(),
-        time_ago: 'just now',
-        upvotes: 0,
-        meow_count: 0,
-        has_meowed: false
-      };
-      
-      setReplies(prev => [optimisticComment, ...prev]);
-      setReplyCount(prev => prev + 1);
-      setNewComment('');
-      
-      const response = await createReply(postCode, newComment);
-      
-      if (response.success) {
-        setReplies(prev => 
-          prev.map(reply => 
-            reply.id === tempId 
-              ? {
-                  ...reply,
-                  id: response.reply_id,
-                  created_on: response.created_on,
-                  avatar_url: response.avatar_url || reply.avatar_url
-                }
-              : reply
-          )
-        );
-        
-        toast.success('Comment added successfully');
-      } else {
-        setReplies(prev => prev.filter(reply => reply.id !== tempId));
-        setReplyCount(prev => prev - 1);
-        toast.error('Failed to add comment');
+      if (parentId === 0) {
+        setNewComment('');
       }
+      
+      await loadReplies();
+      toast.success('Comment added successfully');
     } catch (error) {
-      console.error('Error adding comment:', error);
+      console.error('Error adding reply:', error);
       toast.error('Failed to add comment. Please try again.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleAddReply = async (parentId: number, content: string) => {
-    if (!content.trim()) return;
+  const handleMeowChange = async (commentId: number, newState: boolean) => {
+    // Optimistically update UI
+    setReplies(prev => updateMeowState(prev, commentId, newState));
     
     try {
-      const userAvatar = localStorage.getItem('dapps_user_avatar') || 'default';
-      const userHandle = localStorage.getItem('dapps_user_handle') || 'you';
+      const response = await toggleMeow(commentId);
       
-      const tempId = Date.now();
-      
-      const optimisticReply: CommentReply = {
-        id: tempId,
-        uid: 0,
-        handle: userHandle,
-        avatar_url: userAvatar,
-        content: content,
-        created_on: new Date().toISOString(),
-        time_ago: 'just now',
-        upvotes: 0,
-        meow_count: 0,
-        has_meowed: false
-      };
-      
-      setReplies(prev => 
-        prev.map(reply => {
-          if (reply.id === parentId) {
-            return {
-              ...reply,
-              sub_replies: reply.sub_replies 
-                ? [...reply.sub_replies, optimisticReply]
-                : [optimisticReply]
-            };
-          }
-          return reply;
-        })
-      );
-      
-      const response = await createReply(postCode, content, parentId);
-      
-      if (response.success) {
-        setReplies(prev => 
-          prev.map(reply => {
-            if (reply.id === parentId && reply.sub_replies) {
-              return {
-                ...reply,
-                sub_replies: reply.sub_replies.map(subReply => 
-                  subReply.id === tempId 
-                    ? {
-                        ...subReply,
-                        id: response.reply_id,
-                        created_on: response.created_on,
-                        avatar_url: response.avatar_url || subReply.avatar_url
-                      }
-                    : subReply
-                )
-              };
-            }
-            return reply;
-          })
-        );
-        
-        toast.success('Reply added successfully');
+      if (!response.success) {
+        // Revert change if unsuccessful
+        setReplies(prev => updateMeowState(prev, commentId, !newState));
+        toast.error('Failed to update reaction. Please try again.');
       }
     } catch (error) {
-      console.error('Error adding reply:', error);
-      toast.error('Failed to add reply. Please try again.');
-    }
-  };
-
-  const handleToggleMeow = async (commentId: number) => {
-    const updateReplies = (repliesList: CommentReply[]): CommentReply[] => {
-      return repliesList.map(reply => {
-        if (reply.id === commentId) {
-          return {
-            ...reply,
-            has_meowed: !reply.has_meowed,
-            meow_count: reply.has_meowed ? reply.meow_count - 1 : reply.meow_count + 1
-          };
-        } else if (reply.sub_replies && reply.sub_replies.length > 0) {
-          return {
-            ...reply,
-            sub_replies: updateReplies(reply.sub_replies)
-          };
-        }
-        return reply;
-      });
-    };
-    
-    setReplies(prev => updateReplies(prev));
-    
-    try {
-      await toggleMeow(commentId);
-    } catch (error) {
       console.error('Error toggling meow:', error);
-      
-      setReplies(prev => updateReplies(prev));
-      toast.error('Failed to update meow. Please try again.');
+      // Revert change on error
+      setReplies(prev => updateMeowState(prev, commentId, !newState));
+      toast.error('Failed to update reaction. Please try again.');
     }
   };
+  
+  const updateMeowState = (comments: CommentReply[], targetId: number, newState: boolean): CommentReply[] => {
+    return comments.map(comment => {
+      if (comment.id === targetId) {
+        return {
+          ...comment,
+          has_meowed: newState,
+          meow_count: newState ? comment.meow_count + 1 : Math.max(0, comment.meow_count - 1)
+        };
+      }
+      
+      if (comment.sub_replies && comment.sub_replies.length > 0) {
+        return {
+          ...comment,
+          sub_replies: updateMeowState(comment.sub_replies, targetId, newState)
+        };
+      }
+      
+      return comment;
+    });
+  };
 
-  useEffect(() => {
-    if (initialReplies.length === 0) {
-      loadComments();
-    }
-  }, [initialReplies.length, loadComments]);
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleAddReply(0, newComment);
+  };
 
   const userAvatar = localStorage.getItem('dapps_user_avatar') || 'default';
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Comments ({replyCount})</h2>
-      </div>
+      <h2 className="text-xl font-semibold">Comments ({replyCount})</h2>
       
-      <form onSubmit={handleAddComment} className="flex gap-3 bg-muted/20 p-4 rounded-lg border border-border/40">
+      <form onSubmit={handleSubmit} className="flex gap-3 bg-muted/20 p-4 rounded-lg border border-border/40">
         <Avatar className="h-10 w-10 shrink-0 border border-muted/60">
           <AvatarImage src={`https://img.dapps.co/avatar/${userAvatar}.svg`} />
           <AvatarFallback>Y</AvatarFallback>
@@ -235,35 +144,30 @@ export const EnhancedCommentsSection = ({
               className="gap-1.5"
             >
               {submitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Posting...
-                </>
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <>
-                  <Send className="h-4 w-4" />
-                  Comment
-                </>
+                <Send className="h-4 w-4" />
               )}
+              Comment
             </Button>
           </div>
         </div>
       </form>
       
-      {loading && replies.length === 0 ? (
-        <div className="flex justify-center items-center py-8">
+      {loading ? (
+        <div className="flex justify-center py-8">
           <Loader2 className="h-8 w-8 text-primary animate-spin" />
         </div>
       ) : replies.length > 0 ? (
-        <div className="space-y-6 pt-4 divide-y divide-border/20">
+        <div className="space-y-6 divide-y divide-border/20">
           {replies.map(reply => (
             <div key={reply.id} className="pt-6 first:pt-0">
               <EnhancedCommentItem 
                 comment={reply}
-                level={1}
-                onToggleMeow={handleToggleMeow}
-                onAddReply={handleAddReply}
                 postAuthorHandle={postAuthorHandle}
+                onMeowChange={handleMeowChange}
+                onReply={handleAddReply}
+                isAuthorReplying={reply.handle === postAuthorHandle}
               />
             </div>
           ))}

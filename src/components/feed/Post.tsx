@@ -11,6 +11,7 @@ import { PostContent } from './post/PostContent';
 import { PostFooter } from './post/PostFooter';
 import { usePostMedia } from './post/usePostMedia';
 import { CommentSection } from './post/CommentSection';
+import { CommentButton } from './post/CommentButton';
 
 export interface PostProps {
   username: string;
@@ -165,6 +166,17 @@ export const Post = ({
     setNewComment('');
   };
 
+  const handleToggleComments = () => {
+    setShowComments(!showComments);
+    if (!showComments && !loadingComments && comments.length === 0) {
+      setLoadingComments(true);
+      // Simulate loading comments
+      setTimeout(() => {
+        setLoadingComments(false);
+      }, 1000);
+    }
+  };
+
   return (
     <Card 
       className="border border-border/40 shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden animate-scale-in"
@@ -211,6 +223,15 @@ export const Post = ({
         setImageViewerOpen={setImageViewerOpen}
         selectedImageIndex={selectedImageIndex}
       >
+        {!hideComments && !disableNavigation && (
+          <div className="flex items-center justify-between w-full mt-3">
+            <CommentButton 
+              count={commentCount} 
+              onClick={handleToggleComments} 
+            />
+          </div>
+        )}
+        
         {!hideComments && showComments && (
           <div onClick={(e) => e.stopPropagation()} className="w-full">
             {loadingComments ? (

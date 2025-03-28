@@ -27,6 +27,7 @@ const DetailedPostPage = () => {
   const navigate = useNavigate();
   
   const [post, setPost] = useState<PostDetails | null>(null);
+  const [originalPost, setOriginalPost] = useState<any | null>(null);
   const [replies, setReplies] = useState<CommentReply[]>([]);
   const [replyCount, setReplyCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -44,6 +45,10 @@ const DetailedPostPage = () => {
       const data = await fetchPost(postId);
       
       setPost(data.post);
+      if (data.original_post) {
+        setOriginalPost(data.original_post);
+      }
+      
       // Convert replies to CommentReply format
       const formattedReplies = data.replies?.map(reply => ({
         id: reply.id,
@@ -73,12 +78,23 @@ const DetailedPostPage = () => {
       setReplies(formattedReplies as CommentReply[]);
       setReplyCount(data.reply_count || 0);
       
-      if (data.post.community && !communityId) {
-        navigate(`/c/${data.post.community}/${data.post.code}`, { replace: true });
+      if (data.post && data.post.community && !communityId) {
+        // Don't use navigate with replace as it causes issues
+        // Only update URL if needed without forcing a redirect
+        window.history.replaceState(
+          null, 
+          '', 
+          `/c/${data.post.community}/${data.post.code}`
+        );
       }
       
-      if (!data.post.community && !handle && data.post.author && data.post.author.handle) {
-        navigate(`/${data.post.author.handle.split('.')[0]}/${data.post.code}`, { replace: true });
+      if (data.post && !data.post.community && !handle && data.post.author && data.post.author.handle) {
+        // Only update URL if needed without forcing a redirect
+        window.history.replaceState(
+          null,
+          '',
+          `/${data.post.author.handle.split('.')[0]}/${data.post.code}`
+        );
       }
     } catch (error) {
       console.error('Error loading post:', error);
@@ -86,7 +102,7 @@ const DetailedPostPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [postId, communityId, handle, navigate]);
+  }, [postId, communityId, handle]);
   
   useEffect(() => {
     loadPost();
@@ -194,6 +210,18 @@ const DetailedPostPage = () => {
     return window.location.href;
   };
   
+  // Prepare mirror data if the post is a mirror
+  const mirrorData = post.is_mirror === 1 ? {
+    quote: post.mirror_quote || '',
+    originalAuthor: post.original_author || '',
+    originalCommunity: post.original_community || '',
+    originalBody: post.original_body || '',
+    originalTimeAgo: post.original_created_on || '',
+    originalAvatar: post.original_author_avatar || '',
+    originalImages: post.original_images || [],
+    originalTitle: post.original_title || ''
+  } : undefined;
+  
   return (
     <div className="max-w-2xl mx-auto pt-16 pb-20 px-4 animate-in fade-in">
       <Helmet>
@@ -267,10 +295,10 @@ const DetailedPostPage = () => {
       
       <div className="mb-8">
         <Post
-          username={post.author.handle}
-          avatar={post.author.avatar}
+          username={post.author?.handle || post.handle}
+          avatar={post.author?.avatar || post.avatar}
           community={post.community || undefined}
-          timeAgo={post.time_ago}
+          timeAgo={post.time_ago || post.timeAgo}
           content={post.body}
           roarCount={post.upvotes}
           commentCount={replyCount}
@@ -279,17 +307,8 @@ const DetailedPostPage = () => {
           roared={post.has_upvoted}
           onRoar={handleRoar}
           images={filteredImages}
-          isMirror={post.is_mirror}
-          mirrorData={post.is_mirror ? {
-            quote: post.mirror_quote || '',
-            originalAuthor: post.original_author || '',
-            originalCommunity: post.original_community || '',
-            originalBody: post.original_body || '',
-            originalTimeAgo: post.original_created_on || '',
-            originalAvatar: post.original_author_avatar || '',
-            originalImages: post.original_images || [],
-            originalTitle: post.original_title || ''
-          } : undefined}
+          isMirror={post.is_mirror === 1}
+          mirrorData={mirrorData}
           ipfs={post.ipfs}
           disableNavigation={true}
           hideComments={true}
@@ -300,7 +319,7 @@ const DetailedPostPage = () => {
         postCode={post.code}
         initialReplies={replies}
         initialReplyCount={replyCount}
-        postAuthorHandle={post.author.handle}
+        postAuthorHandle={post.author?.handle || post.handle}
       />
     </div>
   );

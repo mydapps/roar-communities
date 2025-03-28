@@ -1,15 +1,9 @@
 
 import React from 'react';
+import { Share } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-  SheetClose,
-} from '@/components/ui/sheet';
-import { ShareIcon } from 'lucide-react';
+import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Drawer, DrawerTrigger, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { ShareContent } from './ShareContent';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -23,49 +17,46 @@ interface ShareButtonProps {
   video?: string;
   postCode?: string;
   community?: string;
-  onShareSuccess?: (platform: string) => void;
+  onShareSuccess: (platform: string) => void;
 }
 
-export const ShareButton = ({ 
-  open, 
-  onOpenChange, 
-  username, 
-  timeAgo, 
-  content, 
+export const ShareButton = ({
+  open,
+  onOpenChange,
+  username,
+  timeAgo,
+  content,
   images,
   video,
   postCode,
   community,
   onShareSuccess
 }: ShareButtonProps) => {
-  const isMobile = useIsMobile();
+  const mobile = useIsMobile();
   
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent post navigation
     onOpenChange(true);
   };
   
-  const handleClose = () => {
-    onOpenChange(false);
-  };
-  
-  return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetTrigger asChild>
-        <Button 
-          variant="ghost" 
-          size="sm"
-          onClick={handleClick}
-          className="gap-2 hover:text-blue-500 hover:bg-blue-500/10"
-        >
-          <ShareIcon className="h-4 w-4" />
-        </Button>
-      </SheetTrigger>
-      <SheetContent side={isMobile ? "bottom" : "right"} className={isMobile ? "h-[90vh] sm:max-w-md sm:h-[85vh] mx-auto p-0 overflow-auto" : "sm:max-w-md p-0 overflow-auto"}>
-        <SheetHeader className="p-4 text-left border-b sticky top-0 bg-background z-10">
-          <SheetTitle>Share Post</SheetTitle>
-        </SheetHeader>
-        <div className="overflow-auto">
+  if (mobile) {
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        <DrawerTrigger asChild>
+          <Button 
+            variant="ghost" 
+            size="sm"
+            className="px-2 hover:text-green-500 hover:bg-green-500/10"
+            onClick={handleClick}
+          >
+            <Share className="h-4 w-4" />
+          </Button>
+        </DrawerTrigger>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>Share Post</DrawerTitle>
+          </DrawerHeader>
+          
           <ShareContent 
             username={username}
             timeAgo={timeAgo}
@@ -74,11 +65,40 @@ export const ShareButton = ({
             video={video}
             postCode={postCode}
             community={community}
-            onClose={handleClose}
             onShareSuccess={onShareSuccess}
           />
-        </div>
-        <SheetClose className="absolute top-4 right-4" />
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+  
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetTrigger asChild>
+        <Button 
+          variant="ghost" 
+          size="sm"
+          className="px-2 hover:text-green-500 hover:bg-green-500/10"
+          onClick={handleClick}
+        >
+          <Share className="h-4 w-4" />
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="right" className="sm:max-w-md">
+        <SheetHeader>
+          <SheetTitle>Share Post</SheetTitle>
+        </SheetHeader>
+        
+        <ShareContent 
+          username={username}
+          timeAgo={timeAgo}
+          content={content}
+          images={images}
+          video={video}
+          postCode={postCode}
+          community={community}
+          onShareSuccess={onShareSuccess}
+        />
       </SheetContent>
     </Sheet>
   );
