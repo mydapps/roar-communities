@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchPost, PostDetails, Reply, createReply } from '@/utils/postApi';
 import { toggleRoar } from '@/utils/api';
 import { Post } from '@/components/feed/Post';
-import { CommentsSection } from '@/components/post/CommentsSection';
+import { EnhancedCommentsSection } from '@/components/post/EnhancedCommentsSection';
 import { Helmet } from 'react-helmet-async';
 import { 
   Breadcrumb, 
@@ -20,13 +19,14 @@ import { AlertTriangle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
+import { CommentReply } from '@/components/post/EnhancedCommentItem';
 
 const DetailedPostPage = () => {
   const { communityId, postId, handle } = useParams<{ communityId?: string; postId: string; handle?: string }>();
   const navigate = useNavigate();
   
   const [post, setPost] = useState<PostDetails | null>(null);
-  const [replies, setReplies] = useState<Reply[]>([]);
+  const [replies, setReplies] = useState<CommentReply[]>([]);
   const [replyCount, setReplyCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -46,14 +46,10 @@ const DetailedPostPage = () => {
       setReplies(data.replies || []);
       setReplyCount(data.reply_count || 0);
       
-      // If the post has a community but we accessed it via /handle/:postId or /post/:postId,
-      // redirect to the proper URL with community
       if (data.post.community && !communityId) {
         navigate(`/c/${data.post.community}/${data.post.code}`, { replace: true });
       }
       
-      // If the post doesn't have a community but we accessed it via /post/:postId,
-      // redirect to the proper URL with handle
       if (!data.post.community && !handle && data.post.author && data.post.author.handle) {
         navigate(`/${data.post.author.handle.split('.')[0]}/${data.post.code}`, { replace: true });
       }
@@ -84,7 +80,6 @@ const DetailedPostPage = () => {
     
     try {
       await toggleRoar(post.code);
-      // Refresh the post to get the updated roar status
       setRefreshCount(prev => prev + 1);
     } catch (error) {
       console.error('Error roaring post:', error);
@@ -97,7 +92,6 @@ const DetailedPostPage = () => {
     
     try {
       await createReply(post.code, content, parentId);
-      // Refresh comments to show the new reply
       handleRefreshComments();
     } catch (error) {
       console.error('Error adding reply:', error);
@@ -151,14 +145,12 @@ const DetailedPostPage = () => {
       ? post.body.substring(0, 50) + '...' 
       : post.body || "Untitled Post";
   
-  // Create meta description for SEO
   const metaDescription = post.title
     ? `${post.title} - Posted by ${post.author.handle}`
     : post.body.length > 150 
       ? post.body.substring(0, 150) + '...' 
       : post.body;
   
-  // Get primary image for OG image if available
   const ogImage = post.featured_image || (post.images && post.images.length > 0 ? post.images[0] : '');
   
   return (
@@ -167,19 +159,16 @@ const DetailedPostPage = () => {
         <title>{displayTitle} | Dapps</title>
         <meta name="description" content={metaDescription} />
         
-        {/* Open Graph / Facebook */}
         <meta property="og:type" content="article" />
         <meta property="og:title" content={displayTitle} />
         <meta property="og:description" content={metaDescription} />
         {ogImage && <meta property="og:image" content={ogImage} />}
         
-        {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={displayTitle} />
         <meta name="twitter:description" content={metaDescription} />
         {ogImage && <meta name="twitter:image" content={ogImage} />}
         
-        {/* Canonical URL */}
         <link rel="canonical" href={window.location.href} />
       </Helmet>
       
@@ -256,7 +245,7 @@ const DetailedPostPage = () => {
       
       <EnhancedCommentsSection
         postCode={post.code}
-        initialReplies={replies}
+        initialReplies={replies as CommentReply[]}
         initialReplyCount={replyCount}
       />
     </div>

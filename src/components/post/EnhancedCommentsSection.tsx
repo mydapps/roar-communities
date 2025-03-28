@@ -3,15 +3,14 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Reply } from '@/utils/postApi';
 import { RefreshCw, Send, Loader2 } from 'lucide-react';
-import { fetchReplies, createReply, toggleMeow } from '@/utils/commentApi';
+import { fetchReplies, toggleMeow, createReply } from '@/utils/commentApi';
 import { toast } from 'sonner';
-import { EnhancedCommentItem } from './EnhancedCommentItem';
+import { EnhancedCommentItem, CommentReply } from './EnhancedCommentItem';
 
 interface EnhancedCommentsSectionProps {
   postCode: string;
-  initialReplies?: Reply[];
+  initialReplies?: CommentReply[];
   initialReplyCount?: number;
 }
 
@@ -20,7 +19,7 @@ export const EnhancedCommentsSection = ({
   initialReplies = [],
   initialReplyCount = 0
 }: EnhancedCommentsSectionProps) => {
-  const [replies, setReplies] = useState<Reply[]>(initialReplies);
+  const [replies, setReplies] = useState<CommentReply[]>(initialReplies);
   const [replyCount, setReplyCount] = useState(initialReplyCount);
   const [newComment, setNewComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -33,7 +32,7 @@ export const EnhancedCommentsSection = ({
       const response = await fetchReplies(postCode);
       
       if (response.success && response.replies) {
-        setReplies(response.replies);
+        setReplies(response.replies as unknown as CommentReply[]);
         setReplyCount(response.total_count || response.replies.length);
       }
     } catch (error) {
@@ -66,7 +65,7 @@ export const EnhancedCommentsSection = ({
       
       // Create optimistic comment
       const tempId = Date.now();
-      const optimisticComment: Reply = {
+      const optimisticComment: CommentReply = {
         id: tempId,
         uid: 0,
         handle: userHandle,
@@ -129,7 +128,7 @@ export const EnhancedCommentsSection = ({
       const tempId = Date.now();
       
       // Create optimistic reply
-      const optimisticReply: Reply = {
+      const optimisticReply: CommentReply = {
         id: tempId,
         uid: 0,
         handle: userHandle,
@@ -195,7 +194,7 @@ export const EnhancedCommentsSection = ({
   // Handle toggling meow on a comment
   const handleToggleMeow = async (commentId: number) => {
     // Find the comment to update (could be a top-level comment or a reply)
-    const updateReplies = (repliesList: Reply[]): Reply[] => {
+    const updateReplies = (repliesList: CommentReply[]): CommentReply[] => {
       return repliesList.map(reply => {
         if (reply.id === commentId) {
           // Update this reply

@@ -3,11 +3,24 @@ import React, { useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Reply } from '@/utils/postApi';
 import { Cat, Send, ChevronDown, Loader2 } from 'lucide-react';
 
+export interface CommentReply {
+  id: number;
+  uid: number;
+  handle: string;
+  avatar_url: string;
+  content: string;
+  created_on: string;
+  time_ago: string;
+  upvotes: number;
+  meow_count: number;
+  has_meowed: boolean;
+  sub_replies?: CommentReply[];
+}
+
 interface EnhancedCommentItemProps {
-  comment: Reply;
+  comment: CommentReply;
   level: number;
   onToggleMeow: (commentId: number) => Promise<void>;
   onAddReply: (parentId: number, content: string) => Promise<void>;

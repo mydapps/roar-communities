@@ -1,22 +1,9 @@
 
 import { toast } from 'sonner';
+import { CommentReply } from '@/components/post/EnhancedCommentItem';
 
 // Base API URL
 const API_BASE_URL = 'https://api.dapps.co';
-
-export interface Reply {
-  id: number;
-  uid: number;
-  handle: string;
-  avatar_url: string;
-  content: string;
-  created_on: string;
-  time_ago: string;
-  upvotes: number;
-  meow_count: number;
-  has_meowed: boolean;
-  sub_replies?: Reply[];
-}
 
 export interface RepliesResponse {
   success: boolean;
@@ -24,7 +11,7 @@ export interface RepliesResponse {
   community: string;
   total_count: number;
   displayed_count: number;
-  replies: Reply[];
+  replies: CommentReply[];
 }
 
 export interface MeowResponse {
