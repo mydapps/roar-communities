@@ -153,7 +153,7 @@ const FeedPage = () => {
               commentCount={post.reply_count}
               shareCount={0}
               postCode={post.code}
-              roared={post.roar === 1}
+              roared={post.has_upvoted === 1}
               onRoar={() => handleRoar(post.code)}
               images={post.images || (post.image === 1 ? [post.image_url] : undefined)}
               isMirror={post.is_mirror === 1}
