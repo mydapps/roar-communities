@@ -86,14 +86,14 @@ const DetailedPostPage = () => {
     }
   };
   
-  const handleAddReply = async (parentId: number, content: string) => {
+  const handleAddReply = async (parentId: number, content: string): Promise<void> => {
     if (!post || !content.trim()) return;
     
     try {
       await createReply(post.code, content, parentId);
       // Refresh comments to show the new reply
       handleRefreshComments();
-      return true;
+      // Don't return a boolean value here, this function should return void
     } catch (error) {
       console.error('Error adding reply:', error);
       toast.error('Failed to post your comment. Please try again.');
