@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
   Home, 
@@ -9,17 +9,80 @@ import {
   Gift, 
   Settings,
   X,
-  Sparkles
+  Sparkles,
+  Plus,
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+interface Community {
+  name: string;
+  image: string;
+  membersCount: number;
+}
+
+interface CommunitiesResponse {
+  success: boolean;
+  communities: Community[];
+  pagination: {
+    totalItems: number;
+    hasNextPage: boolean;
+  };
+}
+
 const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [communities, setCommunities] = useState<Community[]>([]);
+  const [loadingCommunities, setLoadingCommunities] = useState(false);
+  const [hasCommunities, setHasCommunities] = useState(false);
+  
+  useEffect(() => {
+    const userKey = localStorage.getItem('dapps_user_key');
+    setIsLoggedIn(!!userKey);
+    
+    if (userKey) {
+      fetchCommunities(userKey);
+    }
+  }, []);
+  
+  const fetchCommunities = async (userKey: string) => {
+    setLoadingCommunities(true);
+    
+    try {
+      const response = await fetch("https://api.dapps.co/get_communities?personal=1&category=popular&page=1&limit=5", {
+        method: 'GET',
+        headers: {
+          'x-user-key': userKey
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+      
+      const data: CommunitiesResponse = await response.json();
+      
+      if (data.success && data.communities.length > 0) {
+        setCommunities(data.communities);
+        setHasCommunities(true);
+      } else {
+        setHasCommunities(false);
+      }
+    } catch (error) {
+      console.error('Error fetching communities:', error);
+      toast.error('Failed to load communities');
+    } finally {
+      setLoadingCommunities(false);
+    }
+  };
+  
   // Close sidebar when clicking outside on mobile
   useEffect(() => {
     const handleResize = () => {
@@ -87,24 +150,53 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
               <NavItem to="/account" icon={<Settings className="h-5 w-5" />} label="Account" />
             </nav>
 
-            {/* Communities section */}
-            <div className="space-y-2">
-              <div className="py-2">
-                <h4 className="text-sm font-medium text-muted-foreground mb-3">My Communities</h4>
-                <div className="space-y-1">
-                  <CommunityItem name="Ethereum Devs" img="https://github.com/shadcn.png" />
-                  <CommunityItem name="DeFi Explorers" img="https://github.com/shadcn.png" />
-                  <CommunityItem name="NFT Creators" img="https://github.com/shadcn.png" />
+            {/* Communities section - only show if logged in and has communities */}
+            {isLoggedIn && (
+              <div className="space-y-2">
+                <div className="py-2">
+                  <h4 className="text-sm font-medium text-muted-foreground mb-3">My Communities</h4>
+                  
+                  {loadingCommunities ? (
+                    <div className="flex justify-center py-4">
+                      <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
+                    </div>
+                  ) : hasCommunities ? (
+                    <>
+                      <div className="space-y-1">
+                        {communities.map((community) => (
+                          <CommunityItem 
+                            key={community.name} 
+                            name={community.name} 
+                            img={community.image} 
+                          />
+                        ))}
+                      </div>
+                      
+                      {communities.length > 4 && (
+                        <NavLink 
+                          to="/communities"
+                          className="block mt-2 text-sm text-primary hover:underline font-medium"
+                        >
+                          View more
+                        </NavLink>
+                      )}
+                    </>
+                  ) : null}
                 </div>
               </div>
-            </div>
+            )}
             
-            {/* Create community button */}
-            <div className="py-4">
-              <Button className="w-full" size="sm">
-                Create Community
-              </Button>
-            </div>
+            {/* Create community button - only show if logged in */}
+            {isLoggedIn && (
+              <div className="py-4">
+                <Button asChild className="w-full" size="sm">
+                  <NavLink to="/new-community" className="flex items-center gap-1.5">
+                    <Plus className="h-4 w-4" />
+                    Create Community
+                  </NavLink>
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </aside>
@@ -159,7 +251,15 @@ const CommunityItem = ({ name, img }: CommunityItemProps) => {
         )
       }
     >
-      <img src={img} alt={name} className="h-6 w-6 rounded-full" />
+      <img 
+        src={img || "https://dapps.co/dapps.png"} 
+        alt={name} 
+        className="h-6 w-6 rounded-full object-cover"
+        onError={(e) => {
+          // Fallback if image fails to load
+          (e.target as HTMLImageElement).src = "https://dapps.co/dapps.png";
+        }}
+      />
       <span>{name}</span>
     </NavLink>
   );

@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
@@ -171,7 +170,8 @@ export const Post = ({
       has_meowed: false
     };
     
-    setComments(prev => [newComment, ...prev]);
+    // Add new comment to the bottom of the list
+    setComments(prev => [...prev, newComment]);
   };
 
   const handleToggleComments = async () => {
