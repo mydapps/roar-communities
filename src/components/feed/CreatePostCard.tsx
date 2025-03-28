@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -97,6 +98,7 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
       
       let fullBody = content.trim();
       
+      // Add all media URLs to the post body with markdown syntax, regardless of type
       if (mediaUrls.length > 0) {
         mediaUrls.forEach(url => {
           fullBody += ` ![](${url})`;
