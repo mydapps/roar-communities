@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -16,6 +15,7 @@ interface EnhancedCommentItemProps {
   onReply: (parentId: number, content: string) => Promise<void>;
   isAuthorReplying?: boolean;
   isMobile?: boolean;
+  onOpenMobileReply?: (commentId: number, handle: string, avatar: string, content: string) => void;
 }
 
 export const EnhancedCommentItem = ({
@@ -26,7 +26,8 @@ export const EnhancedCommentItem = ({
   onMeowChange,
   onReply,
   isAuthorReplying = false,
-  isMobile = false
+  isMobile = false,
+  onOpenMobileReply
 }: EnhancedCommentItemProps) => {
   const [isReplying, setIsReplying] = useState(false);
   const [replyContent, setReplyContent] = useState('');
@@ -63,10 +64,8 @@ export const EnhancedCommentItem = ({
   };
 
   const handleReplyClick = () => {
-    if (isMobile) {
-      // On mobile, just call onReply with empty content
-      // The actual reply content will be handled by the drawer
-      onReply(comment.id, '');
+    if (isMobile && onOpenMobileReply) {
+      onOpenMobileReply(comment.id, comment.handle, comment.avatar_url, comment.content);
     } else {
       setIsReplying(!isReplying);
     }
@@ -200,6 +199,7 @@ export const EnhancedCommentItem = ({
               onReply={onReply}
               isAuthorReplying={reply.handle === postAuthorHandle}
               isMobile={isMobile}
+              onOpenMobileReply={onOpenMobileReply}
             />
           ))}
         </div>
