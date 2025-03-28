@@ -139,7 +139,7 @@ const FeedPage = () => {
               shareCount={0}
               postCode={post.code}
               roared={post.roar === 1}
-              images={!post.is_mirror && post.multiple_images === 1 ? post.images : (!post.is_mirror && post.image === 1 ? [post.image_url] : undefined)}
+              images={post.images || (post.image === 1 ? [post.image_url] : undefined)}
               isMirror={post.is_mirror === 1}
               mirrorData={post.is_mirror === 1 ? {
                 quote: post.mirror_quote || '',

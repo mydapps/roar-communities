@@ -82,6 +82,7 @@ export const Post = ({
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const isMobile = useIsMobile();
   
+  // Parse content for embedded media
   const [parsedContent, parsedImages, parsedVideos] = useMemo(() => {
     const mediaRegex = /!\[\]\((https:\/\/[^)]+)\)/g;
     const mediaUrls: string[] = [];
@@ -107,16 +108,36 @@ export const Post = ({
     return [cleanedContent, extractedImages, extractedVideos];
   }, [content]);
   
+  // Process images array to separate videos and images
+  const [mediaImages, mediaVideos] = useMemo(() => {
+    if (!images || images.length === 0) return [[], []];
+    
+    const imgArray: string[] = [];
+    const vidArray: string[] = [];
+    
+    images.forEach(url => {
+      if (url.match(/\.(mp4|webm|ogg|mov)$/i) || url.includes('/video/')) {
+        vidArray.push(url);
+      } else {
+        imgArray.push(url);
+      }
+    });
+    
+    return [imgArray, vidArray];
+  }, [images]);
+  
+  // Combine all image sources
   const allImages = useMemo(() => {
-    const combinedImages = [...(images || [])];
+    const combinedImages = [...mediaImages];
     if (parsedImages.length > 0) {
       combinedImages.push(...parsedImages);
     }
     return combinedImages.length > 0 ? combinedImages : undefined;
-  }, [images, parsedImages]);
+  }, [mediaImages, parsedImages]);
   
+  // Combine all video sources
   const allVideos = useMemo(() => {
-    const combinedVideos = [];
+    const combinedVideos = [...mediaVideos];
     if (video) {
       combinedVideos.push(video);
     }
@@ -124,8 +145,9 @@ export const Post = ({
       combinedVideos.push(...parsedVideos);
     }
     return combinedVideos.length > 0 ? combinedVideos : undefined;
-  }, [video, parsedVideos]);
+  }, [mediaVideos, video, parsedVideos]);
   
+  // Check if post has any media
   const hasMedia = useMemo(() => {
     return (allImages && allImages.length > 0) || (allVideos && allVideos.length > 0);
   }, [allImages, allVideos]);
