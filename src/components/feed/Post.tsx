@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
@@ -40,6 +41,7 @@ export interface PostProps {
   ipfs?: string;
   avatar?: string;
   hideComments?: boolean;
+  isLoggedIn?: boolean;
 }
 
 export const Post = ({ 
@@ -60,7 +62,8 @@ export const Post = ({
   mirrorData,
   ipfs,
   avatar,
-  hideComments = false
+  hideComments = false,
+  isLoggedIn
 }: PostProps) => {
   const navigate = useNavigate();
   const [localRoared, setLocalRoared] = useState(roared);
@@ -79,6 +82,9 @@ export const Post = ({
   
   const { toast } = useToast();
   
+  // Check if user is logged in if not provided as prop
+  const userIsLoggedIn = isLoggedIn !== undefined ? isLoggedIn : !!localStorage.getItem('dapps_user_key');
+  
   const ipfsHash = ipfs || postCode || `Qm${Array.from({length: 44}, () => Math.floor(Math.random() * 16).toString(16)).join('')}`;
 
   useEffect(() => {
@@ -87,6 +93,22 @@ export const Post = ({
   }, [roared, roarCount]);
 
   const handleRoar = async () => {
+    // If user is not logged in, show toast asking them to login
+    if (!userIsLoggedIn) {
+      toast({
+        title: "Login Required",
+        description: "You need to login to roar at this post",
+        variant: "destructive",
+        action: <button 
+          className="bg-primary text-white px-3 py-1 rounded text-xs"
+          onClick={() => navigate('/index')}
+        >
+          Login
+        </button>
+      });
+      return;
+    }
+    
     if (postCode) {
       const newRoaredState = !localRoared;
       setLocalRoared(newRoaredState);
@@ -156,6 +178,22 @@ export const Post = ({
   const handleAddComment = (text: string) => {
     if (!text.trim()) return;
     
+    // If user is not logged in, show toast asking them to login
+    if (!userIsLoggedIn) {
+      toast({
+        title: "Login Required",
+        description: "You need to login to comment on this post",
+        variant: "destructive",
+        action: <button 
+          className="bg-primary text-white px-3 py-1 rounded text-xs"
+          onClick={() => navigate('/index')}
+        >
+          Login
+        </button>
+      });
+      return;
+    }
+    
     // Create a temporary comment object for immediate feedback
     const newComment: CommentReply = {
       id: Date.now(),
@@ -175,6 +213,22 @@ export const Post = ({
   };
 
   const handleToggleComments = async () => {
+    // If user is not logged in, show toast asking them to login
+    if (!userIsLoggedIn) {
+      toast({
+        title: "Login Required",
+        description: "You need to login to view comments",
+        variant: "destructive",
+        action: <button 
+          className="bg-primary text-white px-3 py-1 rounded text-xs"
+          onClick={() => navigate('/index')}
+        >
+          Login
+        </button>
+      });
+      return;
+    }
+    
     setShowComments(!showComments);
     
     if (!showComments && !loadingComments && comments.length === 0 && postCode) {
@@ -241,6 +295,7 @@ export const Post = ({
         selectedImageIndex={selectedImageIndex}
         commentCount={commentCount}
         onToggleComments={handleToggleComments}
+        isLoggedIn={userIsLoggedIn}
       >
         {showComments && !hideComments && (
           <div onClick={(e) => e.stopPropagation()} className="w-full">

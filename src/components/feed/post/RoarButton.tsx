@@ -9,9 +9,10 @@ interface RoarButtonProps {
   active: boolean;
   onClick: () => void;
   postCode?: string;
+  isLoggedIn?: boolean;
 }
 
-export const RoarButton = ({ count, active, onClick, postCode }: RoarButtonProps) => {
+export const RoarButton = ({ count, active, onClick, postCode, isLoggedIn }: RoarButtonProps) => {
   const [localActive, setLocalActive] = useState(active);
   const [localCount, setLocalCount] = useState(count);
   const [roarAnimation, setRoarAnimation] = useState(false);
@@ -26,6 +27,11 @@ export const RoarButton = ({ count, active, onClick, postCode }: RoarButtonProps
   const handleClick = async () => {
     // Call the parent component's onClick handler
     onClick();
+    
+    // If user is not logged in, exit early (the parent will handle showing the login toast)
+    if (isLoggedIn === false) {
+      return;
+    }
     
     // Immediately update UI state
     const newRoarState = !localActive;

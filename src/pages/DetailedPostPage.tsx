@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Lock, MessageSquare } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
@@ -34,6 +34,9 @@ const DetailedPostPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [refreshCount, setRefreshCount] = useState(0);
   const [refreshingComments, setRefreshingComments] = useState(false);
+  
+  // Check if user is logged in
+  const isLoggedIn = !!localStorage.getItem('dapps_user_key');
   
   const loadPost = useCallback(async () => {
     if (!postId) return;
@@ -121,6 +124,17 @@ const DetailedPostPage = () => {
   const handleRoar = async () => {
     if (!post) return;
     
+    if (!isLoggedIn) {
+      toast.error('You need to login to roar at this post', {
+        description: 'Please login or sign up to interact with posts',
+        action: {
+          label: 'Login',
+          onClick: () => navigate('/index')
+        }
+      });
+      return;
+    }
+    
     try {
       await toggleRoar(post.code);
       setRefreshCount(prev => prev + 1);
@@ -132,6 +146,17 @@ const DetailedPostPage = () => {
   
   const handleAddReply = async (parentId: number, content: string): Promise<void> => {
     if (!post || !content.trim()) return;
+    
+    if (!isLoggedIn) {
+      toast.error('You need to login to comment', {
+        description: 'Please login or sign up to join the conversation',
+        action: {
+          label: 'Login',
+          onClick: () => navigate('/index')
+        }
+      });
+      return;
+    }
     
     try {
       await createReply(post.code, content, parentId);
@@ -146,6 +171,39 @@ const DetailedPostPage = () => {
   const goBack = () => {
     navigate(-1);
   };
+  
+  const navigateToLogin = () => {
+    navigate('/index');
+  };
+  
+  // Handle encrypted posts for non-logged in users
+  if (!loading && post?.is_encrypted === 1 && !isLoggedIn) {
+    return (
+      <div className="max-w-2xl mx-auto pt-8 pb-20 px-4">
+        <div className="relative backdrop-blur-md">
+          <div className="absolute inset-0 bg-background/90 flex flex-col items-center justify-center z-10">
+            <div className="bg-primary/10 p-6 rounded-full mb-4">
+              <Lock className="h-12 w-12 text-primary" />
+            </div>
+            <h2 className="text-2xl font-bold mb-2 text-center">Encrypted Content</h2>
+            <p className="text-muted-foreground mb-6 text-center max-w-md">
+              This post is encrypted and only available to logged-in members of this community.
+            </p>
+            <Button size="lg" onClick={navigateToLogin}>Login or Sign Up</Button>
+          </div>
+          
+          {/* Blurred post preview */}
+          <div className="opacity-20 pointer-events-none filter blur-md">
+            <div className="h-[300px] bg-card rounded-lg mb-8"></div>
+            <div className="space-y-4">
+              <div className="h-12 bg-card rounded-md"></div>
+              <div className="h-32 bg-card rounded-md"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
   
   if (loading) {
     return (
@@ -312,15 +370,36 @@ const DetailedPostPage = () => {
           ipfs={post.ipfs}
           disableNavigation={true}
           hideComments={true}
+          isLoggedIn={isLoggedIn}
         />
       </div>
       
-      <EnhancedCommentsSection
-        postCode={post.code}
-        initialReplies={replies}
-        initialReplyCount={replyCount}
-        postAuthorHandle={post.author?.handle || (post.handle || '')}
-      />
+      {isLoggedIn ? (
+        <EnhancedCommentsSection
+          postCode={post.code}
+          initialReplies={replies}
+          initialReplyCount={replyCount}
+          postAuthorHandle={post.author?.handle || (post.handle || '')}
+        />
+      ) : (
+        <div className="relative backdrop-blur-sm py-10">
+          <div className="absolute inset-0 bg-background/70 flex flex-col items-center justify-center z-10">
+            <div className="bg-primary/10 p-4 rounded-full mb-4">
+              <MessageSquare className="h-8 w-8 text-primary" />
+            </div>
+            <h3 className="text-xl font-bold mb-2">Join the conversation</h3>
+            <p className="text-muted-foreground mb-6 text-center max-w-md">
+              Login or sign up to view and participate in the discussion
+            </p>
+            <Button onClick={navigateToLogin}>Login or Sign Up</Button>
+          </div>
+          
+          {/* Blurred comments preview */}
+          <div className="opacity-20 pointer-events-none filter blur-md">
+            <div className="h-[200px] bg-card rounded-lg"></div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

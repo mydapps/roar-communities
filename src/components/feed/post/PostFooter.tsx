@@ -30,6 +30,7 @@ interface PostFooterProps {
   children?: React.ReactNode;
   commentCount: number;
   onToggleComments: () => void;
+  isLoggedIn?: boolean;
 }
 
 export const PostFooter: React.FC<PostFooterProps> = ({
@@ -53,7 +54,8 @@ export const PostFooter: React.FC<PostFooterProps> = ({
   selectedImageIndex,
   children,
   commentCount,
-  onToggleComments
+  onToggleComments,
+  isLoggedIn
 }) => {
   return (
     <CardFooter className="pt-0 flex justify-between flex-col">
@@ -64,6 +66,7 @@ export const PostFooter: React.FC<PostFooterProps> = ({
             active={localRoared} 
             onClick={handleRoar}
             postCode={postCode}
+            isLoggedIn={isLoggedIn}
           />
           
           <CommentButton 
