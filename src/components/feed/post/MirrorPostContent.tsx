@@ -2,8 +2,7 @@
 import React, { useMemo } from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
-import { Image as ImageIcon, Film } from 'lucide-react';
-import { ImageCarousel } from './ImageCarousel';
+import { MediaCarousel } from './MediaCarousel';
 
 interface MirrorPostContentProps {
   mirrorData: {
@@ -67,28 +66,32 @@ export const MirrorPostContent = ({ mirrorData }: MirrorPostContentProps) => {
     return [imgArray, vidArray];
   }, [mirrorData.originalImages]);
   
-  // Combine all image sources
-  const allImages = useMemo(() => {
-    const combinedImages = [...mediaImages];
-    if (parsedImages.length > 0) {
-      combinedImages.push(...parsedImages);
-    }
-    return combinedImages.length > 0 ? combinedImages : undefined;
-  }, [mediaImages, parsedImages]);
-  
-  // Combine all video sources
-  const allVideos = useMemo(() => {
-    const combinedVideos = [...mediaVideos];
-    if (parsedVideos && parsedVideos.length > 0) {
-      combinedVideos.push(...parsedVideos);
-    }
-    return combinedVideos.length > 0 ? combinedVideos : undefined;
-  }, [mediaVideos, parsedVideos]);
-  
-  // Check if post has any media
-  const hasMedia = useMemo(() => {
-    return (allImages && allImages.length > 0) || (allVideos && allVideos.length > 0);
-  }, [allImages, allVideos]);
+  // Combine all media sources into a single array of media items
+  const allMedia = useMemo(() => {
+    const media: { type: 'image' | 'video', url: string }[] = [];
+    
+    // Add images from original images array
+    mediaImages.forEach(url => {
+      media.push({ type: 'image', url });
+    });
+    
+    // Add videos from original images array
+    mediaVideos.forEach(url => {
+      media.push({ type: 'video', url });
+    });
+    
+    // Add images parsed from markdown
+    parsedImages.forEach(url => {
+      media.push({ type: 'image', url });
+    });
+    
+    // Add videos parsed from markdown
+    parsedVideos.forEach(url => {
+      media.push({ type: 'video', url });
+    });
+    
+    return media.length > 0 ? media : undefined;
+  }, [mediaImages, mediaVideos, parsedImages, parsedVideos]);
   
   // Simple function to handle image click (could be expanded for a fullscreen viewer)
   const handleImageClick = (imageSrc: string) => {
@@ -121,51 +124,12 @@ export const MirrorPostContent = ({ mirrorData }: MirrorPostContentProps) => {
             <p className="text-sm mt-1 break-words">{cleanedBody}</p>
           )}
           
-          {hasMedia && (
-            <div className="mt-2" data-media-element="true">
-              {/* Header for media section when both image and video are present */}
-              {allImages && allVideos && (
-                <div className="flex items-center gap-2 mb-2 text-xs font-medium text-muted-foreground">
-                  {allImages && allImages.length > 0 && (
-                    <div className="flex items-center gap-1">
-                      <ImageIcon className="h-3.5 w-3.5" />
-                      <span>{allImages.length} {allImages.length === 1 ? 'Image' : 'Images'}</span>
-                    </div>
-                  )}
-                  {allVideos && allVideos.length > 0 && (
-                    <div className="flex items-center gap-1 ml-3">
-                      <Film className="h-3.5 w-3.5" />
-                      <span>{allVideos.length} {allVideos.length === 1 ? 'Video' : 'Videos'}</span>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Display images */}
-              {allImages && allImages.length > 0 && (
-                <div className="mb-3">
-                  <AspectRatio ratio={16/9} className="overflow-hidden rounded-md">
-                    <ImageCarousel images={allImages} onImageClick={handleImageClick} />
-                  </AspectRatio>
-                </div>
-              )}
-              
-              {/* Display videos */}
-              {allVideos && allVideos.length > 0 && (
-                <div className="space-y-3">
-                  {allVideos.map((videoUrl, index) => (
-                    <AspectRatio key={`video-${index}`} ratio={16/9} className="overflow-hidden rounded-md">
-                      <video 
-                        src={videoUrl} 
-                        controls 
-                        className="w-full h-full object-cover"
-                        preload="metadata"
-                        poster={`${videoUrl}?poster=true`}
-                      />
-                    </AspectRatio>
-                  ))}
-                </div>
-              )}
+          {allMedia && allMedia.length > 0 && (
+            <div className="mt-2">
+              <MediaCarousel 
+                media={allMedia} 
+                onImageClick={handleImageClick} 
+              />
             </div>
           )}
         </div>

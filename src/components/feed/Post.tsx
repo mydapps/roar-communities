@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
@@ -7,9 +6,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Loader2, Image as ImageIcon, Film } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 import { ImageCarousel } from './post/ImageCarousel';
+import { MediaCarousel } from './post/MediaCarousel';
 import { ImageViewer } from './post/ImageViewer';
 import { RoarButton } from './post/RoarButton';
 import { CommentButton } from './post/CommentButton';
@@ -82,7 +82,6 @@ export const Post = ({
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const isMobile = useIsMobile();
   
-  // Parse content for embedded media
   const [parsedContent, parsedImages, parsedVideos] = useMemo(() => {
     const mediaRegex = /!\[\]\((https:\/\/[^)]+)\)/g;
     const mediaUrls: string[] = [];
@@ -108,7 +107,6 @@ export const Post = ({
     return [cleanedContent, extractedImages, extractedVideos];
   }, [content]);
   
-  // Process images array to separate videos and images
   const [mediaImages, mediaVideos] = useMemo(() => {
     if (!images || images.length === 0) return [[], []];
     
@@ -126,31 +124,45 @@ export const Post = ({
     return [imgArray, vidArray];
   }, [images]);
   
-  // Combine all image sources
-  const allImages = useMemo(() => {
-    const combinedImages = [...mediaImages];
-    if (parsedImages.length > 0) {
-      combinedImages.push(...parsedImages);
-    }
-    return combinedImages.length > 0 ? combinedImages : undefined;
-  }, [mediaImages, parsedImages]);
-  
-  // Combine all video sources
-  const allVideos = useMemo(() => {
-    const combinedVideos = [...mediaVideos];
+  const allMedia = useMemo(() => {
+    const media: { type: 'image' | 'video', url: string }[] = [];
+    
+    mediaImages.forEach(url => {
+      media.push({ type: 'image', url });
+    });
+    
+    mediaVideos.forEach(url => {
+      media.push({ type: 'video', url });
+    });
+    
     if (video) {
-      combinedVideos.push(video);
+      media.push({ type: 'video', url: video });
     }
-    if (parsedVideos && parsedVideos.length > 0) {
-      combinedVideos.push(...parsedVideos);
-    }
-    return combinedVideos.length > 0 ? combinedVideos : undefined;
-  }, [mediaVideos, video, parsedVideos]);
+    
+    parsedImages.forEach(url => {
+      media.push({ type: 'image', url });
+    });
+    
+    parsedVideos.forEach(url => {
+      media.push({ type: 'video', url });
+    });
+    
+    return media.length > 0 ? media : undefined;
+  }, [mediaImages, mediaVideos, video, parsedImages, parsedVideos]);
   
-  // Check if post has any media
+  const allImages = useMemo(() => {
+    if (!allMedia) return undefined;
+    
+    const images = allMedia
+      .filter(item => item.type === 'image')
+      .map(item => item.url);
+      
+    return images.length > 0 ? images : undefined;
+  }, [allMedia]);
+  
   const hasMedia = useMemo(() => {
-    return (allImages && allImages.length > 0) || (allVideos && allVideos.length > 0);
-  }, [allImages, allVideos]);
+    return allMedia && allMedia.length > 0;
+  }, [allMedia]);
   
   const { toast } = useToast();
   
@@ -306,50 +318,11 @@ export const Post = ({
         )}
         
         {!isMirror && hasMedia && (
-          <div className="mt-3" data-media-element="true">
-            {/* Header for media section when both image and video are present */}
-            {allImages && allVideos && (
-              <div className="flex items-center gap-2 mb-2 text-xs font-medium text-muted-foreground">
-                {allImages && allImages.length > 0 && (
-                  <div className="flex items-center gap-1">
-                    <ImageIcon className="h-3.5 w-3.5" />
-                    <span>{allImages.length} {allImages.length === 1 ? 'Image' : 'Images'}</span>
-                  </div>
-                )}
-                {allVideos && allVideos.length > 0 && (
-                  <div className="flex items-center gap-1 ml-3">
-                    <Film className="h-3.5 w-3.5" />
-                    <span>{allVideos.length} {allVideos.length === 1 ? 'Video' : 'Videos'}</span>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Display images */}
-            {allImages && allImages.length > 0 && (
-              <div className="mb-3">
-                <AspectRatio ratio={16/9} className="overflow-hidden rounded-md">
-                  <ImageCarousel images={allImages} onImageClick={handleImageClick} />
-                </AspectRatio>
-              </div>
-            )}
-            
-            {/* Display videos */}
-            {allVideos && allVideos.length > 0 && (
-              <div className="space-y-3">
-                {allVideos.map((videoUrl, index) => (
-                  <AspectRatio key={`video-${index}`} ratio={16/9} className="overflow-hidden rounded-md">
-                    <video 
-                      src={videoUrl} 
-                      controls 
-                      className="w-full h-full object-cover"
-                      preload="metadata"
-                      poster={`${videoUrl}?poster=true`}
-                    />
-                  </AspectRatio>
-                ))}
-              </div>
-            )}
+          <div className="mt-3">
+            <MediaCarousel 
+              media={allMedia!} 
+              onImageClick={handleImageClick} 
+            />
           </div>
         )}
       </CardContent>
