@@ -94,7 +94,6 @@ export const PostFooter: React.FC<PostFooterProps> = ({
           postCode={postCode}
           community={community}
           onShareSuccess={onShareSuccess}
-          onClose={() => setShareSheetOpen(false)}
         />
       </div>
       

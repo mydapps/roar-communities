@@ -73,6 +73,7 @@ export const Post = ({
   const [shareSheetOpen, setShareSheetOpen] = useState(false);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [ipfsSheetOpen, setIpfsSheetOpen] = useState(false);
   const isMobile = useIsMobile();
   
   const { parsedContent, allMedia, allImages, hasMedia } = usePostMedia(content, images, video);
@@ -103,6 +104,15 @@ export const Post = ({
         variant: "destructive"
       });
     }
+  };
+
+  const handleVerifyIpfs = () => {
+    // Implementation for IPFS verification
+    console.log(`Verifying IPFS hash: ${ipfsHash}`);
+    toast({
+      title: "IPFS Verification",
+      description: `Verifying content with IPFS hash: ${ipfsHash}`,
+    });
   };
 
   const handleImageClick = (imageSrc: string) => {
@@ -196,6 +206,9 @@ export const Post = ({
         timeAgo={timeAgo}
         avatar={avatar}
         ipfsHash={ipfsHash}
+        onVerifyIpfs={handleVerifyIpfs}
+        ipfsSheetOpen={ipfsSheetOpen}
+        setIpfsSheetOpen={setIpfsSheetOpen}
       />
       
       <PostContent 

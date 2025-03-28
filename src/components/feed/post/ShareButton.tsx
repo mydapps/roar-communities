@@ -39,6 +39,10 @@ export const ShareButton = ({
     onOpenChange(true);
   };
   
+  const handleClose = () => {
+    onOpenChange(false);
+  };
+  
   if (mobile) {
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
@@ -66,7 +70,7 @@ export const ShareButton = ({
             postCode={postCode}
             community={community}
             onShareSuccess={onShareSuccess}
-            onClose={() => onOpenChange(false)}
+            onClose={handleClose}
           />
         </DrawerContent>
       </Drawer>
@@ -99,7 +103,7 @@ export const ShareButton = ({
           postCode={postCode}
           community={community}
           onShareSuccess={onShareSuccess}
-          onClose={() => onOpenChange(false)}
+          onClose={handleClose}
         />
       </SheetContent>
     </Sheet>

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -12,9 +12,9 @@ interface PostHeaderProps {
   timeAgo: string;
   avatar?: string;
   ipfsHash: string;
-  onVerifyIpfs: () => void;
-  ipfsSheetOpen: boolean;
-  setIpfsSheetOpen: (open: boolean) => void;
+  onVerifyIpfs?: () => void;
+  ipfsSheetOpen?: boolean;
+  setIpfsSheetOpen?: (open: boolean) => void;
 }
 
 export const PostHeader: React.FC<PostHeaderProps> = ({
@@ -23,9 +23,9 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
   timeAgo,
   avatar,
   ipfsHash,
-  onVerifyIpfs,
-  ipfsSheetOpen,
-  setIpfsSheetOpen
+  onVerifyIpfs = () => {},
+  ipfsSheetOpen = false,
+  setIpfsSheetOpen = () => {}
 }) => {
   const navigate = useNavigate();
 
