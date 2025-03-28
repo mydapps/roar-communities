@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
 import MobileBottomNav from './MobileBottomNav';
@@ -12,6 +12,13 @@ const MainLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useIsMobile();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  
+  useEffect(() => {
+    // Check if user is logged in
+    const userKey = localStorage.getItem('dapps_user_key');
+    setIsLoggedIn(!!userKey);
+  }, [location]);
   
   const handleRefresh = async () => {
     // Simulate a refresh delay
@@ -29,9 +36,11 @@ const MainLayout = () => {
       
       {/* Main content area - modified for proper sidebar scrolling */}
       <div className="flex flex-1">
-        <div className="hidden md:block"> 
-          <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        </div>
+        {isLoggedIn && (
+          <div className="hidden md:block"> 
+            <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+          </div>
+        )}
         
         <div className="flex-1 overflow-auto">
           <PullToRefresh 
@@ -47,7 +56,7 @@ const MainLayout = () => {
         </div>
       </div>
       
-      {isMobile && <MobileBottomNav />}
+      {isMobile && isLoggedIn && <MobileBottomNav />}
     </div>
   );
 };

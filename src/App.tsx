@@ -19,6 +19,7 @@ import NotFound from '@/pages/NotFound';
 import AvatarHandlePage from '@/pages/AvatarHandlePage';
 import PrivyAuthProvider from '@/components/onboarding/PrivyAuthProvider';
 import { Toaster } from 'sonner';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
 
 function App() {
   return (
@@ -26,26 +27,64 @@ function App() {
       <PrivyAuthProvider>
         <BrowserRouter>
           <Routes>
-            {/* Special routes without main layout */}
+            {/* Public routes - accessible to everyone */}
             <Route path="/" element={<Index />} />
+            <Route path="/index" element={<Index />} />
             <Route path="/invite/:code" element={<Index />} />
             <Route path="request-invite" element={<RequestInvitePage />} />
             <Route path="avatar-handle" element={<AvatarHandlePage />} />
+            <Route path="login" element={<LoginPage />} />
             
-            {/* Routes with main layout */}
+            {/* Mixed access routes with MainLayout */}
             <Route element={<MainLayout />}>
-              <Route path="feed" element={<FeedPage />} />
-              <Route path="communities" element={<CommunitiesPage />} />
-              <Route path="c/:id" element={<CommunityPage />} />
+              {/* Public routes within MainLayout */}
               <Route path="c/:communityId/:postId" element={<DetailedPostPage />} />
               <Route path=":handle/:postId" element={<DetailedPostPage />} />
               <Route path="post/:postId" element={<DetailedPostPage />} />
-              <Route path="u/:username" element={<AccountPage />} />
-              <Route path="my-shares" element={<MySharesPage />} />
-              <Route path="account" element={<AccountPage />} />
-              <Route path="search" element={<SearchPage />} />
-              <Route path="referral" element={<ReferralPage />} />
-              <Route path="login" element={<LoginPage />} />
+              
+              {/* Protected routes - require authentication */}
+              <Route path="feed" element={
+                <ProtectedRoute>
+                  <FeedPage />
+                </ProtectedRoute>
+              } />
+              <Route path="communities" element={
+                <ProtectedRoute>
+                  <CommunitiesPage />
+                </ProtectedRoute>
+              } />
+              <Route path="c/:id" element={
+                <ProtectedRoute>
+                  <CommunityPage />
+                </ProtectedRoute>
+              } />
+              <Route path="u/:username" element={
+                <ProtectedRoute>
+                  <AccountPage />
+                </ProtectedRoute>
+              } />
+              <Route path="my-shares" element={
+                <ProtectedRoute>
+                  <MySharesPage />
+                </ProtectedRoute>
+              } />
+              <Route path="account" element={
+                <ProtectedRoute>
+                  <AccountPage />
+                </ProtectedRoute>
+              } />
+              <Route path="search" element={
+                <ProtectedRoute>
+                  <SearchPage />
+                </ProtectedRoute>
+              } />
+              <Route path="referral" element={
+                <ProtectedRoute>
+                  <ReferralPage />
+                </ProtectedRoute>
+              } />
+              
+              {/* 404 route */}
               <Route path="*" element={<NotFound />} />
             </Route>
           </Routes>
