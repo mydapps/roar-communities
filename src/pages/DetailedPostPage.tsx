@@ -177,7 +177,8 @@ const DetailedPostPage = () => {
   };
   
   // Handle encrypted posts for non-logged in users
-  if (!loading && post?.is_encrypted && post.is_encrypted !== 0 && !isLoggedIn) {
+  // Properly check is_encrypted, which could be either a boolean or a number
+  if (!loading && post && post.is_encrypted && !isLoggedIn) {
     return (
       <div className="max-w-2xl mx-auto pt-8 pb-20 px-4">
         <div className="relative backdrop-blur-md">

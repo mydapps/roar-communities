@@ -56,7 +56,7 @@ export interface PostDetails {
   has_upvoted: boolean;
   featured_image?: string;
   images?: string[];
-  is_encrypted: boolean;
+  is_encrypted: boolean | number;  // Updated to allow both boolean and number
   is_mirror: number;
   original_post_code?: string;
   original_community?: string;
