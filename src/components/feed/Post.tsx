@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
@@ -6,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Image as ImageIcon, Film } from 'lucide-react';
 
 import { ImageCarousel } from './post/ImageCarousel';
 import { ImageViewer } from './post/ImageViewer';
@@ -113,6 +114,21 @@ export const Post = ({
     }
     return combinedImages.length > 0 ? combinedImages : undefined;
   }, [images, parsedImages]);
+  
+  const allVideos = useMemo(() => {
+    const combinedVideos = [];
+    if (video) {
+      combinedVideos.push(video);
+    }
+    if (parsedVideos && parsedVideos.length > 0) {
+      combinedVideos.push(...parsedVideos);
+    }
+    return combinedVideos.length > 0 ? combinedVideos : undefined;
+  }, [video, parsedVideos]);
+  
+  const hasMedia = useMemo(() => {
+    return (allImages && allImages.length > 0) || (allVideos && allVideos.length > 0);
+  }, [allImages, allVideos]);
   
   const { toast } = useToast();
   
@@ -267,37 +283,51 @@ export const Post = ({
           />
         )}
         
-        {!isMirror && allImages && allImages.length > 0 && (
-          <div className="mt-3 relative" data-media-element="true">
-            <AspectRatio ratio={16/9} className="overflow-hidden rounded-md">
-              <ImageCarousel images={allImages} onImageClick={handleImageClick} />
-            </AspectRatio>
-          </div>
-        )}
-        
-        {!isMirror && (parsedVideos && parsedVideos.length > 0 || video) && (
-          <div className="mt-3 space-y-3" data-media-element="true">
-            {video && (
-              <AspectRatio ratio={16/9} className="overflow-hidden rounded-md">
-                <video 
-                  src={video} 
-                  controls 
-                  className="w-full h-full object-cover"
-                  preload="metadata"
-                />
-              </AspectRatio>
+        {!isMirror && hasMedia && (
+          <div className="mt-3" data-media-element="true">
+            {/* Header for media section when both image and video are present */}
+            {allImages && allVideos && (
+              <div className="flex items-center gap-2 mb-2 text-xs font-medium text-muted-foreground">
+                {allImages && allImages.length > 0 && (
+                  <div className="flex items-center gap-1">
+                    <ImageIcon className="h-3.5 w-3.5" />
+                    <span>{allImages.length} {allImages.length === 1 ? 'Image' : 'Images'}</span>
+                  </div>
+                )}
+                {allVideos && allVideos.length > 0 && (
+                  <div className="flex items-center gap-1 ml-3">
+                    <Film className="h-3.5 w-3.5" />
+                    <span>{allVideos.length} {allVideos.length === 1 ? 'Video' : 'Videos'}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Display images */}
+            {allImages && allImages.length > 0 && (
+              <div className="mb-3">
+                <AspectRatio ratio={16/9} className="overflow-hidden rounded-md">
+                  <ImageCarousel images={allImages} onImageClick={handleImageClick} />
+                </AspectRatio>
+              </div>
             )}
             
-            {parsedVideos && parsedVideos.map((videoUrl, index) => (
-              <AspectRatio key={`video-${index}`} ratio={16/9} className="overflow-hidden rounded-md">
-                <video 
-                  src={videoUrl} 
-                  controls 
-                  className="w-full h-full object-cover"
-                  preload="metadata"
-                />
-              </AspectRatio>
-            ))}
+            {/* Display videos */}
+            {allVideos && allVideos.length > 0 && (
+              <div className="space-y-3">
+                {allVideos.map((videoUrl, index) => (
+                  <AspectRatio key={`video-${index}`} ratio={16/9} className="overflow-hidden rounded-md">
+                    <video 
+                      src={videoUrl} 
+                      controls 
+                      className="w-full h-full object-cover"
+                      preload="metadata"
+                      poster={`${videoUrl}?poster=true`}
+                    />
+                  </AspectRatio>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </CardContent>
