@@ -11,7 +11,7 @@ import { PostContent } from './post/PostContent';
 import { PostFooter } from './post/PostFooter';
 import { usePostMedia } from './post/usePostMedia';
 import { CommentSection } from './post/CommentSection';
-import { CommentButton } from './post/CommentButton';
+import { fetchReplies, CommentReply } from '@/utils/commentApi';
 
 export interface PostProps {
   username: string;
@@ -68,11 +68,8 @@ export const Post = ({
   const [localRoarCount, setLocalRoarCount] = useState(roarCount);
   const [showComments, setShowComments] = useState(false);
   const [loadingComments, setLoadingComments] = useState(false);
-  const [newComment, setNewComment] = useState('');
-  const [comments, setComments] = useState<{id: string, user: string, text: string, timeAgo: string}[]>([]);
+  const [comments, setComments] = useState<CommentReply[]>([]);
   const [mirrorSheetOpen, setMirrorSheetOpen] = useState(false);
-  const [selectedCommunity, setSelectedCommunity] = useState<string | null>(null);
-  const [ipfsSheetOpen, setIpfsSheetOpen] = useState(false);
   const [shareSheetOpen, setShareSheetOpen] = useState(false);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
@@ -106,10 +103,6 @@ export const Post = ({
         variant: "destructive"
       });
     }
-  };
-
-  const handleVerifyOnIpfs = () => {
-    window.open(`https://ipfs.io/ipfs/${ipfsHash}`, '_blank');
   };
 
   const handleImageClick = (imageSrc: string) => {
@@ -151,29 +144,43 @@ export const Post = ({
     Math.floor(Math.random() * 36).toString(36)).join('')
   ).current;
 
-  // Add the handleAddComment function
   const handleAddComment = (text: string) => {
     if (!text.trim()) return;
     
-    const newCommentObj = {
-      id: `comment-${Date.now()}`,
-      user: 'You',
-      text: text,
-      timeAgo: 'just now'
+    // Create a temporary comment object for immediate feedback
+    const newComment: CommentReply = {
+      id: Date.now(),
+      uid: 0,
+      handle: 'You',
+      avatar_url: localStorage.getItem('dapps_user_avatar') || 'default',
+      content: text,
+      created_on: new Date().toISOString(),
+      time_ago: 'just now',
+      upvotes: 0,
+      meow_count: 0,
+      has_meowed: false
     };
     
-    setComments(prev => [newCommentObj, ...prev]);
-    setNewComment('');
+    setComments(prev => [newComment, ...prev]);
   };
 
-  const handleToggleComments = () => {
+  const handleToggleComments = async () => {
     setShowComments(!showComments);
-    if (!showComments && !loadingComments && comments.length === 0) {
+    
+    if (!showComments && !loadingComments && comments.length === 0 && postCode) {
       setLoadingComments(true);
-      // Simulate loading comments
-      setTimeout(() => {
+      
+      try {
+        const response = await fetchReplies(postCode, 3);
+        
+        if (response.success) {
+          setComments(response.replies);
+        }
+      } catch (error) {
+        console.error('Error fetching comments:', error);
+      } finally {
         setLoadingComments(false);
-      }, 1000);
+      }
     }
   };
 
@@ -189,9 +196,6 @@ export const Post = ({
         timeAgo={timeAgo}
         avatar={avatar}
         ipfsHash={ipfsHash}
-        onVerifyIpfs={handleVerifyOnIpfs}
-        ipfsSheetOpen={ipfsSheetOpen}
-        setIpfsSheetOpen={setIpfsSheetOpen}
       />
       
       <PostContent 
@@ -222,21 +226,14 @@ export const Post = ({
         imageViewerOpen={imageViewerOpen}
         setImageViewerOpen={setImageViewerOpen}
         selectedImageIndex={selectedImageIndex}
+        commentCount={commentCount}
+        onToggleComments={handleToggleComments}
       >
-        {!hideComments && !disableNavigation && (
-          <div className="flex items-center justify-between w-full mt-3">
-            <CommentButton 
-              count={commentCount} 
-              onClick={handleToggleComments} 
-            />
-          </div>
-        )}
-        
-        {!hideComments && showComments && (
+        {showComments && !hideComments && (
           <div onClick={(e) => e.stopPropagation()} className="w-full">
             {loadingComments ? (
-              <div className="w-full py-8 flex justify-center">
-                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+              <div className="w-full py-4 flex justify-center">
+                <Loader2 className="w-6 h-6 text-primary animate-spin" />
               </div>
             ) : (
               <CommentSection 

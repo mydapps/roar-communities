@@ -4,6 +4,7 @@ import { CardFooter } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import { RoarButton } from './RoarButton';
 import { MirrorButton } from './MirrorButton';
+import { CommentButton } from './CommentButton';
 import { ShareButton } from './ShareButton';
 import { ImageViewer } from './ImageViewer';
 
@@ -27,6 +28,8 @@ interface PostFooterProps {
   setImageViewerOpen: (open: boolean) => void;
   selectedImageIndex: number;
   children?: React.ReactNode;
+  commentCount: number;
+  onToggleComments: () => void;
 }
 
 export const PostFooter: React.FC<PostFooterProps> = ({
@@ -48,7 +51,9 @@ export const PostFooter: React.FC<PostFooterProps> = ({
   imageViewerOpen,
   setImageViewerOpen,
   selectedImageIndex,
-  children
+  children,
+  commentCount,
+  onToggleComments
 }) => {
   return (
     <CardFooter className="pt-0 flex justify-between flex-col">
@@ -59,6 +64,11 @@ export const PostFooter: React.FC<PostFooterProps> = ({
             active={localRoared} 
             onClick={handleRoar}
             postCode={postCode}
+          />
+          
+          <CommentButton 
+            count={commentCount} 
+            onClick={onToggleComments} 
           />
           
           <MirrorButton 
@@ -84,6 +94,7 @@ export const PostFooter: React.FC<PostFooterProps> = ({
           postCode={postCode}
           community={community}
           onShareSuccess={onShareSuccess}
+          onClose={() => setShareSheetOpen(false)}
         />
       </div>
       

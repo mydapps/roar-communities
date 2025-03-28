@@ -1,365 +1,133 @@
-import React, { useState, useEffect } from 'react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Send, Cat, Loader2 } from 'lucide-react';
-import { Textarea } from '@/components/ui/textarea';
-import { toast } from 'sonner';
-import { fetchReplies, toggleMeow, createReply, CommentReply } from '@/utils/commentApi';
 
-interface CommentSectionProps {
-  comments: Array<{
-    id: string;
-    user: string;
-    text: string;
-    timeAgo: string;
-  }>;
-  postCode: string;
-  onAddComment: (text: string) => void;
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Send, Loader2 } from 'lucide-react';
+import { CommentReply, createReply } from '@/utils/commentApi';
+import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
+
+interface CommentItemProps {
+  user: string;
+  text: string;
+  timeAgo: string;
+  avatarUrl?: string;
 }
 
-const MeowButton = ({ 
-  comment, 
-  onMeow 
-}: { 
-  comment: CommentReply, 
-  onMeow: (commentId: number) => void 
-}) => {
-  const [meowAnimating, setMeowAnimating] = useState(false);
-  const [meowWavesAnimation, setMeowWavesAnimation] = useState(false);
-  const [meowTextAnimating, setMeowTextAnimating] = useState(false);
-  
-  const handleMeowClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    if (!comment.has_meowed) {
-      setMeowWavesAnimation(true);
-      setMeowAnimating(true);
-      setMeowTextAnimating(true);
-      
-      setTimeout(() => setMeowWavesAnimation(false), 1000);
-      setTimeout(() => setMeowAnimating(false), 1200);
-      setTimeout(() => setMeowTextAnimating(false), 1500);
-    } else {
-      setMeowWavesAnimation(false);
-      setMeowAnimating(false);
-      setMeowTextAnimating(false);
-    }
-    
-    onMeow(comment.id);
-  };
-  
+const CommentItem: React.FC<CommentItemProps> = ({ user, text, timeAgo, avatarUrl }) => {
   return (
-    <Button 
-      variant={comment.has_meowed ? "meow-active" : "meow"} 
-      size="sm" 
-      onClick={handleMeowClick}
-      className="h-8 px-2 text-xs gap-1.5 rounded-full"
-    >
-      <div className="relative">
-        <div className={`transition-all duration-300 ${meowAnimating ? 'scale-125' : ''}`}>
-          <Cat className={`h-3.5 w-3.5 ${comment.has_meowed ? 'text-amber-500' : ''}`} />
-        </div>
-        {meowWavesAnimation && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="animate-ping absolute h-5 w-5 rounded-full bg-amber-500/30"></div>
-            <div className="animate-ping delay-75 absolute h-7 w-7 rounded-full bg-amber-500/20"></div>
-          </div>
-        )}
-      </div>
-      <span className={comment.has_meowed ? 'text-amber-500 font-medium' : ''}>
-        {meowTextAnimating ? "Meow!" : comment.meow_count}
-      </span>
-    </Button>
-  );
-};
-
-const CommentItem = ({ 
-  comment, 
-  onMeow 
-}: { 
-  comment: CommentReply, 
-  onMeow: (commentId: number) => void 
-}) => {
-  const formatUsername = (name: string) => {
-    return '@' + name.split('.')[0];
-  };
-  
-  const getAvatarUrl = (avatarPath: string) => {
-    if (avatarPath.includes('https://img.dapps.co/avatar/')) {
-      const parts = avatarPath.split('https://img.dapps.co/avatar/');
-      return parts[parts.length - 1].replace('.svg.svg', '.svg');
-    }
-    return avatarPath;
-  };
-  
-  return (
-    <div key={comment.id} className="flex gap-3 w-full mb-4">
-      <Avatar className="h-8 w-8 flex-shrink-0">
-        <AvatarImage src={`https://img.dapps.co/avatar/${getAvatarUrl(comment.avatar_url)}`} />
-        <AvatarFallback>{comment.handle[0].toUpperCase()}</AvatarFallback>
+    <div className="flex gap-3 py-3">
+      <Avatar className="h-8 w-8 shrink-0">
+        <AvatarImage src={avatarUrl || `https://img.dapps.co/avatar/default.svg`} />
+        <AvatarFallback>{user[0]?.toUpperCase()}</AvatarFallback>
       </Avatar>
       <div className="flex-1">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="font-medium text-sm">
-            {comment.handle === 'you' ? 'you' : formatUsername(comment.handle)}
-          </span>
-          <span className="text-muted-foreground text-xs">·</span>
-          <span className="text-muted-foreground text-xs">{comment.time_ago}</span>
+        <div className="flex items-baseline gap-2">
+          <span className="font-medium text-sm">{user}</span>
+          <span className="text-xs text-muted-foreground">{timeAgo}</span>
         </div>
-        <p className="text-sm">{comment.content}</p>
-        
-        <div className="mt-2 flex items-center gap-2">
-          <MeowButton comment={comment} onMeow={onMeow} />
-        </div>
-        
-        {comment.sub_replies && comment.sub_replies.length > 0 && (
-          <div className="ml-4 mt-3 border-l-2 border-primary/10 pl-4 space-y-4">
-            {comment.sub_replies.map(reply => (
-              <CommentItem key={reply.id} comment={reply} onMeow={onMeow} />
-            ))}
-          </div>
-        )}
+        <p className="text-sm mt-1">{text}</p>
       </div>
     </div>
   );
 };
 
-export const CommentSection = ({ comments: initialComments, postCode, onAddComment }: CommentSectionProps) => {
+interface CommentSectionProps {
+  comments: CommentReply[];
+  postCode: string;
+  onAddComment: (text: string) => void;
+}
+
+export const CommentSection: React.FC<CommentSectionProps> = ({ 
+  comments, 
+  postCode,
+  onAddComment 
+}) => {
   const [newComment, setNewComment] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [apiComments, setApiComments] = useState<CommentReply[]>([]);
-  const [submittingComment, setSubmittingComment] = useState(false);
-  
-  useEffect(() => {
-    if (postCode) {
-      loadCommentsFromApi();
-    }
-  }, [postCode]);
-  
-  const loadCommentsFromApi = async () => {
-    if (!postCode) return;
-    
-    setLoading(true);
-    try {
-      const response = await fetchReplies(postCode);
-      
-      if (response.success && response.replies) {
-        setApiComments(response.replies);
-      }
-    } catch (error) {
-      console.error('Error loading comments:', error);
-      toast.error('Could not load comments. Please try again later.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [submitting, setSubmitting] = useState(false);
+  const navigate = useNavigate();
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     if (!newComment.trim()) return;
     
-    const userAvatar = localStorage.getItem('dapps_user_avatar') || 'default';
-    const userHandle = localStorage.getItem('dapps_user_handle') || 'you';
-    
-    const tempId = Date.now();
-    
-    const tempComment: CommentReply = {
-      id: tempId,
-      uid: 0,
-      handle: userHandle,
-      avatar_url: userAvatar,
-      content: newComment,
-      created_on: new Date().toISOString(),
-      time_ago: 'just now',
-      upvotes: 0,
-      meow_count: 0,
-      has_meowed: false,
-    };
-    
-    setApiComments(prev => [...prev, tempComment]);
-    setNewComment('');
-    setSubmittingComment(true);
+    setSubmitting(true);
     
     try {
       const response = await createReply(postCode, newComment);
       
       if (response.success) {
-        setApiComments(prev => prev.map(comment => 
-          comment.id === tempId 
-            ? {
-                ...comment,
-                id: response.reply_id,
-                time_ago: 'just now',
-                created_on: response.created_on,
-                avatar_url: response.avatar_url,
-              }
-            : comment
-        ));
-        
         onAddComment(newComment);
-        toast.success('Comment added');
+        setNewComment('');
+        toast.success('Comment added successfully');
+      } else {
+        toast.error('Failed to add comment. Please try again.');
       }
     } catch (error) {
       console.error('Error posting comment:', error);
-      toast.error('Could not post your comment. Please try again later.');
+      toast.error('Failed to add comment. Please try again.');
     } finally {
-      setSubmittingComment(false);
+      setSubmitting(false);
     }
   };
   
-  const handleMeow = async (commentId: number) => {
-    setApiComments(prev => prev.map(comment => {
-      if (comment.id === commentId) {
-        return {
-          ...comment,
-          has_meowed: !comment.has_meowed,
-          meow_count: comment.has_meowed ? comment.meow_count - 1 : comment.meow_count + 1
-        };
-      }
-      
-      if (comment.sub_replies && comment.sub_replies.length > 0) {
-        return {
-          ...comment,
-          sub_replies: comment.sub_replies.map(reply => {
-            if (reply.id === commentId) {
-              return {
-                ...reply,
-                has_meowed: !reply.has_meowed,
-                meow_count: reply.has_meowed ? reply.meow_count - 1 : reply.meow_count + 1
-              };
-            }
-            return reply;
-          })
-        };
-      }
-      
-      return comment;
-    }));
-    
-    try {
-      const response = await toggleMeow(commentId);
-      
-      if (response.success) {
-        setApiComments(prev => prev.map(comment => {
-          if (comment.id === commentId) {
-            return {
-              ...comment,
-              meow_count: response.meow_count
-            };
-          }
-          
-          if (comment.sub_replies && comment.sub_replies.length > 0) {
-            return {
-              ...comment,
-              sub_replies: comment.sub_replies.map(reply => {
-                if (reply.id === commentId) {
-                  return {
-                    ...reply,
-                    meow_count: response.meow_count
-                  };
-                }
-                return reply;
-              })
-            };
-          }
-          
-          return comment;
-        }));
-      }
-    } catch (error) {
-      console.error('Error meowing comment:', error);
-      
-      setApiComments(prev => prev.map(comment => {
-        if (comment.id === commentId) {
-          return {
-            ...comment,
-            has_meowed: !comment.has_meowed,
-            meow_count: comment.has_meowed ? comment.meow_count + 1 : comment.meow_count - 1
-          };
-        }
-        
-        if (comment.sub_replies && comment.sub_replies.length > 0) {
-          return {
-            ...comment,
-            sub_replies: comment.sub_replies.map(reply => {
-              if (reply.id === commentId) {
-                return {
-                  ...reply,
-                  has_meowed: !reply.has_meowed,
-                  meow_count: reply.has_meowed ? reply.meow_count + 1 : reply.meow_count - 1
-                };
-              }
-              return reply;
-            })
-          };
-        }
-        
-        return comment;
-      }));
-      
-      toast.error('Failed to update meow. Please try again later.');
+  const handleViewAllComments = () => {
+    if (postCode) {
+      navigate(`/${postCode}`);
     }
   };
-  
-  const formatUsername = (name: string) => {
-    return '@' + name.split('.')[0];
-  };
-  
-  const userAvatar = localStorage.getItem('dapps_user_avatar') || 'default';
   
   return (
-    <div className="space-y-4 mt-4 w-full">
-      <h3 className="font-medium text-lg">Comments ({loading ? '...' : apiComments.length})</h3>
-      
-      {loading ? (
-        <div className="flex justify-center items-center py-8">
-          <Loader2 className="w-8 h-8 text-primary animate-spin" />
-        </div>
-      ) : apiComments.length > 0 ? (
-        <div className="space-y-4 w-full">
-          {apiComments.map(comment => (
-            <CommentItem key={comment.id} comment={comment} onMeow={handleMeow} />
+    <div className="space-y-3 mt-2">
+      {comments.length > 0 && (
+        <div className="space-y-1 divide-y divide-border/30">
+          {comments.map((comment) => (
+            <CommentItem 
+              key={comment.id}
+              user={comment.handle}
+              text={comment.content}
+              timeAgo={comment.time_ago}
+              avatarUrl={comment.avatar_url}
+            />
           ))}
         </div>
-      ) : (
-        <Card className="p-4 text-center w-full">
-          <p className="text-muted-foreground text-sm">No comments yet. Be the first to comment!</p>
-        </Card>
       )}
       
-      <form onSubmit={handleSubmit} className="mt-4 w-full">
-        <div className="flex gap-3 w-full">
-          <Avatar className="h-8 w-8 flex-shrink-0">
-            <AvatarImage src={`https://img.dapps.co/avatar/${userAvatar}.svg`} />
-            <AvatarFallback>Y</AvatarFallback>
-          </Avatar>
-          <div className="flex-1 space-y-2 w-full">
-            <Textarea 
-              placeholder="Write a comment..." 
-              className="min-h-[80px] resize-none w-full"
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-            />
-            <div className="flex justify-end">
-              <Button 
-                type="submit" 
-                size="sm" 
-                disabled={!newComment.trim() || submittingComment} 
-                className="gap-1.5"
-              >
-                {submittingComment ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-                Comment
-              </Button>
-            </div>
-          </div>
-        </div>
+      <form onSubmit={handleSubmit} className="flex gap-2 items-end mt-3">
+        <Textarea 
+          placeholder="Add a comment..." 
+          className="min-h-[60px] text-sm"
+          value={newComment}
+          onChange={(e) => setNewComment(e.target.value)}
+        />
+        <Button 
+          type="submit" 
+          size="sm"
+          className="shrink-0"
+          disabled={!newComment.trim() || submitting}
+        >
+          {submitting ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Send className="h-4 w-4" />
+          )}
+        </Button>
       </form>
+      
+      {comments.length > 0 && (
+        <div className="text-center">
+          <Button 
+            variant="link" 
+            size="sm" 
+            className="text-xs text-muted-foreground"
+            onClick={handleViewAllComments}
+          >
+            View all comments
+          </Button>
+        </div>
+      )}
     </div>
   );
 };
