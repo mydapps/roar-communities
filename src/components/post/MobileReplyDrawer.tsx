@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Send, X, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface MobileReplyDrawerProps {
   open: boolean;
@@ -42,9 +43,11 @@ export const MobileReplyDrawer: React.FC<MobileReplyDrawerProps> = ({
     try {
       await onSubmit(replyContent);
       setReplyContent('');
+      toast.success('Reply posted successfully');
       onOpenChange(false);
     } catch (error) {
       console.error('Error submitting reply:', error);
+      toast.error('Failed to post reply. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

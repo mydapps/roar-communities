@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -45,11 +46,15 @@ export const EnhancedCommentsSection = ({
     setLoading(true);
     
     try {
-      const response = await fetchReplies(postCode, 10);
+      console.log(`Fetching comments for post ${postCode}`);
+      const response = await fetchReplies(postCode, 20);
       
       if (response.success) {
+        console.log('Fetched replies successfully:', response.replies);
         setReplies(response.replies);
         setReplyCount(response.total_count);
+      } else {
+        console.error('Failed to fetch replies:', response);
       }
     } catch (error) {
       console.error('Error fetching replies:', error);
@@ -68,19 +73,21 @@ export const EnhancedCommentsSection = ({
   
   // Handle comment submission
   const handleSubmitComment = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     
     if (!newComment.trim()) return;
     
     setSubmitting(true);
     
     try {
+      console.log('Submitting comment to post:', postCode);
       // Parent ID 0 means top-level comment
       const response = await createReply(postCode, newComment);
-      setNewComment('');
       
       // If the API returns the created reply, add it to the list immediately
-      // Otherwise, refresh the comments to show the new one
       if (response.success) {
         const newReply: CommentReply = {
           id: response.reply_id,
@@ -98,15 +105,15 @@ export const EnhancedCommentsSection = ({
         
         setReplies(prev => [newReply, ...prev]);
         setReplyCount(prev => prev + 1);
+        setNewComment('');
         toast.success('Comment added successfully');
       } else {
         // Fallback to refreshing the comments
         fetchComments();
-        toast.success('Comment added successfully');
       }
     } catch (error) {
       console.error('Error adding comment:', error);
-      toast.error('Could not post your comment. Please try again.');
+      toast.error('Could not post your comment. Please try again later.');
     } finally {
       setSubmitting(false);
     }
@@ -146,9 +153,11 @@ export const EnhancedCommentsSection = ({
     }
     
     try {
+      console.log(`Creating reply to comment ${parentId} with content: ${content}`);
       const response = await createReply(postCode, content, parentId);
       
       if (response.success) {
+        console.log('Reply created successfully:', response);
         // Create a new reply object to add to the UI immediately
         const newReply: CommentReply = {
           id: response.reply_id,
@@ -191,8 +200,8 @@ export const EnhancedCommentsSection = ({
         toast.success('Reply added successfully');
       } else {
         // Fallback to refreshing if something went wrong with adding the reply directly
+        console.log('API reported success=false, refreshing comments');
         fetchComments();
-        toast.success('Reply added successfully');
       }
       
       return Promise.resolve();
@@ -260,28 +269,37 @@ export const EnhancedCommentsSection = ({
   const handleDrawerSubmit = async (content: string) => {
     if (!replyTarget) return Promise.reject(new Error('No reply target'));
     
-    if (replyTarget.isPost) {
-      // If replying to the post itself
-      setNewComment(content);
-      await handleSubmitComment();
-    } else {
-      // If replying to a comment
-      await handleReplyToComment(replyTarget.id, content);
+    try {
+      if (replyTarget.isPost) {
+        // If replying to the post itself
+        setNewComment(content);
+        await handleSubmitComment();
+      } else {
+        // If replying to a comment
+        await handleReplyToComment(replyTarget.id, content);
+      }
+      return Promise.resolve();
+    } catch (error) {
+      console.error('Error in drawer submit:', error);
+      return Promise.reject(error);
     }
-    return Promise.resolve();
   };
   
   // Get user avatar from localStorage
   const userAvatar = localStorage.getItem('dapps_user_avatar') || 'default';
   
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" onClick={(e) => e.stopPropagation()}>
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">Comments ({replyCount})</h2>
         <Button 
           variant="ghost" 
           size="sm" 
-          onClick={fetchComments}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            fetchComments();
+          }}
           disabled={loading}
           className="gap-1.5"
         >
@@ -290,7 +308,14 @@ export const EnhancedCommentsSection = ({
         </Button>
       </div>
       
-      <form onSubmit={handleSubmitComment} className="flex gap-3 bg-muted/20 p-4 rounded-lg border border-border/40">
+      <form 
+        onSubmit={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          handleSubmitComment(e);
+        }} 
+        className="flex gap-3 bg-muted/20 p-4 rounded-lg border border-border/40"
+      >
         <Avatar className="h-10 w-10 shrink-0 border border-muted/60">
           <AvatarImage src={`https://img.dapps.co/avatar/${userAvatar}.svg`} />
           <AvatarFallback>Y</AvatarFallback>
@@ -298,9 +323,14 @@ export const EnhancedCommentsSection = ({
         <div className="flex-1 space-y-2">
           {isMobile ? (
             <Button 
+              type="button"
               variant="outline" 
               className="w-full justify-start text-muted-foreground font-normal"
-              onClick={() => openReplyDrawer(0, postAuthorHandle, userAvatar, "Main post", true)}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                openReplyDrawer(0, postAuthorHandle, userAvatar, "Main post", true);
+              }}
             >
               Add a comment...
             </Button>
@@ -310,6 +340,7 @@ export const EnhancedCommentsSection = ({
               className="resize-none bg-background min-h-[80px]"
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
             />
           )}
           
@@ -342,6 +373,9 @@ export const EnhancedCommentsSection = ({
                 onMeowChange={handleMeowChange}
                 onReply={handleReplyToComment}
                 isMobile={isMobile}
+                onOpenMobileReply={(commentId, handle, avatar, content) => {
+                  openReplyDrawer(commentId, handle, avatar, content);
+                }}
               />
             </div>
           ))}

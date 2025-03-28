@@ -39,7 +39,11 @@ const DetailedPostPage = () => {
   const isLoggedIn = !!localStorage.getItem('dapps_user_key');
   
   const loadPost = useCallback(async () => {
-    if (!postId) return;
+    if (!postId) {
+      setError('No post ID provided');
+      setLoading(false);
+      return;
+    }
     
     try {
       setLoading(true);
@@ -104,8 +108,10 @@ const DetailedPostPage = () => {
   }, [postId, communityId, handle]);
   
   useEffect(() => {
-    loadPost();
-  }, [loadPost]);
+    if (postId) {
+      loadPost();
+    }
+  }, [loadPost, postId]);
   
   const handleRefreshComments = useCallback(() => {
     if (refreshingComments) return;
@@ -117,7 +123,12 @@ const DetailedPostPage = () => {
     }, 500);
   }, [refreshingComments]);
   
-  const handleRoar = async () => {
+  const handleRoar = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
     if (!post) return;
     
     if (!isLoggedIn) {
@@ -155,6 +166,7 @@ const DetailedPostPage = () => {
     }
     
     try {
+      console.log(`Creating reply to post ${post.code} with parentId ${parentId} and content: ${content}`);
       await createReply(post.code, content, parentId);
       handleRefreshComments();
     } catch (error) {
@@ -164,11 +176,15 @@ const DetailedPostPage = () => {
     }
   };
   
-  const goBack = () => {
+  const goBack = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     navigate(-1);
   };
   
-  const navigateToLogin = () => {
+  const navigateToLogin = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     navigate('/index');
   };
   
@@ -272,7 +288,7 @@ const DetailedPostPage = () => {
   } : undefined;
   
   return (
-    <div className="max-w-2xl mx-auto pt-16 pb-20 px-4 animate-in fade-in">
+    <div className="max-w-2xl mx-auto pt-16 pb-20 px-4 animate-in fade-in" onClick={(e) => e.stopPropagation()}>
       <Helmet>
         <title>{displayTitle} | Dapps</title>
         <meta name="description" content={metaDescription} />
@@ -304,25 +320,30 @@ const DetailedPostPage = () => {
             <BreadcrumbList>
               <BreadcrumbItem>
                 <BreadcrumbLink asChild>
-                  <Link to="/feed">Feed</Link>
+                  <Link to="/feed" onClick={(e) => e.stopPropagation()}>Feed</Link>
                 </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               
-              {post.community ? (
+              {post?.community ? (
                 <>
                   <BreadcrumbItem>
                     <BreadcrumbLink asChild>
-                      <Link to={`/c/${post.community}`}>{post.community}</Link>
+                      <Link to={`/c/${post.community}`} onClick={(e) => e.stopPropagation()}>
+                        {post.community}
+                      </Link>
                     </BreadcrumbLink>
                   </BreadcrumbItem>
                   <BreadcrumbSeparator />
                 </>
-              ) : post.author && post.author.handle ? (
+              ) : post?.author && post.author.handle ? (
                 <>
                   <BreadcrumbItem>
                     <BreadcrumbLink asChild>
-                      <Link to={`/u/${post.author.handle.split('.')[0]}`}>
+                      <Link 
+                        to={`/u/${post.author.handle.split('.')[0]}`}
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         {post.author.handle.split('.')[0]}
                       </Link>
                     </BreadcrumbLink>
@@ -332,44 +353,55 @@ const DetailedPostPage = () => {
               ) : null}
               
               <BreadcrumbItem>
-                <BreadcrumbPage>{truncateTitle(displayTitle)}</BreadcrumbPage>
+                <BreadcrumbPage>{post ? truncateTitle(post.title || post.body) : "Loading..."}</BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
         </ScrollArea>
       </div>
       
-      <div className="mb-8">
-        <Post
-          username={post.author?.handle || (post.handle || '')}
-          avatar={post.author?.avatar || (post.avatar || '')}
-          community={post.community || undefined}
-          timeAgo={post.time_ago || (post.timeAgo || '')}
-          content={post.body}
-          roarCount={post.upvotes}
-          commentCount={replyCount}
-          shareCount={0}
-          postCode={post.code}
-          roared={post.has_upvoted}
-          onRoar={handleRoar}
-          images={filteredImages}
-          isMirror={post.is_mirror === 1}
-          mirrorData={mirrorData}
-          ipfs={post.ipfs}
-          disableNavigation={true}
-          hideComments={true}
-          isLoggedIn={isLoggedIn}
-        />
-      </div>
+      {post && (
+        <div className="mb-8">
+          <Post
+            username={post.author?.handle || (post.handle || '')}
+            avatar={post.author?.avatar || (post.avatar || '')}
+            community={post.community || undefined}
+            timeAgo={post.time_ago || (post.timeAgo || '')}
+            content={post.body}
+            roarCount={post.upvotes}
+            commentCount={replyCount}
+            shareCount={0}
+            postCode={post.code}
+            roared={post.has_upvoted}
+            onRoar={handleRoar}
+            images={post.images?.filter(img => img !== 'https://dapps.co/dapps.png')}
+            isMirror={post.is_mirror === 1}
+            mirrorData={post.is_mirror === 1 ? {
+              quote: post.mirror_quote || '',
+              originalAuthor: post.original_author || '',
+              originalCommunity: post.original_community || '',
+              originalBody: post.original_body || '',
+              originalTimeAgo: post.original_created_on || '',
+              originalAvatar: post.original_author_avatar || '',
+              originalImages: post.original_images || [],
+              originalTitle: post.original_title || ''
+            } : undefined}
+            ipfs={post.ipfs}
+            disableNavigation={true}
+            hideComments={true}
+            isLoggedIn={isLoggedIn}
+          />
+        </div>
+      )}
       
-      {isLoggedIn ? (
+      {post && isLoggedIn ? (
         <EnhancedCommentsSection
           postCode={post.code}
           initialReplies={replies}
           initialReplyCount={replyCount}
           postAuthorHandle={post.author?.handle || (post.handle || '')}
         />
-      ) : (
+      ) : isLoggedIn ? null : (
         <div className="relative backdrop-blur-sm py-10">
           <div className="absolute inset-0 bg-background/70 flex flex-col items-center justify-center z-10">
             <div className="bg-primary/10 p-4 rounded-full mb-4">
@@ -379,7 +411,7 @@ const DetailedPostPage = () => {
             <p className="text-muted-foreground mb-6 text-center max-w-md">
               Login or sign up to view and participate in the discussion
             </p>
-            <Button onClick={navigateToLogin}>Login or Sign Up</Button>
+            <Button onClick={(e) => navigateToLogin(e)}>Login or Sign Up</Button>
           </div>
           
           <div className="opacity-20 pointer-events-none filter blur-md">

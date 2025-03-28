@@ -58,6 +58,7 @@ export const fetchReplies = async (postCode: string, limit: number = 10): Promis
       throw new Error('Authentication required');
     }
     
+    console.log(`Fetching replies for post ${postCode} with limit ${limit}`);
     const response = await fetch(`${API_BASE_URL}/get_replies?postCode=${postCode}&limit=${limit}`, {
       method: 'GET',
       headers: {
@@ -129,7 +130,7 @@ export const toggleMeow = async (replyId: number): Promise<MeowResponse> => {
 /**
  * Create a new reply for a post
  */
-export const createReply = async (postCode: string, content: string, parentId?: number): Promise<CreateReplyResponse> => {
+export const createReply = async (postCode: string, content: string, parentId: number = 0): Promise<CreateReplyResponse> => {
   try {
     const userKey = localStorage.getItem('dapps_user_key');
     
@@ -138,12 +139,12 @@ export const createReply = async (postCode: string, content: string, parentId?: 
       throw new Error('Authentication required');
     }
     
-    const payload: any = {
+    const payload: Record<string, any> = {
       postCode,
       content
     };
     
-    if (parentId) {
+    if (parentId !== undefined && parentId !== null && parentId !== 0) {
       payload.parentId = parentId;
     }
     
@@ -159,6 +160,8 @@ export const createReply = async (postCode: string, content: string, parentId?: 
     });
     
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('API error response:', errorText);
       throw new Error(`Failed to create reply: ${response.status}`);
     }
     
@@ -173,7 +176,7 @@ export const createReply = async (postCode: string, content: string, parentId?: 
       message: 'Failed to create reply',
       reply_id: 0,
       post_code: postCode,
-      parent_id: 0,
+      parent_id: parentId || 0,
       created_on: new Date().toISOString(),
       handle: '',
       avatar_url: ''
