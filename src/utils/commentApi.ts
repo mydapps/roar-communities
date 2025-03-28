@@ -5,7 +5,7 @@ import { CommentReply } from '@/components/post/EnhancedCommentItem';
 // Base API URL
 const API_BASE_URL = 'https://api.dapps.co';
 
-export { CommentReply };
+export type { CommentReply };
 
 export interface RepliesResponse {
   success: boolean;
