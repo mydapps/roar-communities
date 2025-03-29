@@ -240,7 +240,7 @@ const CommunityPage = () => {
                   What's on your mind?
                 </h2>
                 <CreatePostCard 
-                  onPostCreated={handlePostCreated} 
+                  onPostCreated={handlePostCreated}
                   communityName={community?.name || id || ''}
                 />
               </CardContent>
