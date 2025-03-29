@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePreventZoom } from '@/hooks/usePreventZoom';
@@ -47,6 +47,7 @@ import { TradeSheet } from '@/components/shares/TradeSheet';
 import { Post } from '@/components/feed/Post';
 import CreatePostCard from '@/components/feed/CreatePostCard';
 import { MembersList } from '@/components/community/MembersList';
+import { useCommunityPosts } from '@/hooks/useCommunityPosts';
 
 const LionIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-5 w-5">
@@ -62,11 +63,7 @@ const CommunityPage = () => {
   const { id } = useParams<{ id: string }>();
   const isMobile = useIsMobile();
   const [tradeSheetOpen, setTradeSheetOpen] = useState(false);
-  const [isRoared, setIsRoared] = useState<Record<number, boolean>>({});
   const [activeTab, setActiveTab] = useState("posts");
-  const [isMirroredPost, setIsMirroredPost] = useState<Record<number, boolean>>({});
-  const [isIPFSSaved, setIsIPFSSaved] = useState<Record<number, boolean>>({});
-  const [userPosts, setUserPosts] = useState<any[]>([]);
   const [tradeAction, setTradeAction] = useState<"buy" | "sell">("buy");
   
   // Fetch community data from API
@@ -75,98 +72,18 @@ const CommunityPage = () => {
   // Fetch community members with infinite scroll
   const { members, loading: membersLoading, hasMore: hasMoreMembers, loadMore: loadMoreMembers } = useCommunityMembers(id);
   
-  const ethToUsd = 2500; // Default value, will be overridden if API returns price data
+  // Fetch community posts with infinite scroll
+  const { posts, loading: postsLoading, hasMore: hasMorePosts, loadMore: loadMorePosts } = useCommunityPosts(id);
   
-  // Default posts data while API integration is pending
-  const defaultPosts = [
-    {
-      id: 1,
-      username: "alice.eth",
-      timeAgo: "2h",
-      content: "Just deployed my first smart contract on Ethereum. The gas fees were surprisingly reasonable!",
-      roarCount: 24,
-      commentCount: 5,
-      shareCount: 2,
-      avatar: "https://avatar.vercel.sh/alice.eth"
-    },
-    {
-      id: 2,
-      username: "bob.lens",
-      timeAgo: "5h",
-      content: "Anyone trying out the new DEX? The UI is clean and the liquidity seems good so far. I'm impressed with the low slippage.",
-      roarCount: 42,
-      commentCount: 12,
-      shareCount: 7,
-      avatar: "https://avatar.vercel.sh/bob.lens"
-    },
-    {
-      id: 3,
-      username: "crypto_sarah",
-      timeAgo: "1d",
-      content: "I've been experimenting with layer 2 solutions like Optimism and Arbitrum. The transaction fees are a game changer for smaller transactions! Have any of you had a chance to compare their performance?",
-      roarCount: 37,
-      commentCount: 15,
-      shareCount: 4,
-      avatar: "https://avatar.vercel.sh/crypto_sarah"
-    }
-  ];
-  
-  const [posts, setPosts] = useState(defaultPosts);
+  const ethToUsd = communityData?.community?.prices?.buy_price_usd && communityData?.community?.prices?.buy_price 
+    ? communityData.community.prices.buy_price_usd / communityData.community.prices.buy_price
+    : 2500; // Default value if API doesn't return price data
   
   const [buyAmount, setBuyAmount] = useState<number>(1);
   
-  const handleRoar = (postId: number) => {
-    setIsRoared(prev => {
-      const updatedState = { ...prev };
-      if (updatedState[postId]) {
-        updatedState[postId] = false;
-        
-        setPosts(prev => prev.map(post => 
-          post.id === postId 
-            ? { ...post, roarCount: post.roarCount - 1 } 
-            : post
-        ));
-      } else {
-        updatedState[postId] = true;
-        
-        setPosts(prev => prev.map(post => 
-          post.id === postId 
-            ? { ...post, roarCount: post.roarCount + 1 } 
-            : post
-        ));
-      }
-      return updatedState;
-    });
-  };
-  
-  const handleMirror = (postId: number) => {
-    setIsMirroredPost(prev => {
-      const updated = { ...prev };
-      updated[postId] = !updated[postId];
-      
-      if (updated[postId]) {
-        toast.success("Post mirrored to your profile!");
-      }
-      
-      return updated;
-    });
-  };
-  
-  const handleSaveToIPFS = (postId: number) => {
-    setIsIPFSSaved(prev => {
-      const updated = { ...prev };
-      updated[postId] = !updated[postId];
-      
-      if (updated[postId]) {
-        toast.success("Post saved to IPFS permanently!");
-      }
-      
-      return updated;
-    });
-  };
-  
   const handlePostCreated = (newPost: any) => {
-    setUserPosts([newPost, ...userPosts]);
+    // This would be handled by refetching posts or optimistically adding the new post
+    toast.success("Post created successfully!");
   };
   
   // Calculate chart points based on price trend
@@ -227,7 +144,7 @@ const CommunityPage = () => {
     <div className="flex flex-col md:flex-row gap-4 animate-fade-in max-w-full overflow-x-hidden">
       <div className="flex-1 order-2 md:order-1">
         {isMobile && (
-          <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm pb-3 mb-3 border-b">
+          <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm pb-3 mb-3 border-b pt-14">
             <div className="flex items-center gap-3 mb-2">
               <Avatar className="h-10 w-10">
                 <AvatarImage src={community?.image} alt={community?.name} />
@@ -322,40 +239,65 @@ const CommunityPage = () => {
                   <Sparkles className="h-5 w-5 text-primary" />
                   What's on your mind?
                 </h2>
-                <CreatePostCard onPostCreated={handlePostCreated} />
+                <CreatePostCard 
+                  onPostCreated={handlePostCreated} 
+                  communityName={community?.name || id || ''}
+                />
               </CardContent>
             </Card>
             
             <div className="space-y-6">
-              {userPosts.map((post, index) => (
-                <Post 
-                  key={`user-post-${index}`}
-                  username={post.username}
-                  community={post.community}
-                  timeAgo={post.timeAgo}
-                  content={post.content}
-                  roarCount={post.roarCount}
-                  commentCount={post.commentCount}
-                  shareCount={post.shareCount}
-                  images={post.images}
-                  video={post.video}
-                />
-              ))}
-              
-              {posts.map((post) => (
-                <Post 
-                  key={`community-post-${post.id}`}
-                  username={post.username}
-                  community={community?.name || id || ''}
-                  timeAgo={post.timeAgo}
-                  content={post.content}
-                  roarCount={post.roarCount}
-                  commentCount={post.commentCount || 0}
-                  shareCount={post.shareCount || 0}
-                  images={[]}
-                  video={undefined}
-                />
-              ))}
+              {postsLoading && posts.length === 0 ? (
+                <div className="flex justify-center p-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : posts.length > 0 ? (
+                <>
+                  {posts.map((post, index) => (
+                    <Post 
+                      key={`post-${post.code}-${index}`}
+                      username={post.handle}
+                      community={post.community}
+                      timeAgo={post.timeAgo}
+                      content={post.body}
+                      roarCount={post.upvotes}
+                      commentCount={post.reply_count}
+                      shareCount={post.engagement}
+                      images={post.multiple_images ? post.images : (post.image ? [post.image_url] : [])}
+                      video={undefined}
+                      postCode={post.code}
+                      avatar={post.avatar}
+                      roared={post.roar === 1}
+                      isMirror={post.is_mirror === 1}
+                      ipfs={post.code}
+                      isLoggedIn={!!localStorage.getItem('dapps_user_key')}
+                    />
+                  ))}
+                  
+                  {hasMorePosts && (
+                    <div className="flex justify-center py-4">
+                      <Button 
+                        variant="outline" 
+                        onClick={loadMorePosts}
+                        disabled={postsLoading}
+                        className="gap-2"
+                      >
+                        {postsLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <ChevronUp className="h-4 w-4" />
+                        )}
+                        Load more posts
+                      </Button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-center p-8 border border-dashed rounded-lg">
+                  <MessageCircle className="h-10 w-10 text-muted-foreground/50 mx-auto mb-2" />
+                  <p className="text-muted-foreground">No posts in this community yet. Be the first to post!</p>
+                </div>
+              )}
             </div>
           </TabsContent>
           
@@ -420,49 +362,51 @@ const CommunityPage = () => {
                     </ul>
                   </div>
                   
-                  <div>
-                    <h3 className="font-medium mb-3">Last Month's Winners</h3>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between p-3 rounded-lg border border-primary/30 bg-primary/5 shadow-sm">
-                        <div className="flex items-center gap-3">
-                          <div className="bg-primary text-primary-foreground rounded-full h-8 w-8 flex items-center justify-center font-bold">
-                            1
+                  {community?.rewards.last_distributed && (
+                    <div>
+                      <h3 className="font-medium mb-3">Last Month's Winners</h3>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between p-3 rounded-lg border border-primary/30 bg-primary/5 shadow-sm">
+                          <div className="flex items-center gap-3">
+                            <div className="bg-primary text-primary-foreground rounded-full h-8 w-8 flex items-center justify-center font-bold">
+                              1
+                            </div>
+                            <div>
+                              <div className="font-medium">alice.eth</div>
+                              <div className="text-sm text-muted-foreground line-clamp-1">"The future of layer 2 solutions is here..."</div>
+                            </div>
                           </div>
-                          <div>
-                            <div className="font-medium">alice.eth</div>
-                            <div className="text-sm text-muted-foreground line-clamp-1">"The future of layer 2 solutions is here..."</div>
-                          </div>
+                          <div className="font-bold">0.45 ETH</div>
                         </div>
-                        <div className="font-bold">0.45 ETH</div>
-                      </div>
-                      
-                      <div className="flex items-center justify-between p-3 rounded-lg border border-primary/20 shadow-sm">
-                        <div className="flex items-center gap-3">
-                          <div className="bg-primary/10 rounded-full h-8 w-8 flex items-center justify-center text-primary font-bold">
-                            2
+                        
+                        <div className="flex items-center justify-between p-3 rounded-lg border border-primary/20 shadow-sm">
+                          <div className="flex items-center gap-3">
+                            <div className="bg-primary/10 rounded-full h-8 w-8 flex items-center justify-center text-primary font-bold">
+                              2
+                            </div>
+                            <div>
+                              <div className="font-medium">bob.lens</div>
+                              <div className="text-sm text-muted-foreground line-clamp-1">"Here's my analysis of the recent EIP..."</div>
+                            </div>
                           </div>
-                          <div>
-                            <div className="font-medium">bob.lens</div>
-                            <div className="text-sm text-muted-foreground line-clamp-1">"Here's my analysis of the recent EIP..."</div>
-                          </div>
+                          <div className="font-bold">0.32 ETH</div>
                         </div>
-                        <div className="font-bold">0.32 ETH</div>
-                      </div>
-                      
-                      <div className="flex items-center justify-between p-3 rounded-lg border border-border shadow-sm">
-                        <div className="flex items-center gap-3">
-                          <div className="bg-primary/5 rounded-full h-8 w-8 flex items-center justify-center text-primary font-bold">
-                            3
+                        
+                        <div className="flex items-center justify-between p-3 rounded-lg border border-border shadow-sm">
+                          <div className="flex items-center gap-3">
+                            <div className="bg-primary/5 rounded-full h-8 w-8 flex items-center justify-center text-primary font-bold">
+                              3
+                            </div>
+                            <div>
+                              <div className="font-medium">charlie.sol</div>
+                              <div className="text-sm text-muted-foreground line-clamp-1">"I created this tutorial for beginners..."</div>
+                            </div>
                           </div>
-                          <div>
-                            <div className="font-medium">charlie.sol</div>
-                            <div className="text-sm text-muted-foreground line-clamp-1">"I created this tutorial for beginners..."</div>
-                          </div>
+                          <div className="font-bold">0.18 ETH</div>
                         </div>
-                        <div className="font-bold">0.18 ETH</div>
                       </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
