@@ -14,9 +14,14 @@ import { createPost } from '@/utils/api';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import confetti from 'canvas-confetti';
 
-const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void }) => {
+interface CreatePostCardProps {
+  onPostCreated: (post: any) => void;
+  communityName?: string;
+}
+
+const CreatePostCard = ({ onPostCreated, communityName }: CreatePostCardProps) => {
   const [content, setContent] = useState('');
-  const [selectedCommunity, setSelectedCommunity] = useState('');
+  const [selectedCommunity, setSelectedCommunity] = useState(communityName || '');
   const [showCommunityDialog, setShowCommunityDialog] = useState(false);
   const [uploadedMedia, setUploadedMedia] = useState<MediaUploadResponse[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -33,6 +38,12 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
       setUserAvatar(avatarUrl);
     }
   }, []);
+
+  useEffect(() => {
+    if (communityName) {
+      setSelectedCommunity(communityName);
+    }
+  }, [communityName]);
 
   const handleCommunitySelect = (community: string) => {
     setSelectedCommunity(community);
@@ -140,7 +151,7 @@ const CreatePostCard = ({ onPostCreated }: { onPostCreated: (post: any) => void 
         onPostCreated(newPost);
         
         setContent('');
-        setSelectedCommunity('');
+        setSelectedCommunity(communityName || '');
         setUploadedMedia([]);
         setIsExpanded(false);
       } else {
