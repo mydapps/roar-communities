@@ -83,6 +83,8 @@ export const useCommunityData = (communityName: string | undefined) => {
           headers['x-user-key'] = userKey;
         }
 
+        console.log(`Fetching community data for: ${communityName}`);
+
         const response = await fetch(`https://api.dapps.co/get_community?name=${encodeURIComponent(communityName)}`, {
           method: 'GET',
           headers,
@@ -94,8 +96,22 @@ export const useCommunityData = (communityName: string | undefined) => {
 
         const responseData = await response.json();
         
+        console.log("Community API response:", responseData);
+        
         if (!responseData.success) {
           throw new Error(responseData.message || 'Failed to fetch community data');
+        }
+
+        // Ensure reward data is correctly processed
+        if (responseData.community && responseData.community.rewards) {
+          console.log("Raw rewards data:", responseData.community.rewards);
+          // Make sure rewards.available_rewards is a number
+          responseData.community.rewards.available_rewards = 
+            typeof responseData.community.rewards.available_rewards === 'number' ? 
+            responseData.community.rewards.available_rewards : 
+            parseFloat(responseData.community.rewards.available_rewards) || 0;
+          
+          console.log("Processed rewards data:", responseData.community.rewards);
         }
 
         setData(responseData);

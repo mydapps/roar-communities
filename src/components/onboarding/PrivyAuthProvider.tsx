@@ -15,10 +15,27 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
   const navigate = useNavigate();
   
+  // Debug for routing and auth issues
+  console.log("PrivyAuthWrapper - Current path:", location.pathname);
+  
   // Don't redirect if we're already on community page or detailed post page
   const isCommunityPage = location.pathname.startsWith('/c/');
-  const isDetailedPostPage = location.pathname.includes('/post/') || 
-                            (location.pathname.includes('/c/') && location.pathname.split('/').length > 3);
+  const isPostPage = location.pathname.includes('/post/') || 
+                    (location.pathname.includes('/c/') && location.pathname.split('/').length > 3);
+                    
+  // Flag for publicly accessible routes
+  const isPublicRoute = 
+    location.pathname === '/' || 
+    location.pathname === '/index' || 
+    location.pathname === '/login' || 
+    location.pathname === '/request-invite' ||
+    location.pathname === '/avatar-handle' ||
+    location.pathname.startsWith('/invite/') ||
+    isCommunityPage ||
+    isPostPage;
+    
+  console.log("PrivyAuthWrapper - Is public route:", isPublicRoute);
+  console.log("PrivyAuthWrapper - Auth status:", { ready, authenticated, authProcessed });
   
   useEffect(() => {
     // Reset auth processed state when authentication status changes
@@ -73,7 +90,7 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
               console.log('PrivyAuthProvider - Registration status:', data.registered);
               
               // Don't redirect if we're already on community or post page
-              if (isCommunityPage || isDetailedPostPage) {
+              if (isCommunityPage || isPostPage) {
                 console.log('Already on community/post page, skipping redirect');
                 setAuthProcessed(true);
                 return;
@@ -81,8 +98,9 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
               
               // Check registration status
               if (data.registered === "1") {
-                // User is fully registered, redirect to feed
+                // User is fully registered, redirect to feed if on a public route
                 if (location.pathname === '/' || location.pathname === '/login') {
+                  console.log("Redirecting to feed from public route");
                   navigate('/feed');
                   toast.success('Successfully logged in!');
                 }
@@ -91,11 +109,13 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
                 if (data.handle && data.avatar) {
                   // Both handle and avatar are set, redirect to request-invite
                   if (location.pathname !== '/request-invite' && location.pathname !== '/feed') {
+                    console.log("Redirecting to request-invite");
                     navigate('/request-invite');
                   }
                 } else {
                   // Missing handle or avatar, redirect to avatar-handle page
                   if (location.pathname !== '/avatar-handle') {
+                    console.log("Redirecting to avatar-handle");
                     navigate('/avatar-handle');
                     toast.info('Please complete your profile');
                   }
@@ -121,7 +141,7 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
 
       handlePrivyAuth();
     }
-  }, [ready, authenticated, user, getAccessToken, authProcessed, isCommunityPage, isDetailedPostPage, location.pathname, navigate]);
+  }, [ready, authenticated, user, getAccessToken, authProcessed, isCommunityPage, isPostPage, location.pathname, navigate]);
 
   return <>{children}</>;
 };

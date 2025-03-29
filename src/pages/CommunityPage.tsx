@@ -67,8 +67,18 @@ const CommunityPage = () => {
   const [activeTab, setActiveTab] = useState("posts");
   const [tradeAction, setTradeAction] = useState<"buy" | "sell">("buy");
   
+  // Debug logs for tracking component rendering and state
+  console.log("CommunityPage rendering, id:", id, "activeTab:", activeTab);
+  
   // Fetch community data from API
   const { data: communityData, loading: communityLoading, error: communityError } = useCommunityData(id);
+  
+  // Debug logs for community data
+  console.log("Community data:", communityData);
+  if (communityData?.community?.rewards) {
+    console.log("Community rewards:", communityData.community.rewards);
+    console.log("Available rewards:", communityData.community.rewards.available_rewards);
+  }
   
   // Fetch community members with infinite scroll
   const { members, loading: membersLoading, hasMore: hasMoreMembers, loadMore: loadMoreMembers } = useCommunityMembers(id);
@@ -161,6 +171,7 @@ const CommunityPage = () => {
   
   // Get the available rewards
   const availableRewards = community?.rewards?.available_rewards || 0;
+  console.log("Rendered with available rewards:", availableRewards);
   const hasLastDistributed = community?.rewards?.last_distributed && community.rewards.last_distributed !== null;
   
   return (
@@ -218,42 +229,40 @@ const CommunityPage = () => {
               <div className="bg-muted/50 rounded-lg p-2">
                 <div className="text-xs text-muted-foreground">Share Price</div>
                 <div className="font-semibold text-sm flex items-center">
-                  ${community?.prices.buy_price_usd.toFixed(2) || '0.00'}
+                  ${community?.prices?.buy_price_usd?.toFixed(2) || '0.00'}
                 </div>
               </div>
               <div className="bg-muted/50 rounded-lg p-2">
                 <div className="text-xs text-muted-foreground">Market Cap</div>
                 <div className="font-semibold text-sm flex items-center">
-                  ${community?.market_cap.usd >= 1000000 
+                  ${community?.market_cap?.usd >= 1000000 
                     ? (community.market_cap.usd / 1000000).toFixed(1) + 'M' 
-                    : community?.market_cap.usd.toLocaleString(undefined, { maximumFractionDigits: 0 }) || '0'}
+                    : community?.market_cap?.usd?.toLocaleString(undefined, { maximumFractionDigits: 0 }) || '0'}
                 </div>
               </div>
             </div>
           </div>
         )}
         
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <ScrollArea className="w-full max-w-full pb-2">
-            <TabsList className="w-full lg:w-auto justify-start mb-6 pb-px overflow-x-auto flex-nowrap border-b">
-              <TabsTrigger value="posts" className="flex-shrink-0">
-                <MessageCircle className="h-4 w-4 mr-2" />
-                Posts
-              </TabsTrigger>
-              <TabsTrigger value="members" className="flex-shrink-0">
-                <Users className="h-4 w-4 mr-2" />
-                Members
-              </TabsTrigger>
-              <TabsTrigger value="rewards" className="flex-shrink-0">
-                <DollarSign className="h-4 w-4 mr-2" />
-                Rewards
-              </TabsTrigger>
-              <TabsTrigger value="about" className="flex-shrink-0">
-                <Info className="h-4 w-4 mr-2" />
-                About
-              </TabsTrigger>
-            </TabsList>
-          </ScrollArea>
+        <Tabs defaultValue="posts" value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="w-full lg:w-auto justify-start mb-6 pb-px overflow-x-auto flex-nowrap border-b bg-transparent">
+            <TabsTrigger value="posts" className="flex-shrink-0">
+              <MessageCircle className="h-4 w-4 mr-2" />
+              Posts
+            </TabsTrigger>
+            <TabsTrigger value="members" className="flex-shrink-0">
+              <Users className="h-4 w-4 mr-2" />
+              Members
+            </TabsTrigger>
+            <TabsTrigger value="rewards" className="flex-shrink-0">
+              <DollarSign className="h-4 w-4 mr-2" />
+              Rewards
+            </TabsTrigger>
+            <TabsTrigger value="about" className="flex-shrink-0">
+              <Info className="h-4 w-4 mr-2" />
+              About
+            </TabsTrigger>
+          </TabsList>
           
           <TabsContent value="posts" className="animate-fade-in">
             <Card className="mb-6 bg-gradient-to-br from-primary/5 to-secondary/5 border-primary/20">
@@ -374,7 +383,7 @@ const CommunityPage = () => {
                       How Rewards Work
                     </h3>
                     <ul className="space-y-2 text-sm text-muted-foreground list-disc pl-5">
-                      <li>{community?.fees.reward_fees || 2}% of all buy/sell transactions go to the reward pool</li>
+                      <li>{community?.fees?.reward_fees || 2}% of all buy/sell transactions go to the reward pool</li>
                       <li>Rewards are distributed on the last day of each month</li>
                       <li>60% goes to the top 3 most roared posts</li>
                       <li>40% is split among the next 7 top posts</li>
@@ -461,7 +470,7 @@ const CommunityPage = () => {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Total Shares</span>
-                        <span>{community?.shares.toLocaleString() || 0}</span>
+                        <span>{community?.shares?.toLocaleString() || 0}</span>
                       </div>
                     </div>
                   </div>
@@ -471,19 +480,19 @@ const CommunityPage = () => {
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Admin Fee</span>
-                        <span>{community?.fees.admin_fees || 0}%</span>
+                        <span>{community?.fees?.admin_fees || 0}%</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Reward Pool</span>
-                        <span>{community?.fees.reward_fees || 0}%</span>
+                        <span>{community?.fees?.reward_fees || 0}%</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Platform Fee</span>
-                        <span>{community?.fees.platform_fees || 0}%</span>
+                        <span>{community?.fees?.platform_fees || 0}%</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Current Share Price</span>
-                        <span>{community?.prices.buy_price.toFixed(6) || 0} ETH</span>
+                        <span>{community?.prices?.buy_price?.toFixed(6) || 0} ETH</span>
                       </div>
                     </div>
                   </div>
@@ -559,16 +568,16 @@ const CommunityPage = () => {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Price per Share</span>
                     <div className="text-right">
-                      <div className="font-semibold text-[15px]">${community?.prices.buy_price_usd.toFixed(2) || '0.00'}</div>
-                      <div className="text-xs text-muted-foreground">{community?.prices.buy_price.toFixed(6) || '0.000000'} ETH</div>
+                      <div className="font-semibold text-[15px]">${community?.prices?.buy_price_usd?.toFixed(2) || '0.00'}</div>
+                      <div className="text-xs text-muted-foreground">{community?.prices?.buy_price?.toFixed(6) || '0.000000'} ETH</div>
                     </div>
                   </div>
                   
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Market Cap</span>
                     <div className="text-right">
-                      <div className="font-semibold text-[15px]">${community?.market_cap.usd.toLocaleString(undefined, { maximumFractionDigits: 0 }) || '0'}</div>
-                      <div className="text-xs text-muted-foreground">{community?.market_cap.eth.toFixed(2) || '0.00'} ETH</div>
+                      <div className="font-semibold text-[15px]">${community?.market_cap?.usd?.toLocaleString(undefined, { maximumFractionDigits: 0 }) || '0'}</div>
+                      <div className="text-xs text-muted-foreground">{community?.market_cap?.eth?.toFixed(2) || '0.00'} ETH</div>
                     </div>
                   </div>
                   
@@ -580,14 +589,14 @@ const CommunityPage = () => {
                       <div className="bg-primary/5 p-3 rounded-lg">
                         <div className="flex justify-between mb-1">
                           <span className="text-sm text-muted-foreground">Shares Owned</span>
-                          <span className="font-medium">{user?.shares.toFixed(2)}</span>
+                          <span className="font-medium">{user?.shares?.toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-sm text-muted-foreground">Value</span>
                           <div className="text-right">
-                            <div className="font-semibold">${user?.share_value.usd.toFixed(2)}</div>
+                            <div className="font-semibold">${user?.share_value?.usd?.toFixed(2)}</div>
                             <div className="text-xs text-muted-foreground">
-                              {user?.share_value.eth.toFixed(6)} ETH
+                              {user?.share_value?.eth?.toFixed(6)} ETH
                             </div>
                           </div>
                         </div>
@@ -656,7 +665,7 @@ const CommunityPage = () => {
         onOpenChange={setTradeSheetOpen}
         community={{
           name: community?.name || id || '',
-          currentPrice: community?.prices.buy_price || 0.001
+          currentPrice: community?.prices?.buy_price || 0.001
         }}
         action={tradeAction}
         userEthBalance="0.536"
