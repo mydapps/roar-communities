@@ -2,7 +2,7 @@
 import React, { ReactNode, useEffect, useState } from 'react';
 import { PrivyProvider, usePrivy } from '@privy-io/react-auth';
 import { toast } from 'sonner';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 interface PrivyAuthProviderProps {
   children: ReactNode;
@@ -13,6 +13,7 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
   const { ready, authenticated, user, login, getAccessToken } = usePrivy();
   const [authProcessed, setAuthProcessed] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   
   // Don't redirect if we're already on community page or detailed post page
   const isCommunityPage = location.pathname.startsWith('/c/');
@@ -81,21 +82,21 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
               // Check registration status
               if (data.registered === "1") {
                 // User is fully registered, redirect to feed
-                if (window.location.pathname === '/' || window.location.pathname === '/login') {
-                  window.location.href = '/feed';
+                if (location.pathname === '/' || location.pathname === '/login') {
+                  navigate('/feed');
                   toast.success('Successfully logged in!');
                 }
               } else {
                 // User needs to complete registration
                 if (data.handle && data.avatar) {
                   // Both handle and avatar are set, redirect to request-invite
-                  if (window.location.pathname !== '/request-invite' && window.location.pathname !== '/feed') {
-                    window.location.href = '/request-invite';
+                  if (location.pathname !== '/request-invite' && location.pathname !== '/feed') {
+                    navigate('/request-invite');
                   }
                 } else {
                   // Missing handle or avatar, redirect to avatar-handle page
-                  if (window.location.pathname !== '/avatar-handle') {
-                    window.location.href = '/avatar-handle';
+                  if (location.pathname !== '/avatar-handle') {
+                    navigate('/avatar-handle');
                     toast.info('Please complete your profile');
                   }
                 }
@@ -120,7 +121,7 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
 
       handlePrivyAuth();
     }
-  }, [ready, authenticated, user, getAccessToken, authProcessed, isCommunityPage, isDetailedPostPage]);
+  }, [ready, authenticated, user, getAccessToken, authProcessed, isCommunityPage, isDetailedPostPage, location.pathname, navigate]);
 
   return <>{children}</>;
 };
