@@ -13,6 +13,9 @@ const MobileBottomNav = () => {
     /^\/[\w-]+\/[\w-]+$/.test(location.pathname) ||    // user post: /handle/postId
     /^\/post\/[\w-]+$/.test(location.pathname);        // generic post: /post/postId
   
+  // Debug check - log the current path and whether it's detected as a post page
+  console.log('Current path:', location.pathname, 'Is post page:', isPostDetailPage);
+  
   // Don't render the bottom nav on post detail pages
   if (isPostDetailPage) {
     return null;

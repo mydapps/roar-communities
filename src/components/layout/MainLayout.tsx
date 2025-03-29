@@ -62,6 +62,7 @@ const MainLayout = () => {
         </div>
       </div>
       
+      {/* Only show MobileBottomNav when not on a post detail page */}
       {isMobile && isLoggedIn && <MobileBottomNav />}
     </div>
   );
