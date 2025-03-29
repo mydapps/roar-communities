@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, memo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useResponsive } from '@/hooks/use-mobile';
 import { useToast } from '@/hooks/use-toast';
+import { usePreventZoom } from '@/hooks/usePreventZoom';
 
 // UI Components
 import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator, BreadcrumbPage } from '@/components/ui/breadcrumb';
@@ -305,7 +306,10 @@ const MemoizedCommentWithReplies = memo(({
     </div>;
 });
 MemoizedCommentWithReplies.displayName = 'MemoizedCommentWithReplies';
+
 const PostPage = () => {
+  usePreventZoom();
+  
   const {
     communityId,
     postId
@@ -330,6 +334,7 @@ const PostPage = () => {
   const [roarTextAnimation, setRoarTextAnimation] = useState(false);
   const [expandedReplies, setExpandedReplies] = useState<Record<string, boolean>>({});
   const [meowedComments, setMeowedComments] = useState<Record<string, boolean>>({});
+  
   useEffect(() => {
     setTimeout(() => {
       const foundPost = MOCK_POSTS.find(p => p.id === postId) || MOCK_POSTS.find(p => p.community === communityId);
@@ -354,6 +359,7 @@ const PostPage = () => {
       setLoading(false);
     }, 1000);
   }, [communityId, postId]);
+  
   const handleAddComment = useCallback(() => {
     if (!newComment.trim()) return;
     setSubmittingComment(true);
@@ -375,6 +381,7 @@ const PostPage = () => {
       });
     }, 500);
   }, [newComment, toast]);
+  
   const handleAddReply = useCallback((commentId: string, replyText: string) => {
     if (!replyText.trim()) return;
     setSubmittingComment(true);
@@ -413,6 +420,7 @@ const PostPage = () => {
       });
     }, 500);
   }, [toast]);
+  
   const handleMeowComment = useCallback((commentId: string) => {
     setMeowedComments(prev => ({
       ...prev,
@@ -439,6 +447,7 @@ const PostPage = () => {
       return updateMeowCount(prevComments);
     });
   }, [meowedComments]);
+  
   const handleRoar = useCallback(() => {
     const newRoared = !roared;
     setRoared(newRoared);
@@ -456,16 +465,20 @@ const PostPage = () => {
       description: newRoared ? "You've roared at this post" : "You've removed your roar from this post"
     });
   }, [roared, toast]);
+  
   const goBack = () => {
     navigate(-1);
   };
+  
   const formatUsername = (name: string) => {
     return '@' + name.split('.')[0];
   };
+  
   const truncateTitle = (content: string, maxLength = 30) => {
     if (content.length <= maxLength) return content;
     return content.substring(0, maxLength) + '...';
   };
+  
   if (loading) {
     return <div className="space-y-6 animate-fade-in">
         <div className="flex items-center gap-2">
@@ -481,6 +494,7 @@ const PostPage = () => {
         </div>
       </div>;
   }
+  
   if (!post) {
     return <div className="flex flex-col items-center justify-center py-12 text-center">
         <h2 className="text-2xl font-bold mb-2">Post Not Found</h2>
@@ -490,6 +504,7 @@ const PostPage = () => {
         <Button onClick={goBack}>Go Back</Button>
       </div>;
   }
+  
   return <div className="max-w-full overflow-x-hidden animate-fade-in">
       <div className="mb-6">
         <ScrollArea className="w-full">
@@ -557,4 +572,5 @@ const PostPage = () => {
       </div>
     </div>;
 };
+
 export default PostPage;

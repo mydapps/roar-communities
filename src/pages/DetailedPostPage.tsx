@@ -21,8 +21,11 @@ import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import { createReply, type CommentReply } from '@/utils/commentApi';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { usePreventZoom } from '@/hooks/usePreventZoom';
 
 const DetailedPostPage = () => {
+  usePreventZoom();
+  
   const { communityId, postId, handle } = useParams<{ communityId?: string; postId: string; handle?: string }>();
   const navigate = useNavigate();
   const isMobile = useIsMobile();

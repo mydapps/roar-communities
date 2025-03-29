@@ -5,8 +5,11 @@ import { Button } from '@/components/ui/button';
 import { ArrowUp, Loader2 } from 'lucide-react';
 import { fetchPosts, setupMirrorListener, toggleRoar } from '@/utils/api';
 import { toast } from 'sonner';
+import { usePreventZoom } from '@/hooks/usePreventZoom';
 
 const FeedPage = () => {
+  usePreventZoom();
+
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
