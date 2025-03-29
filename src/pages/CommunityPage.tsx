@@ -164,10 +164,10 @@ const CommunityPage = () => {
   const hasLastDistributed = community?.rewards?.last_distributed && community.rewards.last_distributed !== null;
   
   return (
-    <div className="flex flex-col md:flex-row gap-4 animate-fade-in max-w-full overflow-x-hidden">
+    <div className="flex flex-col md:flex-row gap-4 animate-fade-in max-w-full overflow-x-hidden pt-4 md:pt-0">
       <div className="flex-1 order-2 md:order-1">
         {isMobile && (
-          <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm pb-3 mb-3 border-b pt-20">
+          <div className="sticky top-16 z-10 bg-background/95 backdrop-blur-sm pb-3 mb-3 border-b pt-4">
             <div className="flex items-center gap-3 mb-2">
               <Avatar className="h-10 w-10">
                 <AvatarImage src={community?.image} alt={community?.name} />
@@ -358,7 +358,7 @@ const CommunityPage = () => {
                         <span className="font-medium text-primary">Current Reward Pool</span>
                         <div className="text-right">
                           <div className="font-bold text-lg">
-                            {availableRewards.toFixed(5) || '0.00'} ETH
+                            {availableRewards.toFixed(5) || '0.00000'} ETH
                           </div>
                           <div className="text-sm text-muted-foreground">
                             ${(availableRewards * ethToUsd).toLocaleString(undefined, { maximumFractionDigits: 0 })}

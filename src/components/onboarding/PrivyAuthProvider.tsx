@@ -2,6 +2,7 @@
 import React, { ReactNode, useEffect, useState } from 'react';
 import { PrivyProvider, usePrivy } from '@privy-io/react-auth';
 import { toast } from 'sonner';
+import { useLocation } from 'react-router-dom';
 
 interface PrivyAuthProviderProps {
   children: ReactNode;
@@ -11,6 +12,12 @@ interface PrivyAuthProviderProps {
 const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
   const { ready, authenticated, user, login, getAccessToken } = usePrivy();
   const [authProcessed, setAuthProcessed] = useState(false);
+  const location = useLocation();
+  
+  // Don't redirect if we're already on community page or detailed post page
+  const isCommunityPage = location.pathname.startsWith('/c/');
+  const isDetailedPostPage = location.pathname.includes('/post/') || 
+                            (location.pathname.includes('/c/') && location.pathname.split('/').length > 3);
   
   useEffect(() => {
     // Reset auth processed state when authentication status changes
@@ -64,6 +71,13 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
               
               console.log('PrivyAuthProvider - Registration status:', data.registered);
               
+              // Don't redirect if we're already on community or post page
+              if (isCommunityPage || isDetailedPostPage) {
+                console.log('Already on community/post page, skipping redirect');
+                setAuthProcessed(true);
+                return;
+              }
+              
               // Check registration status
               if (data.registered === "1") {
                 // User is fully registered, redirect to feed
@@ -106,7 +120,7 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
 
       handlePrivyAuth();
     }
-  }, [ready, authenticated, user, getAccessToken, authProcessed]);
+  }, [ready, authenticated, user, getAccessToken, authProcessed, isCommunityPage, isDetailedPostPage]);
 
   return <>{children}</>;
 };

@@ -42,14 +42,15 @@ export const useCommunityPosts = (communityName: string | undefined) => {
   const currentPage = useRef<number>(1);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadingElementRef = useRef<HTMLDivElement | null>(null);
+  const isFetchingRef = useRef<boolean>(false);
   
   const fetchPosts = useCallback(async (page: number = 1, append: boolean = false) => {
-    if (!communityName) {
-      setError('Community name is required');
+    if (!communityName || isFetchingRef.current) {
       return;
     }
 
     try {
+      isFetchingRef.current = true;
       setLoading(true);
       setError(null);
 
@@ -94,6 +95,9 @@ export const useCommunityPosts = (communityName: string | undefined) => {
       toast.error('Failed to load community posts. Please try again.');
     } finally {
       setLoading(false);
+      setTimeout(() => {
+        isFetchingRef.current = false;
+      }, 500); // Add a small delay before allowing new fetches to prevent multiple concurrent requests
     }
   }, [communityName]);
 
@@ -101,11 +105,11 @@ export const useCommunityPosts = (communityName: string | undefined) => {
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loading) {
+        if (entries[0].isIntersecting && hasMore && !loading && !isFetchingRef.current) {
           loadMore();
         }
       },
-      { threshold: 0.1 }
+      { threshold: 0.1, rootMargin: '200px' } // Increased rootMargin for earlier loading
     );
     
     observerRef.current = observer;
@@ -137,11 +141,13 @@ export const useCommunityPosts = (communityName: string | undefined) => {
     // Reset and fetch first page when community name changes
     setPosts([]);
     currentPage.current = 1;
+    setHasMore(true);
+    isFetchingRef.current = false;
     fetchPosts(1, false);
   }, [communityName, fetchPosts]);
 
   const loadMore = useCallback(() => {
-    if (loading || !hasMore) return;
+    if (loading || !hasMore || isFetchingRef.current) return;
     
     const nextPage = currentPage.current + 1;
     fetchPosts(nextPage, true);
