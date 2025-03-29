@@ -1,6 +1,10 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { usePreventZoom } from '@/hooks/usePreventZoom';
+import { useCommunityData } from '@/hooks/useCommunityData';
+import { useCommunityMembers } from '@/hooks/useCommunityMembers';
 import { 
   Card, 
   CardContent, 
@@ -36,11 +40,13 @@ import {
   Copy,
   FileText,
   BookOpen,
-  MoreHorizontal
+  MoreHorizontal,
+  Loader2
 } from 'lucide-react';
 import { TradeSheet } from '@/components/shares/TradeSheet';
 import { Post } from '@/components/feed/Post';
 import CreatePostCard from '@/components/feed/CreatePostCard';
+import { MembersList } from '@/components/community/MembersList';
 
 const LionIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-5 w-5">
@@ -52,6 +58,7 @@ const LionIcon = () => (
 );
 
 const CommunityPage = () => {
+  usePreventZoom();
   const { id } = useParams<{ id: string }>();
   const isMobile = useIsMobile();
   const [tradeSheetOpen, setTradeSheetOpen] = useState(false);
@@ -60,68 +67,53 @@ const CommunityPage = () => {
   const [isMirroredPost, setIsMirroredPost] = useState<Record<number, boolean>>({});
   const [isIPFSSaved, setIsIPFSSaved] = useState<Record<number, boolean>>({});
   const [userPosts, setUserPosts] = useState<any[]>([]);
+  const [tradeAction, setTradeAction] = useState<"buy" | "sell">("buy");
   
-  const [communityData, setCommunityData] = useState({
-    name: id ? id.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ') : '',
-    description: "A community for Ethereum developers to share knowledge, collaborate on projects, and discuss the latest advancements in Ethereum technology. Members can contribute content, participate in discussions, and earn rewards from the community pool.",
-    members: 1423,
-    pricePerShare: 0.023,
-    priceChange: 12.5,
-    totalShares: 65000,
-    rewardPool: 2.45,
-    adminAddress: "0x1a2b...3c4d",
-    createdAt: "2023-06-15",
-    tags: ["Development", "Ethereum", "Smart Contracts"],
-    image: "https://images.unsplash.com/photo-1639322537228-f710d846310a?q=80&w=2532&auto=format&fit=crop",
-    userShareCount: 0,
-    posts: [
-      {
-        id: 1,
-        username: "alice.eth",
-        timeAgo: "2h",
-        content: "Just deployed my first smart contract on Ethereum. The gas fees were surprisingly reasonable!",
-        roarCount: 24,
-        commentCount: 5,
-        shareCount: 2,
-        avatar: "https://avatar.vercel.sh/alice.eth"
-      },
-      {
-        id: 2,
-        username: "bob.lens",
-        timeAgo: "5h",
-        content: "Anyone trying out the new DEX? The UI is clean and the liquidity seems good so far. I'm impressed with the low slippage.",
-        roarCount: 42,
-        commentCount: 12,
-        shareCount: 7,
-        avatar: "https://avatar.vercel.sh/bob.lens"
-      },
-      {
-        id: 3,
-        username: "crypto_sarah",
-        timeAgo: "1d",
-        content: "I've been experimenting with layer 2 solutions like Optimism and Arbitrum. The transaction fees are a game changer for smaller transactions! Have any of you had a chance to compare their performance?",
-        roarCount: 37,
-        commentCount: 15,
-        shareCount: 4,
-        avatar: "https://avatar.vercel.sh/crypto_sarah"
-      }
-    ],
-    members_list: [
-      { username: "alice.eth", shares: 320, joinedAt: "3 months ago" },
-      { username: "bob.lens", shares: 250, joinedAt: "2 months ago" },
-      { username: "charlie.sol", shares: 180, joinedAt: "1 month ago" },
-      { username: "david.avax", shares: 120, joinedAt: "3 weeks ago" },
-      { username: "eve.btc", shares: 90, joinedAt: "2 weeks ago" }
-    ]
-  });
-
+  // Fetch community data from API
+  const { data: communityData, loading: communityLoading, error: communityError } = useCommunityData(id);
+  
+  // Fetch community members with infinite scroll
+  const { members, loading: membersLoading, hasMore: hasMoreMembers, loadMore: loadMoreMembers } = useCommunityMembers(id);
+  
+  const ethToUsd = 2500; // Default value, will be overridden if API returns price data
+  
+  // Default posts data while API integration is pending
+  const defaultPosts = [
+    {
+      id: 1,
+      username: "alice.eth",
+      timeAgo: "2h",
+      content: "Just deployed my first smart contract on Ethereum. The gas fees were surprisingly reasonable!",
+      roarCount: 24,
+      commentCount: 5,
+      shareCount: 2,
+      avatar: "https://avatar.vercel.sh/alice.eth"
+    },
+    {
+      id: 2,
+      username: "bob.lens",
+      timeAgo: "5h",
+      content: "Anyone trying out the new DEX? The UI is clean and the liquidity seems good so far. I'm impressed with the low slippage.",
+      roarCount: 42,
+      commentCount: 12,
+      shareCount: 7,
+      avatar: "https://avatar.vercel.sh/bob.lens"
+    },
+    {
+      id: 3,
+      username: "crypto_sarah",
+      timeAgo: "1d",
+      content: "I've been experimenting with layer 2 solutions like Optimism and Arbitrum. The transaction fees are a game changer for smaller transactions! Have any of you had a chance to compare their performance?",
+      roarCount: 37,
+      commentCount: 15,
+      shareCount: 4,
+      avatar: "https://avatar.vercel.sh/crypto_sarah"
+    }
+  ];
+  
+  const [posts, setPosts] = useState(defaultPosts);
+  
   const [buyAmount, setBuyAmount] = useState<number>(1);
-  const estimatedCost = buyAmount * communityData.pricePerShare;
-  
-  const ethToUsd = 3500; // 1 ETH = $3500 USD
-  const priceInUsd = communityData.pricePerShare * ethToUsd;
-  const rewardPoolUsd = communityData.rewardPool * ethToUsd;
-  const marketCapUsd = (communityData.totalShares * communityData.pricePerShare) * ethToUsd;
   
   const handleRoar = (postId: number) => {
     setIsRoared(prev => {
@@ -129,25 +121,19 @@ const CommunityPage = () => {
       if (updatedState[postId]) {
         updatedState[postId] = false;
         
-        setCommunityData(prev => ({
-          ...prev,
-          posts: prev.posts.map(post => 
-            post.id === postId 
-              ? { ...post, roarCount: post.roarCount - 1 } 
-              : post
-          )
-        }));
+        setPosts(prev => prev.map(post => 
+          post.id === postId 
+            ? { ...post, roarCount: post.roarCount - 1 } 
+            : post
+        ));
       } else {
         updatedState[postId] = true;
         
-        setCommunityData(prev => ({
-          ...prev,
-          posts: prev.posts.map(post => 
-            post.id === postId 
-              ? { ...post, roarCount: post.roarCount + 1 } 
-              : post
-          )
-        }));
+        setPosts(prev => prev.map(post => 
+          post.id === postId 
+            ? { ...post, roarCount: post.roarCount + 1 } 
+            : post
+        ));
       }
       return updatedState;
     });
@@ -179,14 +165,64 @@ const CommunityPage = () => {
     });
   };
   
-  const chartPoints = communityData.priceChange > 0 
-    ? "M0,50 Q25,30 50,20 T100,10" 
-    : "M0,50 Q25,70 50,80 T100,90";
-    
   const handlePostCreated = (newPost: any) => {
     setUserPosts([newPost, ...userPosts]);
   };
-
+  
+  // Calculate chart points based on price trend
+  const priceChange = communityData?.community ? 
+    ((communityData.community.prices.buy_price - 0.002) / 0.002) * 100 : 
+    12.5; // Default value
+    
+  const chartPoints = priceChange > 0 
+    ? "M0,50 Q25,30 50,20 T100,10" 
+    : "M0,50 Q25,70 50,80 T100,90";
+  
+  // Handle buy and sell actions
+  const handleBuyAction = () => {
+    setTradeAction("buy");
+    setTradeSheetOpen(true);
+  };
+  
+  const handleSellAction = () => {
+    setTradeAction("sell");
+    setTradeSheetOpen(true);
+  };
+  
+  if (communityLoading) {
+    return (
+      <div className="h-[50vh] flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 mx-auto animate-spin text-primary" />
+          <p className="mt-2 text-muted-foreground">Loading community data...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (communityError) {
+    return (
+      <div className="h-[50vh] flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto">
+          <p className="text-destructive text-lg">Error loading community</p>
+          <p className="mt-2 text-muted-foreground">{communityError}</p>
+          <Button 
+            className="mt-4" 
+            onClick={() => window.location.reload()}
+          >
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
+  
+  const community = communityData?.community;
+  const user = communityData?.user;
+  
+  // Check if user has shares in this community
+  const hasShares = user && user.shares > 0;
+  
   return (
     <div className="flex flex-col md:flex-row gap-4 animate-fade-in max-w-full overflow-x-hidden">
       <div className="flex-1 order-2 md:order-1">
@@ -194,52 +230,63 @@ const CommunityPage = () => {
           <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm pb-3 mb-3 border-b">
             <div className="flex items-center gap-3 mb-2">
               <Avatar className="h-10 w-10">
-                <AvatarImage src={communityData.image} alt={communityData.name} />
-                <AvatarFallback>{communityData.name[0]}</AvatarFallback>
+                <AvatarImage src={community?.image} alt={community?.name} />
+                <AvatarFallback>{community?.name ? community.name[0].toUpperCase() : id?.[0].toUpperCase()}</AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <h1 className="text-xl font-bold truncate">{communityData.name}</h1>
+                <h1 className="text-xl font-bold truncate">{community?.name || id}</h1>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="bg-background/80 text-xs flex items-center">
                     <Users className="h-3 w-3 mr-1" />
-                    {communityData.members}
+                    {community?.members_count || 0}
                   </Badge>
-                  {communityData.priceChange > 0 ? (
+                  {priceChange > 0 ? (
                     <Badge className="bg-green-500/10 text-green-600 text-xs">
                       <ArrowUp className="h-3 w-3 mr-1" />
-                      {communityData.priceChange.toFixed(1)}%
+                      {priceChange.toFixed(1)}%
                     </Badge>
                   ) : (
                     <Badge className="bg-red-500/10 text-red-600 text-xs">
                       <ArrowDown className="h-3 w-3 mr-1" />
-                      {Math.abs(communityData.priceChange).toFixed(1)}%
+                      {Math.abs(priceChange).toFixed(1)}%
                     </Badge>
                   )}
                 </div>
               </div>
-              <Button 
-                size="sm"
-                variant="default"
-                className="bg-purple-600 hover:bg-purple-700 text-white shadow-sm flex-shrink-0"
-                onClick={() => setTradeSheetOpen(true)}
-              >
-                {communityData.userShareCount > 0 ? 'Trade' : 'Join'}
-              </Button>
+              {hasShares ? (
+                <Button 
+                  size="sm"
+                  variant="default"
+                  className="bg-purple-600 hover:bg-purple-700 text-white shadow-sm flex-shrink-0"
+                  onClick={handleBuyAction}
+                >
+                  Trade
+                </Button>
+              ) : (
+                <Button 
+                  size="sm"
+                  variant="default"
+                  className="bg-purple-600 hover:bg-purple-700 text-white shadow-sm flex-shrink-0"
+                  onClick={handleBuyAction}
+                >
+                  Join
+                </Button>
+              )}
             </div>
             
             <div className="grid grid-cols-2 gap-2 mb-2">
               <div className="bg-muted/50 rounded-lg p-2">
                 <div className="text-xs text-muted-foreground">Share Price</div>
                 <div className="font-semibold text-sm flex items-center">
-                  ${priceInUsd.toFixed(2)}
+                  ${community?.prices.buy_price_usd.toFixed(2) || '0.00'}
                 </div>
               </div>
               <div className="bg-muted/50 rounded-lg p-2">
                 <div className="text-xs text-muted-foreground">Market Cap</div>
                 <div className="font-semibold text-sm flex items-center">
-                  ${marketCapUsd >= 1000000 
-                    ? (marketCapUsd / 1000000).toFixed(1) + 'M' 
-                    : marketCapUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  ${community?.market_cap.usd >= 1000000 
+                    ? (community.market_cap.usd / 1000000).toFixed(1) + 'M' 
+                    : community?.market_cap.usd.toLocaleString(undefined, { maximumFractionDigits: 0 }) || '0'}
                 </div>
               </div>
             </div>
@@ -295,11 +342,11 @@ const CommunityPage = () => {
                 />
               ))}
               
-              {communityData.posts.map((post) => (
+              {posts.map((post) => (
                 <Post 
                   key={`community-post-${post.id}`}
                   username={post.username}
-                  community={communityData.name}
+                  community={community?.name || id || ''}
                   timeAgo={post.timeAgo}
                   content={post.content}
                   roarCount={post.roarCount}
@@ -317,32 +364,17 @@ const CommunityPage = () => {
               <CardHeader>
                 <CardTitle>Community Members</CardTitle>
                 <CardDescription>
-                  {communityData.members} members have purchased shares in this community
+                  {community?.members_count || 0} members have purchased shares in this community
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {communityData.members_list.map((member, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 rounded-lg border border-border/40 hover:border-primary/30 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <Avatar>
-                          <AvatarImage src={`https://avatar.vercel.sh/${member.username}`} />
-                          <AvatarFallback>{member.username[0].toUpperCase()}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium">{member.username}</div>
-                          <div className="text-xs text-muted-foreground">Joined {member.joinedAt}</div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-medium">{member.shares} shares</div>
-                        <div className="text-xs text-muted-foreground">
-                          {(member.shares * communityData.pricePerShare).toFixed(3)} ETH
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <MembersList 
+                  members={members} 
+                  loading={membersLoading} 
+                  hasMore={hasMoreMembers} 
+                  loadMore={loadMoreMembers}
+                  ethToUsd={ethToUsd}
+                />
               </CardContent>
             </Card>
           </TabsContent>
@@ -363,8 +395,12 @@ const CommunityPage = () => {
                       <div className="flex justify-between items-center mb-1">
                         <span className="font-medium text-primary">Current Reward Pool</span>
                         <div className="text-right">
-                          <div className="font-bold text-lg">{communityData.rewardPool.toFixed(2)} ETH</div>
-                          <div className="text-sm text-muted-foreground">${rewardPoolUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                          <div className="font-bold text-lg">
+                            {community?.rewards.available_rewards.toFixed(5) || '0.00'} ETH
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            ${((community?.rewards.available_rewards || 0) * ethToUsd).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -376,7 +412,7 @@ const CommunityPage = () => {
                       How Rewards Work
                     </h3>
                     <ul className="space-y-2 text-sm text-muted-foreground list-disc pl-5">
-                      <li>2% of all buy/sell transactions go to the reward pool</li>
+                      <li>{community?.fees.reward_fees || 2}% of all buy/sell transactions go to the reward pool</li>
                       <li>Rewards are distributed on the last day of each month</li>
                       <li>60% goes to the top 3 most roared posts</li>
                       <li>40% is split among the next 7 top posts</li>
@@ -435,12 +471,12 @@ const CommunityPage = () => {
           <TabsContent value="about" className="animate-fade-in">
             <Card>
               <CardHeader>
-                <CardTitle>About {communityData.name}</CardTitle>
+                <CardTitle>About {community?.name || id}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div>
                   <h3 className="font-medium mb-2">Community Description</h3>
-                  <p className="text-muted-foreground">{communityData.description}</p>
+                  <p className="text-muted-foreground">{community?.description || 'No description available.'}</p>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -449,19 +485,19 @@ const CommunityPage = () => {
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Created On</span>
-                        <span>{communityData.createdAt}</span>
+                        <span>{community?.created_on ? new Date(community.created_on).toLocaleDateString() : 'Unknown'}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Admin</span>
-                        <span>{communityData.adminAddress}</span>
+                        <span>{community?.owner ? `${community.owner.substring(0, 6)}...${community.owner.substring(community.owner.length - 4)}` : 'Unknown'}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Total Members</span>
-                        <span>{communityData.members}</span>
+                        <span>{community?.members_count || 0}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Total Shares</span>
-                        <span>{communityData.totalShares.toLocaleString()}</span>
+                        <span>{community?.shares.toLocaleString() || 0}</span>
                       </div>
                     </div>
                   </div>
@@ -471,21 +507,19 @@ const CommunityPage = () => {
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Admin Fee</span>
-                        <span>1.5%</span>
+                        <span>{community?.fees.admin_fees || 0}%</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Reward Pool</span>
-                        <span>2.0%</span>
+                        <span>{community?.fees.reward_fees || 0}%</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Platform Fee</span>
+                        <span>{community?.fees.platform_fees || 0}%</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Current Share Price</span>
-                        <span>{communityData.pricePerShare.toFixed(3)} ETH</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Price Change (24h)</span>
-                        <span className={communityData.priceChange >= 0 ? "text-green-600" : "text-red-600"}>
-                          {communityData.priceChange >= 0 ? "+" : ""}{communityData.priceChange.toFixed(2)}%
-                        </span>
+                        <span>{community?.prices.buy_price.toFixed(6) || 0} ETH</span>
                       </div>
                     </div>
                   </div>
@@ -496,7 +530,7 @@ const CommunityPage = () => {
                   <ul className="space-y-2 text-sm text-muted-foreground list-disc pl-5">
                     <li>Be respectful to all members and maintain a professional tone</li>
                     <li>No spam, excessive self-promotion, or plagiarism</li>
-                    <li>Content should be relevant to Ethereum development</li>
+                    <li>Content should be relevant to {community?.name || id}</li>
                     <li>Provide evidence and sources for technical claims when possible</li>
                     <li>Abide by the community guidelines for posting and commenting</li>
                   </ul>
@@ -515,7 +549,7 @@ const CommunityPage = () => {
                 <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
                   <path 
                     d={chartPoints + " V100 H0 Z"} 
-                    fill={communityData.priceChange > 0 ? "#10B981" : "#EF4444"} 
+                    fill={priceChange > 0 ? "#10B981" : "#EF4444"} 
                   />
                 </svg>
               </div>
@@ -523,34 +557,34 @@ const CommunityPage = () => {
               <div className="relative">
                 <div 
                   className="h-32 w-full bg-cover bg-center" 
-                  style={{ backgroundImage: `url(${communityData.image})` }}
+                  style={{ backgroundImage: `url(${community?.image || 'https://images.unsplash.com/photo-1639322537228-f710d846310a?q=80&w=2532&auto=format&fit=crop'})` }}
                 />
                 <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-background to-transparent"></div>
                 
                 <Avatar className="absolute bottom-0 left-4 transform translate-y-1/2 h-16 w-16 border-4 border-background">
-                  <AvatarImage src={communityData.image} alt={communityData.name} />
-                  <AvatarFallback>{communityData.name[0].toUpperCase()}</AvatarFallback>
+                  <AvatarImage src={community?.image} alt={community?.name} />
+                  <AvatarFallback>{community?.name ? community.name[0].toUpperCase() : id?.[0].toUpperCase()}</AvatarFallback>
                 </Avatar>
               </div>
               
               <CardHeader className="pt-10 pb-2">
                 <div className="flex justify-between items-start">
                   <div>
-                    <CardTitle>{communityData.name}</CardTitle>
+                    <CardTitle>{community?.name || id}</CardTitle>
                     <CardDescription className="mt-1 line-clamp-2">
-                      {communityData.members} members
+                      {community?.members_count || 0} members
                     </CardDescription>
                   </div>
                   
-                  {communityData.priceChange > 0 ? (
+                  {priceChange > 0 ? (
                     <Badge className="bg-green-500/10 text-green-600">
                       <ArrowUp className="h-3 w-3 mr-1" />
-                      {communityData.priceChange.toFixed(1)}%
+                      {priceChange.toFixed(1)}%
                     </Badge>
                   ) : (
                     <Badge className="bg-red-500/10 text-red-600">
                       <ArrowDown className="h-3 w-3 mr-1" />
-                      {Math.abs(communityData.priceChange).toFixed(1)}%
+                      {Math.abs(priceChange).toFixed(1)}%
                     </Badge>
                   )}
                 </div>
@@ -561,16 +595,16 @@ const CommunityPage = () => {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Price per Share</span>
                     <div className="text-right">
-                      <div className="font-semibold text-[15px]">${priceInUsd.toFixed(2)}</div>
-                      <div className="text-xs text-muted-foreground">{communityData.pricePerShare.toFixed(3)} ETH</div>
+                      <div className="font-semibold text-[15px]">${community?.prices.buy_price_usd.toFixed(2) || '0.00'}</div>
+                      <div className="text-xs text-muted-foreground">{community?.prices.buy_price.toFixed(6) || '0.000000'} ETH</div>
                     </div>
                   </div>
                   
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Market Cap</span>
                     <div className="text-right">
-                      <div className="font-semibold text-[15px]">${marketCapUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-                      <div className="text-xs text-muted-foreground">{(communityData.totalShares * communityData.pricePerShare).toFixed(1)} ETH</div>
+                      <div className="font-semibold text-[15px]">${community?.market_cap.usd.toLocaleString(undefined, { maximumFractionDigits: 0 }) || '0'}</div>
+                      <div className="text-xs text-muted-foreground">{community?.market_cap.eth.toFixed(2) || '0.00'} ETH</div>
                     </div>
                   </div>
                   
@@ -578,18 +612,18 @@ const CommunityPage = () => {
                   
                   <div className="pt-1">
                     <div className="text-sm font-medium mb-2">Your Holdings</div>
-                    {communityData.userShareCount > 0 ? (
+                    {hasShares ? (
                       <div className="bg-primary/5 p-3 rounded-lg">
                         <div className="flex justify-between mb-1">
                           <span className="text-sm text-muted-foreground">Shares Owned</span>
-                          <span className="font-medium">{communityData.userShareCount}</span>
+                          <span className="font-medium">{user?.shares.toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-sm text-muted-foreground">Value</span>
                           <div className="text-right">
-                            <div className="font-semibold">${(communityData.userShareCount * communityData.pricePerShare * ethToUsd).toFixed(2)}</div>
+                            <div className="font-semibold">${user?.share_value.usd.toFixed(2)}</div>
                             <div className="text-xs text-muted-foreground">
-                              {(communityData.userShareCount * communityData.pricePerShare).toFixed(3)} ETH
+                              {user?.share_value.eth.toFixed(6)} ETH
                             </div>
                           </div>
                         </div>
@@ -607,8 +641,12 @@ const CommunityPage = () => {
                       <div className="flex justify-between items-center mb-1">
                         <span className="font-medium text-primary">Reward Pool</span>
                         <div className="text-right">
-                          <div className="font-bold text-lg">${rewardPoolUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-                          <div className="text-xs text-muted-foreground">{communityData.rewardPool.toFixed(2)} ETH</div>
+                          <div className="font-bold text-lg">
+                            ${((community?.rewards.available_rewards || 0) * ethToUsd).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {community?.rewards.available_rewards.toFixed(5) || '0.00000'} ETH
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -617,16 +655,30 @@ const CommunityPage = () => {
               </CardContent>
               
               <CardFooter className="flex flex-col gap-3 pt-0">
-                <Button 
-                  className="w-full bg-purple-600 hover:bg-purple-700 text-white shadow-md hover:shadow-lg" 
-                  onClick={() => setTradeSheetOpen(true)}
-                >
-                  {communityData.userShareCount > 0 ? 'Buy More Shares' : 'Join Community'}
-                </Button>
-                
-                {communityData.userShareCount > 0 && (
-                  <Button variant="outline" className="w-full">
-                    Sell Shares
+                {hasShares ? (
+                  <>
+                    <div className="grid grid-cols-2 gap-2 w-full">
+                      <Button 
+                        className="w-full bg-purple-600 hover:bg-purple-700 text-white shadow-md hover:shadow-lg" 
+                        onClick={handleBuyAction}
+                      >
+                        Buy More
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        className="w-full" 
+                        onClick={handleSellAction}
+                      >
+                        Sell
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <Button 
+                    className="w-full bg-purple-600 hover:bg-purple-700 text-white shadow-md hover:shadow-lg" 
+                    onClick={handleBuyAction}
+                  >
+                    Join Community
                   </Button>
                 )}
               </CardFooter>
@@ -639,10 +691,10 @@ const CommunityPage = () => {
         open={tradeSheetOpen}
         onOpenChange={setTradeSheetOpen}
         community={{
-          name: communityData.name,
-          currentPrice: communityData.pricePerShare
+          name: community?.name || id || '',
+          currentPrice: community?.prices.buy_price || 0.001
         }}
-        action={communityData.userShareCount > 0 ? "buy" : "buy"}
+        action={tradeAction}
         userEthBalance="0.536"
       />
     </div>
