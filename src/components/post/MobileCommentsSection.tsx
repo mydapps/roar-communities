@@ -102,7 +102,8 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
                   comment={reply}
                   postAuthorHandle={postAuthorHandle}
                   onMeowChange={handleMeowChange}
-                  onReply={() => {}} // We'll handle this with our custom mobile UI
+                  // Fix: This needs to return a Promise<void> for the parentId and content
+                  onReply={(parentId: number, content: string) => Promise.resolve()}
                   isMobile={true}
                   onOpenMobileReply={(id, handle, avatar, content) => 
                     handleOpenReply(id, handle, content)
