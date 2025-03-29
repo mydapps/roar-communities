@@ -4,6 +4,7 @@ import { fetchPost, PostDetails, OriginalPost } from '@/utils/postApi';
 import { toggleRoar } from '@/utils/api';
 import { Post } from '@/components/feed/Post';
 import { EnhancedCommentsSection } from '@/components/post/EnhancedCommentsSection';
+import { MobileCommentsSection } from '@/components/post/MobileCommentsSection';
 import { Helmet } from 'react-helmet-async';
 import { 
   Breadcrumb, 
@@ -154,8 +155,8 @@ const DetailedPostPage = () => {
     }
   };
   
-  const handleAddReply = async (parentId: number, content: string): Promise<void> => {
-    if (!post || !content.trim()) return;
+  const handleAddReply = async (content: string, parentId?: number): Promise<void> => {
+    if (!post || !content.trim()) return Promise.reject(new Error('Invalid input'));
     
     if (!isLoggedIn) {
       toast.error('You need to login to comment', {
@@ -165,17 +166,18 @@ const DetailedPostPage = () => {
           onClick: () => navigate('/index')
         }
       });
-      return;
+      return Promise.reject(new Error('Not logged in'));
     }
     
     try {
-      console.log(`Creating reply to post ${post.code} with parentId ${parentId} and content: ${content}`);
-      await createReply(post.code, content, parentId);
+      console.log(`Creating reply to post ${post.code} with parentId ${parentId || 0} and content: ${content}`);
+      await createReply(post.code, content, parentId || 0);
       handleRefreshComments();
+      return Promise.resolve();
     } catch (error) {
       console.error('Error adding reply:', error);
       toast.error('Failed to post your comment. Please try again.');
-      throw error;
+      return Promise.reject(error);
     }
   };
   
@@ -398,12 +400,26 @@ const DetailedPostPage = () => {
       )}
       
       {post && isLoggedIn ? (
-        <EnhancedCommentsSection
-          postCode={post.code}
-          initialReplies={replies}
-          initialReplyCount={replyCount}
-          postAuthorHandle={post.author?.handle || (post.handle || '')}
-        />
+        <>
+          {!isMobile && (
+            <EnhancedCommentsSection
+              postCode={post.code}
+              initialReplies={replies}
+              initialReplyCount={replyCount}
+              postAuthorHandle={post.author?.handle || (post.handle || '')}
+            />
+          )}
+          
+          {isMobile && (
+            <MobileCommentsSection
+              postCode={post.code}
+              postAuthorHandle={post.author?.handle || (post.handle || '')}
+              replies={replies}
+              onAddComment={handleAddReply}
+              onRefresh={handleRefreshComments}
+            />
+          )}
+        </>
       ) : isLoggedIn ? null : (
         <div className="relative backdrop-blur-sm py-10">
           <div className="absolute inset-0 bg-background/70 flex flex-col items-center justify-center z-10">

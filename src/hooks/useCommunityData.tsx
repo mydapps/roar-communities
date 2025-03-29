@@ -102,16 +102,41 @@ export const useCommunityData = (communityName: string | undefined) => {
           throw new Error(responseData.message || 'Failed to fetch community data');
         }
 
-        // Ensure reward data is correctly processed
-        if (responseData.community && responseData.community.rewards) {
-          console.log("Raw rewards data:", responseData.community.rewards);
-          // Make sure rewards.available_rewards is a number
-          responseData.community.rewards.available_rewards = 
-            typeof responseData.community.rewards.available_rewards === 'number' ? 
-            responseData.community.rewards.available_rewards : 
-            parseFloat(responseData.community.rewards.available_rewards) || 0;
+        // Enhanced debug logging for rewards data
+        if (responseData.community) {
+          console.log("Full community data received:", responseData.community);
           
-          console.log("Processed rewards data:", responseData.community.rewards);
+          if (responseData.community.rewards) {
+            console.log("Raw rewards data:", responseData.community.rewards);
+            console.log("Rewards type:", typeof responseData.community.rewards);
+            console.log("Available rewards type:", typeof responseData.community.rewards.available_rewards);
+            console.log("Available rewards value:", responseData.community.rewards.available_rewards);
+            
+            // Make sure rewards.available_rewards is a number
+            if (responseData.community.rewards.available_rewards === null || 
+                responseData.community.rewards.available_rewards === undefined) {
+              console.warn("Rewards available was null or undefined, defaulting to 0");
+              responseData.community.rewards.available_rewards = 0;
+            } else if (typeof responseData.community.rewards.available_rewards === 'string') {
+              console.log("Converting rewards from string to number:", responseData.community.rewards.available_rewards);
+              const parsedValue = parseFloat(responseData.community.rewards.available_rewards);
+              if (isNaN(parsedValue)) {
+                console.warn("Failed to parse rewards as number, defaulting to 0");
+                responseData.community.rewards.available_rewards = 0;
+              } else {
+                responseData.community.rewards.available_rewards = parsedValue;
+              }
+            }
+            
+            console.log("Processed rewards data:", responseData.community.rewards);
+          } else {
+            console.warn("No rewards data found in the community object");
+            // Initialize rewards if missing
+            responseData.community.rewards = {
+              available_rewards: 0,
+              last_distributed: ""
+            };
+          }
         }
 
         setData(responseData);
