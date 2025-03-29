@@ -67,7 +67,7 @@ export const useCommunityMembers = (communityName: string | undefined) => {
       const data: CommunityMembersResponse = await response.json();
       
       if (!data.success) {
-        throw new Error(data.message || 'Failed to fetch community members');
+        throw new Error('Failed to fetch community members');
       }
 
       setMembers(prev => append ? [...prev, ...data.members] : data.members);
