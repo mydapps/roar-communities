@@ -14,6 +14,12 @@ const MainLayout = () => {
   const isMobile = useIsMobile();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   
+  // Check if we're on a post detail page
+  const isPostDetailPage = 
+    /^\/c\/[\w-]+\/[\w-]+$/.test(location.pathname) || // community post: /c/communityId/postId
+    /^\/[\w-]+\/[\w-]+$/.test(location.pathname) ||    // user post: /handle/postId
+    /^\/post\/[\w-]+$/.test(location.pathname);        // generic post: /post/postId
+  
   useEffect(() => {
     // Check if user is logged in
     const userKey = localStorage.getItem('dapps_user_key');
@@ -47,7 +53,7 @@ const MainLayout = () => {
             onRefresh={handleRefresh}
             className="transition-all duration-300 ease-in-out h-full"
           >
-            <main className={isMobile ? "pb-16" : ""}>
+            <main className={isMobile && !isPostDetailPage ? "pb-16" : ""}>
               <div className="container py-6 px-4 sm:px-6 max-w-5xl mx-auto animate-fade-in">
                 <Outlet />
               </div>

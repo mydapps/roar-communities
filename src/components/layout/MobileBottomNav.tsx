@@ -1,10 +1,23 @@
 
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { Home, Search, Users, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const MobileBottomNav = () => {
+  const location = useLocation();
+  
+  // Check if we're on a post detail page
+  const isPostDetailPage = 
+    /^\/c\/[\w-]+\/[\w-]+$/.test(location.pathname) || // community post: /c/communityId/postId
+    /^\/[\w-]+\/[\w-]+$/.test(location.pathname) ||    // user post: /handle/postId
+    /^\/post\/[\w-]+$/.test(location.pathname);        // generic post: /post/postId
+  
+  // Don't render the bottom nav on post detail pages
+  if (isPostDetailPage) {
+    return null;
+  }
+
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t md:hidden">
       <div className="flex justify-around items-center py-3 px-2">
