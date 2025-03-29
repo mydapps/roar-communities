@@ -48,6 +48,7 @@ import { Post } from '@/components/feed/Post';
 import CreatePostCard from '@/components/feed/CreatePostCard';
 import { MembersList } from '@/components/community/MembersList';
 import { useCommunityPosts } from '@/hooks/useCommunityPosts';
+import { toggleRoar } from '@/utils/api';
 
 const LionIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-5 w-5">
@@ -73,7 +74,7 @@ const CommunityPage = () => {
   const { members, loading: membersLoading, hasMore: hasMoreMembers, loadMore: loadMoreMembers } = useCommunityMembers(id);
   
   // Fetch community posts with infinite scroll
-  const { posts, loading: postsLoading, hasMore: hasMorePosts, loadMore: loadMorePosts } = useCommunityPosts(id);
+  const { posts, loading: postsLoading, hasMore: hasMorePosts, loadMore: loadMorePosts, loadingElementRef } = useCommunityPosts(id);
   
   const ethToUsd = communityData?.community?.prices?.buy_price_usd && communityData?.community?.prices?.buy_price 
     ? communityData.community.prices.buy_price_usd / communityData.community.prices.buy_price
@@ -104,6 +105,24 @@ const CommunityPage = () => {
   const handleSellAction = () => {
     setTradeAction("sell");
     setTradeSheetOpen(true);
+  };
+  
+  const handleRoar = async (postCode: string) => {
+    if (!postCode) {
+      console.error("Cannot roar post: missing postCode");
+      toast.error("Unable to update post. Missing identifier.");
+      return;
+    }
+    
+    try {
+      const success = await toggleRoar(postCode);
+      if (!success) {
+        toast.error("Failed to update post. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error toggling roar:", error);
+      toast.error("Error updating post. Please try again.");
+    }
   };
   
   if (communityLoading) {
@@ -140,11 +159,15 @@ const CommunityPage = () => {
   // Check if user has shares in this community
   const hasShares = user && user.shares > 0;
   
+  // Get the available rewards
+  const availableRewards = community?.rewards?.available_rewards || 0;
+  const hasLastDistributed = community?.rewards?.last_distributed && community.rewards.last_distributed !== null;
+  
   return (
     <div className="flex flex-col md:flex-row gap-4 animate-fade-in max-w-full overflow-x-hidden">
       <div className="flex-1 order-2 md:order-1">
         {isMobile && (
-          <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm pb-3 mb-3 border-b pt-14">
+          <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm pb-3 mb-3 border-b pt-20">
             <div className="flex items-center gap-3 mb-2">
               <Avatar className="h-10 w-10">
                 <AvatarImage src={community?.image} alt={community?.name} />
@@ -212,7 +235,7 @@ const CommunityPage = () => {
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <ScrollArea className="w-full max-w-full pb-2">
-            <TabsList className="w-full md:w-auto justify-start mb-6 pb-px overflow-x-auto flex-nowrap border-b">
+            <TabsList className="w-full lg:w-auto justify-start mb-6 pb-px overflow-x-auto flex-nowrap border-b">
               <TabsTrigger value="posts" className="flex-shrink-0">
                 <MessageCircle className="h-4 w-4 mr-2" />
                 Posts
@@ -268,29 +291,26 @@ const CommunityPage = () => {
                       postCode={post.code}
                       avatar={post.avatar}
                       roared={post.roar === 1}
+                      onRoar={() => handleRoar(post.code)}
                       isMirror={post.is_mirror === 1}
                       ipfs={post.code}
                       isLoggedIn={!!localStorage.getItem('dapps_user_key')}
                     />
                   ))}
                   
-                  {hasMorePosts && (
-                    <div className="flex justify-center py-4">
-                      <Button 
-                        variant="outline" 
-                        onClick={loadMorePosts}
-                        disabled={postsLoading}
-                        className="gap-2"
-                      >
-                        {postsLoading ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <ChevronUp className="h-4 w-4" />
-                        )}
-                        Load more posts
-                      </Button>
-                    </div>
-                  )}
+                  {/* Infinite scroll loading element */}
+                  <div 
+                    ref={loadingElementRef}
+                    className="flex justify-center py-8"
+                  >
+                    {postsLoading && (
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    )}
+                    
+                    {!postsLoading && !hasMorePosts && posts.length > 0 && (
+                      <p className="text-sm text-muted-foreground">You've reached the end</p>
+                    )}
+                  </div>
                 </>
               ) : (
                 <div className="text-center p-8 border border-dashed rounded-lg">
@@ -338,10 +358,10 @@ const CommunityPage = () => {
                         <span className="font-medium text-primary">Current Reward Pool</span>
                         <div className="text-right">
                           <div className="font-bold text-lg">
-                            {community?.rewards.available_rewards.toFixed(5) || '0.00'} ETH
+                            {availableRewards.toFixed(5) || '0.00'} ETH
                           </div>
                           <div className="text-sm text-muted-foreground">
-                            ${((community?.rewards.available_rewards || 0) * ethToUsd).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                            ${(availableRewards * ethToUsd).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                           </div>
                         </div>
                       </div>
@@ -362,7 +382,7 @@ const CommunityPage = () => {
                     </ul>
                   </div>
                   
-                  {community?.rewards.last_distributed && (
+                  {hasLastDistributed && (
                     <div>
                       <h3 className="font-medium mb-3">Last Month's Winners</h3>
                       <div className="space-y-3">
@@ -586,10 +606,10 @@ const CommunityPage = () => {
                         <span className="font-medium text-primary">Reward Pool</span>
                         <div className="text-right">
                           <div className="font-bold text-lg">
-                            ${((community?.rewards.available_rewards || 0) * ethToUsd).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                            ${(availableRewards * ethToUsd).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            {community?.rewards.available_rewards.toFixed(5) || '0.00000'} ETH
+                            {availableRewards.toFixed(5) || '0.00000'} ETH
                           </div>
                         </div>
                       </div>

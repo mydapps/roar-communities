@@ -40,6 +40,8 @@ export const useCommunityPosts = (communityName: string | undefined) => {
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState<boolean>(true);
   const currentPage = useRef<number>(1);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const loadingElementRef = useRef<HTMLDivElement | null>(null);
   
   const fetchPosts = useCallback(async (page: number = 1, append: boolean = false) => {
     if (!communityName) {
@@ -95,6 +97,42 @@ export const useCommunityPosts = (communityName: string | undefined) => {
     }
   }, [communityName]);
 
+  // Set up intersection observer for infinite scrolling
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loading) {
+          loadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+    
+    observerRef.current = observer;
+    
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
+    };
+  }, [hasMore, loading]);
+
+  // Observe the loading element when it exists
+  useEffect(() => {
+    const currentObserver = observerRef.current;
+    const currentLoadingElement = loadingElementRef.current;
+    
+    if (currentObserver && currentLoadingElement) {
+      currentObserver.observe(currentLoadingElement);
+    }
+    
+    return () => {
+      if (currentObserver && currentLoadingElement) {
+        currentObserver.unobserve(currentLoadingElement);
+      }
+    };
+  }, [loadingElementRef.current]);
+
   useEffect(() => {
     // Reset and fetch first page when community name changes
     setPosts([]);
@@ -109,5 +147,12 @@ export const useCommunityPosts = (communityName: string | undefined) => {
     fetchPosts(nextPage, true);
   }, [loading, hasMore, fetchPosts]);
 
-  return { posts, loading, error, hasMore, loadMore };
+  return { 
+    posts, 
+    loading, 
+    error, 
+    hasMore, 
+    loadMore,
+    loadingElementRef
+  };
 };
