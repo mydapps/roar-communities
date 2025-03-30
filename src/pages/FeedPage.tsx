@@ -1,14 +1,14 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Post } from '@/components/feed/Post';
 import CreatePostCard from '@/components/feed/CreatePostCard';
 import { Button } from '@/components/ui/button';
-import { ArrowUp, Loader2, TrendingUp } from 'lucide-react';
+import { ArrowUp, Loader2, TrendingUp, Globe, User } from 'lucide-react';
 import { fetchPosts, setupMirrorListener, toggleRoar } from '@/utils/api';
 import { toast } from 'sonner';
 import { usePreventZoom } from '@/hooks/usePreventZoom';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 const FeedPage = () => {
   usePreventZoom();
@@ -20,6 +20,7 @@ const FeedPage = () => {
   const [hasMore, setHasMore] = useState(true);
   const [showScrollToTop, setShowScrollToTop] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0); // Used to force refresh
+  const [activeTab, setActiveTab] = useState<string>("personal");
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadingRef = useRef<HTMLDivElement>(null);
   
@@ -37,7 +38,9 @@ const FeedPage = () => {
     try {
       const fetchedPosts = await fetchPosts({ 
         page: pageNum,
-        personal: true 
+        personal: activeTab === "personal",
+        trending: activeTab === "trending",
+        global: activeTab === "global"
       });
       
       if (replace) {
@@ -53,12 +56,13 @@ const FeedPage = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [activeTab]);
   
   useEffect(() => {
     setLoading(true);
+    setPage(1);
     loadPosts(1, true);
-  }, [loadPosts, refreshKey]);
+  }, [loadPosts, refreshKey, activeTab]);
   
   useEffect(() => {
     const handleScroll = () => {
@@ -139,6 +143,11 @@ const FeedPage = () => {
     });
   };
   
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    setError(null);
+  };
+  
   return (
     <div className="max-w-2xl mx-auto pt-8 pb-20 px-4">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -162,6 +171,23 @@ const FeedPage = () => {
           </Card>
         </div>
       </div>
+      
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="mb-6">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="personal" className="flex items-center gap-1.5">
+            <User className="h-3.5 w-3.5" />
+            <span>Personal</span>
+          </TabsTrigger>
+          <TabsTrigger value="global" className="flex items-center gap-1.5">
+            <Globe className="h-3.5 w-3.5" />
+            <span>Global</span>
+          </TabsTrigger>
+          <TabsTrigger value="trending" className="flex items-center gap-1.5">
+            <TrendingUp className="h-3.5 w-3.5" />
+            <span>Trending</span>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
       
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mt-4">
@@ -207,7 +233,11 @@ const FeedPage = () => {
           !loading && !error && (
             <div className="text-center py-8 border rounded-lg bg-background/50 w-full">
               <p className="text-muted-foreground">No posts found</p>
-              <p className="text-sm text-muted-foreground mt-1">Join some communities to see posts here</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {activeTab === "personal" 
+                  ? "Join some communities to see posts here" 
+                  : "No posts available at the moment"}
+              </p>
             </div>
           )
         )}
