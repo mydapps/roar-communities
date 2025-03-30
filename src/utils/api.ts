@@ -1,3 +1,4 @@
+
 import { toast } from 'sonner';
 import { POST_MIRRORED_EVENT } from '@/components/feed/post/MirrorButton';
 
@@ -213,9 +214,10 @@ export const fetchPosts = async (options: {
   page: number;
   personal?: boolean;
   trending?: boolean;
+  global?: boolean;
 }): Promise<Post[]> => {
   try {
-    const { page, personal, trending } = options;
+    const { page, personal, trending, global } = options;
     
     // Get user API key from local storage
     const userKey = localStorage.getItem('dapps_user_key');
@@ -233,6 +235,9 @@ export const fetchPosts = async (options: {
     }
     if (trending) {
       url += '&trending=1';
+    }
+    if (global) {
+      url += '&global=1';
     }
     
     console.log(`Fetching posts from: ${url}`);
