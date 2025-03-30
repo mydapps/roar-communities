@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
@@ -64,6 +65,8 @@ const RequestInvitePage = () => {
   const [showCelebration, setShowCelebration] = useState(false);
   const [showStories, setShowStories] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [authWindow, setAuthWindow] = useState<Window | null>(null);
+  const [checkIntervalId, setCheckIntervalId] = useState<NodeJS.Timeout | null>(null);
   const [tasks, setTasks] = useState<Task[]>([
     {
       id: 'connect-twitter',
@@ -134,6 +137,18 @@ const RequestInvitePage = () => {
     
     fetchInviteStatus(userKey);
   }, [navigate]);
+
+  // Clean up any auth windows and intervals when component unmounts
+  useEffect(() => {
+    return () => {
+      if (authWindow && !authWindow.closed) {
+        authWindow.close();
+      }
+      if (checkIntervalId) {
+        clearInterval(checkIntervalId);
+      }
+    };
+  }, [authWindow, checkIntervalId]);
 
   useEffect(() => {
     if (displayQueuePosition !== queuePosition) {
@@ -308,42 +323,81 @@ const RequestInvitePage = () => {
         
         if (data.success) {
           if (data.url) {
-            window.open(data.url, '_blank', 'width=600,height=600');
+            // Close any existing windows and clear intervals
+            if (authWindow && !authWindow.closed) {
+              authWindow.close();
+            }
+            if (checkIntervalId) {
+              clearInterval(checkIntervalId);
+            }
             
-            const checkInterval = setInterval(async () => {
-              const statusResponse = await fetch('https://api.dapps.co/request_invite_status', {
-                method: 'GET',
-                headers: {
-                  'x-user-key': userKey
-                }
-              });
-              
-              if (statusResponse.ok) {
-                const statusData: ApiResponse = await statusResponse.json();
+            // Open the auth URL in a new window
+            const width = 600;
+            const height = 600;
+            const left = window.innerWidth / 2 - width / 2;
+            const top = window.innerHeight / 2 - height / 2;
+            const features = `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`;
+            
+            const newWindow = window.open(data.url, '_blank', features);
+            setAuthWindow(newWindow);
+            
+            // If window failed to open (common on some mobile browsers), redirect instead
+            if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+              console.log("Popup blocked or not supported, redirecting to auth URL");
+              window.location.href = data.url;
+              return;
+            }
+            
+            // Set up interval to check for success
+            const interval = setInterval(async () => {
+              try {
+                const statusResponse = await fetch('https://api.dapps.co/request_invite_status', {
+                  method: 'GET',
+                  headers: {
+                    'x-user-key': userKey
+                  }
+                });
                 
-                if (statusData.tasks.twitter_connect === 1) {
-                  clearInterval(checkInterval);
-                  toast({
-                    title: "Success!",
-                    description: "Successfully connected X account!",
-                  });
-                  triggerConfetti();
+                if (statusResponse.ok) {
+                  const statusData: ApiResponse = await statusResponse.json();
                   
-                  const updatedTasks = [...tasks];
-                  updatedTasks[0].completed = true;
-                  updatedTasks[1].disabled = false;
-                  updatedTasks[2].disabled = false;
-                  
-                  setTasks(updatedTasks);
-                  setIsConnectingTwitter(false);
-                  
-                  fetchInviteStatus(userKey);
+                  if (statusData.tasks.twitter_connect === 1) {
+                    clearInterval(interval);
+                    setCheckIntervalId(null);
+                    
+                    if (authWindow && !authWindow.closed) {
+                      authWindow.close();
+                    }
+                    setAuthWindow(null);
+                    
+                    toast({
+                      title: "Success!",
+                      description: "Successfully connected X account!",
+                    });
+                    triggerConfetti();
+                    
+                    const updatedTasks = [...tasks];
+                    updatedTasks[0].completed = true;
+                    updatedTasks[1].disabled = false;
+                    updatedTasks[2].disabled = false;
+                    
+                    setTasks(updatedTasks);
+                    setIsConnectingTwitter(false);
+                    
+                    fetchInviteStatus(userKey);
+                  }
                 }
+              } catch (error) {
+                console.error("Error checking Twitter connection status:", error);
               }
             }, 3000);
             
+            setCheckIntervalId(interval);
+            
             setTimeout(() => {
-              clearInterval(checkInterval);
+              clearInterval(interval);
+              setCheckIntervalId(null);
+              
               if (!tasks[0].completed) {
                 setIsConnectingTwitter(false);
                 toast({
