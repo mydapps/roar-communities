@@ -111,13 +111,7 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
       author: handle,
       content
     });
-    // Scroll to make sure the reply input is visible
-    setTimeout(() => {
-      window.scrollTo({ 
-        top: document.body.scrollHeight,
-        behavior: 'smooth'
-      });
-    }, 100);
+    // Removed the scrolling behavior that was causing poor UX
   }, []);
 
   // Cancel reply mode
