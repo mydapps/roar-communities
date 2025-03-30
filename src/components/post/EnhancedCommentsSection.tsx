@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -82,8 +83,9 @@ export const EnhancedCommentsSection = ({
       const response = await createReply(postCode, newComment);
       
       if (response.success) {
+        // Important: Use the reply_id from the API response
         const newReply: CommentReply = {
-          id: response.reply_id,
+          id: response.reply_id, // Use the server-generated ID
           uid: 0,
           handle: response.handle || localStorage.getItem('dapps_user_handle') || 'you',
           avatar_url: response.avatar_url || localStorage.getItem('dapps_user_avatar') || 'default',
@@ -147,8 +149,9 @@ export const EnhancedCommentsSection = ({
       
       if (response.success) {
         console.log('Reply created successfully:', response);
+        // Important: Use the reply_id from the API response
         const newReply: CommentReply = {
-          id: response.reply_id,
+          id: response.reply_id, // Use the server-generated ID
           uid: 0,
           handle: response.handle || localStorage.getItem('dapps_user_handle') || 'you',
           avatar_url: response.avatar_url || localStorage.getItem('dapps_user_avatar') || 'default',
@@ -199,13 +202,16 @@ export const EnhancedCommentsSection = ({
   };
   
   const handleMeowChange = async (commentId: number, newState: boolean) => {
+    // Update UI optimistically
     const updatedReplies = updateMeowState(replies, commentId, newState);
     setReplies(updatedReplies);
     
     try {
+      console.log(`Toggling meow for comment ${commentId} to ${newState}`);
       await toggleMeow(commentId);
     } catch (error) {
       console.error('Error toggling meow:', error);
+      // Revert the optimistic update
       const revertedReplies = updateMeowState(replies, commentId, !newState);
       setReplies(revertedReplies);
       toast.error('Could not update meow. Please try again.');
