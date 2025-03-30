@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -142,23 +141,23 @@ const CreatePostCard = ({ onPostCreated, communityName }: CreatePostCardProps) =
         
         toast.success('Post created successfully!');
         
-        const userAvatar = localStorage.getItem('dapps_user_avatar') || '';
-        const userHandle = localStorage.getItem('dapps_user_handle') || 'you';
+        const currentUserAvatar = localStorage.getItem('dapps_user_avatar') || '';
+        const currentUserHandle = localStorage.getItem('dapps_user_handle') || '';
         
-        // Extract post code from response if available
+        console.log("Using user handle for new post:", currentUserHandle);
+        
         let postCode = '';
         if (typeof response === 'object' && response.postCode) {
           postCode = response.postCode;
           console.log("Received post code from API:", postCode);
         } else {
-          // Fallback to temporary ID if API doesn't return a post code
           postCode = `temp-${Date.now()}`;
           console.log("Using temporary post code:", postCode);
         }
         
         const newPost: Partial<CommunityPost> = {
-          handle: userHandle, // Use the actual user handle instead of hardcoded "you"
-          avatar: userAvatar,
+          handle: currentUserHandle || userHandle,
+          avatar: currentUserAvatar || userAvatar,
           community: selectedCommunity || undefined,
           timeAgo: "just now",
           body: fullBody,
@@ -169,7 +168,7 @@ const CreatePostCard = ({ onPostCreated, communityName }: CreatePostCardProps) =
           image_url: uploadedMedia.filter(m => m.type === 'image')[0]?.url,
           multiple_images: uploadedMedia.filter(m => m.type === 'image').length > 1 ? 1 : 0,
           images: uploadedMedia.filter(m => m.type === 'image').map(m => m.url),
-          code: postCode // Use the post code from API response
+          code: postCode
         };
         
         console.log("Sending new post to feed:", JSON.stringify(newPost));
@@ -181,7 +180,6 @@ const CreatePostCard = ({ onPostCreated, communityName }: CreatePostCardProps) =
         setUploadedMedia([]);
         setIsExpanded(false);
       } else if (typeof response === 'object' && response.status === 'ERROR') {
-        // Extract detailed error message from the response
         const errorMessage = response.error || response.message || 'Failed to create post';
         throw new Error(errorMessage);
       } else {
@@ -190,11 +188,9 @@ const CreatePostCard = ({ onPostCreated, communityName }: CreatePostCardProps) =
     } catch (error: any) {
       console.error('Error creating post:', error);
       
-      // Extract error message. If it's an API response error, it will be in error.message
       let errorMessage: string;
       
       if (typeof error === 'object') {
-        // Check if error is from API with structured response
         if (error.response && error.response.data) {
           errorMessage = error.response.data.error || error.response.data.message || error.message;
         } else {
@@ -206,7 +202,6 @@ const CreatePostCard = ({ onPostCreated, communityName }: CreatePostCardProps) =
       
       console.log("Error message:", errorMessage);
       
-      // Set the error message without any unnecessary conditional logic
       setError(errorMessage);
       
       toast.error(errorMessage);
