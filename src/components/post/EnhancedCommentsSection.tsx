@@ -83,9 +83,11 @@ export const EnhancedCommentsSection = ({
       const response = await createReply(postCode, newComment);
       
       if (response.success) {
-        // Important: Use the reply_id from the API response
+        console.log("Server returned reply_id:", response.reply_id);
+        
+        // Create the new reply object with the server-assigned ID
         const newReply: CommentReply = {
-          id: response.reply_id, // Use the server-generated ID
+          id: response.reply_id,
           uid: 0,
           handle: response.handle || localStorage.getItem('dapps_user_handle') || 'you',
           avatar_url: response.avatar_url || localStorage.getItem('dapps_user_avatar') || 'default',
@@ -145,13 +147,15 @@ export const EnhancedCommentsSection = ({
     
     try {
       console.log(`Creating reply to comment ${parentId} with content: ${content}`);
+      // First submit to API to get the server-assigned ID
       const response = await createReply(postCode, content, parentId);
       
       if (response.success) {
-        console.log('Reply created successfully:', response);
-        // Important: Use the reply_id from the API response
+        console.log('Reply created successfully with ID:', response.reply_id);
+        
+        // Create new reply with the actual server-assigned ID
         const newReply: CommentReply = {
-          id: response.reply_id, // Use the server-generated ID
+          id: response.reply_id,
           uid: 0,
           handle: response.handle || localStorage.getItem('dapps_user_handle') || 'you',
           avatar_url: response.avatar_url || localStorage.getItem('dapps_user_avatar') || 'default',
@@ -163,6 +167,7 @@ export const EnhancedCommentsSection = ({
           has_meowed: false
         };
         
+        // Add the new reply to the correct parent comment
         setReplies(prevReplies => {
           const addReplyToComment = (comments: CommentReply[]): CommentReply[] => {
             return comments.map(comment => {
@@ -202,13 +207,19 @@ export const EnhancedCommentsSection = ({
   };
   
   const handleMeowChange = async (commentId: number, newState: boolean) => {
+    console.log(`Toggling meow for comment ID: ${commentId} to ${newState}`);
+    
     // Update UI optimistically
     const updatedReplies = updateMeowState(replies, commentId, newState);
     setReplies(updatedReplies);
     
     try {
-      console.log(`Toggling meow for comment ${commentId} to ${newState}`);
-      await toggleMeow(commentId);
+      const response = await toggleMeow(commentId);
+      console.log('Meow toggle response:', response);
+      
+      if (!response.success) {
+        throw new Error(`Server returned success=false for meow toggle`);
+      }
     } catch (error) {
       console.error('Error toggling meow:', error);
       // Revert the optimistic update
