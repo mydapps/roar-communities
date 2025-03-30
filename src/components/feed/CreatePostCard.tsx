@@ -14,9 +14,10 @@ import { MediaUpload, MediaPreview, MediaUploadResponse } from '@/components/ui/
 import { createPost } from '@/utils/api';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import confetti from 'canvas-confetti';
+import { CommunityPost } from '@/hooks/useCommunityPosts';
 
 interface CreatePostCardProps {
-  onPostCreated: (post: any) => void;
+  onPostCreated: (post: Partial<CommunityPost>) => void;
   communityName?: string;
 }
 
@@ -132,19 +133,22 @@ const CreatePostCard = ({ onPostCreated, communityName }: CreatePostCardProps) =
         
         toast.success('Post created successfully!');
         
-        const newPost = {
+        const userAvatar = localStorage.getItem('dapps_user_avatar') || '';
+        
+        const newPost: Partial<CommunityPost> = {
           handle: "you",
-          avatar: localStorage.getItem('dapps_user_avatar') || '',
+          avatar: userAvatar,
           community: selectedCommunity || undefined,
           timeAgo: "just now",
           body: fullBody,
           upvotes: 0,
           reply_count: 0,
           roar: 0,
-          images: uploadedMedia.filter(m => m.type === 'image').map(m => m.url),
           image: uploadedMedia.filter(m => m.type === 'image').length > 0 ? 1 : 0,
           image_url: uploadedMedia.filter(m => m.type === 'image')[0]?.url,
-          multiple_images: uploadedMedia.filter(m => m.type === 'image').length > 1 ? 1 : 0
+          multiple_images: uploadedMedia.filter(m => m.type === 'image').length > 1 ? 1 : 0,
+          images: uploadedMedia.filter(m => m.type === 'image').map(m => m.url),
+          code: Date.now().toString() // Temporary unique ID for the new post
         };
         
         console.log("Sending new post to feed:", JSON.stringify(newPost));

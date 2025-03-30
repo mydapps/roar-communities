@@ -47,7 +47,7 @@ import { TradeSheet } from '@/components/shares/TradeSheet';
 import { Post } from '@/components/feed/Post';
 import CreatePostCard from '@/components/feed/CreatePostCard';
 import { MembersList } from '@/components/community/MembersList';
-import { useCommunityPosts } from '@/hooks/useCommunityPosts';
+import { useCommunityPosts, CommunityPost } from '@/hooks/useCommunityPosts';
 import { toggleRoar } from '@/utils/api';
 
 const LionIcon = () => (
@@ -66,6 +66,7 @@ const CommunityPage = () => {
   const [tradeSheetOpen, setTradeSheetOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("posts");
   const [tradeAction, setTradeAction] = useState<"buy" | "sell">("buy");
+  const [localPosts, setLocalPosts] = useState<Partial<CommunityPost>[]>([]);
   
   // Debug logs for tracking component rendering and state
   console.log("CommunityPage rendering, id:", id, "activeTab:", activeTab);
@@ -86,14 +87,24 @@ const CommunityPage = () => {
   // Fetch community posts with infinite scroll
   const { posts, loading: postsLoading, hasMore: hasMorePosts, loadMore: loadMorePosts, loadingElementRef } = useCommunityPosts(id);
   
+  // Combine API posts with local posts
+  const allPosts = [...localPosts, ...posts];
+  
   const ethToUsd = communityData?.community?.prices?.buy_price_usd && communityData?.community?.prices?.buy_price 
     ? communityData.community.prices.buy_price_usd / communityData.community.prices.buy_price
     : 2500; // Default value if API doesn't return price data
   
   const [buyAmount, setBuyAmount] = useState<number>(1);
   
-  const handlePostCreated = (newPost: any) => {
-    // This would be handled by refetching posts or optimistically adding the new post
+  // Reset local posts when community changes
+  useEffect(() => {
+    setLocalPosts([]);
+  }, [id]);
+  
+  const handlePostCreated = (newPost: Partial<CommunityPost>) => {
+    console.log("New post created:", newPost);
+    // Add the new post to the top of the local posts array
+    setLocalPosts(prev => [newPost, ...prev]);
     toast.success("Post created successfully!");
   };
   
@@ -245,7 +256,7 @@ const CommunityPage = () => {
         )}
         
         <Tabs defaultValue="posts" value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full lg:w-auto justify-start mb-6 pb-px overflow-x-auto flex-nowrap border-b bg-transparent">
+          <TabsList className="w-full lg:w-auto flex justify-start mb-6 pb-px overflow-x-auto flex-nowrap border-b bg-transparent p-0">
             <TabsTrigger value="posts" className="flex-shrink-0">
               <MessageCircle className="h-4 w-4 mr-2" />
               Posts
@@ -279,30 +290,30 @@ const CommunityPage = () => {
             </Card>
             
             <div className="space-y-6">
-              {postsLoading && posts.length === 0 ? (
+              {postsLoading && allPosts.length === 0 ? (
                 <div className="flex justify-center p-8">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
-              ) : posts.length > 0 ? (
+              ) : allPosts.length > 0 ? (
                 <>
-                  {posts.map((post, index) => (
+                  {allPosts.map((post, index) => (
                     <Post 
-                      key={`post-${post.code}-${index}`}
-                      username={post.handle}
-                      community={post.community}
-                      timeAgo={post.timeAgo}
-                      content={post.body}
-                      roarCount={post.upvotes}
-                      commentCount={post.reply_count}
-                      shareCount={post.engagement}
-                      images={post.multiple_images ? post.images : (post.image ? [post.image_url] : [])}
+                      key={`post-${post.code || index}-${index}`}
+                      username={post.handle || ''}
+                      community={post.community || ''}
+                      timeAgo={post.timeAgo || ''}
+                      content={post.body || ''}
+                      roarCount={post.upvotes || 0}
+                      commentCount={post.reply_count || 0}
+                      shareCount={post.engagement || 0}
+                      images={post.multiple_images ? post.images || [] : (post.image ? [post.image_url || ''] : [])}
                       video={undefined}
-                      postCode={post.code}
-                      avatar={post.avatar}
+                      postCode={post.code || ''}
+                      avatar={post.avatar || ''}
                       roared={post.roar === 1}
-                      onRoar={() => handleRoar(post.code)}
+                      onRoar={() => post.code ? handleRoar(post.code) : null}
                       isMirror={post.is_mirror === 1}
-                      ipfs={post.code}
+                      ipfs={post.code || ''}
                       isLoggedIn={!!localStorage.getItem('dapps_user_key')}
                     />
                   ))}
