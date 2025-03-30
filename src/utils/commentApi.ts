@@ -99,6 +99,14 @@ export const toggleMeow = async (replyId: number): Promise<MeowResponse> => {
       throw new Error('Authentication required');
     }
     
+    // Validate reply ID is a valid number
+    if (!replyId || isNaN(replyId) || replyId <= 0) {
+      console.error(`Invalid reply ID for meow: ${replyId}`);
+      throw new Error('Invalid reply ID');
+    }
+    
+    console.log(`Sending meow toggle request for reply ID: ${replyId}`);
+    
     const response = await fetch(`${API_BASE_URL}/meow_reply`, {
       method: 'POST',
       headers: {
@@ -109,10 +117,13 @@ export const toggleMeow = async (replyId: number): Promise<MeowResponse> => {
     });
     
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Meow API error (${response.status}):`, errorText);
       throw new Error(`Failed to toggle meow: ${response.status}`);
     }
     
     const data = await response.json();
+    console.log('Meow toggle API response:', data);
     return data;
   } catch (error) {
     console.error('Error toggling meow:', error);
@@ -167,6 +178,13 @@ export const createReply = async (postCode: string, content: string, parentId: n
     
     const data = await response.json();
     console.log('Reply created:', data);
+    
+    // Validate that we received a valid reply_id
+    if (!data.success || !data.reply_id || isNaN(data.reply_id) || data.reply_id <= 0) {
+      console.error('API returned success but no valid reply_id:', data);
+      throw new Error('API returned invalid reply ID');
+    }
+    
     return data;
   } catch (error) {
     console.error('Error creating reply:', error);

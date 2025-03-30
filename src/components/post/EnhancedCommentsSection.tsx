@@ -82,7 +82,7 @@ export const EnhancedCommentsSection = ({
       console.log('Submitting comment to post:', postCode);
       const response = await createReply(postCode, newComment);
       
-      if (response.success) {
+      if (response.success && response.reply_id) {
         console.log("Server returned reply_id:", response.reply_id);
         
         // Create the new reply object with the server-assigned ID
@@ -105,6 +105,8 @@ export const EnhancedCommentsSection = ({
         setNewComment('');
         toast.success('Comment added successfully');
       } else {
+        console.error('API response missing reply_id or success=false:', response);
+        toast.error('Error adding comment. Please try again.');
         fetchComments();
       }
     } catch (error) {
@@ -150,7 +152,7 @@ export const EnhancedCommentsSection = ({
       // First submit to API to get the server-assigned ID
       const response = await createReply(postCode, content, parentId);
       
-      if (response.success) {
+      if (response.success && response.reply_id) {
         console.log('Reply created successfully with ID:', response.reply_id);
         
         // Create new reply with the actual server-assigned ID
@@ -194,7 +196,9 @@ export const EnhancedCommentsSection = ({
         setReplyCount(prev => prev + 1);
         toast.success('Reply added successfully');
       } else {
-        console.log('API reported success=false, refreshing comments');
+        console.error('API response missing reply_id or success=false:', response);
+        toast.error('Error adding reply. Please try again.');
+        console.log('API reported success=false or missing reply_id, refreshing comments');
         fetchComments();
       }
       
@@ -209,6 +213,13 @@ export const EnhancedCommentsSection = ({
   const handleMeowChange = async (commentId: number, newState: boolean) => {
     console.log(`Toggling meow for comment ID: ${commentId} to ${newState}`);
     
+    // Verify we have a valid numeric ID before proceeding
+    if (!commentId || isNaN(commentId) || commentId <= 0) {
+      console.error(`Invalid comment ID for meow toggle: ${commentId}`);
+      toast.error('Cannot update reaction: Invalid comment ID');
+      return;
+    }
+    
     // Update UI optimistically
     const updatedReplies = updateMeowState(replies, commentId, newState);
     setReplies(updatedReplies);
@@ -218,10 +229,11 @@ export const EnhancedCommentsSection = ({
       console.log('Meow toggle response:', response);
       
       if (!response.success) {
+        console.error(`Server returned success=false for meow toggle on comment ID ${commentId}`);
         throw new Error(`Server returned success=false for meow toggle`);
       }
     } catch (error) {
-      console.error('Error toggling meow:', error);
+      console.error(`Error toggling meow for comment ID ${commentId}:`, error);
       // Revert the optimistic update
       const revertedReplies = updateMeowState(replies, commentId, !newState);
       setReplies(revertedReplies);
