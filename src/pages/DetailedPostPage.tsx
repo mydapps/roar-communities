@@ -332,7 +332,7 @@ const DetailedPostPage = () => {
       <div className="mb-8 mt-4">
         <ScrollArea className="w-full">
           <Breadcrumb>
-            <BreadcrumbList>
+            <BreadcrumbList className="flex-nowrap whitespace-nowrap overflow-hidden">
               <BreadcrumbItem>
                 <BreadcrumbLink asChild>
                   <Link to="/feed" onClick={(e) => e.stopPropagation()}>Feed</Link>
@@ -367,8 +367,8 @@ const DetailedPostPage = () => {
                 </>
               ) : null}
               
-              <BreadcrumbItem>
-                <BreadcrumbPage>{truncateText(getBestContentForDisplay())}</BreadcrumbPage>
+              <BreadcrumbItem className="max-w-[200px] truncate">
+                <BreadcrumbPage className="truncate">{truncateText(getBestContentForDisplay())}</BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
