@@ -78,11 +78,12 @@ export const PostFooter: React.FC<PostFooterProps> = ({
             isLoggedIn={isLoggedIn}
           />
           
-          <CommentButton 
-            count={commentCount} 
-            onClick={onToggleComments}
-            hidden={isPostDetailPage} 
-          />
+          {!isPostDetailPage && (
+            <CommentButton 
+              count={commentCount} 
+              onClick={onToggleComments}
+            />
+          )}
           
           <MirrorButton 
             open={mirrorSheetOpen} 

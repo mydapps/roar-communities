@@ -52,7 +52,7 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
               return {
                 ...comment,
                 has_meowed: newState,
-                meow_count: newState ? comment.meow_count + 1 : comment.meow_count - 1
+                meow_count: newState ? comment.meow_count + 1 : Math.max(0, comment.meow_count - 1)
               };
             }
             if (comment.sub_replies) {
@@ -85,7 +85,7 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
               return {
                 ...comment,
                 has_meowed: !newState,
-                meow_count: !newState ? comment.meow_count + 1 : comment.meow_count - 1
+                meow_count: !newState ? comment.meow_count + 1 : Math.max(0, comment.meow_count - 1)
               };
             }
             if (comment.sub_replies) {
@@ -175,22 +175,30 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
         });
       } else {
         // Add as a top-level reply
-        setLocalReplies(prevReplies => [...prevReplies, newComment]);
+        setLocalReplies(prevReplies => [newComment, ...prevReplies]);
       }
       
       // Actually submit to API
       await onAddComment(content, parentId);
       setReplyingTo(null);
       
-      // Refresh to get the server-assigned IDs and other details
-      setTimeout(() => {
-        onRefresh();
-      }, 500);
+      // Toast notification
+      toast.success('Comment posted successfully');
+      
+      // No need to refresh immediately - let the optimistic UI update stay
+      // We'll get the server-assigned IDs on next app refresh
     } catch (error) {
       console.error('Error submitting comment:', error);
+      toast.error('Failed to post comment. Please try again.');
       throw error; // Let the input component handle the error
     }
   };
+
+  // Handle a reply to comment by opening the drawer
+  const handleReplyToComment = useCallback((parentId: number, handle: string, avatar: string, content: string) => {
+    handleOpenReply(parentId, handle, content);
+    return Promise.resolve();
+  }, [handleOpenReply]);
 
   if (!isMobile) {
     return null;
@@ -208,7 +216,7 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
                   comment={reply}
                   postAuthorHandle={postAuthorHandle}
                   onMeowChange={handleMeowChange}
-                  onReply={(parentId: number, content: string) => Promise.resolve()}
+                  onReply={handleReplyToComment}
                   isMobile={true}
                   onOpenMobileReply={(id, handle, avatar, content) => 
                     handleOpenReply(id, handle, content)
