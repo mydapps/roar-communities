@@ -99,8 +99,8 @@ export const ShareContent = ({
       <div className="p-4 border-b">
         <div className="flex items-start gap-3 mb-2">
           <Avatar className="h-10 w-10">
-            <AvatarImage src={`https://api.dicebear.com/7.x/personas/svg?seed=${username}`} />
-            <AvatarFallback>{username[0].toUpperCase()}</AvatarFallback>
+            <AvatarImage src={username.includes('.') ? `https://api.dicebear.com/7.x/personas/svg?seed=${username}` : username} />
+            <AvatarFallback>{username[0]?.toUpperCase() || '?'}</AvatarFallback>
           </Avatar>
           <div className="flex-1">
             <div className="flex items-center gap-1">

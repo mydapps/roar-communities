@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Share } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -18,6 +18,7 @@ interface ShareButtonProps {
   postCode?: string;
   community?: string;
   onShareSuccess: (platform: string) => void;
+  avatar?: string;
 }
 
 export const ShareButton = ({
@@ -30,7 +31,8 @@ export const ShareButton = ({
   video,
   postCode,
   community,
-  onShareSuccess
+  onShareSuccess,
+  avatar
 }: ShareButtonProps) => {
   const mobile = useIsMobile();
   
@@ -42,6 +44,9 @@ export const ShareButton = ({
   const handleClose = () => {
     onOpenChange(false);
   };
+  
+  // Use avatar URL if provided, otherwise username will be used to generate a fallback avatar
+  const userIdentifier = avatar || username;
   
   if (mobile) {
     return (
@@ -62,7 +67,7 @@ export const ShareButton = ({
           </DrawerHeader>
           
           <ShareContent 
-            username={username}
+            username={userIdentifier}
             timeAgo={timeAgo}
             content={content}
             images={images}
@@ -95,7 +100,7 @@ export const ShareButton = ({
         </SheetHeader>
         
         <ShareContent 
-          username={username}
+          username={userIdentifier}
           timeAgo={timeAgo}
           content={content}
           images={images}
