@@ -301,6 +301,8 @@ export const Post = ({
                 comments={comments}
                 postCode={postCode || ''}
                 onAddComment={handleAddComment}
+                username={username}
+                community={community}
               />
             )}
           </div>

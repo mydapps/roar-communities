@@ -37,12 +37,16 @@ interface CommentSectionProps {
   comments: CommentReply[];
   postCode: string;
   onAddComment: (text: string) => void;
+  username?: string;
+  community?: string;
 }
 
 export const CommentSection: React.FC<CommentSectionProps> = ({ 
   comments, 
   postCode,
-  onAddComment 
+  onAddComment,
+  username,
+  community
 }) => {
   const [newComment, setNewComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -75,7 +79,16 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
   
   const handleViewAllComments = () => {
     if (postCode) {
-      navigate(`/${postCode}`);
+      if (community) {
+        navigate(`/c/${community}/${postCode}`);
+      } else if (username) {
+        // Handle user post - navigate to /:handle/:postId
+        const handle = username.split('.')[0]; // Remove domain part if present
+        navigate(`/${handle}/${postCode}`);
+      } else {
+        // Fallback to generic post route
+        navigate(`/post/${postCode}`);
+      }
     }
   };
   
