@@ -21,7 +21,10 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
   // Don't redirect if we're already on community page or detailed post page
   const isCommunityPage = location.pathname.startsWith('/c/');
   const isPostPage = location.pathname.includes('/post/') || 
-                    (location.pathname.includes('/c/') && location.pathname.split('/').length > 3);
+                    (location.pathname.includes('/c/') && location.pathname.split('/').length > 3) ||
+                    (/^\/[\w-]+\/[\w-]+$/.test(location.pathname) && !location.pathname.startsWith('/u/')); // Handle username/postId format
+                    
+  console.log("PrivyAuthWrapper - Is post page:", isPostPage);
                     
   // Flag for publicly accessible routes
   const isPublicRoute = 
@@ -98,8 +101,8 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
               
               // Check registration status
               if (data.registered === "1") {
-                // User is fully registered, redirect to feed if on a public route
-                if (location.pathname === '/' || location.pathname === '/login') {
+                // User is fully registered, redirect to feed if on login/index page
+                if (location.pathname === '/' || location.pathname === '/login' || location.pathname === '/index') {
                   console.log("Redirecting to feed from public route");
                   navigate('/feed');
                   toast.success('Successfully logged in!');
