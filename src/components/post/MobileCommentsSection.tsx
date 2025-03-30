@@ -1,6 +1,6 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { CommentReply, toggleMeow } from '@/utils/commentApi';
+import { CommentReply, toggleMeow, createReply } from '@/utils/commentApi';
 import { EnhancedCommentItem } from './EnhancedCommentItem';
 import { MobileCommentInput } from './MobileCommentInput';
 import { toast } from 'sonner';
@@ -38,6 +38,15 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
   // Handle meow (like) on a comment
   const handleMeowChange = async (commentId: number, newState: boolean) => {
     try {
+      // Verify we have a valid numeric ID before proceeding
+      if (!commentId || isNaN(commentId) || commentId <= 0) {
+        console.error(`Invalid comment ID for meow toggle in mobile: ${commentId}`);
+        toast.error('Cannot update reaction: Invalid comment ID');
+        return;
+      }
+      
+      console.log(`Mobile - Toggling meow for comment ID: ${commentId} to ${newState}`);
+      
       // Update optimistically in UI first
       setMeowedComments(prev => ({
         ...prev,
@@ -68,9 +77,13 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
       });
       
       // API call to update meow state
-      await toggleMeow(commentId);
+      const response = await toggleMeow(commentId);
+      
+      if (!response.success) {
+        throw new Error(`Server returned success=false for meow toggle`);
+      }
     } catch (error) {
-      console.error('Error toggling meow:', error);
+      console.error(`Error toggling meow for comment ID ${commentId}:`, error);
       // Revert optimistic update on error
       setMeowedComments(prev => ({
         ...prev,
@@ -124,25 +137,38 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
     if (!content.trim()) return;
     
     try {
-      // Create temporary comment for immediate feedback
-      const newReplyId = Date.now(); // Temporary ID
+      // Instead of creating a temporary comment with Date.now() ID,
+      // First submit to API to get the real server-assigned ID
+      console.log(`Mobile - Submitting ${parentId ? 'reply' : 'comment'} with content: ${content}`);
+      
+      // API call to create the reply/comment
+      const response = await createReply(postCode, content, parentId || 0);
+      
+      if (!response.success || !response.reply_id) {
+        console.error('API returned success=false or missing reply_id:', response);
+        throw new Error('Failed to create comment/reply');
+      }
+      
+      console.log(`Mobile - Created ${parentId ? 'reply' : 'comment'} with server ID: ${response.reply_id}`);
+      
+      // Create the comment object with the server-assigned ID
       const userHandle = localStorage.getItem('dapps_user_handle') || 'You';
       const userAvatar = localStorage.getItem('dapps_user_avatar') || 'default';
       
       const newComment: CommentReply = {
-        id: newReplyId,
-        uid: 0, // Will be replaced with actual UID when refreshed
+        id: response.reply_id, // Use server-assigned ID
+        uid: 0,
         handle: userHandle,
         avatar_url: userAvatar,
         content: content,
-        created_on: new Date().toISOString(),
+        created_on: response.created_on || new Date().toISOString(),
         time_ago: 'just now',
         upvotes: 0,
         meow_count: 0,
         has_meowed: false
       };
       
-      // Update UI immediately
+      // Update UI with the new comment/reply
       if (parentId && parentId > 0) {
         // Add as a sub-reply
         setLocalReplies(prevReplies => {
@@ -168,11 +194,11 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
           return addSubReply(prevReplies);
         });
       } else {
-        // Add as a top-level reply - CHANGED: now adding to the bottom
+        // Add as a top-level reply
         setLocalReplies(prevReplies => [...prevReplies, newComment]);
       }
       
-      // Actually submit to API
+      // Notify parent component about the new comment
       await onAddComment(content, parentId);
       
       // Clear reply mode after successful submission
@@ -180,9 +206,6 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
       
       // Toast notification
       toast.success('Comment posted successfully');
-      
-      // No need to refresh immediately - let the optimistic UI update stay
-      // We'll get the server-assigned IDs on next app refresh
     } catch (error) {
       console.error('Error submitting comment:', error);
       toast.error('Failed to post comment. Please try again.');
@@ -193,7 +216,7 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
   // Modified to match the expected function signature
   const handleReplySubmit = useCallback((parentId: number, content: string) => {
     return handleSubmit(content, parentId);
-  }, []);
+  }, [handleSubmit]);
 
   // Handle a reply to comment by opening the drawer
   const handleOpenMobileReply = useCallback((id: number, handle: string, content: string) => {

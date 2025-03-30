@@ -85,9 +85,9 @@ export const EnhancedCommentsSection = ({
       if (response.success && response.reply_id) {
         console.log("Server returned reply_id:", response.reply_id);
         
-        // Create the new reply object with the server-assigned ID
+        // FIXED: Create the new reply object with the server-assigned ID
         const newReply: CommentReply = {
-          id: response.reply_id,
+          id: response.reply_id, // Use the server-assigned ID, not a temporary one
           uid: 0,
           handle: response.handle || localStorage.getItem('dapps_user_handle') || 'you',
           avatar_url: response.avatar_url || localStorage.getItem('dapps_user_avatar') || 'default',
@@ -99,6 +99,9 @@ export const EnhancedCommentsSection = ({
           has_meowed: false,
           sub_replies: []
         };
+        
+        // Log the created reply with its ID to verify it's correct
+        console.log("Created new comment with server-assigned ID:", newReply.id);
         
         setReplies(prev => [newReply, ...prev]);
         setReplyCount(prev => prev + 1);
@@ -155,9 +158,9 @@ export const EnhancedCommentsSection = ({
       if (response.success && response.reply_id) {
         console.log('Reply created successfully with ID:', response.reply_id);
         
-        // Create new reply with the actual server-assigned ID
+        // FIXED: Create new reply with the actual server-assigned ID
         const newReply: CommentReply = {
-          id: response.reply_id,
+          id: response.reply_id, // Make sure to use the server-assigned ID
           uid: 0,
           handle: response.handle || localStorage.getItem('dapps_user_handle') || 'you',
           avatar_url: response.avatar_url || localStorage.getItem('dapps_user_avatar') || 'default',
@@ -168,6 +171,9 @@ export const EnhancedCommentsSection = ({
           meow_count: 0,
           has_meowed: false
         };
+        
+        // Log the created reply with its ID to verify it's correct
+        console.log("Created new reply with server-assigned ID:", newReply.id);
         
         // Add the new reply to the correct parent comment
         setReplies(prevReplies => {
