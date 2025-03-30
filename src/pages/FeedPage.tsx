@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Post } from '@/components/feed/Post';
 import CreatePostCard from '@/components/feed/CreatePostCard';
@@ -6,8 +7,6 @@ import { ArrowUp, Loader2, TrendingUp, Globe, User } from 'lucide-react';
 import { fetchPosts, setupMirrorListener, toggleRoar } from '@/utils/api';
 import { toast } from 'sonner';
 import { usePreventZoom } from '@/hooks/usePreventZoom';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 const FeedPage = () => {
@@ -23,16 +22,6 @@ const FeedPage = () => {
   const [activeTab, setActiveTab] = useState<string>("personal");
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadingRef = useRef<HTMLDivElement>(null);
-  
-  // Mock trending tags for demonstration
-  const trendingTags = [
-    { name: 'ethereum', count: 4256 },
-    { name: 'defi', count: 3125 },
-    { name: 'nft', count: 2854 },
-    { name: 'bitcoin', count: 2341 },
-    { name: 'solana', count: 1836 },
-    { name: 'web3', count: 1572 }
-  ];
   
   const loadPosts = useCallback(async (pageNum: number, replace = false) => {
     try {
@@ -150,26 +139,8 @@ const FeedPage = () => {
   
   return (
     <div className="max-w-2xl mx-auto pt-8 pb-20 px-4">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="col-span-1 md:col-span-3">
-          <CreatePostCard onPostCreated={handleNewPost} />
-        </div>
-        
-        <div className="col-span-1">
-          <Card className="p-4 border border-border/40 shadow-sm">
-            <div className="flex items-center gap-2 mb-3">
-              <TrendingUp className="h-4 w-4 text-primary" />
-              <h3 className="font-medium text-sm">Trending Tags</h3>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {trendingTags.map(tag => (
-                <Badge key={tag.name} variant="secondary" className="bg-secondary/60 hover:bg-secondary cursor-pointer">
-                  #{tag.name}
-                </Badge>
-              ))}
-            </div>
-          </Card>
-        </div>
+      <div className="mb-6">
+        <CreatePostCard onPostCreated={handleNewPost} />
       </div>
       
       <Tabs value={activeTab} onValueChange={handleTabChange} className="mb-6">
