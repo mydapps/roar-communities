@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -37,6 +38,7 @@ export const EnhancedCommentItem = ({
   const isPostAuthor = comment.handle === postAuthorHandle;
   
   const handleMeow = () => {
+    // Only animate when adding a meow, not removing it
     if (!comment.has_meowed) {
       setMeowAnimating(true);
       setTimeout(() => setMeowAnimating(false), 1000);

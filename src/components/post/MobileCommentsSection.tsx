@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { CommentReply, toggleMeow } from '@/utils/commentApi';
 import { EnhancedCommentItem } from './EnhancedCommentItem';
 import { MobileCommentInput } from './MobileCommentInput';
@@ -27,16 +27,45 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
     content: string;
   } | null>(null);
   const [meowedComments, setMeowedComments] = useState<Record<number, boolean>>({});
+  const [localReplies, setLocalReplies] = useState<CommentReply[]>(replies);
   const isMobile = useIsMobile();
+
+  // Update local replies when prop changes
+  useEffect(() => {
+    setLocalReplies(replies);
+  }, [replies]);
 
   // Handle meow (like) on a comment
   const handleMeowChange = async (commentId: number, newState: boolean) => {
     try {
-      // Optimistically update UI
+      // Update optimistically in UI first
       setMeowedComments(prev => ({
         ...prev,
         [commentId]: newState
       }));
+      
+      // Update comment's meow count in local state
+      setLocalReplies(prevReplies => {
+        const updateMeowCount = (comments: CommentReply[]): CommentReply[] => {
+          return comments.map(comment => {
+            if (comment.id === commentId) {
+              return {
+                ...comment,
+                has_meowed: newState,
+                meow_count: newState ? comment.meow_count + 1 : comment.meow_count - 1
+              };
+            }
+            if (comment.sub_replies) {
+              return {
+                ...comment,
+                sub_replies: updateMeowCount(comment.sub_replies)
+              };
+            }
+            return comment;
+          });
+        };
+        return updateMeowCount(prevReplies);
+      });
       
       // API call to update meow state
       await toggleMeow(commentId);
@@ -47,6 +76,30 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
         ...prev,
         [commentId]: !newState
       }));
+      
+      // Revert the count update too
+      setLocalReplies(prevReplies => {
+        const revertMeowCount = (comments: CommentReply[]): CommentReply[] => {
+          return comments.map(comment => {
+            if (comment.id === commentId) {
+              return {
+                ...comment,
+                has_meowed: !newState,
+                meow_count: !newState ? comment.meow_count + 1 : comment.meow_count - 1
+              };
+            }
+            if (comment.sub_replies) {
+              return {
+                ...comment,
+                sub_replies: revertMeowCount(comment.sub_replies)
+              };
+            }
+            return comment;
+          });
+        };
+        return revertMeowCount(prevReplies);
+      });
+      
       toast.error('Failed to update reaction');
     }
   };
@@ -77,9 +130,62 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
     if (!content.trim()) return;
     
     try {
+      // Create temporary comment for immediate feedback
+      const newReplyId = Date.now(); // Temporary ID
+      const userHandle = localStorage.getItem('dapps_user_handle') || 'You';
+      const userAvatar = localStorage.getItem('dapps_user_avatar') || 'default';
+      
+      const newComment: CommentReply = {
+        id: newReplyId,
+        uid: 0, // Will be replaced with actual UID when refreshed
+        handle: userHandle,
+        avatar_url: userAvatar,
+        content: content,
+        created_on: new Date().toISOString(),
+        time_ago: 'just now',
+        upvotes: 0,
+        meow_count: 0,
+        has_meowed: false
+      };
+      
+      // Update UI immediately
+      if (parentId && parentId > 0) {
+        // Add as a sub-reply
+        setLocalReplies(prevReplies => {
+          const addSubReply = (comments: CommentReply[]): CommentReply[] => {
+            return comments.map(comment => {
+              if (comment.id === parentId) {
+                return {
+                  ...comment,
+                  sub_replies: comment.sub_replies 
+                    ? [...comment.sub_replies, newComment] 
+                    : [newComment]
+                };
+              }
+              if (comment.sub_replies) {
+                return {
+                  ...comment,
+                  sub_replies: addSubReply(comment.sub_replies)
+                };
+              }
+              return comment;
+            });
+          };
+          return addSubReply(prevReplies);
+        });
+      } else {
+        // Add as a top-level reply
+        setLocalReplies(prevReplies => [...prevReplies, newComment]);
+      }
+      
+      // Actually submit to API
       await onAddComment(content, parentId);
       setReplyingTo(null);
-      onRefresh();
+      
+      // Refresh to get the server-assigned IDs and other details
+      setTimeout(() => {
+        onRefresh();
+      }, 500);
     } catch (error) {
       console.error('Error submitting comment:', error);
       throw error; // Let the input component handle the error
@@ -94,15 +200,14 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
     <>
       {/* Comments list */}
       <div className="space-y-6 mb-24">
-        {replies.length > 0 ? (
+        {localReplies.length > 0 ? (
           <div className="space-y-6 divide-y divide-border/20">
-            {replies.map(reply => (
+            {localReplies.map(reply => (
               <div key={reply.id} className="pt-6 first:pt-0">
                 <EnhancedCommentItem 
                   comment={reply}
                   postAuthorHandle={postAuthorHandle}
                   onMeowChange={handleMeowChange}
-                  // Fix: This needs to return a Promise<void> for the parentId and content
                   onReply={(parentId: number, content: string) => Promise.resolve()}
                   isMobile={true}
                   onOpenMobileReply={(id, handle, avatar, content) => 
