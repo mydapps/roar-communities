@@ -18,6 +18,7 @@ export const RoarButton = ({ count, active, onClick, postCode, isLoggedIn }: Roa
   const [roarAnimation, setRoarAnimation] = useState(false);
   const [roarWavesAnimation, setRoarWavesAnimation] = useState(false);
   const [roarTextAnimation, setRoarTextAnimation] = useState(false);
+  const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
     setLocalActive(active);
@@ -25,11 +26,20 @@ export const RoarButton = ({ count, active, onClick, postCode, isLoggedIn }: Roa
   }, [active, count]);
 
   const handleClick = async () => {
+    // Prevent double-clicks and API race conditions
+    if (processing) {
+      return;
+    }
+    
+    // Set processing flag to prevent multiple clicks
+    setProcessing(true);
+    
     // Call the parent component's onClick handler
     onClick();
     
     // If user is not logged in, exit early (the parent will handle showing the login toast)
     if (isLoggedIn === false) {
+      setProcessing(false);
       return;
     }
     
@@ -65,7 +75,13 @@ export const RoarButton = ({ count, active, onClick, postCode, isLoggedIn }: Roa
         setLocalActive(!newRoarState);
         setLocalCount(prev => !newRoarState ? prev + 1 : prev - 1);
         toast.error("Error updating roar status. Please try again.");
+      } finally {
+        // Reset processing flag after a short delay
+        setTimeout(() => setProcessing(false), 300);
       }
+    } else {
+      // Reset processing flag after a short delay
+      setTimeout(() => setProcessing(false), 300);
     }
   };
 
@@ -75,9 +91,18 @@ export const RoarButton = ({ count, active, onClick, postCode, isLoggedIn }: Roa
       size="sm" 
       onClick={handleClick}
       className={`gap-2 hover:text-primary hover:bg-primary/10 ${localActive ? 'text-primary' : ''}`}
+      disabled={processing}
     >
       <div className="relative">
-        <span className={`text-xl transition-transform ${roarAnimation ? 'scale-150' : ''}`} role="img" aria-label="lion">🦁</span>
+        <span 
+          className={`text-xl transition-transform ${roarAnimation ? 'scale-150' : ''} ${
+            !localActive ? 'opacity-70' : ''
+          }`} 
+          role="img" 
+          aria-label="lion"
+        >
+          🦁
+        </span>
         {roarWavesAnimation && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="animate-ping absolute h-6 w-6 rounded-full bg-primary/30"></div>
@@ -85,7 +110,9 @@ export const RoarButton = ({ count, active, onClick, postCode, isLoggedIn }: Roa
           </div>
         )}
       </div>
-      <span className={`transition-transform ${roarTextAnimation ? 'scale-110 text-primary font-medium' : ''}`}>
+      <span className={`transition-transform ${roarTextAnimation ? 'scale-110 text-primary font-medium' : ''} ${
+        localActive ? 'text-primary font-medium' : ''
+      }`}>
         {localCount}
       </span>
     </Button>

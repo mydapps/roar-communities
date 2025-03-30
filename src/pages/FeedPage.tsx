@@ -111,15 +111,7 @@ const FeedPage = () => {
       return;
     }
     
-    try {
-      const success = await toggleRoar(postCode);
-      if (!success) {
-        toast.error("Failed to update post. Please try again.");
-      }
-    } catch (error) {
-      console.error("Error toggling roar:", error);
-      toast.error("Error updating post. Please try again.");
-    }
+    console.log("Post roar status changing for:", postCode);
   };
   
   const scrollToTop = () => {
