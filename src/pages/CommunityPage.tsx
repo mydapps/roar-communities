@@ -256,20 +256,20 @@ const CommunityPage = () => {
         )}
         
         <Tabs defaultValue="posts" value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full lg:w-auto flex justify-start mb-6 pb-px overflow-x-auto flex-nowrap border-b bg-transparent p-0">
-            <TabsTrigger value="posts" className="flex-shrink-0">
+          <TabsList className="w-full lg:w-auto flex justify-start mb-6 pb-px bg-transparent p-0 overflow-x-auto flex-nowrap h-auto border-b rounded-none">
+            <TabsTrigger value="posts" className="flex-shrink-0 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none data-[state=active]:shadow-none">
               <MessageCircle className="h-4 w-4 mr-2" />
               Posts
             </TabsTrigger>
-            <TabsTrigger value="members" className="flex-shrink-0">
+            <TabsTrigger value="members" className="flex-shrink-0 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none data-[state=active]:shadow-none">
               <Users className="h-4 w-4 mr-2" />
               Members
             </TabsTrigger>
-            <TabsTrigger value="rewards" className="flex-shrink-0">
+            <TabsTrigger value="rewards" className="flex-shrink-0 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none data-[state=active]:shadow-none">
               <DollarSign className="h-4 w-4 mr-2" />
               Rewards
             </TabsTrigger>
-            <TabsTrigger value="about" className="flex-shrink-0">
+            <TabsTrigger value="about" className="flex-shrink-0 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none data-[state=active]:shadow-none">
               <Info className="h-4 w-4 mr-2" />
               About
             </TabsTrigger>
