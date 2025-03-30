@@ -30,14 +30,23 @@ const CreatePostCard = ({ onPostCreated, communityName }: CreatePostCardProps) =
   const [isExpanded, setIsExpanded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [userAvatar, setUserAvatar] = useState('');
+  const [userHandle, setUserHandle] = useState('');
   
   useEffect(() => {
     const storedAvatar = localStorage.getItem('dapps_user_avatar');
+    const storedHandle = localStorage.getItem('dapps_user_handle');
+    
     console.log("Retrieved user avatar from localStorage:", storedAvatar);
+    console.log("Retrieved user handle from localStorage:", storedHandle);
+    
     if (storedAvatar) {
       const avatarUrl = `https://img.dapps.co/avatar/${storedAvatar}.svg`;
       console.log("Setting user avatar URL:", avatarUrl);
       setUserAvatar(avatarUrl);
+    }
+    
+    if (storedHandle) {
+      setUserHandle(storedHandle);
     }
   }, []);
 
@@ -134,6 +143,7 @@ const CreatePostCard = ({ onPostCreated, communityName }: CreatePostCardProps) =
         toast.success('Post created successfully!');
         
         const userAvatar = localStorage.getItem('dapps_user_avatar') || '';
+        const userHandle = localStorage.getItem('dapps_user_handle') || 'you';
         
         // Extract post code from response if available
         let postCode = '';
@@ -147,7 +157,7 @@ const CreatePostCard = ({ onPostCreated, communityName }: CreatePostCardProps) =
         }
         
         const newPost: Partial<CommunityPost> = {
-          handle: "you",
+          handle: userHandle, // Use the actual user handle instead of hardcoded "you"
           avatar: userAvatar,
           community: selectedCommunity || undefined,
           timeAgo: "just now",
