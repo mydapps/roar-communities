@@ -174,8 +174,8 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
           return addSubReply(prevReplies);
         });
       } else {
-        // Add as a top-level reply
-        setLocalReplies(prevReplies => [newComment, ...prevReplies]);
+        // Add as a top-level reply - CHANGED: now adding to the bottom
+        setLocalReplies(prevReplies => [...prevReplies, newComment]);
       }
       
       // Actually submit to API
