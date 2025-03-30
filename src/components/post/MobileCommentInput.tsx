@@ -36,6 +36,11 @@ export const MobileCommentInput: React.FC<MobileCommentInputProps> = ({
   const userAvatar = localStorage.getItem('dapps_user_avatar') || 'default';
   const isLoggedIn = !!localStorage.getItem('dapps_user_key');
 
+  // Update expanded state when isReplyMode changes
+  useEffect(() => {
+    setIsExpanded(isReplyMode);
+  }, [isReplyMode]);
+
   useEffect(() => {
     // Auto-focus the textarea when expanded
     if (isExpanded && inputRef.current) {
@@ -66,11 +71,14 @@ export const MobileCommentInput: React.FC<MobileCommentInputProps> = ({
     try {
       await onSubmit(content, replyToComment?.id);
       setContent('');
-      if (!isReplyMode) {
-        setIsExpanded(false);
-      } else if (onCancel) {
+      
+      // Always collapse after submission - this fixes issue #1
+      setIsExpanded(false);
+      
+      if (onCancel && isReplyMode) {
         onCancel();
       }
+      
       toast.success(isReplyMode ? 'Reply posted' : 'Comment posted');
     } catch (error) {
       console.error('Error posting comment:', error);
@@ -86,8 +94,8 @@ export const MobileCommentInput: React.FC<MobileCommentInputProps> = ({
       onCancel();
     } else {
       setIsExpanded(false);
-      setContent('');
     }
+    setContent('');
   };
 
   // Truncate comment content for reply preview

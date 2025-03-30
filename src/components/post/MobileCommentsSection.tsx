@@ -180,6 +180,8 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
       
       // Actually submit to API
       await onAddComment(content, parentId);
+      
+      // Clear reply mode after successful submission
       setReplyingTo(null);
       
       // Toast notification
@@ -199,6 +201,11 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
     return handleSubmit(content, parentId);
   }, []);
 
+  // Handle a reply to comment by opening the drawer
+  const handleOpenMobileReply = useCallback((id: number, handle: string, content: string) => {
+    handleOpenReply(id, handle, content);
+  }, [handleOpenReply]);
+
   if (!isMobile) {
     return null;
   }
@@ -217,9 +224,7 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
                   onMeowChange={handleMeowChange}
                   onReply={handleReplySubmit}
                   isMobile={true}
-                  onOpenMobileReply={(id, handle, avatar, content) => 
-                    handleOpenReply(id, handle, content)
-                  }
+                  onOpenMobileReply={handleOpenMobileReply}
                 />
               </div>
             ))}
