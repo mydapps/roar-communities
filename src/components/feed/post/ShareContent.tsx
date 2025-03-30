@@ -16,6 +16,7 @@ interface ShareContentProps {
   community?: string;
   onClose: () => void;
   onShareSuccess?: (platform: string) => void;
+  avatar?: string;
 }
 
 const truncateText = (text: string, maxLength: number = 100) => {
@@ -32,7 +33,8 @@ export const ShareContent = ({
   postCode,
   community,
   onClose,
-  onShareSuccess
+  onShareSuccess,
+  avatar
 }: ShareContentProps) => {
   const { toast } = useToast();
   const [successPlatform, setSuccessPlatform] = useState<string | null>(null);
@@ -94,12 +96,20 @@ export const ShareContent = ({
     }
   };
   
+  // Determine the avatar source correctly
+  const getAvatarSource = () => {
+    if (avatar) {
+      return `https://img.dapps.co/avatar/${avatar}.svg`;
+    }
+    return `https://api.dicebear.com/7.x/personas/svg?seed=${username}`;
+  };
+  
   return (
     <>
       <div className="p-4 border-b">
         <div className="flex items-start gap-3 mb-2">
           <Avatar className="h-10 w-10">
-            <AvatarImage src={username.includes('.') ? `https://api.dicebear.com/7.x/personas/svg?seed=${username}` : username} />
+            <AvatarImage src={getAvatarSource()} />
             <AvatarFallback>{username[0]?.toUpperCase() || '?'}</AvatarFallback>
           </Avatar>
           <div className="flex-1">

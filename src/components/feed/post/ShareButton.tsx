@@ -45,9 +45,6 @@ export const ShareButton = ({
     onOpenChange(false);
   };
   
-  // Use avatar URL if provided, otherwise username will be used to generate a fallback avatar
-  const userIdentifier = avatar || username;
-  
   if (mobile) {
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
@@ -67,7 +64,7 @@ export const ShareButton = ({
           </DrawerHeader>
           
           <ShareContent 
-            username={userIdentifier}
+            username={username}
             timeAgo={timeAgo}
             content={content}
             images={images}
@@ -76,6 +73,7 @@ export const ShareButton = ({
             community={community}
             onShareSuccess={onShareSuccess}
             onClose={handleClose}
+            avatar={avatar}
           />
         </DrawerContent>
       </Drawer>
@@ -100,7 +98,7 @@ export const ShareButton = ({
         </SheetHeader>
         
         <ShareContent 
-          username={userIdentifier}
+          username={username}
           timeAgo={timeAgo}
           content={content}
           images={images}
@@ -109,6 +107,7 @@ export const ShareButton = ({
           community={community}
           onShareSuccess={onShareSuccess}
           onClose={handleClose}
+          avatar={avatar}
         />
       </SheetContent>
     </Sheet>
