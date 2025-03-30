@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -28,7 +27,6 @@ export const EnhancedCommentsSection = ({
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  // Mobile reply drawer state
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [replyTarget, setReplyTarget] = useState<{
     id: number;
@@ -39,7 +37,6 @@ export const EnhancedCommentsSection = ({
   } | null>(null);
   const isMobile = useIsMobile();
 
-  // Fetch replies
   const fetchComments = useCallback(async () => {
     if (!postCode) return;
     
@@ -65,13 +62,11 @@ export const EnhancedCommentsSection = ({
   }, [postCode]);
   
   useEffect(() => {
-    // Only fetch if we don't have initial replies
     if (initialReplies.length === 0) {
       fetchComments();
     }
   }, [fetchComments, initialReplies.length]);
   
-  // Handle comment submission
   const handleSubmitComment = async (e?: React.FormEvent) => {
     if (e) {
       e.preventDefault();
@@ -84,18 +79,16 @@ export const EnhancedCommentsSection = ({
     
     try {
       console.log('Submitting comment to post:', postCode);
-      // Parent ID 0 means top-level comment
       const response = await createReply(postCode, newComment);
       
-      // If the API returns the created reply, add it to the list immediately
       if (response.success) {
         const newReply: CommentReply = {
           id: response.reply_id,
-          uid: 0, // Will be set by the server
+          uid: 0,
           handle: response.handle || localStorage.getItem('dapps_user_handle') || 'you',
           avatar_url: response.avatar_url || localStorage.getItem('dapps_user_avatar') || 'default',
           content: newComment,
-          created_on: response.created_on,
+          created_on: response.created_on || new Date().toISOString(),
           time_ago: 'just now',
           upvotes: 0,
           meow_count: 0,
@@ -108,7 +101,6 @@ export const EnhancedCommentsSection = ({
         setNewComment('');
         toast.success('Comment added successfully');
       } else {
-        // Fallback to refreshing the comments
         fetchComments();
       }
     } catch (error) {
@@ -119,12 +111,9 @@ export const EnhancedCommentsSection = ({
     }
   };
   
-  // Handle reply to a comment
   const handleReplyToComment = async (parentId: number, content: string) => {
     if (!content.trim()) {
-      // If on mobile and no content is provided, we're just opening the drawer
       if (isMobile) {
-        // Find the comment being replied to
         const findComment = (comments: CommentReply[], id: number): CommentReply | undefined => {
           for (const comment of comments) {
             if (comment.id === id) return comment;
@@ -158,21 +147,19 @@ export const EnhancedCommentsSection = ({
       
       if (response.success) {
         console.log('Reply created successfully:', response);
-        // Create a new reply object to add to the UI immediately
         const newReply: CommentReply = {
           id: response.reply_id,
-          uid: 0, // Will be set by the server
+          uid: 0,
           handle: response.handle || localStorage.getItem('dapps_user_handle') || 'you',
           avatar_url: response.avatar_url || localStorage.getItem('dapps_user_avatar') || 'default',
           content: content,
-          created_on: response.created_on,
+          created_on: response.created_on || new Date().toISOString(),
           time_ago: 'just now',
           upvotes: 0,
           meow_count: 0,
           has_meowed: false
         };
         
-        // Update the replies state to include the new reply
         setReplies(prevReplies => {
           const addReplyToComment = (comments: CommentReply[]): CommentReply[] => {
             return comments.map(comment => {
@@ -199,7 +186,6 @@ export const EnhancedCommentsSection = ({
         setReplyCount(prev => prev + 1);
         toast.success('Reply added successfully');
       } else {
-        // Fallback to refreshing if something went wrong with adding the reply directly
         console.log('API reported success=false, refreshing comments');
         fetchComments();
       }
@@ -212,7 +198,6 @@ export const EnhancedCommentsSection = ({
     }
   };
   
-  // Handle meow (like/unlike) on a comment
   const handleMeowChange = async (commentId: number, newState: boolean) => {
     const updatedReplies = updateMeowState(replies, commentId, newState);
     setReplies(updatedReplies);
@@ -221,14 +206,12 @@ export const EnhancedCommentsSection = ({
       await toggleMeow(commentId);
     } catch (error) {
       console.error('Error toggling meow:', error);
-      // Revert on error
       const revertedReplies = updateMeowState(replies, commentId, !newState);
       setReplies(revertedReplies);
       toast.error('Could not update meow. Please try again.');
     }
   };
   
-  // Helper function to update meow state in nested replies
   const updateMeowState = (
     replyList: CommentReply[], 
     targetId: number, 
@@ -254,7 +237,6 @@ export const EnhancedCommentsSection = ({
     });
   };
 
-  // Mobile drawer handlers
   const openReplyDrawer = (id: number, handle: string, avatar: string, content: string, isPost: boolean = false) => {
     setReplyTarget({
       id,
@@ -271,11 +253,9 @@ export const EnhancedCommentsSection = ({
     
     try {
       if (replyTarget.isPost) {
-        // If replying to the post itself
         setNewComment(content);
         await handleSubmitComment();
       } else {
-        // If replying to a comment
         await handleReplyToComment(replyTarget.id, content);
       }
       return Promise.resolve();
@@ -284,10 +264,9 @@ export const EnhancedCommentsSection = ({
       return Promise.reject(error);
     }
   };
-  
-  // Get user avatar from localStorage
+
   const userAvatar = localStorage.getItem('dapps_user_avatar') || 'default';
-  
+
   return (
     <div className="space-y-6" onClick={(e) => e.stopPropagation()}>
       <div className="flex items-center justify-between">
@@ -386,7 +365,6 @@ export const EnhancedCommentsSection = ({
         </div>
       )}
       
-      {/* Mobile Reply Drawer */}
       {isMobile && replyTarget && (
         <MobileReplyDrawer 
           open={drawerOpen}
