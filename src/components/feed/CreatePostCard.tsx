@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -154,20 +155,34 @@ const CreatePostCard = ({ onPostCreated, communityName }: CreatePostCardProps) =
         setSelectedCommunity(communityName || '');
         setUploadedMedia([]);
         setIsExpanded(false);
+      } else if (typeof response === 'object' && response.status === 'ERROR') {
+        // Extract detailed error message from the response
+        const errorMessage = response.error || response.message || 'Failed to create post';
+        throw new Error(errorMessage);
       } else {
         throw new Error('Failed to create post');
       }
     } catch (error: any) {
       console.error('Error creating post:', error);
       
-      const errorMessage = error.message || 'Failed to create post. Please try again.';
+      // Extract error message. If it's an API response error, it will be in error.message
+      let errorMessage: string;
+      
+      if (typeof error === 'object') {
+        // Check if error is from API with structured response
+        if (error.response && error.response.data) {
+          errorMessage = error.response.data.error || error.response.data.message || error.message;
+        } else {
+          errorMessage = error.message || 'Failed to create post. Please try again.';
+        }
+      } else {
+        errorMessage = 'Failed to create post. Please try again.';
+      }
+      
       console.log("Error message:", errorMessage);
       
-      if (errorMessage.includes('too short')) {
-        setError('Your post is too short! Please add more content.');
-      } else {
-        setError(errorMessage);
-      }
+      // Set the error message without any unnecessary conditional logic
+      setError(errorMessage);
       
       toast.error(errorMessage);
     } finally {

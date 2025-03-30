@@ -435,24 +435,31 @@ export const createPost = async (params: {
     
     console.log(`Response status: ${response.status}`);
     
-    if (!response.ok) {
-      const contentType = response.headers.get("content-type");
-      let errorMessage = `Error ${response.status}: ${response.statusText}`;
+    const contentType = response.headers.get("content-type");
+    let data;
+    
+    if (contentType && contentType.indexOf("application/json") !== -1) {
+      data = await response.json();
+      console.log('Create post API response:', data);
       
-      if (contentType && contentType.indexOf("application/json") !== -1) {
-        const errorData = await response.json();
-        console.error('Create post API error response (JSON):', errorData);
-        errorMessage = errorData.message || errorMessage;
-      } else {
-        const errorText = await response.text();
-        console.error('Create post API error response (text):', errorText);
+      // If request wasn't successful, return the error response directly
+      if (!response.ok) {
+        console.error('Create post API error response (JSON):', data);
+        return data; // Return the error object with status and error message
+      }
+    } else {
+      const errorText = await response.text();
+      console.error('Create post API error response (text):', errorText);
+      
+      if (!response.ok) {
+        return {
+          status: 'ERROR',
+          error: `Error ${response.status}: ${errorText}`
+        };
       }
       
-      throw new Error(errorMessage);
+      data = { success: true };
     }
-    
-    const data = await response.json();
-    console.log('Create post API response:', data);
     
     // Return the raw response if it has a status property, otherwise return boolean success
     return data.status === "SUCCESS" ? data : (data.success === true);
