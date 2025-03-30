@@ -111,7 +111,12 @@ const FeedPage = () => {
       return;
     }
     
-    console.log("Post roar status changing for:", postCode);
+    try {
+      await toggleRoar(postCode);
+    } catch (error) {
+      console.error("Error toggling roar:", error);
+      toast.error("Error updating post. Please try again.");
+    }
   };
   
   const scrollToTop = () => {
@@ -148,7 +153,7 @@ const FeedPage = () => {
               commentCount={post.reply_count}
               shareCount={0}
               postCode={post.code}
-              roared={post.has_upvoted === 1}
+              roared={post.roar === 1 || post.has_upvoted === 1}
               onRoar={() => handleRoar(post.code)}
               images={post.images || (post.image === 1 ? [post.image_url] : undefined)}
               isMirror={post.is_mirror === 1}

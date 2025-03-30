@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
@@ -67,6 +66,7 @@ export const Post = ({
 }: PostProps) => {
   const navigate = useNavigate();
   const [localRoared, setLocalRoared] = useState(roared);
+  const [hasRoared, setHasRoared] = useState(roared);
   const [localRoarCount, setLocalRoarCount] = useState(roarCount);
   const [showComments, setShowComments] = useState(false);
   const [loadingComments, setLoadingComments] = useState(false);
@@ -82,18 +82,16 @@ export const Post = ({
   
   const { toast } = useToast();
   
-  // Check if user is logged in if not provided as prop
   const userIsLoggedIn = isLoggedIn !== undefined ? isLoggedIn : !!localStorage.getItem('dapps_user_key');
   
   const ipfsHash = ipfs || postCode || `Qm${Array.from({length: 44}, () => Math.floor(Math.random() * 16).toString(16)).join('')}`;
 
   useEffect(() => {
-    setLocalRoared(roared);
+    setHasRoared(roared);
     setLocalRoarCount(roarCount);
   }, [roared, roarCount]);
 
   const handleRoar = async () => {
-    // If user is not logged in, show toast asking them to login
     if (!userIsLoggedIn) {
       toast({
         title: "Login Required",
@@ -110,8 +108,8 @@ export const Post = ({
     }
     
     if (postCode) {
-      const newRoaredState = !localRoared;
-      setLocalRoared(newRoaredState);
+      const newRoaredState = !hasRoared;
+      setHasRoared(newRoaredState);
       setLocalRoarCount(prev => newRoaredState ? prev + 1 : prev - 1);
       
       if (onRoar) {
@@ -128,7 +126,6 @@ export const Post = ({
   };
 
   const handleVerifyIpfs = () => {
-    // Implementation for IPFS verification
     console.log(`Verifying IPFS hash: ${ipfsHash}`);
     toast({
       title: "IPFS Verification",
@@ -178,7 +175,6 @@ export const Post = ({
   const handleAddComment = (text: string) => {
     if (!text.trim()) return;
     
-    // If user is not logged in, show toast asking them to login
     if (!userIsLoggedIn) {
       toast({
         title: "Login Required",
@@ -194,7 +190,6 @@ export const Post = ({
       return;
     }
     
-    // Create a temporary comment object for immediate feedback
     const newComment: CommentReply = {
       id: Date.now(),
       uid: 0,
@@ -208,12 +203,10 @@ export const Post = ({
       has_meowed: false
     };
     
-    // Add new comment to the bottom of the list
     setComments(prev => [...prev, newComment]);
   };
 
   const handleToggleComments = async () => {
-    // If user is not logged in, show toast asking them to login
     if (!userIsLoggedIn) {
       toast({
         title: "Login Required",
@@ -275,7 +268,7 @@ export const Post = ({
       />
       
       <PostFooter
-        localRoared={localRoared}
+        localRoared={hasRoared}
         localRoarCount={localRoarCount}
         handleRoar={handleRoar}
         postCode={postCode}
