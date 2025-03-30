@@ -250,9 +250,19 @@ const DetailedPostPage = () => {
     );
   }
   
-  const truncateTitle = (text: string, maxLength = 30) => {
-    if (!text || text.trim() === "") return "Untitled Post";
+  const truncateText = (text: string, maxLength = 40) => {
+    if (!text || text.trim() === "") return "No content";
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+  };
+  
+  const getBestContentForDisplay = () => {
+    if (post.body && post.body.trim() !== "") {
+      return post.body;
+    }
+    if (post.title && post.title.trim() !== "") {
+      return post.title;
+    }
+    return "No content";
   };
   
   const displayTitle = post.title && post.title.trim() !== "" 
@@ -358,7 +368,7 @@ const DetailedPostPage = () => {
               ) : null}
               
               <BreadcrumbItem>
-                <BreadcrumbPage>{post ? truncateTitle(post.title || post.body) : "Loading..."}</BreadcrumbPage>
+                <BreadcrumbPage>{truncateText(getBestContentForDisplay())}</BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>

@@ -1,8 +1,7 @@
-
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Bell, Menu, Search, User, Gift, Sparkles, LogOut } from 'lucide-react';
+import { Bell, Menu, Search, User, Gift, Sparkles, LogOut, ArrowLeft } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   DropdownMenu, 
@@ -24,15 +23,16 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
   const isMobile = useIsMobile();
   const { logout } = usePrivy();
   const navigate = useNavigate();
+  const location = useLocation();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userAvatar, setUserAvatar] = useState('default');
   
+  const isFeedPage = location.pathname === '/feed';
+  
   useEffect(() => {
-    // Check if user is logged in
     const userKey = localStorage.getItem('dapps_user_key');
     setIsLoggedIn(!!userKey);
     
-    // Get user avatar if available
     const avatar = localStorage.getItem('dapps_user_avatar');
     if (avatar) {
       setUserAvatar(avatar);
@@ -43,15 +43,12 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
     try {
       console.log('Logging out user...');
       
-      // 1. Clear ALL localStorage items
       localStorage.clear();
       console.log('Cleared all localStorage items');
       
-      // 2. Logout from Privy
       await logout();
       console.log('Logged out from Privy');
       
-      // 3. Redirect to home page using navigate instead of window.location
       console.log('Redirecting to homepage...');
       navigate('/');
       
@@ -61,6 +58,10 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
       console.error('Logout error:', error);
       toast.error('Error logging out. Please try again.');
     }
+  };
+  
+  const handleBackClick = () => {
+    navigate(-1);
   };
   
   return (
@@ -78,6 +79,19 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
               <span className="sr-only">Toggle menu</span>
             </Button>
           )}
+          
+          {!isFeedPage && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="mr-1"
+              onClick={handleBackClick}
+              aria-label="Go back"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          )}
+          
           <Link to="/" className="flex items-center gap-2">
             <img 
               src="https://dapps.co/logo1.png" 
