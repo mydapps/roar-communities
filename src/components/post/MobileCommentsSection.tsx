@@ -194,11 +194,10 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
     }
   };
 
-  // Handle a reply to comment by opening the drawer
-  const handleReplyToComment = useCallback((parentId: number, handle: string, avatar: string, content: string) => {
-    handleOpenReply(parentId, handle, content);
-    return Promise.resolve();
-  }, [handleOpenReply]);
+  // Modified to match the expected function signature
+  const handleReplySubmit = useCallback((parentId: number, content: string) => {
+    return handleSubmit(content, parentId);
+  }, []);
 
   if (!isMobile) {
     return null;
@@ -216,7 +215,7 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
                   comment={reply}
                   postAuthorHandle={postAuthorHandle}
                   onMeowChange={handleMeowChange}
-                  onReply={handleReplyToComment}
+                  onReply={handleReplySubmit}
                   isMobile={true}
                   onOpenMobileReply={(id, handle, avatar, content) => 
                     handleOpenReply(id, handle, content)
