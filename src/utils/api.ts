@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 import { POST_MIRRORED_EVENT } from '@/components/feed/post/MirrorButton';
 
@@ -446,6 +445,16 @@ export const createPost = async (params: {
       if (!response.ok) {
         console.error('Create post API error response (JSON):', data);
         return data; // Return the error object with status and error message
+      }
+      
+      // Extract the post code from the response if available
+      if (data.postCode || data.post_code || data.code) {
+        const postCode = data.postCode || data.post_code || data.code;
+        console.log('Extracted post code from response:', postCode);
+        return {
+          status: "SUCCESS",
+          postCode: postCode
+        };
       }
     } else {
       const errorText = await response.text();

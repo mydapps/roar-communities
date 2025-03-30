@@ -135,6 +135,17 @@ const CreatePostCard = ({ onPostCreated, communityName }: CreatePostCardProps) =
         
         const userAvatar = localStorage.getItem('dapps_user_avatar') || '';
         
+        // Extract post code from response if available
+        let postCode = '';
+        if (typeof response === 'object' && response.postCode) {
+          postCode = response.postCode;
+          console.log("Received post code from API:", postCode);
+        } else {
+          // Fallback to temporary ID if API doesn't return a post code
+          postCode = `temp-${Date.now()}`;
+          console.log("Using temporary post code:", postCode);
+        }
+        
         const newPost: Partial<CommunityPost> = {
           handle: "you",
           avatar: userAvatar,
@@ -148,7 +159,7 @@ const CreatePostCard = ({ onPostCreated, communityName }: CreatePostCardProps) =
           image_url: uploadedMedia.filter(m => m.type === 'image')[0]?.url,
           multiple_images: uploadedMedia.filter(m => m.type === 'image').length > 1 ? 1 : 0,
           images: uploadedMedia.filter(m => m.type === 'image').map(m => m.url),
-          code: Date.now().toString() // Temporary unique ID for the new post
+          code: postCode // Use the post code from API response
         };
         
         console.log("Sending new post to feed:", JSON.stringify(newPost));
