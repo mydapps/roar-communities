@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Card, 
@@ -135,7 +134,11 @@ const MySharesPage = () => {
       setUserEthBalance(balanceData.balance.eth);
     } catch (error) {
       console.error('Failed to fetch wallet balance:', error);
-      toast.error('Failed to load wallet balance');
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load wallet balance"
+      });
     } finally {
       setIsLoadingBalance(false);
     }

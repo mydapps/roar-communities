@@ -105,7 +105,11 @@ export const TradeSheet = ({
 
   const handleSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!community?.name) {
-      toast.error('Community information is missing');
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Community information is missing"
+      });
       return;
     }
 
@@ -123,7 +127,11 @@ export const TradeSheet = ({
       setPreviewOpen(true);
     } catch (error) {
       console.error('Transaction precheck failed:', error);
-      toast.error(error instanceof Error ? error.message : 'Transaction precheck failed. Please try again.');
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error instanceof Error ? error.message : 'Transaction precheck failed. Please try again.'
+      });
     } finally {
       setIsLoadingPrecheck(false);
     }
@@ -131,7 +139,11 @@ export const TradeSheet = ({
 
   const handleConfirmTransaction = async () => {
     if (!community?.name || !precheckData) {
-      toast.error('Missing transaction data');
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Missing transaction data"
+      });
       return;
     }
     
@@ -168,7 +180,11 @@ export const TradeSheet = ({
       }, 2000);
     } catch (error) {
       console.error('Transaction confirmation failed:', error);
-      toast.error(error instanceof Error ? error.message : 'Transaction failed. Please try again.');
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error instanceof Error ? error.message : 'Transaction failed. Please try again.'
+      });
     } finally {
       setIsConfirming(false);
     }
