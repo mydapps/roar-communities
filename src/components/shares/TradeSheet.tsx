@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Sheet,
   SheetContent,
@@ -25,7 +25,15 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Check, ArrowRight } from 'lucide-react';
+import { Check, ArrowRight, Loader2, RefreshCw } from 'lucide-react';
+import { 
+  buySharesPrecheck, 
+  buySharesConfirm,
+  sellSharesPrecheck,
+  sellSharesConfirm,
+  getWalletBalance,
+  SharePrecheckResponse 
+} from '@/utils/communityApi';
 
 interface TradeSheetProps {
   open: boolean;
@@ -46,11 +54,25 @@ export const TradeSheet = ({
 }: TradeSheetProps) => {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [isLoadingPrecheck, setIsLoadingPrecheck] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [precheckData, setPrecheckData] = useState<SharePrecheckResponse | null>(null);
+  const [walletBalance, setWalletBalance] = useState<string>(userEthBalance);
+  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
   const formSchema = z.object({
-    amount: z.coerce.number().min(1, 'Amount must be at least 1 share'),
+    amount: z.coerce
+      .number()
+      .min(0.001, 'Amount must be at least 0.001 shares')
+      .refine(val => {
+        // Check that number has at most 3 decimal places
+        const decimalStr = val.toString().split('.')[1] || '';
+        return decimalStr.length <= 3;
+      }, {
+        message: 'Maximum 3 decimal places allowed'
+      }),
   });
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -60,45 +82,96 @@ export const TradeSheet = ({
     }
   });
 
-  // Calculate preview values
-  const sharePrice = community?.currentPrice || 0;
-  const amount = form.watch('amount');
-  
-  // Calculate total value with simulated bonding curve
-  // Higher amounts = slightly higher average price
-  const priceMultiplier = 1 + (amount / 1000); // Simple bonding curve simulation
-  const totalEth = (amount * sharePrice * priceMultiplier).toFixed(6);
-  const fee = (0.0003).toFixed(6);
-  const total = action === 'buy' 
-    ? (parseFloat(totalEth) + parseFloat(fee)).toFixed(6)
-    : (parseFloat(totalEth) - parseFloat(fee)).toFixed(6);
+  useEffect(() => {
+    if (open) {
+      fetchWalletBalance();
+    }
+  }, [open]);
 
-  const handleSubmit = (values: z.infer<typeof formSchema>) => {
-    setPreviewOpen(true);
+  const fetchWalletBalance = async () => {
+    if (!open) return;
+    
+    setIsLoadingBalance(true);
+    try {
+      const balanceData = await getWalletBalance();
+      setWalletBalance(balanceData.balance.eth);
+    } catch (error) {
+      console.error('Failed to fetch wallet balance:', error);
+      // Fall back to the provided value
+    } finally {
+      setIsLoadingBalance(false);
+    }
   };
 
-  const handleConfirmTransaction = () => {
-    setPreviewOpen(false);
-    setShowSuccess(true);
+  const handleSubmit = async (values: z.infer<typeof formSchema>) => {
+    if (!community?.name) {
+      toast.error('Community information is missing');
+      return;
+    }
 
-    // Show success animation for 2 seconds then close
-    setTimeout(() => {
-      setShowSuccess(false);
+    setIsLoadingPrecheck(true);
+    try {
+      let precheckResult;
       
-      // Always close the modal after success, regardless of embedded status
-      onOpenChange(false);
+      if (action === 'buy') {
+        precheckResult = await buySharesPrecheck(community.name, values.amount);
+      } else {
+        precheckResult = await sellSharesPrecheck(community.name, values.amount);
+      }
       
-      // Reset form
-      form.reset();
+      setPrecheckData(precheckResult);
+      setPreviewOpen(true);
+    } catch (error) {
+      console.error('Transaction precheck failed:', error);
+      toast.error(error instanceof Error ? error.message : 'Transaction precheck failed. Please try again.');
+    } finally {
+      setIsLoadingPrecheck(false);
+    }
+  };
+
+  const handleConfirmTransaction = async () => {
+    if (!community?.name || !precheckData) {
+      toast.error('Missing transaction data');
+      return;
+    }
+    
+    setIsConfirming(true);
+    try {
+      let result;
       
-      // Show toast
-      toast({
-        title: "Transaction successful!",
-        description: action === 'buy' 
-          ? `You've purchased ${form.getValues('amount')} shares of ${community?.name}` 
-          : `You've sold ${form.getValues('amount')} shares of ${community?.name}`,
-      });
-    }, 2000);
+      if (action === 'buy') {
+        result = await buySharesConfirm(community.name, precheckData.shareQuantity);
+      } else {
+        result = await sellSharesConfirm(community.name, precheckData.shareQuantity);
+      }
+      
+      setPreviewOpen(false);
+      setShowSuccess(true);
+      
+      // Show success animation for 2 seconds then close
+      setTimeout(() => {
+        setShowSuccess(false);
+        
+        // Always close the modal after success, regardless of embedded status
+        onOpenChange(false);
+        
+        // Reset form
+        form.reset();
+        
+        // Show toast
+        toast({
+          title: "Transaction successful!",
+          description: action === 'buy' 
+            ? `You've purchased ${precheckData.shareQuantity} shares of ${community?.name}` 
+            : `You've sold ${precheckData.shareQuantity} shares of ${community?.name}`,
+        });
+      }, 2000);
+    } catch (error) {
+      console.error('Transaction confirmation failed:', error);
+      toast.error(error instanceof Error ? error.message : 'Transaction failed. Please try again.');
+    } finally {
+      setIsConfirming(false);
+    }
   };
 
   if (!community || !action) return null;
@@ -108,7 +181,21 @@ export const TradeSheet = ({
       {action === 'buy' && (
         <div className="mb-4 p-3 rounded-md bg-muted/50">
           <div className="text-sm text-muted-foreground">Your ETH Balance</div>
-          <div className="font-medium text-lg">{userEthBalance} ETH</div>
+          <div className="font-medium text-lg flex items-center gap-2">
+            {isLoadingBalance ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <>
+                {walletBalance} ETH
+                <button 
+                  onClick={fetchWalletBalance}
+                  className="p-1 rounded-full hover:bg-muted/80 transition-colors"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </button>
+              </>
+            )}
+          </div>
         </div>
       )}
       
@@ -123,9 +210,10 @@ export const TradeSheet = ({
                 <FormControl>
                   <Input 
                     type="number" 
-                    min="1" 
-                    step="1"
+                    min="0.001" 
+                    step="0.001"
                     {...field} 
+                    placeholder="Enter amount (max 3 decimals)"
                   />
                 </FormControl>
                 <FormMessage />
@@ -133,64 +221,74 @@ export const TradeSheet = ({
             )}
           />
           
-          <div className="space-y-4 bg-muted/30 p-4 rounded-md">
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Quantity</span>
-              <span className="text-sm">{amount} shares</span>
-            </div>
-            
-            <div className="flex justify-between border-t pt-2">
-              <span className="text-sm font-medium">Total Price</span>
-              <span className="text-sm font-medium">{totalEth} ETH</span>
-            </div>
-            
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Network Fee</span>
-              <span className="text-sm">{fee} ETH</span>
-            </div>
-            
-            <div className="flex justify-between border-t pt-2">
-              <span className="font-medium">Total</span>
-              <span className="font-medium">{total} ETH</span>
-            </div>
-          </div>
-          
-          <Button type="submit" className="w-full">Review Transaction</Button>
+          <Button 
+            type="submit" 
+            className="w-full" 
+            disabled={isLoadingPrecheck}
+          >
+            {isLoadingPrecheck ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Calculating...
+              </>
+            ) : (
+              'Review Transaction'
+            )}
+          </Button>
         </form>
       </Form>
     </>
   );
 
-  const renderPreviewContent = () => (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center py-2 border-b">
-        <span className="text-muted-foreground">Action</span>
-        <span className="font-medium">
-          {action === 'buy' ? 'Buy' : 'Sell'} {amount} Shares
-        </span>
+  const renderPreviewContent = () => {
+    if (!precheckData) return null;
+    
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center py-2 border-b">
+          <span className="text-muted-foreground">Action</span>
+          <span className="font-medium">
+            {action === 'buy' ? 'Buy' : 'Sell'} {precheckData.shareQuantity} Shares
+          </span>
+        </div>
+        
+        <div className="flex justify-between items-center py-2 border-b">
+          <span className="text-muted-foreground">Community</span>
+          <span className="font-medium">{precheckData.communityName}</span>
+        </div>
+        
+        <div className="flex justify-between items-center py-2 border-b">
+          <span className="text-muted-foreground">Price per Share</span>
+          <span className="font-medium">
+            {precheckData.sharePrice.toFixed(6)} ETH 
+            <span className="text-xs text-muted-foreground ml-1">
+              (${precheckData.sharePriceUsd.toFixed(2)})
+            </span>
+          </span>
+        </div>
+        
+        <div className="flex justify-between items-center py-2 border-b">
+          <span className="text-muted-foreground">Total Price</span>
+          <span className="font-medium">
+            {precheckData.totalSharePrice.toFixed(6)} ETH
+            <span className="text-xs text-muted-foreground ml-1">
+              (${precheckData.totalSharePriceUsd.toFixed(2)})
+            </span>
+          </span>
+        </div>
+        
+        <div className="flex justify-between items-center py-2 border-b">
+          <span className="text-muted-foreground">Network Fee</span>
+          <span className="font-medium">{precheckData.fee}</span>
+        </div>
+        
+        <div className="flex justify-between items-center py-2 font-medium">
+          <span>Total {action === 'buy' ? 'Cost' : 'Received'}</span>
+          <span>{precheckData.totalValue}</span>
+        </div>
       </div>
-      
-      <div className="flex justify-between items-center py-2 border-b">
-        <span className="text-muted-foreground">Community</span>
-        <span className="font-medium">{community?.name}</span>
-      </div>
-      
-      <div className="flex justify-between items-center py-2 border-b">
-        <span className="text-muted-foreground">Total Price</span>
-        <span className="font-medium">{totalEth} ETH</span>
-      </div>
-      
-      <div className="flex justify-between items-center py-2 border-b">
-        <span className="text-muted-foreground">Network Fee</span>
-        <span className="font-medium">{fee} ETH</span>
-      </div>
-      
-      <div className="flex justify-between items-center py-2 font-medium">
-        <span>Total {action === 'buy' ? 'Cost' : 'Received'}</span>
-        <span>{total} ETH</span>
-      </div>
-    </div>
-  );
+    );
+  };
 
   // For embedded in drawer version
   if (isEmbedded) {
@@ -205,13 +303,22 @@ export const TradeSheet = ({
                 className="w-full py-3"
                 variant="default"
                 onClick={handleConfirmTransaction}
+                disabled={isConfirming}
               >
-                Confirm Transaction
+                {isConfirming ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  'Confirm Transaction'
+                )}
               </Button>
               <Button 
                 className="w-full" 
                 variant="outline" 
                 onClick={() => setPreviewOpen(false)}
+                disabled={isConfirming}
               >
                 Back
               </Button>
@@ -229,8 +336,8 @@ export const TradeSheet = ({
               <h2 className="text-2xl font-bold">Success!</h2>
               <p className="text-muted-foreground">
                 {action === 'buy' 
-                  ? `You've purchased ${form.getValues('amount')} shares of ${community?.name}` 
-                  : `You've sold ${form.getValues('amount')} shares of ${community?.name}`}
+                  ? `You've purchased ${precheckData?.shareQuantity} shares of ${community?.name}` 
+                  : `You've sold ${precheckData?.shareQuantity} shares of ${community?.name}`}
               </p>
             </div>
           </div>
@@ -273,23 +380,38 @@ export const TradeSheet = ({
                         className="w-full py-6 rounded-full relative group cursor-grab active:cursor-grabbing"
                         variant="default"
                         onClick={handleConfirmTransaction}
+                        disabled={isConfirming}
                       >
-                        <div className="absolute inset-0 flex items-center justify-center opacity-100 group-hover:opacity-0 transition-opacity">
-                          <div className="flex items-center">
-                            <span>Slide to confirm</span>
-                            <ArrowRight className="ml-2 h-4 w-4" />
+                        {isConfirming ? (
+                          <div className="flex items-center justify-center">
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Processing...
                           </div>
-                        </div>
-                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <div className="flex items-center">
-                            <span>Click to confirm</span>
-                          </div>
-                        </div>
+                        ) : (
+                          <>
+                            <div className="absolute inset-0 flex items-center justify-center opacity-100 group-hover:opacity-0 transition-opacity">
+                              <div className="flex items-center">
+                                <span>Slide to confirm</span>
+                                <ArrowRight className="ml-2 h-4 w-4" />
+                              </div>
+                            </div>
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="flex items-center">
+                                <span>Click to confirm</span>
+                              </div>
+                            </div>
+                          </>
+                        )}
                       </Button>
                     </div>
                   </div>
                   <div className="mt-4">
-                    <Button variant="outline" className="w-full" onClick={() => setPreviewOpen(false)}>
+                    <Button 
+                      variant="outline" 
+                      className="w-full" 
+                      onClick={() => setPreviewOpen(false)}
+                      disabled={isConfirming}
+                    >
                       Back
                     </Button>
                   </div>
@@ -309,8 +431,8 @@ export const TradeSheet = ({
               <h2 className="text-2xl font-bold">Success!</h2>
               <p className="text-muted-foreground">
                 {action === 'buy' 
-                  ? `You've purchased ${form.getValues('amount')} shares of ${community?.name}` 
-                  : `You've sold ${form.getValues('amount')} shares of ${community?.name}`}
+                  ? `You've purchased ${precheckData?.shareQuantity} shares of ${community?.name}` 
+                  : `You've sold ${precheckData?.shareQuantity} shares of ${community?.name}`}
               </p>
             </div>
           </div>
@@ -351,13 +473,22 @@ export const TradeSheet = ({
                     className="w-full py-3"
                     variant="default"
                     onClick={handleConfirmTransaction}
+                    disabled={isConfirming}
                   >
-                    Confirm Transaction
+                    {isConfirming ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      'Confirm Transaction'
+                    )}
                   </Button>
                   <Button 
                     className="w-full" 
                     variant="outline" 
                     onClick={() => setPreviewOpen(false)}
+                    disabled={isConfirming}
                   >
                     Back
                   </Button>
@@ -378,8 +509,8 @@ export const TradeSheet = ({
             <h2 className="text-2xl font-bold">Success!</h2>
             <p className="text-muted-foreground">
               {action === 'buy' 
-                ? `You've purchased ${form.getValues('amount')} shares of ${community?.name}` 
-                : `You've sold ${form.getValues('amount')} shares of ${community?.name}`}
+                ? `You've purchased ${precheckData?.shareQuantity} shares of ${community?.name}` 
+                : `You've sold ${precheckData?.shareQuantity} shares of ${community?.name}`}
             </p>
           </div>
         </div>

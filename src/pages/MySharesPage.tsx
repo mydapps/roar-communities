@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Card, 
   CardContent, 
@@ -15,7 +15,8 @@ import {
   RefreshCw,
   SendHorizontal,
   Plus,
-  Minus
+  Minus,
+  Loader2
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
@@ -25,6 +26,7 @@ import { PortfolioSummary } from '@/components/shares/PortfolioSummary';
 import { DepositSheet } from '@/components/shares/DepositSheet';
 import { SendSheet } from '@/components/shares/SendSheet';
 import { TradeSheet } from '@/components/shares/TradeSheet';
+import { getWalletBalance } from '@/utils/communityApi';
 import { 
   Drawer,
   DrawerContent,
@@ -117,8 +119,27 @@ const MySharesPage = () => {
   const [tradeAction, setTradeAction] = useState<'buy' | 'sell' | null>(null);
   const [tradeOpen, setTradeOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [userEthBalance, setUserEthBalance] = useState("0.000");
+  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
   const { toast } = useToast();
   const isMobile = useIsMobile();
+
+  useEffect(() => {
+    fetchWalletBalance();
+  }, []);
+
+  const fetchWalletBalance = async () => {
+    setIsLoadingBalance(true);
+    try {
+      const balanceData = await getWalletBalance();
+      setUserEthBalance(balanceData.balance.eth);
+    } catch (error) {
+      console.error('Failed to fetch wallet balance:', error);
+      toast.error('Failed to load wallet balance');
+    } finally {
+      setIsLoadingBalance(false);
+    }
+  };
 
   const handleTradeClick = (community: any, action: 'buy' | 'sell') => {
     setSelectedCommunity(community);
@@ -127,6 +148,7 @@ const MySharesPage = () => {
   };
 
   const handleRefresh = () => {
+    fetchWalletBalance();
     toast({
       title: "Refreshing",
       description: "Fetching latest portfolio data...",
@@ -168,9 +190,21 @@ const MySharesPage = () => {
               Portfolio Value: <span className="font-semibold text-foreground">{totalValue.toFixed(4)} ETH</span> 
               <span className="text-xs ml-1 text-muted-foreground">(${totalValueUsd.toFixed(2)})</span>
             </div>
-            <Button variant="outline" size="sm" onClick={handleRefresh} className="rounded-full hover:bg-primary/10">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleRefresh} 
+              className="rounded-full hover:bg-primary/10"
+              disabled={isLoadingBalance}
+            >
+              {isLoadingBalance ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh
+                </>
+              )}
             </Button>
           </div>
         </CardHeader>
