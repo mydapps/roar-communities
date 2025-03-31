@@ -32,6 +32,7 @@ interface PostFooterProps {
   commentCount: number;
   onToggleComments: () => void;
   isLoggedIn?: boolean;
+  hideComments?: boolean;
 }
 
 export const PostFooter: React.FC<PostFooterProps> = ({
@@ -56,16 +57,11 @@ export const PostFooter: React.FC<PostFooterProps> = ({
   children,
   commentCount,
   onToggleComments,
-  isLoggedIn
+  isLoggedIn,
+  hideComments = false
 }) => {
   const location = useLocation();
   
-  // Check if we're on a post detail page
-  const isPostDetailPage = 
-    /^\/c\/[\w-]+\/[\w-]+$/.test(location.pathname) || // community post: /c/communityId/postId
-    /^\/[\w-]+\/[\w-]+$/.test(location.pathname) ||    // user post: /handle/postId
-    /^\/post\/[\w-]+$/.test(location.pathname);        // generic post: /post/postId
-
   return (
     <CardFooter className="pt-0 flex justify-between flex-col">
       <div className="flex justify-between w-full mb-3">
@@ -78,12 +74,11 @@ export const PostFooter: React.FC<PostFooterProps> = ({
             isLoggedIn={isLoggedIn}
           />
           
-          {!isPostDetailPage && (
-            <CommentButton 
-              count={commentCount} 
-              onClick={onToggleComments}
-            />
-          )}
+          <CommentButton 
+            count={commentCount} 
+            onClick={onToggleComments}
+            hidden={hideComments}
+          />
           
           <MirrorButton 
             open={mirrorSheetOpen} 

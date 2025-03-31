@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
@@ -289,6 +290,7 @@ export const Post = ({
         commentCount={commentCount}
         onToggleComments={handleToggleComments}
         isLoggedIn={userIsLoggedIn}
+        hideComments={hideComments}
       >
         {showComments && !hideComments && (
           <div onClick={(e) => e.stopPropagation()} className="w-full">
