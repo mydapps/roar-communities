@@ -101,7 +101,7 @@ export const useCommunityPosts = (communityName: string | undefined) => {
       setLoading(false);
       setTimeout(() => {
         isFetchingRef.current = false;
-      }, 500); // Add a small delay before allowing new fetches to prevent multiple concurrent requests
+      }, 300); // Reduced delay to make infinite scrolling more responsive
     }
   }, [communityName]);
 
@@ -114,7 +114,7 @@ export const useCommunityPosts = (communityName: string | undefined) => {
           loadMore();
         }
       },
-      { threshold: 0.1, rootMargin: '200px' } // Increased rootMargin for earlier loading
+      { threshold: 0.1, rootMargin: '300px' } // Increased rootMargin to load earlier
     );
     
     observerRef.current = observer;
@@ -150,7 +150,10 @@ export const useCommunityPosts = (communityName: string | undefined) => {
     currentPage.current = 1;
     setHasMore(true);
     isFetchingRef.current = false;
-    fetchPosts(1, false);
+    
+    if (communityName) {
+      fetchPosts(1, false);
+    }
   }, [communityName, fetchPosts]);
 
   const loadMore = useCallback(() => {
