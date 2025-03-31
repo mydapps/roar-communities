@@ -79,7 +79,7 @@ export const useCommunityPosts = (communityName: string | undefined) => {
 
       const data: CommunityPost[] = await response.json();
       
-      console.log(`Received posts data: ${data.length} posts`);
+      console.log(`Received posts data: ${data.length} posts for page ${page}`);
       
       if (!Array.isArray(data)) {
         throw new Error('Invalid response format for community posts');
@@ -87,7 +87,7 @@ export const useCommunityPosts = (communityName: string | undefined) => {
 
       // Check if we received fewer posts than expected (assuming 10 per page)
       // This means we've reached the end of the list
-      const hasMorePosts = data.length >= 10;
+      const hasMorePosts = data.length > 0;
       
       setPosts(prev => append ? [...prev, ...data] : data);
       setHasMore(hasMorePosts);
@@ -101,23 +101,39 @@ export const useCommunityPosts = (communityName: string | undefined) => {
       setLoading(false);
       setTimeout(() => {
         isFetchingRef.current = false;
-      }, 300); // Reduced delay to make infinite scrolling more responsive
+      }, 200); // Reduced delay to make infinite scrolling more responsive
     }
   }, [communityName]);
 
   // Set up intersection observer for infinite scrolling
   useEffect(() => {
+    // Disconnect previous observer if it exists
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+    }
+    
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loading && !isFetchingRef.current) {
+        const entry = entries[0];
+        console.log("Intersection observer triggered: ", entry.isIntersecting, "hasMore:", hasMore, "loading:", loading);
+        if (entry.isIntersecting && hasMore && !loading && !isFetchingRef.current) {
           console.log("Loading element is visible, loading more posts...");
           loadMore();
         }
       },
-      { threshold: 0.1, rootMargin: '300px' } // Increased rootMargin to load earlier
+      { 
+        threshold: 0.1, 
+        rootMargin: '500px' // Increased rootMargin to detect earlier
+      }
     );
     
     observerRef.current = observer;
+    
+    // Immediately observe loading element if it exists
+    if (loadingElementRef.current) {
+      observer.observe(loadingElementRef.current);
+      console.log("Observer attached to loading element");
+    }
     
     return () => {
       if (observerRef.current) {

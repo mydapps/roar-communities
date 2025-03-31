@@ -264,7 +264,7 @@ const CommunityPage = () => {
         )}
         
         <Card className="mb-6 bg-gradient-to-br from-primary/5 to-secondary/5 border-primary/20 mt-6 md:mt-8">
-          <CardContent className={`pt-6 ${isMobile ? 'mt-16' : ''}`}>
+          <CardContent className={`pt-6 ${isMobile ? 'mt-24' : ''}`}>
             <h2 className="text-xl font-semibold mb-3 flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-primary" />
               What's on your mind?
@@ -330,7 +330,8 @@ const CommunityPage = () => {
                     
                     <div 
                       ref={loadingElementRef}
-                      className="flex justify-center py-8"
+                      className="flex justify-center py-8 my-4"
+                      id="infinite-scroll-marker"
                     >
                       {postsLoading && (
                         <Loader2 className="h-8 w-8 animate-spin text-primary" />
