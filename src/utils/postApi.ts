@@ -1,6 +1,5 @@
-
 import { toast } from 'sonner';
-import { API_BASE_URL, getUserApiKey, createAuthHeaders } from './apiBase';
+import { API_BASE_URL, getUserApiKey, createAuthHeaders, setupEventListener } from './apiBase';
 import { POST_MIRRORED_EVENT } from '@/components/feed/post/MirrorButton';
 
 /**
@@ -28,12 +27,7 @@ export interface Post {
   multiple_images: number;
   images: string[];
   reply_count: number;
-  replies: {
-    handle: string;
-    avatar: string;
-    date: string;
-    body: string;
-  }[];
+  replies: Reply[];
   pinned: number;
   is_mirror: number;
   mirror_quote?: string;
@@ -45,6 +39,50 @@ export interface Post {
   original_author_avatar?: string;
   original_created_on?: string;
   original_images?: string[];
+}
+
+/**
+ * Interface for detailed post information
+ */
+export interface PostDetails extends Post {
+  author: {
+    handle: string;
+    avatar: string;
+  };
+  created_at: string;
+  featured_image: string;
+  has_upvoted: boolean;
+  is_encrypted: boolean;
+}
+
+/**
+ * Interface for original post information (for mirrors)
+ */
+export interface OriginalPost {
+  code: string;
+  community: string;
+  title: string;
+  body: string;
+  author: string;
+  author_avatar: string;
+  created_on: string;
+  images: string[];
+}
+
+/**
+ * Interface for reply data
+ */
+export interface Reply {
+  id: number;
+  user_id: number;
+  handle: string;
+  avatar: string;
+  content: string;
+  created_at: string;
+  time_ago: string;
+  upvotes: number;
+  has_meowed: boolean;
+  replies?: Reply[];
 }
 
 /**
@@ -141,6 +179,50 @@ export const fetchPosts = async (options: FetchPostsOptions): Promise<Post[]> =>
     console.error('Error fetching posts:', error);
     toast.error('Failed to load posts. Please try again.');
     return [];
+  }
+};
+
+/**
+ * Fetch a single post by its code/ID
+ */
+export const fetchPost = async (postCode: string): Promise<{
+  post: PostDetails;
+  original_post?: OriginalPost;
+  replies?: Reply[];
+  reply_count?: number;
+}> => {
+  try {
+    const userKey = getUserApiKey();
+    
+    if (!userKey) {
+      throw new Error('Authentication required. Please log in again.');
+    }
+    
+    console.log(`Fetching post with code: ${postCode}`);
+    
+    const response = await fetch(`${API_BASE_URL}/get_post?post=${postCode}`, {
+      method: 'GET',
+      headers: {
+        'x-user-key': userKey,
+      },
+    });
+    
+    console.log(`Post API response status: ${response.status}`);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Failed response body: ${errorText}`);
+      throw new Error(`Failed to fetch post: ${errorText}`);
+    }
+    
+    const data = await response.json();
+    console.log(`Post API response:`, data);
+    
+    return data;
+  } catch (error) {
+    console.error('Error fetching post:', error);
+    toast.error('Failed to load post. Please try again.');
+    throw error;
   }
 };
 

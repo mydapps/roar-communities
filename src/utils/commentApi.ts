@@ -1,10 +1,11 @@
 
 import { toast } from 'sonner';
+import { API_BASE_URL, getUserApiKey, createAuthHeaders } from './apiBase';
 
-// Base API URL
-const API_BASE_URL = 'https://api.dapps.co';
-
-export type CommentReply = {
+/**
+ * Interface for comment reply data
+ */
+export interface CommentReply {
   id: number;
   uid: number;
   handle: string;
@@ -18,186 +19,154 @@ export type CommentReply = {
   sub_replies?: CommentReply[];
 }
 
-export interface RepliesResponse {
-  success: boolean;
-  post_code: string;
-  community: string;
-  total_count: number;
-  displayed_count: number;
-  replies: CommentReply[];
-}
-
-export interface MeowResponse {
-  success: boolean;
-  message: string;
-  action: string;
-  reply_id: number;
-  meow_count: number;
-}
-
-export interface CreateReplyResponse {
-  success: boolean;
-  message: string;
-  reply_id: number;
-  post_code: string;
-  parent_id: number;
-  created_on: string;
-  handle: string;
-  avatar_url: string;
-}
-
 /**
  * Fetch replies for a post
  */
-export const fetchReplies = async (postCode: string, limit: number = 10): Promise<RepliesResponse> => {
+export const fetchReplies = async (postCode: string, limit = 10): Promise<{
+  success: boolean;
+  replies: CommentReply[];
+  total_count: number;
+}> => {
   try {
-    const userKey = localStorage.getItem('dapps_user_key');
+    const userKey = getUserApiKey();
     
     if (!userKey) {
-      console.error('No user key found for fetching replies');
-      throw new Error('Authentication required');
+      return { success: false, replies: [], total_count: 0 };
     }
     
-    console.log(`Fetching replies for post ${postCode} with limit ${limit}`);
-    const response = await fetch(`${API_BASE_URL}/get_replies?postCode=${postCode}&limit=${limit}`, {
+    console.log(`Fetching replies for post: ${postCode}, limit: ${limit}`);
+    
+    const response = await fetch(`${API_BASE_URL}/fetch_replies?post=${postCode}&limit=${limit}`, {
       method: 'GET',
       headers: {
         'x-user-key': userKey,
       },
     });
     
-    if (!response.ok) {
-      throw new Error(`Failed to fetch replies: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    console.log('API Reply data:', data);
-    return data;
-  } catch (error) {
-    console.error('Error fetching replies:', error);
-    toast.error('Could not load comments. Please try again later.');
-    return {
-      success: false,
-      post_code: postCode,
-      community: '',
-      total_count: 0,
-      displayed_count: 0,
-      replies: []
-    };
-  }
-};
-
-/**
- * Toggle meow for a reply
- */
-export const toggleMeow = async (replyId: number): Promise<MeowResponse> => {
-  try {
-    const userKey = localStorage.getItem('dapps_user_key');
-    
-    if (!userKey) {
-      console.error('No user key found for meowing');
-      throw new Error('Authentication required');
-    }
-    
-    // Validate reply ID is a valid number
-    if (!replyId || isNaN(replyId) || replyId <= 0) {
-      console.error(`Invalid reply ID for meow: ${replyId}`);
-      throw new Error('Invalid reply ID');
-    }
-    
-    console.log(`Sending meow toggle request for reply ID: ${replyId}`);
-    
-    const response = await fetch(`${API_BASE_URL}/meow_reply`, {
-      method: 'POST',
-      headers: {
-        'x-user-key': userKey,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ replyId })
-    });
+    console.log(`Replies API response status: ${response.status}`);
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Meow API error (${response.status}):`, errorText);
-      throw new Error(`Failed to toggle meow: ${response.status}`);
+      console.error(`Failed response body: ${errorText}`);
+      throw new Error(`Failed to fetch replies: ${errorText}`);
     }
     
     const data = await response.json();
-    console.log('Meow toggle API response:', data);
-    return data;
-  } catch (error) {
-    console.error('Error toggling meow:', error);
-    toast.error('Could not update meow. Please try again later.');
+    console.log(`Fetched ${data.replies?.length || 0} replies`);
+    
     return {
-      success: false,
-      message: 'Failed to update meow',
-      action: 'error',
-      reply_id: replyId,
-      meow_count: 0
+      success: true,
+      replies: data.replies || [],
+      total_count: data.total_count || 0
     };
+  } catch (error) {
+    console.error('Error fetching replies:', error);
+    toast.error('Failed to load comments. Please try again.');
+    return { success: false, replies: [], total_count: 0 };
   }
 };
 
 /**
- * Create a new reply for a post
+ * Create a reply to a post or another reply
  */
-export const createReply = async (postCode: string, content: string, parentId: number = 0): Promise<CreateReplyResponse> => {
+export const createReply = async (postCode: string, content: string, parentId = 0): Promise<{
+  success: boolean;
+  reply_id?: number;
+  handle?: string;
+  avatar_url?: string;
+  created_on?: string;
+}> => {
   try {
-    const userKey = localStorage.getItem('dapps_user_key');
+    const userKey = getUserApiKey();
     
     if (!userKey) {
-      console.error('No user key found for creating reply');
-      throw new Error('Authentication required');
+      toast.error('Authentication required. Please log in again.');
+      return { success: false };
     }
     
-    const payload: Record<string, any> = {
-      postCode,
-      content
-    };
-    
-    if (parentId !== undefined && parentId !== null && parentId !== 0) {
-      payload.parentId = parentId;
-    }
-    
-    console.log('Creating reply with payload:', payload);
+    console.log(`Creating reply to post ${postCode}, parent ${parentId}, content: ${content}`);
     
     const response = await fetch(`${API_BASE_URL}/create_reply`, {
       method: 'POST',
-      headers: {
-        'x-user-key': userKey,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
+      headers: createAuthHeaders(),
+      body: JSON.stringify({
+        postCode,
+        content,
+        parentId
+      })
     });
+    
+    console.log(`Create reply API response status: ${response.status}`);
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('API error response:', errorText);
-      throw new Error(`Failed to create reply: ${response.status}`);
+      console.error(`Failed response body: ${errorText}`);
+      throw new Error(`Failed to create reply: ${errorText}`);
     }
     
     const data = await response.json();
-    console.log('Reply created:', data);
+    console.log('Create reply API response:', data);
     
-    // Validate that we received a valid reply_id
-    if (!data.success || !data.reply_id || isNaN(data.reply_id) || data.reply_id <= 0) {
-      console.error('API returned success but no valid reply_id:', data);
-      throw new Error('API returned invalid reply ID');
+    if (data.success) {
+      return {
+        success: true,
+        reply_id: data.reply_id || data.id,
+        handle: data.handle,
+        avatar_url: data.avatar_url,
+        created_on: data.created_on
+      };
+    } else {
+      console.error('API returned success: false', data);
+      return { success: false };
     }
-    
-    return data;
   } catch (error) {
     console.error('Error creating reply:', error);
-    toast.error('Could not post your comment. Please try again later.');
+    throw error;
+  }
+};
+
+/**
+ * Toggle "meow" (like) status for a comment
+ */
+export const toggleMeow = async (commentId: number): Promise<{
+  success: boolean;
+  message?: string;
+}> => {
+  try {
+    const userKey = getUserApiKey();
+    
+    if (!userKey) {
+      toast.error('Authentication required. Please log in again.');
+      return { success: false, message: 'Not authenticated' };
+    }
+    
+    console.log(`Toggling meow for comment: ${commentId}`);
+    
+    const response = await fetch(`${API_BASE_URL}/toggle_meow`, {
+      method: 'POST',
+      headers: createAuthHeaders(),
+      body: JSON.stringify({
+        commentId
+      })
+    });
+    
+    console.log(`Toggle meow API response status: ${response.status}`);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Failed response body: ${errorText}`);
+      throw new Error(`Failed to toggle meow: ${errorText}`);
+    }
+    
+    const data = await response.json();
+    console.log('Toggle meow API response:', data);
+    
     return {
-      success: false,
-      message: 'Failed to create reply',
-      reply_id: 0,
-      post_code: postCode,
-      parent_id: parentId || 0,
-      created_on: new Date().toISOString(),
-      handle: '',
-      avatar_url: ''
+      success: data.success === true,
+      message: data.message
     };
+  } catch (error) {
+    console.error('Error toggling meow:', error);
+    return { success: false, message: 'An error occurred' };
   }
 };
