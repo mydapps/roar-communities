@@ -202,7 +202,8 @@ export const fetchPost = async (postCode: string): Promise<{
     
     console.log(`Fetching post with code: ${postCode}`);
     
-    const response = await fetch(`${API_BASE_URL}/get_post?post=${postCode}`, {
+    // Fix the parameter name from 'post' to 'code'
+    const response = await fetch(`${API_BASE_URL}/get_post?code=${postCode}`, {
       method: 'GET',
       headers: {
         'x-user-key': userKey,
