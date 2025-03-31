@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchPost, PostDetails, OriginalPost } from '@/utils/postApi';
@@ -382,7 +381,7 @@ const DetailedPostPage = () => {
             username={post.author?.handle || (post.handle || '')}
             avatar={post.author?.avatar || (post.avatar || '')}
             community={post.community || undefined}
-            timeAgo={post.timeAgo || (post.time_ago || '')} 
+            timeAgo={post.timeAgo || ''} 
             content={post.body}
             roarCount={post.upvotes}
             commentCount={replyCount}
