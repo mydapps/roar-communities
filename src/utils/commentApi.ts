@@ -36,7 +36,8 @@ export const fetchReplies = async (postCode: string, limit = 10): Promise<{
     
     console.log(`Fetching replies for post: ${postCode}, limit: ${limit}`);
     
-    const response = await fetch(`${API_BASE_URL}/fetch_replies?post=${postCode}&limit=${limit}`, {
+    // Updated API endpoint from fetch_replies to get_replies as specified
+    const response = await fetch(`${API_BASE_URL}/get_replies?postCode=${postCode}&limit=${limit}`, {
       method: 'GET',
       headers: {
         'x-user-key': userKey,

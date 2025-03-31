@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -68,56 +67,46 @@ const CommunityPage = () => {
   const [tradeAction, setTradeAction] = useState<"buy" | "sell">("buy");
   const [localPosts, setLocalPosts] = useState<Partial<CommunityPost>[]>([]);
   
-  // Debug logs for tracking component rendering and state
   console.log("CommunityPage rendering, id:", id, "activeTab:", activeTab);
   
-  // Fetch community data from API
   const { data: communityData, loading: communityLoading, error: communityError } = useCommunityData(id);
   
-  // Debug logs for community data
   console.log("Community data:", communityData);
   if (communityData?.community?.rewards) {
     console.log("Community rewards:", communityData.community.rewards);
     console.log("Available rewards:", communityData.community.rewards.available_rewards);
   }
   
-  // Fetch community members with infinite scroll
   const { members, loading: membersLoading, hasMore: hasMoreMembers, loadMore: loadMoreMembers } = useCommunityMembers(id);
   
-  // Fetch community posts with infinite scroll
   const { posts, loading: postsLoading, hasMore: hasMorePosts, loadMore: loadMorePosts, loadingElementRef } = useCommunityPosts(id);
   
-  // Combine API posts with local posts
   const allPosts = [...localPosts, ...posts];
   
   const ethToUsd = communityData?.community?.prices?.buy_price_usd && communityData?.community?.prices?.buy_price 
     ? communityData.community.prices.buy_price_usd / communityData.community.prices.buy_price
-    : 2500; // Default value if API doesn't return price data
+    : 2500;
   
   const [buyAmount, setBuyAmount] = useState<number>(1);
   
-  // Reset local posts when community changes
   useEffect(() => {
     setLocalPosts([]);
   }, [id]);
   
   const handlePostCreated = (newPost: Partial<CommunityPost>) => {
     console.log("New post created:", newPost);
-    // Add the new post to the top of the local posts array
     setLocalPosts(prev => [newPost, ...prev]);
     toast.success("Post created successfully!");
   };
   
-  // Calculate chart points based on price trend
   const priceChange = communityData?.community ? 
     ((communityData.community.prices.buy_price - 0.002) / 0.002) * 100 : 
-    12.5; // Default value
-    
+    12.5;
+  
   const chartPoints = priceChange > 0 
     ? "M0,50 Q25,30 50,20 T100,10" 
     : "M0,50 Q25,70 50,80 T100,90";
   
-  // Handle buy and sell actions
   const handleBuyAction = () => {
     setTradeAction("buy");
     setTradeSheetOpen(true);
@@ -177,10 +166,8 @@ const CommunityPage = () => {
   const community = communityData?.community;
   const user = communityData?.user;
   
-  // Check if user has shares in this community
   const hasShares = user && user.shares > 0;
   
-  // Get the available rewards
   const availableRewards = community?.rewards?.available_rewards || 0;
   console.log("Rendered with available rewards:", availableRewards);
   const hasLastDistributed = community?.rewards?.last_distributed && community.rewards.last_distributed !== null;
@@ -276,8 +263,7 @@ const CommunityPage = () => {
           </div>
         )}
         
-        {/* Create Post Card */}
-        <Card className="mb-6 bg-gradient-to-br from-primary/5 to-secondary/5 border-primary/20">
+        <Card className="mb-6 bg-gradient-to-br from-primary/5 to-secondary/5 border-primary/20 mt-6">
           <CardContent className="pt-6">
             <h2 className="text-xl font-semibold mb-3 flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-primary" />
@@ -290,7 +276,6 @@ const CommunityPage = () => {
           </CardContent>
         </Card>
         
-        {/* Mobile Tabs Navigation (visible below create post area on mobile) */}
         {isMobile && (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mb-6">
             <TabsList className="w-full grid grid-cols-4 bg-muted/50">
@@ -343,7 +328,6 @@ const CommunityPage = () => {
                       />
                     ))}
                     
-                    {/* Infinite scroll loading element */}
                     <div 
                       ref={loadingElementRef}
                       className="flex justify-center py-8"
@@ -550,7 +534,6 @@ const CommunityPage = () => {
           </Tabs>
         )}
         
-        {/* Desktop Tabs Navigation (visible above content on desktop) */}
         {!isMobile && (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="w-full lg:w-auto flex justify-start mb-6 pb-px bg-transparent p-0 overflow-x-auto flex-nowrap h-auto border-b rounded-none">
@@ -603,7 +586,6 @@ const CommunityPage = () => {
                       />
                     ))}
                     
-                    {/* Infinite scroll loading element */}
                     <div 
                       ref={loadingElementRef}
                       className="flex justify-center py-8"
@@ -954,7 +936,6 @@ const CommunityPage = () => {
               </CardFooter>
             </Card>
             
-            {/* Desktop Tabs Navigation (visible below sidebar on desktop) */}
             <Card className="mt-4 border rounded-lg shadow-sm">
               <div className="p-4 border-b">
                 <h3 className="font-medium text-lg">Community Navigation</h3>

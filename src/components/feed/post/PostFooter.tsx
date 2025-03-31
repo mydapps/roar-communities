@@ -62,7 +62,7 @@ export const PostFooter: React.FC<PostFooterProps> = ({
 }) => {
   const location = useLocation();
   
-  // Check if this is a detailed post page
+  // Check if this is a detailed post page - proper path detection
   const isDetailedPostPage = location.pathname.includes('/post/') || 
                              (location.pathname.includes('/c/') && location.pathname.split('/').length > 3) ||
                              (location.pathname.split('/').length === 3 && !location.pathname.includes('/c/'));
@@ -79,8 +79,8 @@ export const PostFooter: React.FC<PostFooterProps> = ({
             isLoggedIn={isLoggedIn}
           />
           
-          {/* Only hide comments button on detailed post page */}
-          {(!isDetailedPostPage && !hideComments) && (
+          {/* Show comment button except when explicitly hidden or on detailed post page */}
+          {(!hideComments && (!isDetailedPostPage || location.pathname.startsWith('/c/') && location.pathname.split('/').length <= 3)) && (
             <CommentButton 
               count={commentCount} 
               onClick={onToggleComments}
