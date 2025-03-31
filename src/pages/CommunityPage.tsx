@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -263,7 +264,7 @@ const CommunityPage = () => {
           </div>
         )}
         
-        <Card className="mb-6 bg-gradient-to-br from-primary/5 to-secondary/5 border-primary/20 mt-6">
+        <Card className="mb-6 bg-gradient-to-br from-primary/5 to-secondary/5 border-primary/20 mt-6 md:mt-8">
           <CardContent className="pt-6">
             <h2 className="text-xl font-semibold mb-3 flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-primary" />
@@ -277,7 +278,7 @@ const CommunityPage = () => {
         </Card>
         
         {isMobile && (
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mb-6">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mb-6 mt-8">
             <TabsList className="w-full grid grid-cols-4 bg-muted/50">
               <TabsTrigger value="posts" className="data-[state=active]:bg-background">
                 <MessageCircle className="h-4 w-4 mr-1" />

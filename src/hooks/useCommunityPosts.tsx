@@ -63,6 +63,8 @@ export const useCommunityPosts = (communityName: string | undefined) => {
         headers['x-user-key'] = userKey;
       }
 
+      console.log(`Fetching community posts: ${communityName}, page: ${page}`);
+      
       const response = await fetch(
         `https://api.dapps.co/fetch_posts?c=${encodeURIComponent(communityName)}&page=${page}`,
         {
@@ -76,6 +78,8 @@ export const useCommunityPosts = (communityName: string | undefined) => {
       }
 
       const data: CommunityPost[] = await response.json();
+      
+      console.log(`Received posts data: ${data.length} posts`);
       
       if (!Array.isArray(data)) {
         throw new Error('Invalid response format for community posts');
@@ -106,6 +110,7 @@ export const useCommunityPosts = (communityName: string | undefined) => {
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && hasMore && !loading && !isFetchingRef.current) {
+          console.log("Loading element is visible, loading more posts...");
           loadMore();
         }
       },
@@ -127,6 +132,7 @@ export const useCommunityPosts = (communityName: string | undefined) => {
     const currentLoadingElement = loadingElementRef.current;
     
     if (currentObserver && currentLoadingElement) {
+      console.log("Observer attached to loading element");
       currentObserver.observe(currentLoadingElement);
     }
     
@@ -139,6 +145,7 @@ export const useCommunityPosts = (communityName: string | undefined) => {
 
   useEffect(() => {
     // Reset and fetch first page when community name changes
+    console.log("Community name changed, resetting posts:", communityName);
     setPosts([]);
     currentPage.current = 1;
     setHasMore(true);
@@ -147,8 +154,12 @@ export const useCommunityPosts = (communityName: string | undefined) => {
   }, [communityName, fetchPosts]);
 
   const loadMore = useCallback(() => {
-    if (loading || !hasMore || isFetchingRef.current) return;
+    if (loading || !hasMore || isFetchingRef.current) {
+      console.log("Cannot load more:", { loading, hasMore, isFetching: isFetchingRef.current });
+      return;
+    }
     
+    console.log("Loading more posts, page:", currentPage.current + 1);
     const nextPage = currentPage.current + 1;
     fetchPosts(nextPage, true);
   }, [loading, hasMore, fetchPosts]);

@@ -8,6 +8,7 @@ import { CommentButton } from './CommentButton';
 import { ShareButton } from './ShareButton';
 import { ImageViewer } from './ImageViewer';
 import { useLocation } from 'react-router-dom';
+import { isMobile } from '@/utils/responsive';
 
 interface PostFooterProps {
   localRoared: boolean;
@@ -62,10 +63,8 @@ export const PostFooter: React.FC<PostFooterProps> = ({
 }) => {
   const location = useLocation();
   
-  // Check if this is a detailed post page - proper path detection
-  const isDetailedPostPage = location.pathname.includes('/post/') || 
-                             (location.pathname.includes('/c/') && location.pathname.split('/').length > 3) ||
-                             (location.pathname.split('/').length === 3 && !location.pathname.includes('/c/'));
+  // Check if this is a detailed post page
+  const isDetailedPostPage = location.pathname.includes('/post/');
   
   return (
     <CardFooter className="pt-0 flex justify-between flex-col">
@@ -80,7 +79,7 @@ export const PostFooter: React.FC<PostFooterProps> = ({
           />
           
           {/* Show comment button except when explicitly hidden or on detailed post page */}
-          {(!hideComments && (!isDetailedPostPage || location.pathname.startsWith('/c/') && location.pathname.split('/').length <= 3)) && (
+          {!hideComments && !isDetailedPostPage && (
             <CommentButton 
               count={commentCount} 
               onClick={onToggleComments}

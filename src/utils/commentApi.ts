@@ -36,7 +36,7 @@ export const fetchReplies = async (postCode: string, limit = 10): Promise<{
     
     console.log(`Fetching replies for post: ${postCode}, limit: ${limit}`);
     
-    // Updated API endpoint from fetch_replies to get_replies as specified
+    // Use the correct API endpoint and parameter name
     const response = await fetch(`${API_BASE_URL}/get_replies?postCode=${postCode}&limit=${limit}`, {
       method: 'GET',
       headers: {
