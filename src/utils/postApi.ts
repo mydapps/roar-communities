@@ -1,3 +1,4 @@
+
 import { toast } from 'sonner';
 import { API_BASE_URL, getUserApiKey, createAuthHeaders, setupEventListener } from './apiBase';
 import { POST_MIRRORED_EVENT } from '@/components/feed/post/MirrorButton';
@@ -82,6 +83,7 @@ export interface Reply {
   time_ago: string;
   upvotes: number;
   has_meowed: boolean;
+  meow_count: number; // Add this missing property
   replies?: Reply[];
 }
 
