@@ -62,6 +62,11 @@ export const PostFooter: React.FC<PostFooterProps> = ({
 }) => {
   const location = useLocation();
   
+  // Check if this is a detailed post page
+  const isDetailedPostPage = location.pathname.includes('/post/') || 
+                             (location.pathname.includes('/c/') && location.pathname.split('/').length > 3) ||
+                             (location.pathname.split('/').length === 3 && !location.pathname.includes('/c/'));
+  
   return (
     <CardFooter className="pt-0 flex justify-between flex-col">
       <div className="flex justify-between w-full mb-3">
@@ -74,11 +79,13 @@ export const PostFooter: React.FC<PostFooterProps> = ({
             isLoggedIn={isLoggedIn}
           />
           
-          <CommentButton 
-            count={commentCount} 
-            onClick={onToggleComments}
-            hidden={hideComments}
-          />
+          {/* Only hide comments button on detailed post page */}
+          {(!isDetailedPostPage && !hideComments) && (
+            <CommentButton 
+              count={commentCount} 
+              onClick={onToggleComments}
+            />
+          )}
           
           <MirrorButton 
             open={mirrorSheetOpen} 
