@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Sheet,
@@ -73,7 +72,6 @@ export const TradeSheet = ({
       .number()
       .min(0.001, 'Amount must be at least 0.001 shares')
       .refine(val => {
-        // Check that number has at most 3 decimal places
         const decimalStr = val.toString().split('.')[1] || '';
         return decimalStr.length <= 3;
       }, {
@@ -118,7 +116,6 @@ export const TradeSheet = ({
       setWalletBalance(balanceData.balance.eth);
     } catch (error) {
       console.error('Failed to fetch wallet balance:', error);
-      // Fall back to the provided value
     } finally {
       setIsLoadingBalance(false);
     }
@@ -174,6 +171,22 @@ export const TradeSheet = ({
         return;
       }
       
+      if (typeof precheckResult.sharePrice === 'string') {
+        precheckResult.sharePrice = parseFloat(precheckResult.sharePrice);
+      }
+      
+      if (typeof precheckResult.sharePriceUsd === 'string') {
+        precheckResult.sharePriceUsd = parseFloat(precheckResult.sharePriceUsd);
+      }
+      
+      if (typeof precheckResult.totalSharePrice === 'string') {
+        precheckResult.totalSharePrice = parseFloat(precheckResult.totalSharePrice);
+      }
+      
+      if (typeof precheckResult.totalSharePriceUsd === 'string') {
+        precheckResult.totalSharePriceUsd = parseFloat(precheckResult.totalSharePriceUsd);
+      }
+      
       setPrecheckData(precheckResult);
       setPreviewOpen(true);
     } catch (error) {
@@ -211,17 +224,13 @@ export const TradeSheet = ({
       setPreviewOpen(false);
       setShowSuccess(true);
       
-      // Show success animation for 2 seconds then close
       setTimeout(() => {
         setShowSuccess(false);
         
-        // Always close the modal after success, regardless of embedded status
         onOpenChange(false);
         
-        // Reset form
         form.reset({ amount: 1 });
         
-        // Show toast
         toast({
           title: "Transaction successful!",
           description: action === 'buy' 
@@ -363,9 +372,13 @@ export const TradeSheet = ({
         <div className="flex justify-between items-center py-2 border-b">
           <span className="text-muted-foreground">Price per Share</span>
           <span className="font-medium">
-            {precheckData.sharePrice.toFixed(6)} ETH 
+            {typeof precheckData.sharePrice === 'number' 
+              ? precheckData.sharePrice.toFixed(6) 
+              : parseFloat(String(precheckData.sharePrice)).toFixed(6)} ETH 
             <span className="text-xs text-muted-foreground ml-1">
-              (${precheckData.sharePriceUsd.toFixed(2)})
+              (${typeof precheckData.sharePriceUsd === 'number' 
+                  ? precheckData.sharePriceUsd.toFixed(2) 
+                  : parseFloat(String(precheckData.sharePriceUsd)).toFixed(2)})
             </span>
           </span>
         </div>
@@ -373,9 +386,13 @@ export const TradeSheet = ({
         <div className="flex justify-between items-center py-2 border-b">
           <span className="text-muted-foreground">Total Price</span>
           <span className="font-medium">
-            {precheckData.totalSharePrice.toFixed(6)} ETH
+            {typeof precheckData.totalSharePrice === 'number' 
+              ? precheckData.totalSharePrice.toFixed(6) 
+              : parseFloat(String(precheckData.totalSharePrice)).toFixed(6)} ETH
             <span className="text-xs text-muted-foreground ml-1">
-              (${precheckData.totalSharePriceUsd.toFixed(2)})
+              (${typeof precheckData.totalSharePriceUsd === 'number' 
+                  ? precheckData.totalSharePriceUsd.toFixed(2) 
+                  : parseFloat(String(precheckData.totalSharePriceUsd)).toFixed(2)})
             </span>
           </span>
         </div>
@@ -393,7 +410,6 @@ export const TradeSheet = ({
     );
   };
 
-  // For embedded in drawer version
   if (isEmbedded) {
     return (
       <>
@@ -429,7 +445,6 @@ export const TradeSheet = ({
           </div>
         )}
         
-        {/* Success overlay */}
         {showSuccess && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 animate-fade-in">
             <div className="text-center space-y-4 animate-scale-in">
@@ -449,7 +464,6 @@ export const TradeSheet = ({
     );
   }
 
-  // For mobile
   if (isMobile && !isEmbedded) {
     return (
       <>
@@ -524,7 +538,6 @@ export const TradeSheet = ({
           </DrawerContent>
         </Drawer>
         
-        {/* Success overlay */}
         {showSuccess && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 animate-fade-in">
             <div className="text-center space-y-4 animate-scale-in">
@@ -543,8 +556,7 @@ export const TradeSheet = ({
       </>
     );
   }
-  
-  // For desktop - improved to ensure everything stays in the same sheet
+
   return (
     <>
       <Sheet open={open && !showSuccess} onOpenChange={(open) => {
@@ -602,7 +614,6 @@ export const TradeSheet = ({
         </SheetContent>
       </Sheet>
       
-      {/* Success overlay */}
       {showSuccess && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 animate-fade-in">
           <div className="text-center space-y-4 animate-scale-in">

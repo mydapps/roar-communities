@@ -40,11 +40,11 @@ export interface FetchCommunitiesOptions {
 export interface SharePrecheckResponse {
   status: string;
   fee: string;
-  sharePrice: number;
-  sharePriceUsd: number;
+  sharePrice: number | string;
+  sharePriceUsd: number | string;
   shareQuantity: number;
-  totalSharePrice: number;
-  totalSharePriceUsd: number;
+  totalSharePrice: number | string;
+  totalSharePriceUsd: number | string;
   totalValue: string;
   communityName: string;
   error?: string;
@@ -284,6 +284,23 @@ export const buySharesPrecheck = async (communityName: string, shareQuantity: nu
       throw new Error(data.message || data.error || 'Transaction precheck failed');
     }
     
+    // Ensure numeric fields are properly parsed from strings if needed
+    if (typeof data.sharePrice === 'string') {
+      data.sharePrice = parseFloat(data.sharePrice);
+    }
+    
+    if (typeof data.sharePriceUsd === 'string') {
+      data.sharePriceUsd = parseFloat(data.sharePriceUsd);
+    }
+    
+    if (typeof data.totalSharePrice === 'string') {
+      data.totalSharePrice = parseFloat(data.totalSharePrice);
+    }
+    
+    if (typeof data.totalSharePriceUsd === 'string') {
+      data.totalSharePriceUsd = parseFloat(data.totalSharePriceUsd);
+    }
+    
     return data;
   } catch (error) {
     console.error('Error in buy shares precheck:', error);
@@ -360,6 +377,23 @@ export const sellSharesPrecheck = async (communityName: string, shareQuantity: n
     
     if (data.status !== 'SUCCESS') {
       throw new Error(data.message || 'Transaction precheck failed');
+    }
+    
+    // Ensure numeric fields are properly parsed from strings if needed
+    if (typeof data.sharePrice === 'string') {
+      data.sharePrice = parseFloat(data.sharePrice);
+    }
+    
+    if (typeof data.sharePriceUsd === 'string') {
+      data.sharePriceUsd = parseFloat(data.sharePriceUsd);
+    }
+    
+    if (typeof data.totalSharePrice === 'string') {
+      data.totalSharePrice = parseFloat(data.totalSharePrice);
+    }
+    
+    if (typeof data.totalSharePriceUsd === 'string') {
+      data.totalSharePriceUsd = parseFloat(data.totalSharePriceUsd);
     }
     
     return data;
