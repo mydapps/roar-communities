@@ -1,14 +1,13 @@
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import React from 'react';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { ChevronRight, Users, TrendingUp, Gift, Coins, Plus, Minus, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { ArrowUp, ArrowDown, Users, TrendingUp } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { TradeSheet } from '@/components/shares/TradeSheet';
 
-export interface CommunityCardProps {
+interface CommunityCardProps {
   name: string;
   description: string;
   members: number;
@@ -16,165 +15,108 @@ export interface CommunityCardProps {
   priceChange: number;
   rewardPool: number;
   marketCap: number;
-  image?: string;
-  isMember?: boolean;
+  image: string;
+  isMember: boolean;
+  onBuy?: () => void;
+  onSell?: () => void;
 }
 
-const CommunityCard = ({ 
+const CommunityCard: React.FC<CommunityCardProps> = ({ 
   name, 
   description, 
   members, 
   pricePerShare, 
   priceChange, 
   rewardPool, 
-  marketCap,
-  image = "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=500&h=500&fit=crop",
-  isMember = false
-}: CommunityCardProps) => {
-  const initials = name.split(' ').map(word => word[0]).join('').toUpperCase();
-  
-  const ethToUsd = 3500;
-  const priceInUsd = pricePerShare * ethToUsd;
-  const rewardPoolUsd = rewardPool * ethToUsd;
-  const marketCapUsd = marketCap * ethToUsd;
-  
-  const [tradeSheetOpen, setTradeSheetOpen] = useState(false);
-  const slug = name.toLowerCase().replace(/\s+/g, '-');
+  marketCap, 
+  image,
+  isMember,
+  onBuy,
+  onSell
+}) => {
+  const formatNumber = (num: number): string => {
+    if (num >= 1_000_000) {
+      return (num / 1_000_000).toFixed(1) + 'M';
+    } else if (num >= 1_000) {
+      return (num / 1_000).toFixed(1) + 'K';
+    } else {
+      return num.toString();
+    }
+  };
+
+  const priceChangeColor = priceChange >= 0 ? "text-green-600" : "text-red-600";
+  const priceChangeSign = priceChange >= 0 ? "+" : "";
 
   return (
-    <Card className="overflow-hidden hover:shadow-md transition-all duration-300 animate-scale-in relative">
-      <div className={`h-1 w-full ${priceChange >= 0 ? "bg-green-500" : "bg-red-500"}`} />
-      
-      <div 
-        className="absolute inset-0 opacity-[0.03] pointer-events-none" 
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3E%3Cpath d='M0,50 Q25,${priceChange >= 0 ? '30' : '70'} 50,${priceChange >= 0 ? '20' : '80'} T100,${priceChange >= 0 ? '10' : '90'} V100 H0 Z' fill='%23${priceChange >= 0 ? '10B981' : 'EF4444'}' /%3E%3C/svg%3E")`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'bottom'
-        }}
-      />
-      
-      <CardHeader className="pb-2 flex flex-row items-start gap-4">
-        <Avatar className="h-14 w-14 border-2 border-primary/10">
-          <AvatarImage src={image} alt={name} />
-          <AvatarFallback>{initials}</AvatarFallback>
-        </Avatar>
+    <Card className="overflow-hidden hover:shadow-md transition-all duration-300">
+      <div className="p-5">
+        <div className="flex items-center gap-3 mb-4">
+          <Avatar className="h-12 w-12">
+            <AvatarImage src={image} alt={name} />
+            <AvatarFallback className="bg-primary/10 text-primary">
+              {name.charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          <div>
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-lg">{name}</h3>
+              {isMember && (
+                <Badge variant="outline" className="ml-3 bg-primary/10 text-primary border-primary/20">
+                  Member
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-center text-sm text-muted-foreground">
+              <Users className="h-3.5 w-3.5 mr-1" />
+              {formatNumber(members)} members
+            </div>
+          </div>
+        </div>
         
-        <div className="flex-1">
-          <Link 
-            to={`/c/${slug}`}
-            className="text-lg font-bold hover:text-primary transition-colors"
-          >
-            {name}
-          </Link>
-          
-          <div className="flex items-center gap-2 mt-1">
-            {priceChange >= 0 ? (
-              <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20">
-                <ArrowUp className="h-3 w-3 mr-1" />
-                {priceChange.toFixed(1)}%
-              </Badge>
-            ) : (
-              <Badge className="bg-red-500/10 text-red-600 hover:bg-red-500/20">
-                <ArrowDown className="h-3 w-3 mr-1" />
-                {Math.abs(priceChange).toFixed(1)}%
-              </Badge>
+        <p className="text-muted-foreground mb-4 text-sm line-clamp-2">{description}</p>
+        
+        <div className="grid grid-cols-2 gap-y-2 mb-4">
+          <div className="flex items-center">
+            <Coins className="h-4 w-4 mr-1.5 text-muted-foreground" />
+            <span className="text-sm">{pricePerShare.toFixed(6)} ETH</span>
+          </div>
+          <div className="flex items-center justify-end">
+            <TrendingUp className="h-4 w-4 mr-1.5 text-muted-foreground" />
+            <span className={`text-sm ${priceChangeColor}`}>
+              {priceChangeSign}{priceChange}%
+            </span>
+          </div>
+          <div className="flex items-center">
+            <Gift className="h-4 w-4 mr-1.5 text-muted-foreground" />
+            <span className="text-sm">{rewardPool.toFixed(2)} ETH</span>
+          </div>
+          <div className="flex items-center justify-end">
+            <span className="text-sm text-muted-foreground">
+              Cap: ${formatNumber(marketCap)}
+            </span>
+          </div>
+        </div>
+        
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex gap-2">
+            <Button size="sm" onClick={onBuy} className="px-3">
+              <Plus className="h-4 w-4 mr-1" />
+              {isMember ? 'Buy' : 'Join'}
+            </Button>
+            {isMember && (
+              <Button size="sm" onClick={onSell} variant="outline" className="px-3">
+                <Minus className="h-4 w-4 mr-1" />
+                Sell
+              </Button>
             )}
-            <div className="flex flex-col">
-              <span className="text-sm font-semibold">
-                ${priceInUsd.toFixed(2)}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                {pricePerShare.toFixed(3)} ETH
-              </span>
-            </div>
           </div>
-        </div>
-      </CardHeader>
-      
-      <CardContent className="pb-3">
-        <p className="text-sm text-muted-foreground mb-6 line-clamp-2">{description}</p>
-        
-        <div className="grid grid-cols-2 gap-4 mb-5">
-          <div>
-            <div className="text-xs text-muted-foreground mb-1">Members</div>
-            <div className="flex items-center">
-              <Users className="h-4 w-4 mr-1.5 text-muted-foreground" />
-              <span className="font-medium">{members.toLocaleString()}</span>
-            </div>
-          </div>
-          <div>
-            <div className="text-xs text-muted-foreground mb-1">Market Cap</div>
-            <div className="flex flex-col">
-              <div className="font-medium">
-                ${marketCapUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-              </div>
-              <span className="text-xs text-muted-foreground">
-                {marketCap.toFixed(1)} ETH
-              </span>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-primary/5 rounded-lg p-3 mb-4 border border-primary/20 shadow-sm relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 animate-pulse"></div>
-          <div className="relative z-10">
-            <div className="flex justify-between items-center mb-1">
-              <span className="font-medium text-primary">Reward Pool</span>
-              <div className="text-right">
-                <div className="font-bold text-lg">${rewardPoolUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-                <div className="text-xs text-muted-foreground">{rewardPool.toFixed(2)} ETH</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-      
-      <CardFooter className="bg-muted/40 flex justify-between pt-3">
-        <Button variant="ghost" size="sm" asChild>
-          <Link to={`/c/${slug}`}>
-            View Details
-          </Link>
-        </Button>
-        {isMember ? (
-          <Button 
-            size="sm"
-            variant="default"
-            onClick={() => setTradeSheetOpen(true)}
-          >
-            Buy Shares
+          <Button asChild variant="ghost" size="icon" className="h-8 w-8">
+            <Link to={`/community/${name}`}>
+              <ExternalLink className="h-4 w-4" />
+            </Link>
           </Button>
-        ) : (
-          <Button 
-            size="sm"
-            variant="default"
-            className="bg-purple-600 hover:bg-purple-700 text-white shadow-md hover:shadow-lg"
-            onClick={() => setTradeSheetOpen(true)}
-          >
-            Join
-          </Button>
-        )}
-      </CardFooter>
-      
-      <TradeSheet
-        open={tradeSheetOpen}
-        onOpenChange={setTradeSheetOpen}
-        community={{
-          community: name,
-          shares: 0,
-          image: image,
-          currentPrice: {
-            eth: pricePerShare,
-            usd: priceInUsd
-          },
-          value: {
-            eth: 0,
-            usd: 0
-          }
-        }}
-        action={isMember ? "buy" : "buy"}
-        userEthBalance="0.536"
-      />
+        </div>
+      </div>
     </Card>
   );
 };
