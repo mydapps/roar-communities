@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -43,12 +42,12 @@ const CommunityCard = ({
 
   return (
     <Card className="overflow-hidden hover:shadow-md transition-all duration-300 animate-scale-in relative">
-      <div className={`h-1 w-full ${priceChange > 0 ? "bg-green-500" : "bg-red-500"}`} />
+      <div className={`h-1 w-full ${priceChange >= 0 ? "bg-green-500" : "bg-red-500"}`} />
       
       <div 
         className="absolute inset-0 opacity-[0.03] pointer-events-none" 
         style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3E%3Cpath d='M0,50 Q25,${priceChange > 0 ? '30' : '70'} 50,${priceChange > 0 ? '20' : '80'} T100,${priceChange > 0 ? '10' : '90'} V100 H0 Z' fill='%23${priceChange > 0 ? '10B981' : 'EF4444'}' /%3E%3C/svg%3E")`,
+          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3E%3Cpath d='M0,50 Q25,${priceChange >= 0 ? '30' : '70'} 50,${priceChange >= 0 ? '20' : '80'} T100,${priceChange >= 0 ? '10' : '90'} V100 H0 Z' fill='%23${priceChange >= 0 ? '10B981' : 'EF4444'}' /%3E%3C/svg%3E")`,
           backgroundSize: 'cover',
           backgroundPosition: 'bottom'
         }}
@@ -69,7 +68,7 @@ const CommunityCard = ({
           </Link>
           
           <div className="flex items-center gap-2 mt-1">
-            {priceChange > 0 ? (
+            {priceChange >= 0 ? (
               <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20">
                 <ArrowUp className="h-3 w-3 mr-1" />
                 {priceChange.toFixed(1)}%
@@ -161,7 +160,10 @@ const CommunityCard = ({
         onOpenChange={setTradeSheetOpen}
         community={{
           name: name,
-          currentPrice: pricePerShare
+          currentPrice: {
+            eth: pricePerShare,
+            usd: priceInUsd
+          }
         }}
         action={isMember ? "buy" : "buy"}
         userEthBalance="0.536"

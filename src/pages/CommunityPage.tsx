@@ -973,7 +973,10 @@ const CommunityPage = () => {
         onOpenChange={setTradeSheetOpen}
         community={{
           name: community?.name || id || '',
-          currentPrice: community?.prices?.buy_price || 0.001
+          currentPrice: {
+            eth: community?.prices?.buy_price || 0.001,
+            usd: (community?.prices?.buy_price_usd || (community?.prices?.buy_price ? community.prices.buy_price * ethToUsd : 2.5))
+          }
         }}
         action={tradeAction}
         userEthBalance="0.536"
