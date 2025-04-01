@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Sheet,
@@ -33,14 +32,15 @@ import {
   sellSharesConfirm,
   getWalletBalance,
   getSharePrice,
+  getShareValue,
   SharePrecheckResponse,
-  SharePriceResponse
+  SharePriceResponse,
+  ShareValueResponse
 } from '@/utils/communityApi';
 import { Link } from 'react-router-dom';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from '@/components/ui/badge';
 
-// Define a constant for ETH to USD conversion rate
 const ethToUsd = 3521.89; // Mock ETH/USD exchange rate
 
 interface TradeSheetProps {
@@ -71,6 +71,8 @@ export const TradeSheet = ({
   const [isLoadingSharePrice, setIsLoadingSharePrice] = useState(false);
   const [insufficientFunds, setInsufficientFunds] = useState(false);
   const [noSharesError, setNoSharesError] = useState(false);
+  const [shareValue, setShareValue] = useState<ShareValueResponse | null>(null);
+  const [isLoadingShareValue, setIsLoadingShareValue] = useState(false);
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
@@ -100,6 +102,9 @@ export const TradeSheet = ({
       fetchWalletBalance();
       if (community?.name) {
         fetchSharePrice(form.getValues().amount || 1);
+        if (action === 'sell') {
+          fetchShareValue();
+        }
       }
       setInsufficientFunds(false);
       setNoSharesError(false);
@@ -147,6 +152,26 @@ export const TradeSheet = ({
       });
     } finally {
       setIsLoadingSharePrice(false);
+    }
+  };
+
+  const fetchShareValue = async () => {
+    if (!community?.name || !open) return;
+    
+    setIsLoadingShareValue(true);
+    try {
+      console.log(`Fetching share value for ${community.name}`);
+      const valueData = await getShareValue(community.name);
+      setShareValue(valueData);
+    } catch (error) {
+      console.error('Failed to fetch share value:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to fetch share value"
+      });
+    } finally {
+      setIsLoadingShareValue(false);
     }
   };
 
@@ -272,7 +297,9 @@ export const TradeSheet = ({
   };
 
   const handleSellAll = () => {
-    if (community?.userShares) {
+    if (shareValue?.data?.shares) {
+      form.setValue('amount', shareValue.data.shares);
+    } else if (community?.userShares) {
       form.setValue('amount', community.userShares);
     }
   };
@@ -308,10 +335,14 @@ export const TradeSheet = ({
             <div>
               <div className="text-sm text-muted-foreground">Your Shares</div>
               <div className="font-medium text-lg flex items-center gap-2">
-                {community?.userShares || 0} shares
+                {isLoadingShareValue ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>{shareValue?.data?.shares || community?.userShares || 0} shares</>
+                )}
               </div>
             </div>
-            {community?.userShares > 0 && (
+            {(shareValue?.data?.shares > 0 || community?.userShares > 0) && (
               <Button 
                 size="sm" 
                 variant="outline" 
@@ -356,38 +387,33 @@ export const TradeSheet = ({
       {sharePriceInfo && watchAmount > 0 && (
         <div className="mb-4 p-3 rounded-md bg-muted/30 border border-border">
           <div className="font-medium">
-            {watchAmount !== 1 && (
-              <div>
-                <div className="text-sm text-muted-foreground mb-1">Total for {watchAmount} shares</div>
-                <div className="text-lg font-semibold">
-                  {action === 'buy' 
-                    ? `${sharePriceInfo.buyTotalRequired} ETH` 
-                    : `${sharePriceInfo.sellTotalReturn} ETH`}
-                  <span className="text-xs ml-2 text-muted-foreground">
-                    (~${action === 'buy' 
-                      ? ((parseFloat(sharePriceInfo.buyTotalRequired) * ethToUsd) || 0).toFixed(2)
-                      : ((parseFloat(sharePriceInfo.sellTotalReturn) * ethToUsd) || 0).toFixed(2)})
-                  </span>
-                </div>
+            <div>
+              <div className="text-sm text-muted-foreground mb-1">
+                {watchAmount === 1 ? 'Price per share' : `Total for ${watchAmount} shares`}
               </div>
-            )}
-            
-            {watchAmount === 1 && (
-              <div>
-                <div className="text-sm text-muted-foreground mb-1">Price per share</div>
-                <div className="text-lg font-semibold">
-                  {action === 'buy' ? sharePriceInfo.currentBuyPrice : sharePriceInfo.currentSellPrice} ETH
-                  <span className="text-xs ml-2 text-muted-foreground">
-                    (~${action === 'buy'
-                      ? ((parseFloat(sharePriceInfo.currentBuyPrice) * ethToUsd) || 0).toFixed(2)
-                      : ((parseFloat(sharePriceInfo.currentSellPrice) * ethToUsd) || 0).toFixed(2)})
-                  </span>
-                </div>
+              <div className="text-lg font-semibold">
+                {action === 'buy' 
+                  ? (watchAmount === 1 
+                      ? sharePriceInfo.currentBuyPrice
+                      : sharePriceInfo.buyTotalRequired)
+                  : (watchAmount === 1
+                      ? sharePriceInfo.currentSellPrice
+                      : sharePriceInfo.sellTotalReturn)
+                } ETH
+                <span className="text-xs ml-2 text-muted-foreground">
+                  (~${action === 'buy' 
+                    ? ((parseFloat(watchAmount === 1 
+                        ? sharePriceInfo.currentBuyPrice 
+                        : sharePriceInfo.buyTotalRequired) * ethToUsd) || 0).toFixed(2)
+                    : ((parseFloat(watchAmount === 1
+                        ? sharePriceInfo.currentSellPrice
+                        : sharePriceInfo.sellTotalReturn) * ethToUsd) || 0).toFixed(2)})
+                </span>
               </div>
-            )}
+            </div>
           </div>
           
-          {action === 'sell' && community?.userShares && (
+          {action === 'sell' && (sharePriceInfo?.sellPriceImpact || shareValue?.data?.shares) && (
             <div className="flex items-center mt-2 text-xs text-muted-foreground">
               <TooltipProvider>
                 <Tooltip>
@@ -413,6 +439,20 @@ export const TradeSheet = ({
         </div>
       )}
       
+      {action === 'sell' && shareValue?.data && (
+        <div className="mb-4 p-3 rounded-md bg-green-500/10 border border-green-500/20">
+          <div className="flex flex-col">
+            <div className="text-sm text-muted-foreground">Current Share Value</div>
+            <div className="font-medium text-lg flex items-center gap-2">
+              {shareValue.data.value.sell.eth.toFixed(8)} ETH
+              <span className="text-sm text-muted-foreground">
+                (${shareValue.data.value.sell.usd.toFixed(2)})
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <Form {...form}>
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
           <FormField
@@ -430,16 +470,16 @@ export const TradeSheet = ({
                     placeholder="Enter amount (max 3 decimals)"
                   />
                 </FormControl>
-                {action === 'sell' && community?.userShares > 0 && (
+                {action === 'sell' && (shareValue?.data?.shares > 0 || community?.userShares > 0) && (
                   <div className="flex justify-between items-center mt-1">
                     <div className="text-xs text-blue-600 cursor-pointer"
-                         onClick={() => form.setValue('amount', community.userShares)}>
-                      Sell all my shares ({community.userShares})
+                         onClick={handleSellAll}>
+                      Sell all my shares ({shareValue?.data?.shares || community?.userShares})
                     </div>
                     
                     <div className="text-xs text-muted-foreground">
-                      {watchAmount && community.userShares 
-                        ? `${((watchAmount / community.userShares) * 100).toFixed(0)}% of your shares`
+                      {watchAmount && (shareValue?.data?.shares || community?.userShares)
+                        ? `${((watchAmount / (shareValue?.data?.shares || community?.userShares)) * 100).toFixed(0)}% of your shares`
                         : ''}
                     </div>
                   </div>

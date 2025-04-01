@@ -109,6 +109,40 @@ export interface SharePriceResponse {
 }
 
 /**
+ * Interface for share value response
+ */
+export interface ShareValueResponse {
+  success: boolean;
+  data: {
+    community: string;
+    shares: number;
+    image: string;
+    price: {
+      buy: {
+        eth: number;
+        usd: number;
+      };
+      sell: {
+        eth: number;
+        usd: number;
+      };
+      change_percentage: number;
+      direction: 'up' | 'down';
+    };
+    value: {
+      buy: {
+        eth: number;
+        usd: number;
+      };
+      sell: {
+        eth: number;
+        usd: number;
+      };
+    };
+  };
+}
+
+/**
  * Fetch communities with optional search query
  */
 export const fetchCommunities = async (options: FetchCommunitiesOptions): Promise<Community[]> => {
@@ -501,6 +535,47 @@ export const getWalletBalance = async (): Promise<WalletBalanceResponse> => {
     return data;
   } catch (error) {
     console.error('Error fetching wallet balance:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get share value for a specific community
+ */
+export const getShareValue = async (communityName: string): Promise<ShareValueResponse> => {
+  try {
+    const userKey = getUserApiKey();
+    if (!userKey) {
+      throw new Error('User key not found');
+    }
+    
+    const url = `${API_BASE_URL}/share_value?community=${encodeURIComponent(communityName)}`;
+    
+    console.log(`Fetching share value for ${communityName}`);
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'x-user-key': userKey
+      }
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Share value fetch failed: ${errorText}`);
+      throw new Error(`Failed to fetch share value: ${errorText}`);
+    }
+    
+    const data = await response.json();
+    console.log('Share value response:', data);
+    
+    if (!data.success) {
+      throw new Error(data.message || 'Failed to fetch share value');
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Error fetching share value:', error);
     throw error;
   }
 };
