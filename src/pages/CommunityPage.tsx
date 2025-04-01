@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -96,6 +97,12 @@ const CommunityPage = () => {
     setLocalPosts([]);
     fetchWalletBalance();
   }, [id]);
+  
+  const handlePostCreated = (newPost: Partial<CommunityPost>) => {
+    console.log("New post created:", newPost);
+    setLocalPosts(prev => [newPost, ...prev]);
+    toast.success("Post created successfully!");
+  };
   
   const fetchWalletBalance = async () => {
     setIsLoadingBalance(true);
