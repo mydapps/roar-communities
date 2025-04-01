@@ -17,7 +17,8 @@ import {
   User,
   ArrowRight,
   Link as LinkIcon,
-  Wallet
+  Wallet,
+  Calendar
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -26,21 +27,101 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { toast } from 'sonner';
 import { shareToSocialMedia, SharePlatform } from '@/utils/shareUtils';
 import { useResponsive } from '@/hooks/use-mobile';
+import { createAuthHeaders } from '@/utils/apiBase';
+import { format } from 'date-fns';
+import { Skeleton } from '@/components/ui/skeleton';
+
+// Define types for API responses
+interface ReferralEarnings {
+  wallet: string;
+  referral_earnings: number;
+  address_balance: number;
+  total_withdrawn: number;
+  available_to_withdraw: number;
+}
+
+interface InvitedUser {
+  id: number;
+  handle: string;
+  avatar_url: string | null;
+  invited_on: string;
+}
+
+interface InvitedUsersResponse {
+  success: boolean;
+  total: number;
+  page: number;
+  limit: number;
+  total_pages: number;
+  invited_users: InvitedUser[];
+}
 
 const ReferralPage = () => {
   const { isMobile } = useResponsive();
   const [copied, setCopied] = useState(false);
-  const [rewardsClaimable, setRewardsClaimable] = useState(true);
+  const [rewardsClaimable, setRewardsClaimable] = useState(false);
   const [isClaimingRewards, setIsClaimingRewards] = useState(false);
   const [showCopyNotification, setShowCopyNotification] = useState(false);
   
-  // Reward state
-  const [totalEarned, setTotalEarned] = useState(1.25);
-  const [availableRewards, setAvailableRewards] = useState(0.18);
+  // User data
+  const [userHandle, setUserHandle] = useState<string>('');
   
-  const referralUrl = 'dapps.co/invite/abc';
-  const totalReferrals = 8;
-  const activeReferrals = 5;
+  // API data states
+  const [isLoading, setIsLoading] = useState(true);
+  const [earnings, setEarnings] = useState<ReferralEarnings | null>(null);
+  const [invitedUsers, setInvitedUsers] = useState<InvitedUser[]>([]);
+  const [totalInvites, setTotalInvites] = useState(0);
+  
+  // Generate referral URL with user handle
+  const referralUrl = userHandle ? `dapps.co/invite/${userHandle}` : 'dapps.co/invite';
+  
+  useEffect(() => {
+    // Get user handle from local storage
+    const storedHandle = localStorage.getItem('dapps_user_handle');
+    if (storedHandle) {
+      setUserHandle(storedHandle);
+    }
+    
+    // Fetch referral earnings and invited users
+    fetchReferralData();
+  }, []);
+  
+  const fetchReferralData = async () => {
+    setIsLoading(true);
+    try {
+      // Fetch referral earnings
+      const earningsResponse = await fetch('https://api.dapps.co/referral_earnings', {
+        headers: createAuthHeaders()
+      });
+      
+      if (earningsResponse.ok) {
+        const earningsData = await earningsResponse.json();
+        if (earningsData.success) {
+          setEarnings(earningsData);
+          // Set rewards claimable if available to withdraw > 0
+          setRewardsClaimable(earningsData.available_to_withdraw > 0);
+        }
+      }
+      
+      // Fetch invited users
+      const invitedUsersResponse = await fetch('https://api.dapps.co/invited_users?page=1&limit=20', {
+        headers: createAuthHeaders()
+      });
+      
+      if (invitedUsersResponse.ok) {
+        const invitedUsersData: InvitedUsersResponse = await invitedUsersResponse.json();
+        if (invitedUsersData.success) {
+          setInvitedUsers(invitedUsersData.invited_users);
+          setTotalInvites(invitedUsersData.total);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching referral data:', error);
+      toast.error('Failed to load referral data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
   
   const handleCopy = () => {
     navigator.clipboard.writeText(referralUrl);
@@ -87,53 +168,57 @@ const ReferralPage = () => {
     });
   };
 
-  const handleClaimRewards = () => {
+  const handleClaimRewards = async () => {
+    if (!earnings || !rewardsClaimable) return;
+    
     setIsClaimingRewards(true);
     
-    // Animate reward claiming
-    let tempAvailable = availableRewards;
-    const claimAnimation = setInterval(() => {
-      if (tempAvailable <= 0.01) {
-        clearInterval(claimAnimation);
-        setAvailableRewards(0);
-        setTotalEarned((prev) => prev + tempAvailable);
-        setIsClaimingRewards(false);
-        setRewardsClaimable(false);
-        
-        // Success animation
-        confetti({
-          particleCount: 150,
-          spread: 90,
-          origin: { y: 0.6 },
-          colors: ['#4F46E5', '#10B981', '#F59E0B']
-        });
-        
-        toast.success("Rewards claimed successfully!");
-        return;
-      }
+    try {
+      // Here you would typically call an API to claim rewards
+      // For now, we'll simulate it with a delay
+
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
-      const increment = 0.01;
-      tempAvailable -= increment;
+      // Update state after claiming
+      setEarnings(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          referral_earnings: prev.referral_earnings,
+          available_to_withdraw: 0,
+          total_withdrawn: prev.total_withdrawn + prev.available_to_withdraw
+        };
+      });
       
-      setAvailableRewards(tempAvailable);
-      setTotalEarned((prev) => prev + increment);
-    }, 50);
+      setRewardsClaimable(false);
+      
+      // Success animation
+      confetti({
+        particleCount: 150,
+        spread: 90,
+        origin: { y: 0.6 },
+        colors: ['#4F46E5', '#10B981', '#F59E0B']
+      });
+      
+      toast.success("Rewards claimed successfully!");
+    } catch (error) {
+      console.error('Error claiming rewards:', error);
+      toast.error('Failed to claim rewards');
+    } finally {
+      setIsClaimingRewards(false);
+    }
   };
   
-  // Sample data for referral history
-  const referralHistory = [
-    { username: "alex.eth", date: "2023-08-15", amount: 0.35, active: true },
-    { username: "jenny.sol", date: "2023-09-02", amount: 0.28, active: true },
-    { username: "max.btc", date: "2023-09-10", amount: 0.42, active: true },
-    { username: "sarah.avax", date: "2023-09-18", amount: 0.12, active: true },
-    { username: "tom.arb", date: "2023-09-25", amount: 0.08, active: true },
-    { username: "jessica.matic", date: "2023-10-05", amount: 0, active: false },
-    { username: "mike.op", date: "2023-10-12", amount: 0, active: false },
-    { username: "lily.base", date: "2023-10-19", amount: 0, active: false }
-  ];
+  const formatDate = (dateString: string) => {
+    try {
+      return format(new Date(dateString), 'yyyy-MM-dd');
+    } catch (err) {
+      return 'Invalid date';
+    }
+  };
 
   return (
-    <div className="space-y-5 max-w-3xl mx-auto px-4 pb-20">
+    <div className="space-y-5 max-w-3xl mx-auto px-4 pb-20 pt-20">
       {/* Header Section */}
       <motion.div 
         initial={{ opacity: 0, y: -10 }}
@@ -159,7 +244,11 @@ const ReferralPage = () => {
             whileHover={{ scale: 1.05 }}
           >
             <div className="text-sm text-muted-foreground">Your Invites</div>
-            <div className="text-2xl font-bold text-primary">{totalReferrals}</div>
+            {isLoading ? (
+              <Skeleton className="h-8 w-12 mx-auto" />
+            ) : (
+              <div className="text-2xl font-bold text-primary">{totalInvites}</div>
+            )}
           </motion.div>
         </div>
       </motion.div>
@@ -296,109 +385,121 @@ const ReferralPage = () => {
             </CardHeader>
             
             <CardContent className="pt-4">
-              <div className="space-y-4">
-                {/* Total Earned */}
-                <motion.div
-                  initial={{ opacity: 0, y: 5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                  className="flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <div className="p-1.5 bg-primary/10 rounded-full">
-                      <Sparkles className="h-4 w-4 text-primary" />
-                    </div>
-                    <span className="font-medium">Total Earned</span>
+              {isLoading ? (
+                <div className="space-y-4">
+                  <Skeleton className="h-14 w-full" />
+                  <Skeleton className="h-14 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                  <div className="grid grid-cols-2 gap-3 mt-2">
+                    <Skeleton className="h-20 w-full" />
+                    <Skeleton className="h-20 w-full" />
                   </div>
-                  <motion.div 
-                    className="text-xl font-bold text-primary"
-                    animate={isClaimingRewards ? { scale: [1, 1.05, 1] } : {}}
-                    transition={{ repeat: isClaimingRewards ? Infinity : 0, duration: 0.5 }}
-                  >
-                    {totalEarned.toFixed(2)} ETH
-                  </motion.div>
-                </motion.div>
-                
-                {/* Available Rewards */}
-                {availableRewards > 0 && (
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Total Earned */}
                   <motion.div
                     initial={{ opacity: 0, y: 5 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4 }}
+                    transition={{ delay: 0.3 }}
                     className="flex items-center justify-between"
                   >
                     <div className="flex items-center gap-1.5">
-                      <div className="p-1.5 bg-amber-500/10 rounded-full">
-                        <Wallet className="h-4 w-4 text-amber-500" />
+                      <div className="p-1.5 bg-primary/10 rounded-full">
+                        <Sparkles className="h-4 w-4 text-primary" />
                       </div>
-                      <span className="font-medium">Available Rewards</span>
+                      <span className="font-medium">Total Earned</span>
                     </div>
                     <motion.div 
-                      className="text-xl font-bold text-amber-500"
-                      animate={rewardsClaimable && !isClaimingRewards ? { 
-                        scale: [1, 1.05, 1],
-                      } : {}}
-                      transition={{ 
-                        repeat: rewardsClaimable && !isClaimingRewards ? Infinity : 0, 
-                        duration: 1.5 
-                      }}
+                      className="text-xl font-bold text-primary"
+                      animate={isClaimingRewards ? { scale: [1, 1.05, 1] } : {}}
+                      transition={{ repeat: isClaimingRewards ? Infinity : 0, duration: 0.5 }}
                     >
-                      {availableRewards.toFixed(2)} ETH
+                      {earnings?.referral_earnings.toFixed(4)} ETH
                     </motion.div>
                   </motion.div>
-                )}
-                
-                {availableRewards > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 5 }}
-                    animate={{ opacity: 1, y: 0 }}
+                  
+                  {/* Available Rewards */}
+                  {earnings && earnings.available_to_withdraw > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.4 }}
+                      className="flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <div className="p-1.5 bg-amber-500/10 rounded-full">
+                          <Wallet className="h-4 w-4 text-amber-500" />
+                        </div>
+                        <span className="font-medium">Available Rewards</span>
+                      </div>
+                      <motion.div 
+                        className="text-xl font-bold text-amber-500"
+                        animate={rewardsClaimable && !isClaimingRewards ? { 
+                          scale: [1, 1.05, 1],
+                        } : {}}
+                        transition={{ 
+                          repeat: rewardsClaimable && !isClaimingRewards ? Infinity : 0, 
+                          duration: 1.5 
+                        }}
+                      >
+                        {earnings.available_to_withdraw.toFixed(4)} ETH
+                      </motion.div>
+                    </motion.div>
+                  )}
+                  
+                  {earnings && earnings.available_to_withdraw > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.5 }}
+                    >
+                      <Button 
+                        variant={rewardsClaimable ? "default" : "outline"}
+                        className="w-full"
+                        disabled={!rewardsClaimable || isClaimingRewards}
+                        onClick={handleClaimRewards}
+                      >
+                        {isClaimingRewards ? (
+                          <>
+                            <motion.div
+                              animate={{ rotate: 360 }}
+                              transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                              className="mr-1.5"
+                            >
+                              <Sparkles className="h-4 w-4" />
+                            </motion.div>
+                            Claiming Rewards...
+                          </>
+                        ) : rewardsClaimable ? (
+                          <>Claim Rewards</>
+                        ) : (
+                          <>No Rewards Available</>
+                        )}
+                      </Button>
+                    </motion.div>
+                  )}
+                  
+                  {/* Stats */}
+                  <motion.div 
+                    className="grid grid-cols-2 gap-3 mt-2"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
                     transition={{ delay: 0.5 }}
                   >
-                    <Button 
-                      variant={rewardsClaimable ? "default" : "outline"}
-                      className="w-full"
-                      disabled={!rewardsClaimable || isClaimingRewards}
-                      onClick={handleClaimRewards}
-                    >
-                      {isClaimingRewards ? (
-                        <>
-                          <motion.div
-                            animate={{ rotate: 360 }}
-                            transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-                            className="mr-1.5"
-                          >
-                            <Sparkles className="h-4 w-4" />
-                          </motion.div>
-                          Claiming Rewards...
-                        </>
-                      ) : rewardsClaimable ? (
-                        <>Claim Rewards</>
-                      ) : (
-                        <>No Rewards Available</>
-                      )}
-                    </Button>
+                    <div className="bg-muted/40 rounded-lg p-3 text-center border border-border/50">
+                      <Users className="h-4 w-4 mx-auto mb-1 text-primary" />
+                      <div className="text-xl font-bold">{totalInvites}</div>
+                      <div className="text-xs text-muted-foreground">Total Invites</div>
+                    </div>
+                    <div className="bg-muted/40 rounded-lg p-3 text-center border border-border/50">
+                      <Wallet className="h-4 w-4 mx-auto mb-1 text-green-500" />
+                      <div className="text-xl font-bold">{earnings?.total_withdrawn.toFixed(4) || '0.0000'}</div>
+                      <div className="text-xs text-muted-foreground">Total Withdrawn</div>
+                    </div>
                   </motion.div>
-                )}
-                
-                {/* Stats */}
-                <motion.div 
-                  className="grid grid-cols-2 gap-3 mt-2"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.5 }}
-                >
-                  <div className="bg-muted/40 rounded-lg p-3 text-center border border-border/50">
-                    <Users className="h-4 w-4 mx-auto mb-1 text-primary" />
-                    <div className="text-xl font-bold">{totalReferrals}</div>
-                    <div className="text-xs text-muted-foreground">Total Invites</div>
-                  </div>
-                  <div className="bg-muted/40 rounded-lg p-3 text-center border border-border/50">
-                    <CheckCircle2 className="h-4 w-4 mx-auto mb-1 text-green-500" />
-                    <div className="text-xl font-bold">{activeReferrals}</div>
-                    <div className="text-xs text-muted-foreground">Active Invites</div>
-                  </div>
-                </motion.div>
-              </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
@@ -466,7 +567,7 @@ const ReferralPage = () => {
         </Card>
       </motion.div>
       
-      {/* Recent Referrals Section */}
+      {/* Invited Users Section */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -477,61 +578,59 @@ const ReferralPage = () => {
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-xl">
               <Users className="h-5 w-5 text-primary" />
-              Recent Invites
+              Your Invites
             </CardTitle>
             <CardDescription className="text-sm">
-              Your most recent referrals and their status
+              People you've invited to dapps.co
             </CardDescription>
           </CardHeader>
           
           <CardContent>
-            <div className="space-y-2">
-              {referralHistory.slice(0, isMobile ? 3 : 5).map((referral, index) => (
-                <motion.div 
-                  key={index}
-                  initial={{ opacity: 0, y: 5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 * index + 0.5 }}
-                  className="flex items-center justify-between p-3 rounded-lg border border-border/40 hover:bg-muted/20 transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={`https://avatar.vercel.sh/${referral.username}`} />
-                      <AvatarFallback>{referral.username[0].toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="font-medium text-sm">{referral.username}</div>
-                      <div className="text-xs text-muted-foreground">{referral.date}</div>
+            {isLoading ? (
+              <div className="space-y-2">
+                {[1, 2, 3, 4, 5].map(i => (
+                  <Skeleton key={i} className="h-16 w-full" />
+                ))}
+              </div>
+            ) : invitedUsers.length > 0 ? (
+              <div className="space-y-2">
+                {invitedUsers.map((user, index) => (
+                  <motion.div 
+                    key={user.id}
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 * index + 0.5 }}
+                    className="flex items-center justify-between p-3 rounded-lg border border-border/40 hover:bg-muted/20 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={user.avatar_url || `https://avatar.vercel.sh/${user.handle}`} />
+                        <AvatarFallback>{user.handle[0].toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="font-medium text-sm">@{user.handle}</div>
+                        <div className="text-xs text-muted-foreground">{formatDate(user.invited_on)}</div>
+                      </div>
                     </div>
-                  </div>
-                  
-                  <div className="text-right">
-                    <div className="font-medium text-sm">
-                      {referral.amount > 0 ? (
-                        <span className="text-primary">{referral.amount.toFixed(2)} ETH</span>
-                      ) : "-"}
+                    
+                    <div className="text-right">
+                      <div className="text-xs flex items-center gap-1 text-muted-foreground">
+                        <Calendar className="h-3 w-3" />
+                        <span>Joined {formatDate(user.invited_on)}</span>
+                      </div>
                     </div>
-                    <div className="text-xs">
-                      {referral.active ? (
-                        <span className="text-green-600 flex items-center gap-1 justify-end">
-                          <CheckCircle2 className="h-3 w-3" /> Active
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground">Pending</span>
-                      )}
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-              
-              {/* View More Button (mobile only) */}
-              {isMobile && totalReferrals > 3 && (
-                <Button variant="outline" size="sm" className="w-full mt-2 text-primary">
-                  <ArrowRight className="h-4 w-4 mr-1" />
-                  View All {totalReferrals} Invites
-                </Button>
-              )}
-            </div>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center p-6">
+                <Users className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
+                <h3 className="text-lg font-medium mb-1">No invites yet</h3>
+                <p className="text-muted-foreground text-sm max-w-sm mx-auto">
+                  Start sharing your invite link with friends to earn rewards!
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </motion.div>
