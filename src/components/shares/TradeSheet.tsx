@@ -8,7 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { CommunityPortfolioItem, SharePrecheckResponse, buySharesPrecheck, sellSharesPrecheck } from '@/utils/communityApi';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Plus, Minus } from 'lucide-react';
 
 interface TradeSheetProps {
   open: boolean;
@@ -46,18 +46,15 @@ export const TradeSheet = ({
 
   useEffect(() => {
     if (community && action && open) {
-      // Initialize with 1 share by default
       setShareQuantity(1);
       
-      // Set max shares based on action (buy: arbitrary max, sell: owned shares)
       if (action === 'sell') {
         const ownedShares = Math.floor(community.shares * 100) / 100;
         setMaxShares(ownedShares > 0 ? ownedShares : 0.01);
       } else {
-        setMaxShares(100); // Default max for buying
+        setMaxShares(100);
       }
       
-      // If we already have precheck data from parent, use it
       if (precheckData) {
         setPrecheck(precheckData);
         if (precheckData.sharePrice) {
@@ -74,7 +71,6 @@ export const TradeSheet = ({
             : precheckData.sharePriceUsd.toString());
         }
       } else {
-        // Otherwise, fetch initial precheck data
         fetchPrecheckData(1);
       }
     }
@@ -95,7 +91,6 @@ export const TradeSheet = ({
         result = await sellSharesPrecheck(community.community, quantity);
       }
       
-      // Handle possible error states
       if (result.status === 'ERROR' || result.status === 'DEPOSIT') {
         setErrorMessage(result.error || `Unable to ${action} shares at this time`);
       } else {
@@ -142,7 +137,6 @@ export const TradeSheet = ({
 
   const SheetComponent = (
     <div className={`space-y-6 ${isEmbedded ? '' : 'px-2'}`}>
-      {/* Community Info */}
       {community && (
         <div className="flex items-center gap-3">
           <Avatar className="h-12 w-12">
@@ -158,14 +152,12 @@ export const TradeSheet = ({
         </div>
       )}
       
-      {/* Error Message */}
       {errorMessage && (
         <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm">
           {errorMessage}
         </div>
       )}
       
-      {/* Share Quantity */}
       <div className="space-y-4">
         <div className="flex justify-between items-center">
           <Label htmlFor="shareQuantity">Share Quantity</Label>
@@ -206,7 +198,6 @@ export const TradeSheet = ({
       
       <Separator />
       
-      {/* Price Info */}
       <div className="space-y-3">
         <div className="flex justify-between">
           <span className="text-sm">Share Price</span>
@@ -233,7 +224,6 @@ export const TradeSheet = ({
         )}
       </div>
       
-      {/* Action Buttons */}
       <div className="flex gap-3 pt-4">
         <Button
           className="flex-1"

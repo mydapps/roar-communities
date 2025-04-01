@@ -39,7 +39,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PortfolioSummary } from '@/components/shares/PortfolioSummary';
 import { DepositSheet } from '@/components/shares/DepositSheet';
 import { SendSheet } from '@/components/shares/SendSheet';
-import { TradeSheet } from '@/components/shares/TradeSheet';
+import { TradeDialog } from '@/components/shares/TradeDialog';
 import { CommunityShareCard } from '@/components/shares/CommunityShareCard';
 import { usePortfolio } from '@/hooks/usePortfolio';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -177,6 +177,7 @@ const MySharesPage = () => {
 
   return (
     <div className="space-y-6 animate-fade-in pb-20 md:pb-10 pt-20 md:pt-16">
+      {/* Portfolio Summary */}
       <PortfolioSummary 
         ethValue={totalEthValue.toFixed(4)} 
         usdValue={totalUsdValue.toFixed(2)}
@@ -192,7 +193,9 @@ const MySharesPage = () => {
         }}
       />
       
+      {/* Portfolio Card */}
       <Card>
+        {/* Card Header */}
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-xl font-bold">
             My Portfolio
@@ -220,7 +223,10 @@ const MySharesPage = () => {
             </Button>
           </div>
         </CardHeader>
+        
+        {/* Card Content */}
         <CardContent className="pt-4">
+          {/* Mobile Portfolio Value */}
           <div className="flex items-center justify-between mb-4 md:hidden">
             <div className="text-sm text-muted-foreground">
               Portfolio Value: <span className="font-semibold text-foreground">{totalEthValue.toFixed(4)} ETH</span> 
@@ -228,6 +234,7 @@ const MySharesPage = () => {
             </div>
           </div>
           
+          {/* Portfolio Items */}
           <ScrollArea className="max-h-[calc(100vh-300px)] md:max-h-none">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-6">
               {portfolioItems.map((community) => (
@@ -330,25 +337,27 @@ const MySharesPage = () => {
               </DrawerHeader>
               
               <div className="px-4 py-4 flex-1 overflow-y-auto">
-                <TradeSheet 
-                  open={true}
-                  onOpenChange={() => setTradeOpen(false)}
-                  community={selectedCommunity}
-                  action={tradeAction}
-                  userEthBalance={userEthBalance}
-                  isEmbedded={true}
-                  onBuyConfirm={handleBuySharesConfirm}
-                  onSellConfirm={handleSellSharesConfirm}
-                  loadingAction={loadingAction}
-                  precheckData={precheckData}
-                />
+                {/* We render the TradeDialog content directly inside the drawer */}
+                {selectedCommunity && tradeAction && (
+                  <TradeDialog
+                    open={true}
+                    onOpenChange={() => setTradeOpen(false)}
+                    community={selectedCommunity}
+                    action={tradeAction}
+                    userEthBalance={userEthBalance}
+                    onBuyConfirm={handleBuySharesConfirm}
+                    onSellConfirm={handleSellSharesConfirm}
+                    loadingAction={loadingAction}
+                    precheckData={precheckData}
+                  />
+                )}
               </div>
             </DrawerContent>
           </Drawer>
         </>
       ) : (
         <>
-          {/* Desktop: Use Sheet components with right-side opening */}
+          {/* Desktop: Use Sheets and Dialogs with right-side opening */}
           
           {/* Deposit ETH Sheet for Desktop */}
           <DepositSheet 
@@ -364,18 +373,20 @@ const MySharesPage = () => {
             isEthSend={!selectedCommunity}
           />
 
-          {/* Trade (Buy/Sell) Sheet for Desktop */}
-          <TradeSheet 
-            open={tradeOpen} 
-            onOpenChange={setTradeOpen} 
-            community={selectedCommunity}
-            action={tradeAction}
-            userEthBalance={userEthBalance}
-            onBuyConfirm={handleBuySharesConfirm}
-            onSellConfirm={handleSellSharesConfirm}
-            loadingAction={loadingAction}
-            precheckData={precheckData}
-          />
+          {/* For desktop, we use the TradeDialog directly */}
+          {selectedCommunity && tradeAction && (
+            <TradeDialog 
+              open={tradeOpen} 
+              onOpenChange={setTradeOpen} 
+              community={selectedCommunity}
+              action={tradeAction}
+              userEthBalance={userEthBalance}
+              onBuyConfirm={handleBuySharesConfirm}
+              onSellConfirm={handleSellSharesConfirm}
+              loadingAction={loadingAction}
+              precheckData={precheckData}
+            />
+          )}
         </>
       )}
 
