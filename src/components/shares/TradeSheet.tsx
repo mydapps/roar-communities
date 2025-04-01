@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from '@/components/ui/drawer';
@@ -7,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { CommunityPortfolioItem, SharePrecheckResponse, buySharesPrecheck, sellSharesPrecheck } from '@/utils/communityApi';
+import { CommunityPortfolioItem, SharePrecheckResponse, buySharesPrecheck, sellSharesPrecheck, buySharesConfirm, sellSharesConfirm } from '@/utils/communityApi';
 import { toast } from 'sonner';
 import { Loader2, ArrowRight, Info, Plus, Minus } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -62,11 +61,11 @@ export const TradeSheet = ({
   // Use the mobile hook outside of the embedded check
   const isMobile = useIsMobile();
 
-  // Log the callbacks to help debug the issue
+  // For debugging
   console.log('TradeSheet received callbacks:', {
     onBuyConfirm: onBuyConfirm ? 'defined' : 'undefined',
     onSellConfirm: onSellConfirm ? 'defined' : 'undefined',
-    action: action
+    action
   });
 
   useEffect(() => {
@@ -261,25 +260,51 @@ export const TradeSheet = ({
     try {
       console.log(`Attempting to ${action} ${shareQuantity} shares of ${community.community}`);
       
-      if (action === 'buy' && onBuyConfirm) {
-        console.log(`Calling onBuyConfirm with args:`, community.community, shareQuantity);
-        await onBuyConfirm(community.community, shareQuantity);
-        // Show success animation
+      if (action === 'buy') {
+        // If there's a callback provided by parent, use it
+        if (onBuyConfirm) {
+          console.log(`Using provided onBuyConfirm callback for ${community.community}`);
+          await onBuyConfirm(community.community, shareQuantity);
+        } else {
+          // Otherwise use our internal function for direct API call
+          console.log(`No onBuyConfirm callback provided, using direct API call for ${community.community}`);
+          const result = await buySharesConfirm(community.community, shareQuantity);
+          
+          if (result.status === 'SUCCESS') {
+            triggerSuccessAnimation();
+            toast.success(`Successfully purchased ${result.shareQuantity} shares of ${community.community}!`);
+            onOpenChange(false);
+          } else {
+            toast.error(result.message || 'Transaction failed');
+            return;
+          }
+        }
+        
+        // Show success animation even when using callback
         triggerSuccessAnimation();
-        toast.success(`Successfully purchased ${shareQuantity} shares of ${community.community}!`, {
-          duration: 4000,
-        });
-      } else if (action === 'sell' && onSellConfirm) {
-        console.log(`Calling onSellConfirm with args:`, community.community, shareQuantity);
-        await onSellConfirm(community.community, shareQuantity);
-        // Show success animation
+        
+      } else if (action === 'sell') {
+        // If there's a callback provided by parent, use it
+        if (onSellConfirm) {
+          console.log(`Using provided onSellConfirm callback for ${community.community}`);
+          await onSellConfirm(community.community, shareQuantity);
+        } else {
+          // Otherwise use our internal function for direct API call
+          console.log(`No onSellConfirm callback provided, using direct API call for ${community.community}`);
+          const result = await sellSharesConfirm(community.community, shareQuantity);
+          
+          if (result.status === 'SUCCESS') {
+            triggerSuccessAnimation();
+            toast.success(`Successfully sold ${result.soldShares} shares of ${community.community}!`);
+            onOpenChange(false);
+          } else {
+            toast.error(result.message || 'Transaction failed');
+            return;
+          }
+        }
+        
+        // Show success animation even when using callback
         triggerSuccessAnimation();
-        toast.success(`Successfully sold ${shareQuantity} shares of ${community.community}!`, {
-          duration: 4000,
-        });
-      } else {
-        console.error(`No callback found for ${action} action`);
-        toast.error(`Unable to ${action} shares at this time`);
       }
     } catch (error) {
       console.error(`Error during ${action} operation:`, error);

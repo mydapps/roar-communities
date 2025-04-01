@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Card, 
@@ -122,7 +121,6 @@ const MySharesPage = () => {
       console.log(`Confirming buy of ${quantity} shares for ${communityName}`);
       console.log(`User ETH balance before purchase: ${userEthBalance}`);
       
-      // Add additional validation
       if (!communityName) {
         console.error("Community name is empty in handleBuySharesConfirm");
         throw new Error("Invalid community name");
