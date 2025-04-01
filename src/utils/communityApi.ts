@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 import { API_BASE_URL, getUserApiKey, createAuthHeaders } from './apiBase';
 
@@ -222,7 +221,8 @@ export const getSharePrice = async (communityName: string, shareQuantity: number
       shareQuantity = 1;
     }
 
-    const url = `${API_BASE_URL}/get_share_price?communityName=${encodeURIComponent(communityName)}&shareQuantity=${quantity}`;
+    // Use the correct parameter name 'shares' instead of 'shareQuantity'
+    const url = `${API_BASE_URL}/get_share_price?communityName=${encodeURIComponent(communityName)}&shares=${quantity}`;
     
     console.log(`Fetching share price for ${communityName}, quantity: ${quantity}`);
     
