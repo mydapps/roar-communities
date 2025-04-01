@@ -65,6 +65,7 @@ const MySharesPage = () => {
     setIsLoadingBalance(true);
     try {
       const balanceData = await getWalletBalance();
+      console.log('Wallet balance data:', balanceData);
       setUserEthBalance(balanceData.balance.eth);
     } catch (error) {
       console.error('Failed to fetch wallet balance:', error);
@@ -93,6 +94,7 @@ const MySharesPage = () => {
         precheckResult = await sellSharesPrecheck(community.community, 1);
       }
       
+      console.log(`Precheck result for ${action}:`, precheckResult);
       setPrecheckData(precheckResult);
     } catch (error) {
       console.error(`Failed to precheck ${action}:`, error);
@@ -105,7 +107,9 @@ const MySharesPage = () => {
   const handleBuySharesConfirm = async (communityName: string, quantity: number) => {
     try {
       setLoadingAction(true);
+      console.log(`Confirming buy of ${quantity} shares for ${communityName}`);
       const result = await buySharesConfirm(communityName, quantity);
+      console.log('Buy shares confirmation result:', result);
       
       if (result.status === 'SUCCESS') {
         toast.success(`Successfully purchased ${result.shareQuantity} shares of ${communityName}`);
@@ -127,7 +131,9 @@ const MySharesPage = () => {
   const handleSellSharesConfirm = async (communityName: string, quantity: number) => {
     try {
       setLoadingAction(true);
+      console.log(`Confirming sell of ${quantity} shares for ${communityName}`);
       const result = await sellSharesConfirm(communityName, quantity);
+      console.log('Sell shares confirmation result:', result);
       
       if (result.status === 'SUCCESS') {
         toast.success(`Successfully sold ${result.soldShares} shares of ${communityName}`);

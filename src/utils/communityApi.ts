@@ -567,7 +567,7 @@ export const sellSharesConfirm = async (communityName: string, shareQuantity: nu
 export const getWalletBalance = async (): Promise<WalletBalanceResponse> => {
   try {
     const url = `${API_BASE_URL}/get_wallet_balance`;
-    const headers = createAuthHeaders(false);
+    const headers = createAuthHeaders();
     
     console.log('Fetching wallet balance');
     
