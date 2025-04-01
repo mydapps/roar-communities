@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -360,8 +361,8 @@ export const TradeDialog = ({
                 <p className="font-medium">Transaction Information</p>
                 <p className="text-xs mt-1">
                   {action === 'buy' 
-                    ? 'By buying shares, you're investing in this community and becoming a member.'
-                    : 'Selling shares will decrease your position in this community.'}
+                    ? "By buying shares, you're investing in this community and becoming a member."
+                    : "Selling shares will decrease your position in this community."}
                 </p>
               </div>
             </div>
