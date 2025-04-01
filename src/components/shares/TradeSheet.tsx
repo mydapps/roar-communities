@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Sheet,
@@ -25,7 +24,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Check, ArrowRight, Loader2, RefreshCw, AlertCircle, ExternalLink, PartyPopper } from 'lucide-react';
+import { Check, ArrowRight, Loader2, RefreshCw, AlertCircle, ExternalLink, PartyPopper, BadgeInfo } from 'lucide-react';
 import { 
   buySharesPrecheck, 
   buySharesConfirm,
@@ -37,6 +36,8 @@ import {
   SharePriceResponse
 } from '@/utils/communityApi';
 import { Link } from 'react-router-dom';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Badge } from '@/components/ui/badge';
 
 interface TradeSheetProps {
   open: boolean;
@@ -96,7 +97,6 @@ export const TradeSheet = ({
       if (community?.name) {
         fetchSharePrice(form.getValues().amount || 1);
       }
-      // Reset error states when opening
       setInsufficientFunds(false);
       setNoSharesError(false);
     }
@@ -179,7 +179,6 @@ export const TradeSheet = ({
         return;
       }
       
-      // Ensure numeric fields are properly handled
       if (typeof precheckResult.sharePrice === 'string') {
         precheckResult.sharePrice = parseFloat(precheckResult.sharePrice);
       }
@@ -201,7 +200,6 @@ export const TradeSheet = ({
     } catch (error) {
       console.error('Transaction precheck failed:', error);
       
-      // Check if the error is related to not having shares
       const errorMessage = error instanceof Error ? error.message : 'Transaction precheck failed. Please try again.';
       if (errorMessage.includes('do not have any shares') || errorMessage.toLowerCase().includes('no shares')) {
         setNoSharesError(true);
@@ -256,7 +254,7 @@ export const TradeSheet = ({
             ? `You've purchased ${precheckData.shareQuantity} shares of ${community?.name}` 
             : `You've sold ${precheckData.shareQuantity} shares of ${community?.name}`,
         });
-      }, 3000); // Extended success display time for better experience
+      }, 3000);
     } catch (error) {
       console.error('Transaction confirmation failed:', error);
       toast({
@@ -266,6 +264,12 @@ export const TradeSheet = ({
       });
     } finally {
       setIsConfirming(false);
+    }
+  };
+
+  const handleSellAll = () => {
+    if (community?.userShares) {
+      form.setValue('amount', community.userShares);
     }
   };
 
@@ -290,6 +294,27 @@ export const TradeSheet = ({
                 </button>
               </>
             )}
+          </div>
+        </div>
+      )}
+      
+      {action === 'sell' && community.userShares && (
+        <div className="mb-4 p-3 rounded-md bg-blue-500/10 border border-blue-500/20">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm text-muted-foreground">Your Shares</div>
+              <div className="font-medium text-lg flex items-center gap-2">
+                {community.userShares} shares
+              </div>
+            </div>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              className="border-blue-500/30 text-blue-600 hover:bg-blue-500/10"
+              onClick={handleSellAll}
+            >
+              Sell All
+            </Button>
           </div>
         </div>
       )}
@@ -337,11 +362,29 @@ export const TradeSheet = ({
                   ? `${sharePriceInfo.buyTotalRequired} ETH` 
                   : `${sharePriceInfo.sellTotalReturn} ETH`}
               </div>
+            </div>
+          )}
+          
+          {action === 'sell' && community.userShares && (
+            <div className="flex items-center mt-2 text-xs text-muted-foreground">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center cursor-help">
+                      <BadgeInfo className="h-3 w-3 mr-1" />
+                      Impact on price
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-72">
+                    <p>Selling shares will decrease the price. Larger sell orders have a bigger impact.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               
-              {action === 'sell' && community.userShares && (
-                <div className="text-xs text-muted-foreground mt-1">
-                  You own {community.userShares} shares
-                </div>
+              {sharePriceInfo.sellPriceImpact && parseFloat(sharePriceInfo.sellPriceImpact) > 0 && (
+                <Badge variant="outline" className="ml-2 text-xs bg-red-500/10 text-red-600 border-red-200">
+                  -{sharePriceInfo.sellPriceImpact}%
+                </Badge>
               )}
             </div>
           )}
@@ -366,9 +409,17 @@ export const TradeSheet = ({
                   />
                 </FormControl>
                 {action === 'sell' && community.userShares && (
-                  <div className="text-xs text-blue-600 cursor-pointer mt-1" 
-                       onClick={() => form.setValue('amount', community.userShares)}>
-                    Sell all my shares ({community.userShares})
+                  <div className="flex justify-between items-center mt-1">
+                    <div className="text-xs text-blue-600 cursor-pointer"
+                         onClick={() => form.setValue('amount', community.userShares)}>
+                      Sell all my shares ({community.userShares})
+                    </div>
+                    
+                    <div className="text-xs text-muted-foreground">
+                      {watchAmount && community.userShares 
+                        ? `${((watchAmount / community.userShares) * 100).toFixed(0)}% of your shares`
+                        : ''}
+                    </div>
                   </div>
                 )}
                 <FormMessage />

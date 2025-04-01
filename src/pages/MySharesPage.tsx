@@ -25,7 +25,7 @@ import { PortfolioSummary } from '@/components/shares/PortfolioSummary';
 import { DepositSheet } from '@/components/shares/DepositSheet';
 import { SendSheet } from '@/components/shares/SendSheet';
 import { TradeSheet } from '@/components/shares/TradeSheet';
-import { getWalletBalance } from '@/utils/communityApi';
+import { getWalletBalance, fetchCommunities, Community } from '@/utils/communityApi';
 import { 
   Drawer,
   DrawerContent,
@@ -43,6 +43,18 @@ import {
   SheetDescription,
   SheetFooter
 } from "@/components/ui/sheet";
+
+// Define the community data type with userShares explicitly declared
+interface CommunityData {
+  name: string;
+  image: string;
+  shares: number;
+  value: number;
+  avgBuyPrice: number;
+  currentPrice: number;
+  change: number;
+  userShares: number; // Ensure this is explicit
+}
 
 // Dummy data for sample portfolio
 const portfolioData = [
@@ -101,6 +113,7 @@ interface CommunityData {
   avgBuyPrice: number;
   currentPrice: number;
   change: number;
+  userShares: number; // Ensure this is explicit
 }
 
 // Define the CommunityShareCardProps interface
@@ -114,12 +127,13 @@ interface CommunityShareCardProps {
 const MySharesPage = () => {
   const [depositOpen, setDepositOpen] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
-  const [selectedCommunity, setSelectedCommunity] = useState(null);
+  const [selectedCommunity, setSelectedCommunity] = useState<CommunityData | null>(null);
   const [tradeAction, setTradeAction] = useState<'buy' | 'sell' | null>(null);
   const [tradeOpen, setTradeOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [userEthBalance, setUserEthBalance] = useState("0.000");
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
+  const [portfolioItems, setPortfolioItems] = useState<CommunityData[]>(portfolioData);
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
@@ -144,8 +158,11 @@ const MySharesPage = () => {
     }
   };
 
-  const handleTradeClick = (community: any, action: 'buy' | 'sell') => {
-    setSelectedCommunity(community);
+  const handleTradeClick = (community: CommunityData, action: 'buy' | 'sell') => {
+    setSelectedCommunity({
+      ...community,
+      userShares: community.shares // Ensure userShares is set properly
+    });
     setTradeAction(action);
     setTradeOpen(true);
   };
@@ -219,7 +236,7 @@ const MySharesPage = () => {
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {portfolioData.map((community) => (
+            {portfolioItems.map((community) => (
               <CommunityShareCard 
                 key={community.name}
                 community={community}
