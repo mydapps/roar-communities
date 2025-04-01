@@ -350,6 +350,40 @@ export const buySharesPrecheck = async (communityName: string, shareQuantity: nu
     
     console.log(`Buy shares precheck for ${communityName}, quantity: ${shareQuantity}`);
     
+    if (!communityName) {
+      console.error('No community name provided to buySharesPrecheck');
+      return {
+        status: 'ERROR',
+        error: 'Community name is required',
+        fee: '',
+        sharePrice: 0,
+        sharePriceUsd: 0,
+        shareQuantity: 0,
+        totalValue: '',
+        communityName: ''
+      };
+    }
+    
+    if (isNaN(shareQuantity) || shareQuantity <= 0) {
+      console.error(`Invalid share quantity: ${shareQuantity}`);
+      return {
+        status: 'ERROR',
+        error: 'Invalid share quantity',
+        fee: '',
+        sharePrice: 0,
+        sharePriceUsd: 0,
+        shareQuantity: 0,
+        totalValue: '',
+        communityName
+      };
+    }
+    
+    console.log('Request headers:', headers);
+    console.log('Request body:', JSON.stringify({
+      communityName,
+      shareQuantity
+    }));
+    
     const response = await fetch(url, {
       method: 'POST',
       headers,
@@ -359,14 +393,40 @@ export const buySharesPrecheck = async (communityName: string, shareQuantity: nu
       })
     });
     
+    const responseStatus = response.status;
+    console.log(`Buy shares precheck response status: ${responseStatus}`);
+    
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Buy shares precheck failed: ${errorText}`);
-      throw new Error(`Failed to precheck share purchase: ${errorText}`);
+      console.error(`Buy shares precheck failed with status ${responseStatus}: ${errorText}`);
+      return {
+        status: 'ERROR',
+        error: `API error (${responseStatus}): ${errorText}`,
+        fee: '',
+        sharePrice: 0,
+        sharePriceUsd: 0,
+        shareQuantity: 0,
+        totalValue: '',
+        communityName
+      };
     }
     
     const data = await response.json();
     console.log('Buy shares precheck response:', data);
+    
+    if (!data || typeof data !== 'object') {
+      console.error('Invalid API response format', data);
+      return {
+        status: 'ERROR',
+        error: 'Invalid API response format',
+        fee: '',
+        sharePrice: 0,
+        sharePriceUsd: 0,
+        shareQuantity: 0,
+        totalValue: '',
+        communityName
+      };
+    }
     
     if (data.status === 'DEPOSIT') {
       return {
@@ -384,15 +444,29 @@ export const buySharesPrecheck = async (communityName: string, shareQuantity: nu
     }
     
     if (data.status !== 'SUCCESS') {
-      throw new Error(data.message || data.error || 'Transaction precheck failed');
+      console.error('Transaction precheck failed:', data.message || data.error);
+      return {
+        status: 'ERROR',
+        error: data.message || data.error || 'Transaction precheck failed',
+        fee: '',
+        sharePrice: 0,
+        sharePriceUsd: 0,
+        shareQuantity: 0,
+        totalValue: '',
+        communityName
+      };
     }
     
     // Ensure numeric fields are properly parsed from strings if needed
     const result: SharePrecheckResponse = {
       ...data,
-      sharePrice: typeof data.sharePrice === 'string' ? parseFloat(data.sharePrice) : data.sharePrice,
-      sharePriceUsd: typeof data.sharePriceUsd === 'string' ? parseFloat(data.sharePriceUsd) : data.sharePriceUsd,
-      shareQuantity: Number(data.shareQuantity || shareQuantity)
+      status: data.status || 'ERROR',
+      sharePrice: typeof data.sharePrice === 'string' ? parseFloat(data.sharePrice) : (data.sharePrice || 0),
+      sharePriceUsd: typeof data.sharePriceUsd === 'string' ? parseFloat(data.sharePriceUsd) : (data.sharePriceUsd || 0),
+      shareQuantity: Number(data.shareQuantity || shareQuantity),
+      fee: data.fee || '0 ETH',
+      totalValue: data.totalValue || '0 ETH',
+      communityName: data.communityName || communityName
     };
     
     if (data.totalSharePrice !== undefined) {
@@ -408,7 +482,16 @@ export const buySharesPrecheck = async (communityName: string, shareQuantity: nu
     return result;
   } catch (error) {
     console.error('Error in buy shares precheck:', error);
-    throw error;
+    return {
+      status: 'ERROR',
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
+      fee: '',
+      sharePrice: 0,
+      sharePriceUsd: 0,
+      shareQuantity: 0,
+      totalValue: '',
+      communityName
+    };
   }
 };
 

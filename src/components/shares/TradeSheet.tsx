@@ -66,6 +66,7 @@ export const TradeSheet = ({
     if (community && action && open) {
       // Reset to step 1 when opening
       setStep('quantity');
+      setErrorMessage("");
       
       // Initialize with 1 share by default
       setShareQuantity(1);
@@ -98,6 +99,8 @@ export const TradeSheet = ({
   }, [debouncedShareQuantity, community, action, open]);
 
   const updatePrices = (data: SharePrecheckResponse) => {
+    if (!data) return;
+    
     if (data.sharePrice) {
       setSharePrice(typeof data.sharePrice === 'string' 
         ? data.sharePrice 
@@ -143,6 +146,8 @@ export const TradeSheet = ({
       setLoading(true);
       setErrorMessage("");
       
+      console.log(`Fetching ${action} precheck for ${community.community}, quantity: ${quantity}`);
+      
       let result: SharePrecheckResponse | null = null;
       
       if (action === 'buy') {
@@ -153,16 +158,26 @@ export const TradeSheet = ({
       
       console.log(`Precheck result for ${action}:`, result);
       
+      if (!result) {
+        throw new Error(`No result returned from ${action} precheck`);
+      }
+      
       // Handle possible error states
       if (result.status === 'ERROR' || result.status === 'DEPOSIT') {
         setErrorMessage(result.error || `Unable to ${action} shares at this time`);
-      } else {
+        console.error(`Precheck error: ${result.status}`, result.error);
+      } else if (result.status === 'SUCCESS') {
         setPrecheck(result);
         updatePrices(result);
+        setErrorMessage("");
+      } else {
+        // Unknown status
+        console.warn(`Unknown precheck status: ${result.status}`, result);
+        setErrorMessage(`Unexpected response. Unable to ${action} shares at this time.`);
       }
     } catch (error) {
       console.error('Precheck error:', error);
-      setErrorMessage(`Failed to get ${action} quote`);
+      setErrorMessage(`Failed to get ${action} quote. Please try again.`);
     } finally {
       setLoading(false);
     }

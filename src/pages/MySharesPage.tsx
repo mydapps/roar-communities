@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Card, 
@@ -44,7 +43,6 @@ const MySharesPage = () => {
   const [tradeOpen, setTradeOpen] = useState(false);
   const [userEthBalance, setUserEthBalance] = useState("0.000");
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
-  // Add state for buy/sell actions
   const [loadingAction, setLoadingAction] = useState(false);
   const [precheckData, setPrecheckData] = useState<SharePrecheckResponse | null>(null);
   const isMobile = useIsMobile();
@@ -71,12 +69,12 @@ const MySharesPage = () => {
     } catch (error) {
       console.error('Failed to fetch wallet balance:', error);
       toast.error("Failed to load wallet balance");
+      setUserEthBalance("0.000");
     } finally {
       setIsLoadingBalance(false);
     }
   };
 
-  // Function to trigger confetti animation
   const triggerSuccessAnimation = () => {
     confetti({
       particleCount: 100,
@@ -90,18 +88,17 @@ const MySharesPage = () => {
     setTradeAction(action);
     setTradeOpen(true);
     
-    // Initialize precheck for buy/sell
     try {
       setLoadingAction(true);
       
       let precheckResult: SharePrecheckResponse | null = null;
       
       if (action === 'buy') {
-        // Default to 1 share for initial precheck
         precheckResult = await buySharesPrecheck(community.community, 1);
+        console.log(`Buy precheck result:`, precheckResult);
       } else if (action === 'sell') {
-        // Default to 1 share for initial precheck
         precheckResult = await sellSharesPrecheck(community.community, 1);
+        console.log(`Sell precheck result:`, precheckResult);
       }
       
       console.log(`Precheck result for ${action}:`, precheckResult);
@@ -122,10 +119,8 @@ const MySharesPage = () => {
       console.log('Buy shares confirmation result:', result);
       
       if (result.status === 'SUCCESS') {
-        // Trigger confetti animation on successful purchase
         triggerSuccessAnimation();
         toast.success(`Successfully purchased ${result.shareQuantity} shares of ${communityName}`);
-        // Refresh portfolio data and wallet balance
         refreshPortfolio();
         fetchWalletBalance();
         setTradeOpen(false);
@@ -148,10 +143,8 @@ const MySharesPage = () => {
       console.log('Sell shares confirmation result:', result);
       
       if (result.status === 'SUCCESS') {
-        // Trigger confetti animation on successful sale
         triggerSuccessAnimation();
         toast.success(`Successfully sold ${result.soldShares} shares of ${communityName}`);
-        // Refresh portfolio data and wallet balance
         refreshPortfolio();
         fetchWalletBalance();
         setTradeOpen(false);
@@ -173,14 +166,12 @@ const MySharesPage = () => {
   };
 
   const resetState = () => {
-    // Reset all state to prevent UI getting stuck
     setDepositOpen(false);
     setSendOpen(false);
     setTradeOpen(false);
     setPrecheckData(null);
   };
 
-  // Format portfolio value for display
   const totalEthValue = portfolioSummary?.totalValueEth || 0;
   const totalUsdValue = portfolioSummary?.totalValueUsd || 0;
 
@@ -258,7 +249,6 @@ const MySharesPage = () => {
               />
             ))}
             
-            {/* Loading indicator and load more trigger */}
             {portfolioItems.length > 0 && (
               <div 
                 ref={loadMoreRef} 
@@ -273,7 +263,6 @@ const MySharesPage = () => {
               </div>
             )}
             
-            {/* Empty state */}
             {portfolioItems.length === 0 && !isLoading && (
               <div className="col-span-full p-8 text-center bg-muted/20 rounded-lg border border-border/40">
                 <h3 className="font-medium text-lg">No shares yet</h3>
@@ -281,7 +270,6 @@ const MySharesPage = () => {
               </div>
             )}
             
-            {/* Initial loading state */}
             {isLoading && portfolioItems.length === 0 && (
               <div className="col-span-full flex justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -291,13 +279,11 @@ const MySharesPage = () => {
         </CardContent>
       </Card>
 
-      {/* Deposit ETH Sheet */}
       <DepositSheet 
         open={depositOpen} 
         onOpenChange={setDepositOpen} 
       />
 
-      {/* Send ETH/Shares Sheet */}
       <SendSheet 
         open={sendOpen} 
         onOpenChange={setSendOpen} 
@@ -305,13 +291,12 @@ const MySharesPage = () => {
         isEthSend={!selectedCommunity}
       />
 
-      {/* Trade (Buy/Sell) Sheet */}
       <TradeSheet 
         open={tradeOpen} 
         onOpenChange={setTradeOpen} 
         community={selectedCommunity}
         action={tradeAction}
-        userEthBalance={userEthBalance}
+        userEthBalance={userEthBalance || "0.000"}
         onBuyConfirm={handleBuySharesConfirm}
         onSellConfirm={handleSellSharesConfirm}
         loadingAction={loadingAction}
