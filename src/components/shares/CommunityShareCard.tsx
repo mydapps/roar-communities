@@ -20,6 +20,7 @@ export const CommunityShareCard = ({
   onSellClick,
   onSendClick
 }: CommunityShareCardProps) => {
+  // Add null checks for all object properties to prevent runtime errors
   const { 
     community: name, 
     image, 
@@ -37,16 +38,16 @@ export const CommunityShareCard = ({
         <div className="flex items-center gap-3 mb-4">
           <Avatar>
             <AvatarImage src={image} alt={name} />
-            <AvatarFallback>{name.charAt(0).toUpperCase()}</AvatarFallback>
+            <AvatarFallback>{name ? name.charAt(0).toUpperCase() : '?'}</AvatarFallback>
           </Avatar>
           <div className="flex-1">
             <div className="font-bold">{name}</div>
             <div className="flex items-center gap-2">
               <Badge variant="outline" className={price_direction === 'up' ? "text-green-600" : "text-red-600"}>
                 {price_direction === 'up' ? <ArrowUp className="h-3 w-3 mr-1" /> : <ArrowDown className="h-3 w-3 mr-1" />}
-                {price_direction === 'up' ? "+" : ""}{price_change_percentage.toFixed(2)}%
+                {price_direction === 'up' ? "+" : ""}{(price_change_percentage || 0).toFixed(2)}%
               </Badge>
-              <span className="text-xs text-muted-foreground">{price.eth.toFixed(8)} ETH</span>
+              <span className="text-xs text-muted-foreground">{price?.eth?.toFixed(8) || '0.00000000'} ETH</span>
             </div>
           </div>
         </div>
@@ -58,8 +59,8 @@ export const CommunityShareCard = ({
           </div>
           <div>
             <div className="text-xs text-muted-foreground">Total Value</div>
-            <div className="font-medium text-lg">{value.eth.toFixed(6)} ETH</div>
-            <div className="text-xs text-muted-foreground">${value.usd.toFixed(2)}</div>
+            <div className="font-medium text-lg">{value?.eth?.toFixed(6) || '0.000000'} ETH</div>
+            <div className="text-xs text-muted-foreground">${value?.usd?.toFixed(2) || '0.00'}</div>
           </div>
         </div>
         

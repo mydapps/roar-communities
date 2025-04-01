@@ -227,11 +227,11 @@ const MySharesPage = () => {
           <Drawer open={sendOpen} onOpenChange={setSendOpen}>
             <DrawerContent className="max-h-[85vh] overflow-y-auto">
               <DrawerHeader>
-                <DrawerTitle>{!selectedCommunity ? 'Send ETH' : `Send ${selectedCommunity?.community} Shares`}</DrawerTitle>
+                <DrawerTitle>{!selectedCommunity ? 'Send ETH' : `Send ${selectedCommunity.community} Shares`}</DrawerTitle>
                 <DrawerDescription>
                   {!selectedCommunity 
                     ? 'Send ETH to another wallet address' 
-                    : `Send your ${selectedCommunity?.community} shares to another user`}
+                    : `Send your ${selectedCommunity.community} shares to another user`}
                 </DrawerDescription>
               </DrawerHeader>
               
@@ -321,7 +321,7 @@ const MySharesPage = () => {
                   <div>
                     <h3 className="font-bold text-lg">{selectedCommunity.community}</h3>
                     <p className="text-muted-foreground">
-                      Current Price: {selectedCommunity.price.eth.toFixed(6)} ETH
+                      Current Price: {selectedCommunity.price?.eth?.toFixed(6) || '0.000000'} ETH
                     </p>
                   </div>
                 </div>
@@ -333,7 +333,7 @@ const MySharesPage = () => {
                   </div>
                   <div className="bg-muted/50 rounded-lg p-4">
                     <p className="text-xs text-muted-foreground">Total Value</p>
-                    <p className="text-2xl font-bold">{selectedCommunity.value.eth.toFixed(4)} ETH</p>
+                    <p className="text-2xl font-bold">{selectedCommunity.value?.eth?.toFixed(4) || '0.0000'} ETH</p>
                   </div>
                 </div>
                 

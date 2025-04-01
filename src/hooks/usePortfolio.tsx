@@ -32,9 +32,13 @@ export function usePortfolio() {
       const result = await getUserPortfolio(nextPage);
       
       if (result.success && result.data) {
-        setPortfolioItems(prev => [...prev, ...result.data.communities]);
-        setPagination(result.data.pagination);
-        setPortfolioSummary(result.data.portfolio);
+        // Ensure we're getting valid data before updating state
+        const newCommunities = result.data.communities || [];
+        const validCommunities = newCommunities.filter(c => c && typeof c === 'object');
+        
+        setPortfolioItems(prev => [...prev, ...validCommunities]);
+        setPagination(result.data.pagination || null);
+        setPortfolioSummary(result.data.portfolio || null);
       }
     } catch (error) {
       console.error('Failed to fetch next page:', error);
@@ -51,9 +55,13 @@ export function usePortfolio() {
       const result = await getUserPortfolio(1);
       
       if (result.success && result.data) {
-        setPortfolioItems(result.data.communities);
-        setPagination(result.data.pagination);
-        setPortfolioSummary(result.data.portfolio);
+        // Ensure we're getting valid data before updating state
+        const communities = result.data.communities || [];
+        const validCommunities = communities.filter(c => c && typeof c === 'object');
+        
+        setPortfolioItems(validCommunities);
+        setPagination(result.data.pagination || null);
+        setPortfolioSummary(result.data.portfolio || null);
         setIsError(false);
       }
     } catch (error) {
