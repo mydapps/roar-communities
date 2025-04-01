@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Sheet,
@@ -38,6 +39,9 @@ import {
 import { Link } from 'react-router-dom';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from '@/components/ui/badge';
+
+// Define a constant for ETH to USD conversion rate
+const ethToUsd = 3521.89; // Mock ETH/USD exchange rate
 
 interface TradeSheetProps {
   open: boolean;
