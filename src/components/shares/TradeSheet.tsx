@@ -64,6 +64,7 @@ export const TradeSheet = ({
 
   useEffect(() => {
     if (community && action && open) {
+      console.log(`TradeSheet opened for ${action} of ${community.community} shares`);
       // Reset to step 1 when opening
       setStep('quantity');
       setErrorMessage("");
@@ -82,6 +83,7 @@ export const TradeSheet = ({
       
       // If we already have precheck data from parent, use it
       if (precheckData) {
+        console.log(`Using parent-provided precheck data:`, precheckData);
         setPrecheck(precheckData);
         updatePrices(precheckData);
       } else {
@@ -99,7 +101,12 @@ export const TradeSheet = ({
   }, [debouncedShareQuantity, community, action, open]);
 
   const updatePrices = (data: SharePrecheckResponse) => {
-    if (!data) return;
+    if (!data) {
+      console.log("No precheck data provided to updatePrices");
+      return;
+    }
+    
+    console.log(`Updating prices with data:`, data);
     
     if (data.sharePrice) {
       setSharePrice(typeof data.sharePrice === 'string' 
@@ -140,7 +147,10 @@ export const TradeSheet = ({
   };
 
   const fetchPrecheckData = async (quantity: number) => {
-    if (!community || !action) return;
+    if (!community || !action) {
+      console.log("Missing community or action in fetchPrecheckData");
+      return;
+    }
     
     try {
       setLoading(true);
@@ -159,6 +169,7 @@ export const TradeSheet = ({
       console.log(`Precheck result for ${action}:`, result);
       
       if (!result) {
+        console.error("No result returned from precheck");
         throw new Error(`No result returned from ${action} precheck`);
       }
       
@@ -230,10 +241,16 @@ export const TradeSheet = ({
   };
 
   const handleConfirm = async () => {
-    if (!community || !action) return;
+    if (!community || !action) {
+      console.error("Missing community or action in handleConfirm");
+      return;
+    }
     
     try {
+      console.log(`Attempting to ${action} ${shareQuantity} shares of ${community.community}`);
+      
       if (action === 'buy' && onBuyConfirm) {
+        console.log(`Calling onBuyConfirm with args:`, community.community, shareQuantity);
         await onBuyConfirm(community.community, shareQuantity);
         // Show success animation
         triggerSuccessAnimation();
@@ -241,6 +258,7 @@ export const TradeSheet = ({
           duration: 4000,
         });
       } else if (action === 'sell' && onSellConfirm) {
+        console.log(`Calling onSellConfirm with args:`, community.community, shareQuantity);
         await onSellConfirm(community.community, shareQuantity);
         // Show success animation
         triggerSuccessAnimation();
@@ -248,6 +266,7 @@ export const TradeSheet = ({
           duration: 4000,
         });
       } else {
+        console.error(`No callback found for ${action} action`);
         toast.error(`Unable to ${action} shares at this time`);
       }
     } catch (error) {
@@ -257,6 +276,7 @@ export const TradeSheet = ({
   };
   
   const goToConfirmStep = () => {
+    console.log(`Moving to confirm step for ${action} of ${shareQuantity} shares`);
     setStep('confirm');
   };
   

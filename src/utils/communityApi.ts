@@ -505,6 +505,26 @@ export const buySharesConfirm = async (communityName: string, shareQuantity: num
     
     console.log(`Confirming buy shares for ${communityName}, quantity: ${shareQuantity}`);
     
+    // Add validation
+    if (!communityName) {
+      console.error('No community name provided to buySharesConfirm');
+      throw new Error('Community name is required');
+    }
+    
+    if (isNaN(shareQuantity) || shareQuantity <= 0) {
+      console.error(`Invalid share quantity: ${shareQuantity}`);
+      throw new Error('Invalid share quantity');
+    }
+    
+    // Log the API request details
+    console.log('Buy shares confirm request:');
+    console.log('URL:', url);
+    console.log('Headers:', headers);
+    console.log('Request body:', JSON.stringify({
+      communityName,
+      shareQuantity
+    }));
+    
     const response = await fetch(url, {
       method: 'POST',
       headers,
@@ -514,9 +534,12 @@ export const buySharesConfirm = async (communityName: string, shareQuantity: num
       })
     });
     
+    console.log(`Buy shares confirm response status: ${response.status}`);
+    
+    // Check if the response is non-OK
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Buy shares confirmation failed: ${errorText}`);
+      console.error(`Buy shares confirmation failed with status ${response.status}: ${errorText}`);
       throw new Error(`Failed to confirm share purchase: ${errorText}`);
     }
     
@@ -524,7 +547,12 @@ export const buySharesConfirm = async (communityName: string, shareQuantity: num
     console.log('Buy shares confirmation response:', data);
     
     if (data.status !== 'SUCCESS') {
-      throw new Error(data.message || data.error || 'Transaction failed');
+      console.error(`Buy shares confirmation returned non-success status: ${data.status}`);
+      console.error('Error message:', data.message || data.error || 'Unknown error');
+      return {
+        status: data.status || 'ERROR',
+        message: data.message || data.error || 'Transaction failed',
+      };
     }
     
     return {

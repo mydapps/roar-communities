@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Card, 
@@ -115,6 +116,19 @@ const MySharesPage = () => {
     try {
       setLoadingAction(true);
       console.log(`Confirming buy of ${quantity} shares for ${communityName}`);
+      console.log(`User ETH balance before purchase: ${userEthBalance}`);
+      
+      // Add additional validation
+      if (!communityName) {
+        console.error("Community name is empty in handleBuySharesConfirm");
+        throw new Error("Invalid community name");
+      }
+      
+      if (quantity <= 0) {
+        console.error(`Invalid quantity (${quantity}) in handleBuySharesConfirm`);
+        throw new Error("Quantity must be greater than 0");
+      }
+      
       const result = await buySharesConfirm(communityName, quantity);
       console.log('Buy shares confirmation result:', result);
       
@@ -125,6 +139,8 @@ const MySharesPage = () => {
         fetchWalletBalance();
         setTradeOpen(false);
       } else {
+        console.error('Buy shares failed with status:', result.status);
+        console.error('Error message:', result.message || 'Unknown error');
         toast.error(result.message || 'Transaction failed');
       }
     } catch (error) {
@@ -149,6 +165,8 @@ const MySharesPage = () => {
         fetchWalletBalance();
         setTradeOpen(false);
       } else {
+        console.error('Sell shares failed with status:', result.status);
+        console.error('Error message:', result.message || 'Unknown error');
         toast.error(result.message || 'Transaction failed');
       }
     } catch (error) {
