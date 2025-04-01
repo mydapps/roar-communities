@@ -348,7 +348,7 @@ export const TradeDialog = ({
                 <div className="text-right">
                   <div className="font-medium">{parseFloat(totalCost).toFixed(6)} ETH</div>
                   <div className="text-xs text-muted-foreground">
-                    ${(parseFloat(totalCost) * parseFloat(usdValue) / parseFloat(sharePrice)).toFixed(2)}
+                    ${(parseFloat(usdValue) * shareQuantity).toFixed(2)}
                   </div>
                 </div>
               </div>
