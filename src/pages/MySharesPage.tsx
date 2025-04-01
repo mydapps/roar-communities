@@ -85,6 +85,7 @@ const MySharesPage = () => {
   };
 
   const handleTradeClick = async (community: CommunityPortfolioItem, action: 'buy' | 'sell') => {
+    console.log(`handleTradeClick called for ${community.community} with action ${action}`);
     setSelectedCommunity(community);
     setTradeAction(action);
     setTradeOpen(true);
@@ -95,9 +96,11 @@ const MySharesPage = () => {
       let precheckResult: SharePrecheckResponse | null = null;
       
       if (action === 'buy') {
+        console.log(`Calling buySharesPrecheck for ${community.community}...`);
         precheckResult = await buySharesPrecheck(community.community, 1);
         console.log(`Buy precheck result:`, precheckResult);
       } else if (action === 'sell') {
+        console.log(`Calling sellSharesPrecheck for ${community.community}...`);
         precheckResult = await sellSharesPrecheck(community.community, 1);
         console.log(`Sell precheck result:`, precheckResult);
       }
@@ -113,6 +116,7 @@ const MySharesPage = () => {
   };
 
   const handleBuySharesConfirm = async (communityName: string, quantity: number) => {
+    console.log(`handleBuySharesConfirm called with communityName=${communityName}, quantity=${quantity}`);
     try {
       setLoadingAction(true);
       console.log(`Confirming buy of ${quantity} shares for ${communityName}`);
@@ -129,6 +133,7 @@ const MySharesPage = () => {
         throw new Error("Quantity must be greater than 0");
       }
       
+      console.log('Calling buySharesConfirm API...');
       const result = await buySharesConfirm(communityName, quantity);
       console.log('Buy shares confirmation result:', result);
       
@@ -152,6 +157,7 @@ const MySharesPage = () => {
   };
 
   const handleSellSharesConfirm = async (communityName: string, quantity: number) => {
+    console.log(`handleSellSharesConfirm called with communityName=${communityName}, quantity=${quantity}`);
     try {
       setLoadingAction(true);
       console.log(`Confirming sell of ${quantity} shares for ${communityName}`);
@@ -192,6 +198,14 @@ const MySharesPage = () => {
 
   const totalEthValue = portfolioSummary?.totalValueEth || 0;
   const totalUsdValue = portfolioSummary?.totalValueUsd || 0;
+
+  console.log('Rendering MySharesPage with:', {
+    selectedCommunity: selectedCommunity?.community,
+    tradeAction,
+    tradeOpen,
+    buyCallback: handleBuySharesConfirm ? 'defined' : 'undefined',
+    sellCallback: handleSellSharesConfirm ? 'defined' : 'undefined',
+  });
 
   return (
     <div className="space-y-6 animate-fade-in pb-20 md:pb-10 pt-20 md:pt-16">

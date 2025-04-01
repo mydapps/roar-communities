@@ -62,9 +62,21 @@ export const TradeSheet = ({
   // Use the mobile hook outside of the embedded check
   const isMobile = useIsMobile();
 
+  // Log the callbacks to help debug the issue
+  console.log('TradeSheet received callbacks:', {
+    onBuyConfirm: onBuyConfirm ? 'defined' : 'undefined',
+    onSellConfirm: onSellConfirm ? 'defined' : 'undefined',
+    action: action
+  });
+
   useEffect(() => {
     if (community && action && open) {
       console.log(`TradeSheet opened for ${action} of ${community.community} shares`);
+      console.log('Available callbacks:', {
+        onBuyConfirm: onBuyConfirm ? 'defined' : 'undefined',
+        onSellConfirm: onSellConfirm ? 'defined' : 'undefined',
+      });
+      
       // Reset to step 1 when opening
       setStep('quantity');
       setErrorMessage("");
@@ -91,7 +103,7 @@ export const TradeSheet = ({
         fetchPrecheckData(1);
       }
     }
-  }, [community, action, open, precheckData]);
+  }, [community, action, open, precheckData, onBuyConfirm, onSellConfirm]);
 
   // Use the debounced value for API calls
   useEffect(() => {
@@ -277,6 +289,10 @@ export const TradeSheet = ({
   
   const goToConfirmStep = () => {
     console.log(`Moving to confirm step for ${action} of ${shareQuantity} shares`);
+    console.log('Available callbacks for confirmation:', {
+      onBuyConfirm: onBuyConfirm ? 'defined' : 'undefined',
+      onSellConfirm: onSellConfirm ? 'defined' : 'undefined',
+    });
     setStep('confirm');
   };
   
