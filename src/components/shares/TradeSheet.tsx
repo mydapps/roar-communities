@@ -40,16 +40,19 @@ export const TradeSheet = ({
   // Multi-step flow
   const [step, setStep] = useState<'quantity' | 'confirm'>('quantity');
   const [shareQuantity, setShareQuantity] = useState(1);
+  const [quantityInputValue, setQuantityInputValue] = useState("1");
   const [maxShares, setMaxShares] = useState(100);
   const [loading, setLoading] = useState(false);
   const [precheck, setPrecheck] = useState<SharePrecheckResponse | null>(precheckData);
   const [totalCost, setTotalCost] = useState("0");
   const [sharePrice, setSharePrice] = useState("0");
+  const [totalSharePrice, setTotalSharePrice] = useState("0");
   const [usdValue, setUsdValue] = useState("0");
+  const [totalUsdValue, setTotalUsdValue] = useState("0");
   const [errorMessage, setErrorMessage] = useState("");
   
-  // Preset amounts for quick selection
-  const presetAmounts = [1, 5, 10, 25];
+  // Updated preset amounts to match requirements
+  const presetAmounts = [0.01, 0.1, 1, 10];
   
   // Use the mobile hook outside of the embedded check
   const isMobile = useIsMobile();
@@ -61,6 +64,7 @@ export const TradeSheet = ({
       
       // Initialize with 1 share by default
       setShareQuantity(1);
+      setQuantityInputValue("1");
       
       // Set max shares based on action (buy: arbitrary max, sell: owned shares)
       if (action === 'sell') {
@@ -87,13 +91,36 @@ export const TradeSheet = ({
         ? data.sharePrice 
         : data.sharePrice.toString());
     }
+    
     if (data.totalValue) {
       setTotalCost(data.totalValue);
     }
+    
     if (data.sharePriceUsd) {
       setUsdValue(typeof data.sharePriceUsd === 'string'
         ? data.sharePriceUsd
         : data.sharePriceUsd.toString());
+    }
+    
+    // Set total share price if available
+    if (data.totalSharePrice) {
+      setTotalSharePrice(typeof data.totalSharePrice === 'string'
+        ? data.totalSharePrice
+        : data.totalSharePrice.toString());
+    }
+    
+    // Set total USD value if available
+    if (data.totalSharePriceUsd) {
+      setTotalUsdValue(typeof data.totalSharePriceUsd === 'string'
+        ? data.totalSharePriceUsd
+        : data.totalSharePriceUsd.toString());
+    } else if (data.sharePriceUsd && data.shareQuantity) {
+      // Calculate if not provided
+      const priceUsd = typeof data.sharePriceUsd === 'string'
+        ? parseFloat(data.sharePriceUsd)
+        : data.sharePriceUsd;
+      const calculatedTotal = priceUsd * data.shareQuantity;
+      setTotalUsdValue(calculatedTotal.toString());
     }
   };
 
@@ -129,24 +156,40 @@ export const TradeSheet = ({
     }
   };
 
-  const handleShareQuantityChange = (value: number | number[]) => {
-    const newQuantity = Array.isArray(value) ? value[0] : value;
+  const handleShareQuantityChange = (value: number) => {
+    // Allow for small decimal values (minimum 0.001)
+    const minQuantity = 0.001;
     // Make sure it's within bounds
-    const clampedQuantity = Math.min(Math.max(newQuantity, 0.01), maxShares);
+    const clampedQuantity = Math.min(Math.max(value, minQuantity), maxShares);
+    
     setShareQuantity(clampedQuantity);
+    setQuantityInputValue(clampedQuantity.toString());
     fetchPrecheckData(clampedQuantity);
   };
   
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    setQuantityInputValue(inputValue);
+    
+    // Only update the actual quantity and fetch data if the input is a valid number
+    const parsedValue = parseFloat(inputValue);
+    if (!isNaN(parsedValue)) {
+      setShareQuantity(parsedValue);
+      fetchPrecheckData(parsedValue);
+    }
+  };
+  
   const incrementQuantity = () => {
-    const newQuantity = shareQuantity + 1;
+    const newQuantity = shareQuantity + (shareQuantity < 0.1 ? 0.01 : shareQuantity < 1 ? 0.1 : 1);
     if (newQuantity <= maxShares) {
       handleShareQuantityChange(newQuantity);
     }
   };
   
   const decrementQuantity = () => {
-    const newQuantity = shareQuantity - 1;
-    if (newQuantity > 0) {
+    const decrementValue = shareQuantity <= 1 ? 0.1 : shareQuantity <= 10 ? 1 : 10;
+    const newQuantity = shareQuantity - decrementValue;
+    if (newQuantity >= 0.001) {
       handleShareQuantityChange(newQuantity);
     }
   };
@@ -223,7 +266,7 @@ export const TradeSheet = ({
                   onClick={() => handleShareQuantityChange(amount)}
                   disabled={amount > maxShares || loading || loadingAction}
                 >
-                  {amount}
+                  {amount < 1 ? amount.toFixed(2) : amount}
                 </Button>
               ))}
             </div>
@@ -235,26 +278,28 @@ export const TradeSheet = ({
                 variant="outline"
                 size="icon"
                 onClick={decrementQuantity}
-                disabled={shareQuantity <= 0.01 || loading || loadingAction}
+                disabled={shareQuantity <= 0.001 || loading || loadingAction}
                 className="rounded-r-none"
               >
                 <Minus className="h-4 w-4" />
               </Button>
               <Input
                 id="shareQuantity"
-                type="number"
-                value={shareQuantity}
-                onChange={(e) => {
-                  const value = parseFloat(e.target.value);
-                  if (!isNaN(value) && value > 0) {
-                    handleShareQuantityChange(value);
+                type="text"
+                value={quantityInputValue}
+                onChange={handleInputChange}
+                onBlur={() => {
+                  const parsedValue = parseFloat(quantityInputValue);
+                  if (isNaN(parsedValue) || parsedValue < 0.001) {
+                    setQuantityInputValue("0.001");
+                    handleShareQuantityChange(0.001);
+                  } else if (parsedValue > maxShares) {
+                    setQuantityInputValue(maxShares.toString());
+                    handleShareQuantityChange(maxShares);
                   }
                 }}
-                className="rounded-none text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="rounded-none text-center"
                 disabled={loading || loadingAction}
-                min={0.01}
-                max={maxShares}
-                step={0.01}
               />
               <Button
                 type="button"
@@ -270,7 +315,7 @@ export const TradeSheet = ({
             
             {action === 'sell' && (
               <div className="text-xs text-right text-muted-foreground">
-                Maximum: {maxShares.toFixed(2)} shares available
+                Maximum: {maxShares.toFixed(3)} shares available
               </div>
             )}
           </div>
@@ -288,12 +333,21 @@ export const TradeSheet = ({
             </div>
             
             <div className="flex justify-between">
-              <span className="text-sm">{action === 'buy' ? 'Total Cost' : 'You Receive'}</span>
+              <span className="text-sm">Total Share Price</span>
+              <div className="text-right">
+                <div className="font-medium">
+                  {totalSharePrice ? parseFloat(totalSharePrice).toFixed(6) : (parseFloat(sharePrice) * shareQuantity).toFixed(6)} ETH
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  ${totalUsdValue ? parseFloat(totalUsdValue).toFixed(2) : (parseFloat(usdValue) * shareQuantity).toFixed(2)}
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex justify-between">
+              <span className="text-sm">{action === 'buy' ? 'Total Cost (incl. fees)' : 'You Receive'}</span>
               <div className="text-right">
                 <div className="font-medium">{parseFloat(totalCost).toFixed(6)} ETH</div>
-                <div className="text-xs text-muted-foreground">
-                  ${(parseFloat(usdValue) * shareQuantity).toFixed(2)}
-                </div>
               </div>
             </div>
             
@@ -343,17 +397,33 @@ export const TradeSheet = ({
               <span className="font-medium">{parseFloat(sharePrice).toFixed(6)} ETH</span>
             </div>
             
-            <Separator className="my-2" />
-            
             <div className="flex justify-between">
-              <span className="text-sm font-medium">{action === 'buy' ? 'Total Cost' : 'You Receive'}</span>
+              <span className="text-sm">Total Share Price</span>
               <div className="text-right">
-                <div className="font-medium">{parseFloat(totalCost).toFixed(6)} ETH</div>
+                <div className="font-medium">
+                  {totalSharePrice ? parseFloat(totalSharePrice).toFixed(6) : (parseFloat(sharePrice) * shareQuantity).toFixed(6)} ETH
+                </div>
                 <div className="text-xs text-muted-foreground">
-                  ${(parseFloat(usdValue) * shareQuantity).toFixed(2)}
+                  ${totalUsdValue ? parseFloat(totalUsdValue).toFixed(2) : (parseFloat(usdValue) * shareQuantity).toFixed(2)}
                 </div>
               </div>
             </div>
+            
+            <Separator className="my-2" />
+            
+            <div className="flex justify-between">
+              <span className="text-sm font-medium">{action === 'buy' ? 'Total Cost (incl. fees)' : 'You Receive'}</span>
+              <div className="text-right">
+                <div className="font-medium">{parseFloat(totalCost).toFixed(6)} ETH</div>
+              </div>
+            </div>
+            
+            {precheck?.fee && (
+              <div className="flex justify-between text-sm text-muted-foreground">
+                <span>Fee</span>
+                <span>{precheck.fee}</span>
+              </div>
+            )}
           </div>
           
           <div className="bg-blue-50 border border-blue-100 p-3 rounded-md text-sm text-blue-700 flex items-start gap-2">
