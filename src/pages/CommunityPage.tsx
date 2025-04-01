@@ -48,6 +48,7 @@ import CreatePostCard from '@/components/feed/CreatePostCard';
 import { MembersList } from '@/components/community/MembersList';
 import { useCommunityPosts, CommunityPost } from '@/hooks/useCommunityPosts';
 import { toggleRoar } from '@/utils/api';
+import { getWalletBalance } from '@/utils/communityApi';
 
 const LionIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-5 w-5">
@@ -66,6 +67,8 @@ const CommunityPage = () => {
   const [activeTab, setActiveTab] = useState("posts");
   const [tradeAction, setTradeAction] = useState<"buy" | "sell">("buy");
   const [localPosts, setLocalPosts] = useState<Partial<CommunityPost>[]>([]);
+  const [userEthBalance, setUserEthBalance] = useState("0.000");
+  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
   
   console.log("CommunityPage rendering, id:", id, "activeTab:", activeTab);
   
@@ -91,12 +94,21 @@ const CommunityPage = () => {
   
   useEffect(() => {
     setLocalPosts([]);
+    fetchWalletBalance();
   }, [id]);
   
-  const handlePostCreated = (newPost: Partial<CommunityPost>) => {
-    console.log("New post created:", newPost);
-    setLocalPosts(prev => [newPost, ...prev]);
-    toast.success("Post created successfully!");
+  const fetchWalletBalance = async () => {
+    setIsLoadingBalance(true);
+    try {
+      const balanceData = await getWalletBalance();
+      console.log('Wallet balance data:', balanceData);
+      setUserEthBalance(balanceData.balance.eth);
+    } catch (error) {
+      console.error('Failed to fetch wallet balance:', error);
+      toast.error("Failed to load wallet balance");
+    } finally {
+      setIsLoadingBalance(false);
+    }
   };
   
   const priceChange = communityData?.community ? 
@@ -985,7 +997,7 @@ const CommunityPage = () => {
           }
         }}
         action={tradeAction}
-        userEthBalance={userEthBalance || "0.536"}
+        userEthBalance={userEthBalance}
       />
     </div>
   );
