@@ -11,6 +11,8 @@ import { CommunityPortfolioItem, SharePrecheckResponse, buySharesPrecheck, sellS
 import { toast } from 'sonner';
 import { Loader2, ArrowRight, Info, Plus, Minus } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useDebounce } from '@/hooks/useDebounce';
+import confetti from 'canvas-confetti';
 
 interface TradeSheetProps {
   open: boolean;
@@ -51,6 +53,9 @@ export const TradeSheet = ({
   const [totalUsdValue, setTotalUsdValue] = useState("0");
   const [errorMessage, setErrorMessage] = useState("");
   
+  // Debounce the share quantity to avoid frequent API calls
+  const debouncedShareQuantity = useDebounce(shareQuantity, 500);
+  
   // Updated preset amounts to match requirements
   const presetAmounts = [0.01, 0.1, 1, 10];
   
@@ -84,6 +89,13 @@ export const TradeSheet = ({
       }
     }
   }, [community, action, open, precheckData]);
+
+  // Use the debounced value for API calls
+  useEffect(() => {
+    if (open && community && action && debouncedShareQuantity > 0) {
+      fetchPrecheckData(debouncedShareQuantity);
+    }
+  }, [debouncedShareQuantity, community, action, open]);
 
   const updatePrices = (data: SharePrecheckResponse) => {
     if (data.sharePrice) {
@@ -164,18 +176,17 @@ export const TradeSheet = ({
     
     setShareQuantity(clampedQuantity);
     setQuantityInputValue(clampedQuantity.toString());
-    fetchPrecheckData(clampedQuantity);
+    // fetchPrecheckData is now triggered by the useEffect with debounced value
   };
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
     setQuantityInputValue(inputValue);
     
-    // Only update the actual quantity and fetch data if the input is a valid number
+    // Only update the actual quantity if the input is a valid number
     const parsedValue = parseFloat(inputValue);
     if (!isNaN(parsedValue)) {
       setShareQuantity(parsedValue);
-      fetchPrecheckData(parsedValue);
     }
   };
   
@@ -194,14 +205,33 @@ export const TradeSheet = ({
     }
   };
 
+  // Function to trigger confetti animation on successful transaction
+  const triggerSuccessAnimation = () => {
+    confetti({
+      particleCount: 100,
+      spread: 70,
+      origin: { y: 0.6 }
+    });
+  };
+
   const handleConfirm = async () => {
     if (!community || !action) return;
     
     try {
       if (action === 'buy' && onBuyConfirm) {
         await onBuyConfirm(community.community, shareQuantity);
+        // Show success animation
+        triggerSuccessAnimation();
+        toast.success(`Successfully purchased ${shareQuantity} shares of ${community.community}!`, {
+          duration: 4000,
+        });
       } else if (action === 'sell' && onSellConfirm) {
         await onSellConfirm(community.community, shareQuantity);
+        // Show success animation
+        triggerSuccessAnimation();
+        toast.success(`Successfully sold ${shareQuantity} shares of ${community.community}!`, {
+          duration: 4000,
+        });
       } else {
         toast.error(`Unable to ${action} shares at this time`);
       }

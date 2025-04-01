@@ -34,6 +34,7 @@ import { TradeSheet } from '@/components/shares/TradeSheet';
 import { CommunityShareCard } from '@/components/shares/CommunityShareCard';
 import { usePortfolio } from '@/hooks/usePortfolio';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import confetti from 'canvas-confetti';
 
 const MySharesPage = () => {
   const [depositOpen, setDepositOpen] = useState(false);
@@ -75,6 +76,15 @@ const MySharesPage = () => {
     }
   };
 
+  // Function to trigger confetti animation
+  const triggerSuccessAnimation = () => {
+    confetti({
+      particleCount: 100,
+      spread: 70,
+      origin: { y: 0.6 }
+    });
+  };
+
   const handleTradeClick = async (community: CommunityPortfolioItem, action: 'buy' | 'sell') => {
     setSelectedCommunity(community);
     setTradeAction(action);
@@ -112,6 +122,8 @@ const MySharesPage = () => {
       console.log('Buy shares confirmation result:', result);
       
       if (result.status === 'SUCCESS') {
+        // Trigger confetti animation on successful purchase
+        triggerSuccessAnimation();
         toast.success(`Successfully purchased ${result.shareQuantity} shares of ${communityName}`);
         // Refresh portfolio data and wallet balance
         refreshPortfolio();
@@ -136,6 +148,8 @@ const MySharesPage = () => {
       console.log('Sell shares confirmation result:', result);
       
       if (result.status === 'SUCCESS') {
+        // Trigger confetti animation on successful sale
+        triggerSuccessAnimation();
         toast.success(`Successfully sold ${result.soldShares} shares of ${communityName}`);
         // Refresh portfolio data and wallet balance
         refreshPortfolio();
