@@ -24,7 +24,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Check, ArrowRight, Loader2, RefreshCw, AlertCircle, ExternalLink } from 'lucide-react';
+import { Check, ArrowRight, Loader2, RefreshCw, AlertCircle, ExternalLink, PartyPopper } from 'lucide-react';
 import { 
   buySharesPrecheck, 
   buySharesConfirm,
@@ -92,7 +92,7 @@ export const TradeSheet = ({
     if (open) {
       fetchWalletBalance();
       if (community?.name) {
-        fetchSharePrice(1);
+        fetchSharePrice(form.getValues().amount || 1);
       }
     }
   }, [open, community]);
@@ -126,6 +126,7 @@ export const TradeSheet = ({
     
     setIsLoadingSharePrice(true);
     try {
+      console.log(`Fetching share price for ${community.name}, quantity: ${quantity}`);
       const priceData = await getSharePrice(community.name, quantity);
       setSharePriceInfo(priceData);
     } catch (error) {
@@ -449,14 +450,21 @@ export const TradeSheet = ({
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 animate-fade-in">
             <div className="text-center space-y-4 animate-scale-in">
               <div className="mx-auto rounded-full bg-green-500/20 p-6 w-24 h-24 flex items-center justify-center">
-                <Check className="h-12 w-12 text-green-500 animate-pulse" />
+                <PartyPopper className="h-12 w-12 text-green-500 animate-pulse" />
               </div>
-              <h2 className="text-2xl font-bold">Success!</h2>
-              <p className="text-muted-foreground">
-                {action === 'buy' 
-                  ? `You've purchased ${precheckData?.shareQuantity} shares of ${community?.name}` 
-                  : `You've sold ${precheckData?.shareQuantity} shares of ${community?.name}`}
-              </p>
+              <div className="animate-bounce mt-2">
+                <h2 className="text-2xl font-bold">Success!</h2>
+              </div>
+              <div className="bg-gradient-to-r from-green-500 to-blue-500 bg-clip-text text-transparent">
+                <p className="text-xl font-semibold">
+                  {action === 'buy' 
+                    ? `You've purchased ${precheckData?.shareQuantity} shares of ${community?.name}!` 
+                    : `You've sold ${precheckData?.shareQuantity} shares of ${community?.name}!`}
+                </p>
+              </div>
+              <div className="mt-2 text-sm text-muted-foreground">
+                Transaction completed successfully
+              </div>
             </div>
           </div>
         )}
@@ -541,15 +549,32 @@ export const TradeSheet = ({
         {showSuccess && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 animate-fade-in">
             <div className="text-center space-y-4 animate-scale-in">
-              <div className="mx-auto rounded-full bg-green-500/20 p-6 w-24 h-24 flex items-center justify-center">
-                <Check className="h-12 w-12 text-green-500 animate-pulse" />
+              <div className="relative">
+                <div className="mx-auto rounded-full bg-green-500/20 p-8 w-32 h-32 flex items-center justify-center">
+                  <PartyPopper className="h-16 w-16 text-green-500 animate-pulse" />
+                </div>
+                <div className="absolute -top-2 -right-2">
+                  <div className="animate-ping absolute inline-flex h-6 w-6 rounded-full bg-green-400 opacity-75"></div>
+                  <div className="relative inline-flex rounded-full h-6 w-6 bg-green-500"></div>
+                </div>
+                <div className="absolute -bottom-2 -left-2">
+                  <div className="animate-ping absolute inline-flex h-6 w-6 rounded-full bg-blue-400 opacity-75"></div>
+                  <div className="relative inline-flex rounded-full h-6 w-6 bg-blue-500"></div>
+                </div>
               </div>
-              <h2 className="text-2xl font-bold">Success!</h2>
-              <p className="text-muted-foreground">
-                {action === 'buy' 
-                  ? `You've purchased ${precheckData?.shareQuantity} shares of ${community?.name}` 
-                  : `You've sold ${precheckData?.shareQuantity} shares of ${community?.name}`}
-              </p>
+              <div className="animate-bounce mt-4">
+                <h2 className="text-3xl font-bold">Success!</h2>
+              </div>
+              <div className="bg-gradient-to-r from-green-500 to-blue-500 bg-clip-text text-transparent">
+                <p className="text-2xl font-semibold">
+                  {action === 'buy' 
+                    ? `You've purchased ${precheckData?.shareQuantity} shares of ${community?.name}!` 
+                    : `You've sold ${precheckData?.shareQuantity} shares of ${community?.name}!`}
+                </p>
+              </div>
+              <div className="mt-2 text-sm text-muted-foreground">
+                Transaction completed successfully
+              </div>
             </div>
           </div>
         )}
@@ -617,15 +642,32 @@ export const TradeSheet = ({
       {showSuccess && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 animate-fade-in">
           <div className="text-center space-y-4 animate-scale-in">
-            <div className="mx-auto rounded-full bg-green-500/20 p-6 w-24 h-24 flex items-center justify-center">
-              <Check className="h-12 w-12 text-green-500 animate-pulse" />
+            <div className="relative">
+              <div className="mx-auto rounded-full bg-green-500/20 p-8 w-32 h-32 flex items-center justify-center">
+                <PartyPopper className="h-16 w-16 text-green-500 animate-pulse" />
+              </div>
+              <div className="absolute -top-2 -right-2">
+                <div className="animate-ping absolute inline-flex h-6 w-6 rounded-full bg-green-400 opacity-75"></div>
+                <div className="relative inline-flex rounded-full h-6 w-6 bg-green-500"></div>
+              </div>
+              <div className="absolute -bottom-2 -left-2">
+                <div className="animate-ping absolute inline-flex h-6 w-6 rounded-full bg-blue-400 opacity-75"></div>
+                <div className="relative inline-flex rounded-full h-6 w-6 bg-blue-500"></div>
+              </div>
             </div>
-            <h2 className="text-2xl font-bold">Success!</h2>
-            <p className="text-muted-foreground">
-              {action === 'buy' 
-                ? `You've purchased ${precheckData?.shareQuantity} shares of ${community?.name}` 
-                : `You've sold ${precheckData?.shareQuantity} shares of ${community?.name}`}
-            </p>
+            <div className="animate-bounce mt-4">
+              <h2 className="text-3xl font-bold">Success!</h2>
+            </div>
+            <div className="bg-gradient-to-r from-green-500 to-blue-500 bg-clip-text text-transparent">
+              <p className="text-2xl font-semibold">
+                {action === 'buy' 
+                  ? `You've purchased ${precheckData?.shareQuantity} shares of ${community?.name}!` 
+                  : `You've sold ${precheckData?.shareQuantity} shares of ${community?.name}!`}
+              </p>
+            </div>
+            <div className="mt-2 text-sm text-muted-foreground">
+              Transaction completed successfully
+            </div>
           </div>
         </div>
       )}

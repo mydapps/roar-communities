@@ -1,3 +1,4 @@
+
 import { toast } from 'sonner';
 import { API_BASE_URL, getUserApiKey, createAuthHeaders } from './apiBase';
 
@@ -208,6 +209,13 @@ export const getSharePrice = async (communityName: string, shareQuantity: number
     const userKey = getUserApiKey();
     if (!userKey) {
       throw new Error('User key not found');
+    }
+
+    // Ensure shareQuantity is passed correctly as a number
+    const quantity = Number(shareQuantity);
+    if (isNaN(quantity) || quantity <= 0) {
+      console.error(`Invalid share quantity: ${shareQuantity}, defaulting to 1`);
+      shareQuantity = 1;
     }
 
     const url = `${API_BASE_URL}/get_share_price?communityName=${encodeURIComponent(communityName)}&shareQuantity=${shareQuantity}`;
