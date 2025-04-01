@@ -31,7 +31,8 @@ export const CommunityShareCard = ({
   } = community;
 
   // Default to "up" if percentageChange is 0 or positive
-  const priceDirection = parseFloat(percentageChange || "0") < 0 ? "down" : "up";
+  const priceChangeValue = parseFloat(percentageChange || "0");
+  const priceDirection = priceChangeValue < 0 ? "down" : "up";
   
   return (
     <Card className="hover:shadow-md transition-all duration-300 hover:scale-[1.02] overflow-hidden">
@@ -47,7 +48,7 @@ export const CommunityShareCard = ({
             <div className="flex items-center gap-2">
               <Badge variant="outline" className={priceDirection === 'up' ? "text-green-600" : "text-red-600"}>
                 {priceDirection === 'up' ? <ArrowUp className="h-3 w-3 mr-1" /> : <ArrowDown className="h-3 w-3 mr-1" />}
-                {priceDirection === 'up' && parseFloat(percentageChange || "0") > 0 ? "+" : ""}{parseFloat(percentageChange || "0").toFixed(2)}%
+                {priceDirection === 'up' && priceChangeValue > 0 ? "+" : ""}{priceChangeValue.toFixed(2)}%
               </Badge>
               <span className="text-xs text-muted-foreground">{currentPrice?.eth?.toFixed(8) || '0.00000000'} ETH</span>
             </div>

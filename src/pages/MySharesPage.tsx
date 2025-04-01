@@ -16,9 +16,17 @@ import {
   Plus,
   Minus
 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from "sonner";
 import { useIsMobile } from '@/hooks/use-mobile';
-import { getWalletBalance, CommunityPortfolioItem } from '@/utils/communityApi';
+import { 
+  getWalletBalance, 
+  CommunityPortfolioItem, 
+  buySharesPrecheck,
+  buySharesConfirm,
+  sellSharesPrecheck,
+  sellSharesConfirm,
+  SharePrecheckResponse
+} from '@/utils/communityApi';
 import { 
   Drawer,
   DrawerContent,
@@ -45,7 +53,9 @@ const MySharesPage = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [userEthBalance, setUserEthBalance] = useState("0.000");
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
-  const { toast } = useToast();
+  // Add state for buy/sell actions
+  const [loadingAction, setLoadingAction] = useState(false);
+  const [precheckData, setPrecheckData] = useState<SharePrecheckResponse | null>(null);
   const isMobile = useIsMobile();
 
   const {
@@ -68,29 +78,88 @@ const MySharesPage = () => {
       setUserEthBalance(balanceData.balance.eth);
     } catch (error) {
       console.error('Failed to fetch wallet balance:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to load wallet balance"
-      });
+      toast.error("Failed to load wallet balance");
     } finally {
       setIsLoadingBalance(false);
     }
   };
 
-  const handleTradeClick = (community: CommunityPortfolioItem, action: 'buy' | 'sell') => {
+  const handleTradeClick = async (community: CommunityPortfolioItem, action: 'buy' | 'sell') => {
     setSelectedCommunity(community);
     setTradeAction(action);
     setTradeOpen(true);
+    
+    // Initialize precheck for buy/sell
+    try {
+      setLoadingAction(true);
+      
+      let precheckResult: SharePrecheckResponse | null = null;
+      
+      if (action === 'buy') {
+        // Default to 1 share for initial precheck
+        precheckResult = await buySharesPrecheck(community.community, 1);
+      } else if (action === 'sell') {
+        // Default to 1 share for initial precheck
+        precheckResult = await sellSharesPrecheck(community.community, 1);
+      }
+      
+      setPrecheckData(precheckResult);
+    } catch (error) {
+      console.error(`Failed to precheck ${action}:`, error);
+      toast.error(`Unable to prepare ${action} operation`);
+    } finally {
+      setLoadingAction(false);
+    }
+  };
+
+  const handleBuySharesConfirm = async (communityName: string, quantity: number) => {
+    try {
+      setLoadingAction(true);
+      const result = await buySharesConfirm(communityName, quantity);
+      
+      if (result.status === 'SUCCESS') {
+        toast.success(`Successfully purchased ${result.shareQuantity} shares of ${communityName}`);
+        // Refresh portfolio data and wallet balance
+        refreshPortfolio();
+        fetchWalletBalance();
+        setTradeOpen(false);
+      } else {
+        toast.error(result.message || 'Transaction failed');
+      }
+    } catch (error) {
+      console.error('Buy shares error:', error);
+      toast.error('Failed to complete purchase');
+    } finally {
+      setLoadingAction(false);
+    }
+  };
+
+  const handleSellSharesConfirm = async (communityName: string, quantity: number) => {
+    try {
+      setLoadingAction(true);
+      const result = await sellSharesConfirm(communityName, quantity);
+      
+      if (result.status === 'SUCCESS') {
+        toast.success(`Successfully sold ${result.soldShares} shares of ${communityName}`);
+        // Refresh portfolio data and wallet balance
+        refreshPortfolio();
+        fetchWalletBalance();
+        setTradeOpen(false);
+      } else {
+        toast.error(result.message || 'Transaction failed');
+      }
+    } catch (error) {
+      console.error('Sell shares error:', error);
+      toast.error('Failed to complete sale');
+    } finally {
+      setLoadingAction(false);
+    }
   };
 
   const handleRefresh = () => {
     fetchWalletBalance();
     refreshPortfolio();
-    toast({
-      title: "Refreshing",
-      description: "Fetching latest portfolio data...",
-    });
+    toast.success("Refreshing portfolio data...");
   };
 
   const resetState = () => {
@@ -99,6 +168,7 @@ const MySharesPage = () => {
     setSendOpen(false);
     setTradeOpen(false);
     setDrawerOpen(false);
+    setPrecheckData(null);
   };
 
   // Format portfolio value for display
@@ -106,7 +176,7 @@ const MySharesPage = () => {
   const totalUsdValue = portfolioSummary?.totalValueUsd || 0;
 
   return (
-    <div className="space-y-6 animate-fade-in pb-20 md:pb-10 pt-4 md:pt-0">
+    <div className="space-y-6 animate-fade-in pb-20 md:pb-10 pt-20 md:pt-16">
       <PortfolioSummary 
         ethValue={totalEthValue.toFixed(4)} 
         usdValue={totalUsdValue.toFixed(2)}
@@ -267,6 +337,10 @@ const MySharesPage = () => {
                   action={tradeAction}
                   userEthBalance={userEthBalance}
                   isEmbedded={true}
+                  onBuyConfirm={handleBuySharesConfirm}
+                  onSellConfirm={handleSellSharesConfirm}
+                  loadingAction={loadingAction}
+                  precheckData={precheckData}
                 />
               </div>
             </DrawerContent>
@@ -297,6 +371,10 @@ const MySharesPage = () => {
             community={selectedCommunity}
             action={tradeAction}
             userEthBalance={userEthBalance}
+            onBuyConfirm={handleBuySharesConfirm}
+            onSellConfirm={handleSellSharesConfirm}
+            loadingAction={loadingAction}
+            precheckData={precheckData}
           />
         </>
       )}
@@ -338,11 +416,20 @@ const MySharesPage = () => {
                 </div>
                 
                 <div className="flex gap-4">
-                  <Button className="flex-1 gap-2" onClick={() => handleTradeClick(selectedCommunity, 'buy')}>
+                  <Button 
+                    className="flex-1 gap-2" 
+                    onClick={() => handleTradeClick(selectedCommunity, 'buy')}
+                    disabled={loadingAction}
+                  >
                     <Plus className="h-4 w-4" />
                     Buy More
                   </Button>
-                  <Button variant="outline" className="flex-1 gap-2 text-red-600 hover:text-red-700" onClick={() => handleTradeClick(selectedCommunity, 'sell')}>
+                  <Button 
+                    variant="outline" 
+                    className="flex-1 gap-2 text-red-600 hover:text-red-700" 
+                    onClick={() => handleTradeClick(selectedCommunity, 'sell')}
+                    disabled={loadingAction}
+                  >
                     <Minus className="h-4 w-4" />
                     Sell
                   </Button>

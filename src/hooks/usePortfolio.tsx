@@ -29,6 +29,7 @@ export function usePortfolio() {
     try {
       setIsLoading(true);
       const nextPage = pagination.currentPage + 1;
+      console.log(`Fetching next page: ${nextPage}`);
       const result = await getUserPortfolio(nextPage);
       
       if (result.success && result.data) {
@@ -52,6 +53,7 @@ export function usePortfolio() {
   const refreshPortfolio = useCallback(async () => {
     try {
       setIsRefreshing(true);
+      console.log('Refreshing portfolio data...');
       const result = await getUserPortfolio(1);
       
       if (result.success && result.data) {
@@ -61,7 +63,12 @@ export function usePortfolio() {
         
         setPortfolioItems(validCommunities);
         setPagination(result.data.pagination || null);
-        setPortfolioSummary(result.data.portfolio || null);
+        if (result.data.portfolio) {
+          setPortfolioSummary({
+            totalValueEth: result.data.portfolio.totalValueEth || result.data.portfolio.total_value_eth || 0,
+            totalValueUsd: result.data.portfolio.totalValueUsd || result.data.portfolio.total_value_usd || 0
+          });
+        }
         setIsError(false);
       }
     } catch (error) {
@@ -80,10 +87,11 @@ export function usePortfolio() {
 
   // Load more when scrolling to the bottom
   useEffect(() => {
-    if (inView) {
+    if (inView && pagination?.hasNextPage) {
+      console.log('Load more element in view, fetching next page...');
       fetchNextPage();
     }
-  }, [inView, fetchNextPage]);
+  }, [inView, fetchNextPage, pagination]);
 
   return {
     portfolioItems,
