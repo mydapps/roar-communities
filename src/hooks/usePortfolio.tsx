@@ -24,11 +24,11 @@ export function usePortfolio() {
   });
 
   const fetchNextPage = useCallback(async () => {
-    if (!pagination || !pagination.has_next_page || isLoading) return;
+    if (!pagination || !pagination.hasNextPage || isLoading) return;
     
     try {
       setIsLoading(true);
-      const nextPage = pagination.current_page + 1;
+      const nextPage = pagination.currentPage + 1;
       const result = await getUserPortfolio(nextPage);
       
       if (result.success && result.data) {

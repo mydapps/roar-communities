@@ -102,11 +102,11 @@ const MySharesPage = () => {
   };
 
   // Format portfolio value for display
-  const totalEthValue = portfolioSummary?.total_value_eth || 0;
-  const totalUsdValue = portfolioSummary?.total_value_usd || 0;
+  const totalEthValue = portfolioSummary?.totalValueEth || 0;
+  const totalUsdValue = portfolioSummary?.totalValueUsd || 0;
 
   return (
-    <div className="space-y-6 animate-fade-in pb-20 md:pb-10">
+    <div className="space-y-6 animate-fade-in pb-20 md:pb-10 pt-4 md:pt-0">
       <PortfolioSummary 
         ethValue={totalEthValue.toFixed(4)} 
         usdValue={totalUsdValue.toFixed(2)}
@@ -321,7 +321,7 @@ const MySharesPage = () => {
                   <div>
                     <h3 className="font-bold text-lg">{selectedCommunity.community}</h3>
                     <p className="text-muted-foreground">
-                      Current Price: {selectedCommunity.price?.eth?.toFixed(6) || '0.000000'} ETH
+                      Current Price: {selectedCommunity.currentPrice?.eth?.toFixed(6) || '0.000000'} ETH
                     </p>
                   </div>
                 </div>

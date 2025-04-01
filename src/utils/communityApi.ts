@@ -27,16 +27,23 @@ export interface Community {
 export interface CommunityPortfolioItem {
   community: string;
   shares: number;
-  description: string;
+  description?: string;
   image: string;
-  price: {
+  currentPrice?: {
     eth: number;
     usd: number;
-    sell_eth: number;
-    sell_usd: number;
+    sell_eth?: number;
+    sell_usd?: number;
   };
-  price_change_percentage: number;
-  price_direction: 'up' | 'down';
+  price?: {
+    eth: number;
+    usd: number;
+    sell_eth?: number;
+    sell_usd?: number;
+  };
+  percentageChange?: string;
+  price_change_percentage?: number;
+  price_direction?: 'up' | 'down';
   value: {
     eth: number;
     usd: number;
@@ -44,20 +51,28 @@ export interface CommunityPortfolioItem {
 }
 
 export interface PortfolioPagination {
-  current_page: number;
-  total_pages: number;
-  total_items: number;
-  has_next_page: boolean;
-  has_prev_page: boolean;
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+  hasNextPage: boolean;
+  hasPrevPage?: boolean;
+  has_next_page?: boolean;
+  has_prev_page?: boolean;
+  current_page?: number;
+  total_pages?: number;
+  total_items?: number;
 }
 
 export interface PortfolioSummaryData {
-  total_value_eth: number;
-  total_value_usd: number;
+  totalValueEth: number;
+  totalValueUsd: number;
+  total_value_eth?: number;
+  total_value_usd?: number;
 }
 
 export interface UserPortfolioResponse {
   success: boolean;
+  userId?: number;
   data: {
     communities: CommunityPortfolioItem[];
     pagination: PortfolioPagination;
@@ -649,14 +664,45 @@ export const getUserPortfolio = async (page = 1, limit = 10): Promise<UserPortfo
       throw new Error(`Failed to fetch portfolio: ${errorText}`);
     }
     
-    const data = await response.json();
-    console.log('User portfolio response:', data);
+    const rawData = await response.json();
+    console.log('User portfolio response:', rawData);
     
-    if (!data.success) {
-      throw new Error(data.message || 'Failed to fetch portfolio data');
+    if (!rawData.success) {
+      throw new Error(rawData.message || 'Failed to fetch portfolio data');
     }
     
-    return data;
+    // Normalize the API response to handle both response formats
+    const result: UserPortfolioResponse = {
+      success: rawData.success,
+      userId: rawData.userId,
+      data: {
+        communities: (rawData.data?.communities || []).map((item: any) => ({
+          community: item.community,
+          shares: item.shares,
+          description: item.description,
+          image: item.image,
+          currentPrice: item.currentPrice || item.price,
+          price: item.price,
+          percentageChange: item.percentageChange || (item.price_change_percentage?.toString() || "0"),
+          price_change_percentage: item.price_change_percentage || parseFloat(item.percentageChange || "0"),
+          price_direction: item.price_direction || (parseFloat(item.percentageChange || "0") >= 0 ? 'up' : 'down'),
+          value: item.value
+        })),
+        pagination: {
+          currentPage: rawData.data?.pagination?.currentPage || rawData.data?.pagination?.current_page || 1,
+          totalPages: rawData.data?.pagination?.totalPages || rawData.data?.pagination?.total_pages || 1,
+          totalItems: rawData.data?.pagination?.totalItems || rawData.data?.pagination?.total_items || 0,
+          hasNextPage: rawData.data?.pagination?.hasNextPage || rawData.data?.pagination?.has_next_page || false,
+          hasPrevPage: rawData.data?.pagination?.hasPrevPage || rawData.data?.pagination?.has_prev_page || false
+        },
+        portfolio: {
+          totalValueEth: rawData.data?.portfolio?.totalValueEth || rawData.data?.portfolio?.total_value_eth || 0,
+          totalValueUsd: rawData.data?.portfolio?.totalValueUsd || rawData.data?.portfolio?.total_value_usd || 0
+        }
+      }
+    };
+    
+    return result;
   } catch (error) {
     console.error('Error fetching user portfolio:', error);
     toast.error('Failed to load portfolio. Please try again.');

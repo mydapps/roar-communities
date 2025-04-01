@@ -25,15 +25,17 @@ export const CommunityShareCard = ({
     community: name, 
     image, 
     shares, 
-    price, 
-    price_change_percentage, 
-    price_direction, 
+    currentPrice,
+    percentageChange, 
     value 
   } = community;
+
+  // Default to "up" if percentageChange is 0 or positive
+  const priceDirection = parseFloat(percentageChange || "0") < 0 ? "down" : "up";
   
   return (
     <Card className="hover:shadow-md transition-all duration-300 hover:scale-[1.02] overflow-hidden">
-      <div className={`h-1.5 w-full ${price_direction === 'up' ? "bg-green-500" : "bg-red-500"}`} />
+      <div className={`h-1.5 w-full ${priceDirection === 'up' ? "bg-green-500" : "bg-red-500"}`} />
       <CardContent className="p-4">
         <div className="flex items-center gap-3 mb-4">
           <Avatar>
@@ -43,11 +45,11 @@ export const CommunityShareCard = ({
           <div className="flex-1">
             <div className="font-bold">{name}</div>
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className={price_direction === 'up' ? "text-green-600" : "text-red-600"}>
-                {price_direction === 'up' ? <ArrowUp className="h-3 w-3 mr-1" /> : <ArrowDown className="h-3 w-3 mr-1" />}
-                {price_direction === 'up' ? "+" : ""}{(price_change_percentage || 0).toFixed(2)}%
+              <Badge variant="outline" className={priceDirection === 'up' ? "text-green-600" : "text-red-600"}>
+                {priceDirection === 'up' ? <ArrowUp className="h-3 w-3 mr-1" /> : <ArrowDown className="h-3 w-3 mr-1" />}
+                {priceDirection === 'up' && parseFloat(percentageChange || "0") > 0 ? "+" : ""}{parseFloat(percentageChange || "0").toFixed(2)}%
               </Badge>
-              <span className="text-xs text-muted-foreground">{price?.eth?.toFixed(8) || '0.00000000'} ETH</span>
+              <span className="text-xs text-muted-foreground">{currentPrice?.eth?.toFixed(8) || '0.00000000'} ETH</span>
             </div>
           </div>
         </div>
