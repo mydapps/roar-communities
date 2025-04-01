@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 import { API_BASE_URL, getUserApiKey, createAuthHeaders } from './apiBase';
 
@@ -48,6 +47,7 @@ export interface SharePrecheckResponse {
   totalSharePriceUsd: number;
   totalValue: string;
   communityName: string;
+  error?: string;
 }
 
 /**
@@ -80,6 +80,28 @@ export interface WalletBalanceResponse {
     count: number;
     lastUpdated: string;
   };
+}
+
+/**
+ * Share price response interface
+ */
+export interface SharePriceResponse {
+  currentBuyPrice: string;
+  currentSellPrice: string;
+  totalShares: string;
+  requestedShares: number;
+  buyTotalRequired: string;
+  buyShareCost: string;
+  buyScAdminFee: string;
+  buyCommunityAdminFee: string;
+  buyMemberRewardsFee: string;
+  sellTotalReturn: string;
+  sellNetReturn: string;
+  sellScAdminFee: string;
+  sellCommunityAdminFee: string;
+  sellMemberRewardsFee: string;
+  buyPriceImpact: string;
+  sellPriceImpact: string;
 }
 
 /**
@@ -179,6 +201,43 @@ export const fetchCommunities = async (options: FetchCommunitiesOptions): Promis
 };
 
 /**
+ * Get share price information
+ */
+export const getSharePrice = async (communityName: string, shareQuantity: number): Promise<SharePriceResponse> => {
+  try {
+    const userKey = getUserApiKey();
+    if (!userKey) {
+      throw new Error('User key not found');
+    }
+
+    const url = `${API_BASE_URL}/get_share_price?communityName=${encodeURIComponent(communityName)}&shareQuantity=${shareQuantity}`;
+    
+    console.log(`Fetching share price for ${communityName}, quantity: ${shareQuantity}`);
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'x-user-key': userKey
+      }
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Share price fetch failed: ${errorText}`);
+      throw new Error(`Failed to fetch share price: ${errorText}`);
+    }
+    
+    const data = await response.json();
+    console.log('Share price response:', data);
+    
+    return data;
+  } catch (error) {
+    console.error('Error fetching share price:', error);
+    throw error;
+  }
+};
+
+/**
  * Perform a precheck for buying community shares
  */
 export const buySharesPrecheck = async (communityName: string, shareQuantity: number): Promise<SharePrecheckResponse> => {
@@ -206,8 +265,23 @@ export const buySharesPrecheck = async (communityName: string, shareQuantity: nu
     const data = await response.json();
     console.log('Buy shares precheck response:', data);
     
+    if (data.status === 'DEPOSIT') {
+      return {
+        status: 'DEPOSIT',
+        error: data.error || 'Insufficient ETH balance. Please deposit ETH to proceed.',
+        fee: '',
+        sharePrice: 0,
+        sharePriceUsd: 0,
+        shareQuantity: 0,
+        totalSharePrice: 0,
+        totalSharePriceUsd: 0,
+        totalValue: '',
+        communityName
+      };
+    }
+    
     if (data.status !== 'SUCCESS') {
-      throw new Error(data.message || 'Transaction precheck failed');
+      throw new Error(data.message || data.error || 'Transaction precheck failed');
     }
     
     return data;

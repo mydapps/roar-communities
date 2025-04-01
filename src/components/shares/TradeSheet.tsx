@@ -25,15 +25,18 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Check, ArrowRight, Loader2, RefreshCw } from 'lucide-react';
+import { Check, ArrowRight, Loader2, RefreshCw, AlertCircle, ExternalLink } from 'lucide-react';
 import { 
   buySharesPrecheck, 
   buySharesConfirm,
   sellSharesPrecheck,
   sellSharesConfirm,
   getWalletBalance,
-  SharePrecheckResponse 
+  getSharePrice,
+  SharePrecheckResponse,
+  SharePriceResponse
 } from '@/utils/communityApi';
+import { Link } from 'react-router-dom';
 
 interface TradeSheetProps {
   open: boolean;
@@ -59,6 +62,9 @@ export const TradeSheet = ({
   const [precheckData, setPrecheckData] = useState<SharePrecheckResponse | null>(null);
   const [walletBalance, setWalletBalance] = useState<string>(userEthBalance);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
+  const [sharePriceInfo, setSharePriceInfo] = useState<SharePriceResponse | null>(null);
+  const [isLoadingSharePrice, setIsLoadingSharePrice] = useState(false);
+  const [insufficientFunds, setInsufficientFunds] = useState(false);
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
@@ -78,15 +84,30 @@ export const TradeSheet = ({
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      amount: 10,
+      amount: 1,
     }
   });
+
+  const watchAmount = form.watch('amount');
 
   useEffect(() => {
     if (open) {
       fetchWalletBalance();
+      if (community?.name) {
+        fetchSharePrice(1);
+      }
     }
-  }, [open]);
+  }, [open, community]);
+
+  useEffect(() => {
+    if (open && community?.name && watchAmount) {
+      const debounceTimeout = setTimeout(() => {
+        fetchSharePrice(watchAmount);
+      }, 500);
+      
+      return () => clearTimeout(debounceTimeout);
+    }
+  }, [watchAmount, open, community]);
 
   const fetchWalletBalance = async () => {
     if (!open) return;
@@ -103,6 +124,25 @@ export const TradeSheet = ({
     }
   };
 
+  const fetchSharePrice = async (quantity: number) => {
+    if (!community?.name || !open) return;
+    
+    setIsLoadingSharePrice(true);
+    try {
+      const priceData = await getSharePrice(community.name, quantity);
+      setSharePriceInfo(priceData);
+    } catch (error) {
+      console.error('Failed to fetch share price:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to fetch current share price"
+      });
+    } finally {
+      setIsLoadingSharePrice(false);
+    }
+  };
+
   const handleSubmit = async (values: z.infer<typeof formSchema>) => {
     if (!community?.name) {
       toast({
@@ -114,6 +154,7 @@ export const TradeSheet = ({
     }
 
     setIsLoadingPrecheck(true);
+    setInsufficientFunds(false);
     try {
       let precheckResult;
       
@@ -121,6 +162,16 @@ export const TradeSheet = ({
         precheckResult = await buySharesPrecheck(community.name, values.amount);
       } else {
         precheckResult = await sellSharesPrecheck(community.name, values.amount);
+      }
+      
+      if (precheckResult.status === 'DEPOSIT') {
+        setInsufficientFunds(true);
+        toast({
+          variant: "destructive",
+          title: "Insufficient ETH balance",
+          description: "You don't have enough ETH to complete this transaction."
+        });
+        return;
       }
       
       setPrecheckData(precheckResult);
@@ -168,7 +219,7 @@ export const TradeSheet = ({
         onOpenChange(false);
         
         // Reset form
-        form.reset();
+        form.reset({ amount: 1 });
         
         // Show toast
         toast({
@@ -215,6 +266,42 @@ export const TradeSheet = ({
         </div>
       )}
       
+      {insufficientFunds && (
+        <div className="mb-4 p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+            <div>
+              <h4 className="font-medium">Insufficient ETH Balance</h4>
+              <p className="text-sm">You need to deposit more ETH to complete this transaction.</p>
+              <Link to="/my-shares" className="text-sm font-medium flex items-center gap-1 mt-2 hover:underline">
+                Go to My Shares to deposit
+                <ExternalLink className="h-3 w-3" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {sharePriceInfo && (
+        <div className="mb-4 p-3 rounded-md bg-muted/30 border border-border">
+          <div className="text-sm text-muted-foreground mb-1">Current Price</div>
+          <div className="font-medium">
+            {action === 'buy' ? sharePriceInfo.currentBuyPrice : sharePriceInfo.currentSellPrice} ETH per share
+          </div>
+          
+          {watchAmount > 1 && (
+            <div className="mt-2 text-sm">
+              <div className="text-muted-foreground mb-1">Total for {watchAmount} shares</div>
+              <div className="font-medium">
+                {action === 'buy' 
+                  ? `${sharePriceInfo.buyTotalRequired} ETH` 
+                  : `${sharePriceInfo.sellTotalReturn} ETH`}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      
       <Form {...form}>
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
           <FormField
@@ -240,7 +327,7 @@ export const TradeSheet = ({
           <Button 
             type="submit" 
             className="w-full" 
-            disabled={isLoadingPrecheck}
+            disabled={isLoadingPrecheck || insufficientFunds}
           >
             {isLoadingPrecheck ? (
               <>
