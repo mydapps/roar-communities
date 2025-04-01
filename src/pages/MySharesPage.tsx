@@ -136,11 +136,11 @@ const MySharesPage = () => {
       console.log('Buy shares confirmation result:', result);
       
       if (result.status === 'SUCCESS') {
+        setTradeOpen(false);
         triggerSuccessAnimation();
         toast.success(`Successfully purchased ${result.shareQuantity} shares of ${communityName}`);
         refreshPortfolio();
         fetchWalletBalance();
-        setTradeOpen(false);
       } else {
         console.error('Buy shares failed with status:', result.status);
         console.error('Error message:', result.message || 'Unknown error');
@@ -163,11 +163,11 @@ const MySharesPage = () => {
       console.log('Sell shares confirmation result:', result);
       
       if (result.status === 'SUCCESS') {
+        setTradeOpen(false);
         triggerSuccessAnimation();
         toast.success(`Successfully sold ${result.soldShares} shares of ${communityName}`);
         refreshPortfolio();
         fetchWalletBalance();
-        setTradeOpen(false);
       } else {
         console.error('Sell shares failed with status:', result.status);
         console.error('Error message:', result.message || 'Unknown error');
