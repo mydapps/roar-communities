@@ -44,11 +44,12 @@ export interface SharePrecheckResponse {
   sharePrice: number | string;
   sharePriceUsd: number | string;
   shareQuantity: number;
-  totalSharePrice: number | string;
-  totalSharePriceUsd: number | string;
+  totalSharePrice?: number | string;
+  totalSharePriceUsd?: number | string;
   totalValue: string;
   communityName: string;
   error?: string;
+  shares?: number;
 }
 
 /**
@@ -57,13 +58,16 @@ export interface SharePrecheckResponse {
 export interface ShareConfirmResponse {
   status: string;
   message: string;
-  shareQuantity: number;
-  transactionHash: string;
-  communityData: {
+  shareQuantity?: number;
+  soldShares?: number; // For sell confirmation
+  transactionHash?: string;
+  totalReceived?: number; // For sell confirmation
+  communityData?: {
     shares: number;
     members: number;
     description: string;
   };
+  error?: string;
 }
 
 /**
@@ -218,9 +222,9 @@ export const getSharePrice = async (communityName: string, shareQuantity: number
       shareQuantity = 1;
     }
 
-    const url = `${API_BASE_URL}/get_share_price?communityName=${encodeURIComponent(communityName)}&shareQuantity=${shareQuantity}`;
+    const url = `${API_BASE_URL}/get_share_price?communityName=${encodeURIComponent(communityName)}&shareQuantity=${quantity}`;
     
-    console.log(`Fetching share price for ${communityName}, quantity: ${shareQuantity}`);
+    console.log(`Fetching share price for ${communityName}, quantity: ${quantity}`);
     
     const response = await fetch(url, {
       method: 'GET',
@@ -293,23 +297,24 @@ export const buySharesPrecheck = async (communityName: string, shareQuantity: nu
     }
     
     // Ensure numeric fields are properly parsed from strings if needed
-    if (typeof data.sharePrice === 'string') {
-      data.sharePrice = parseFloat(data.sharePrice);
+    const result: SharePrecheckResponse = {
+      ...data,
+      sharePrice: typeof data.sharePrice === 'string' ? parseFloat(data.sharePrice) : data.sharePrice,
+      sharePriceUsd: typeof data.sharePriceUsd === 'string' ? parseFloat(data.sharePriceUsd) : data.sharePriceUsd,
+      shareQuantity: Number(data.shareQuantity || shareQuantity)
+    };
+    
+    if (data.totalSharePrice !== undefined) {
+      result.totalSharePrice = typeof data.totalSharePrice === 'string' ? 
+        parseFloat(data.totalSharePrice) : data.totalSharePrice;
     }
     
-    if (typeof data.sharePriceUsd === 'string') {
-      data.sharePriceUsd = parseFloat(data.sharePriceUsd);
+    if (data.totalSharePriceUsd !== undefined) {
+      result.totalSharePriceUsd = typeof data.totalSharePriceUsd === 'string' ? 
+        parseFloat(data.totalSharePriceUsd) : data.totalSharePriceUsd;
     }
     
-    if (typeof data.totalSharePrice === 'string') {
-      data.totalSharePrice = parseFloat(data.totalSharePrice);
-    }
-    
-    if (typeof data.totalSharePriceUsd === 'string') {
-      data.totalSharePriceUsd = parseFloat(data.totalSharePriceUsd);
-    }
-    
-    return data;
+    return result;
   } catch (error) {
     console.error('Error in buy shares precheck:', error);
     throw error;
@@ -345,10 +350,13 @@ export const buySharesConfirm = async (communityName: string, shareQuantity: num
     console.log('Buy shares confirmation response:', data);
     
     if (data.status !== 'SUCCESS') {
-      throw new Error(data.message || 'Transaction failed');
+      throw new Error(data.message || data.error || 'Transaction failed');
     }
     
-    return data;
+    return {
+      ...data,
+      shareQuantity: Number(data.shareQuantity || shareQuantity)
+    };
   } catch (error) {
     console.error('Error in buy shares confirmation:', error);
     throw error;
@@ -383,28 +391,37 @@ export const sellSharesPrecheck = async (communityName: string, shareQuantity: n
     const data = await response.json();
     console.log('Sell shares precheck response:', data);
     
+    if (data.status === 'DEPOSIT') {
+      return {
+        status: 'DEPOSIT',
+        error: data.error || 'Insufficient ETH for gas fees. Please deposit ETH to proceed.',
+        fee: '',
+        sharePrice: 0,
+        sharePriceUsd: 0,
+        shareQuantity: 0,
+        totalValue: '',
+        communityName
+      };
+    }
+    
+    if (data.status === 'ERROR') {
+      throw new Error(data.error || 'Failed to precheck share sale');
+    }
+    
     if (data.status !== 'SUCCESS') {
-      throw new Error(data.message || 'Transaction precheck failed');
+      throw new Error(data.message || data.error || 'Transaction precheck failed');
     }
     
     // Ensure numeric fields are properly parsed from strings if needed
-    if (typeof data.sharePrice === 'string') {
-      data.sharePrice = parseFloat(data.sharePrice);
-    }
+    const result: SharePrecheckResponse = {
+      ...data,
+      sharePrice: typeof data.sharePrice === 'string' ? parseFloat(data.sharePrice) : data.sharePrice,
+      sharePriceUsd: typeof data.sharePriceUsd === 'string' ? parseFloat(data.sharePriceUsd) : data.sharePriceUsd,
+      shareQuantity: Number(data.shareQuantity || shareQuantity),
+      shares: Number(data.shares || shareQuantity)
+    };
     
-    if (typeof data.sharePriceUsd === 'string') {
-      data.sharePriceUsd = parseFloat(data.sharePriceUsd);
-    }
-    
-    if (typeof data.totalSharePrice === 'string') {
-      data.totalSharePrice = parseFloat(data.totalSharePrice);
-    }
-    
-    if (typeof data.totalSharePriceUsd === 'string') {
-      data.totalSharePriceUsd = parseFloat(data.totalSharePriceUsd);
-    }
-    
-    return data;
+    return result;
   } catch (error) {
     console.error('Error in sell shares precheck:', error);
     throw error;
@@ -440,10 +457,13 @@ export const sellSharesConfirm = async (communityName: string, shareQuantity: nu
     console.log('Sell shares confirmation response:', data);
     
     if (data.status !== 'SUCCESS') {
-      throw new Error(data.message || 'Transaction failed');
+      throw new Error(data.message || data.error || 'Transaction failed');
     }
     
-    return data;
+    return {
+      ...data,
+      soldShares: Number(data.soldShares || shareQuantity)
+    };
   } catch (error) {
     console.error('Error in sell shares confirmation:', error);
     throw error;

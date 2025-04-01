@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Sheet,
@@ -64,6 +65,7 @@ export const TradeSheet = ({
   const [sharePriceInfo, setSharePriceInfo] = useState<SharePriceResponse | null>(null);
   const [isLoadingSharePrice, setIsLoadingSharePrice] = useState(false);
   const [insufficientFunds, setInsufficientFunds] = useState(false);
+  const [noSharesError, setNoSharesError] = useState(false);
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
@@ -94,6 +96,9 @@ export const TradeSheet = ({
       if (community?.name) {
         fetchSharePrice(form.getValues().amount || 1);
       }
+      // Reset error states when opening
+      setInsufficientFunds(false);
+      setNoSharesError(false);
     }
   }, [open, community]);
 
@@ -153,6 +158,8 @@ export const TradeSheet = ({
 
     setIsLoadingPrecheck(true);
     setInsufficientFunds(false);
+    setNoSharesError(false);
+    
     try {
       let precheckResult;
       
@@ -172,6 +179,7 @@ export const TradeSheet = ({
         return;
       }
       
+      // Ensure numeric fields are properly handled
       if (typeof precheckResult.sharePrice === 'string') {
         precheckResult.sharePrice = parseFloat(precheckResult.sharePrice);
       }
@@ -180,11 +188,11 @@ export const TradeSheet = ({
         precheckResult.sharePriceUsd = parseFloat(precheckResult.sharePriceUsd);
       }
       
-      if (typeof precheckResult.totalSharePrice === 'string') {
+      if (precheckResult.totalSharePrice !== undefined && typeof precheckResult.totalSharePrice === 'string') {
         precheckResult.totalSharePrice = parseFloat(precheckResult.totalSharePrice);
       }
       
-      if (typeof precheckResult.totalSharePriceUsd === 'string') {
+      if (precheckResult.totalSharePriceUsd !== undefined && typeof precheckResult.totalSharePriceUsd === 'string') {
         precheckResult.totalSharePriceUsd = parseFloat(precheckResult.totalSharePriceUsd);
       }
       
@@ -192,11 +200,23 @@ export const TradeSheet = ({
       setPreviewOpen(true);
     } catch (error) {
       console.error('Transaction precheck failed:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error instanceof Error ? error.message : 'Transaction precheck failed. Please try again.'
-      });
+      
+      // Check if the error is related to not having shares
+      const errorMessage = error instanceof Error ? error.message : 'Transaction precheck failed. Please try again.';
+      if (errorMessage.includes('do not have any shares') || errorMessage.toLowerCase().includes('no shares')) {
+        setNoSharesError(true);
+        toast({
+          variant: "destructive",
+          title: "No Shares",
+          description: "You don't have any shares in this community to sell."
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: errorMessage
+        });
+      }
     } finally {
       setIsLoadingPrecheck(false);
     }
@@ -227,9 +247,7 @@ export const TradeSheet = ({
       
       setTimeout(() => {
         setShowSuccess(false);
-        
         onOpenChange(false);
-        
         form.reset({ amount: 1 });
         
         toast({
@@ -238,7 +256,7 @@ export const TradeSheet = ({
             ? `You've purchased ${precheckData.shareQuantity} shares of ${community?.name}` 
             : `You've sold ${precheckData.shareQuantity} shares of ${community?.name}`,
         });
-      }, 2000);
+      }, 3000); // Extended success display time for better experience
     } catch (error) {
       console.error('Transaction confirmation failed:', error);
       toast({
@@ -292,6 +310,18 @@ export const TradeSheet = ({
         </div>
       )}
       
+      {noSharesError && action === 'sell' && (
+        <div className="mb-4 p-3 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-700">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+            <div>
+              <h4 className="font-medium">No Shares to Sell</h4>
+              <p className="text-sm">You don't have any shares in this community to sell.</p>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {sharePriceInfo && (
         <div className="mb-4 p-3 rounded-md bg-muted/30 border border-border">
           <div className="text-sm text-muted-foreground mb-1">Current Price</div>
@@ -299,7 +329,7 @@ export const TradeSheet = ({
             {action === 'buy' ? sharePriceInfo.currentBuyPrice : sharePriceInfo.currentSellPrice} ETH per share
           </div>
           
-          {watchAmount > 1 && (
+          {watchAmount > 0 && watchAmount !== 1 && (
             <div className="mt-2 text-sm">
               <div className="text-muted-foreground mb-1">Total for {watchAmount} shares</div>
               <div className="font-medium">
@@ -307,6 +337,12 @@ export const TradeSheet = ({
                   ? `${sharePriceInfo.buyTotalRequired} ETH` 
                   : `${sharePriceInfo.sellTotalReturn} ETH`}
               </div>
+              
+              {action === 'sell' && community.userShares && (
+                <div className="text-xs text-muted-foreground mt-1">
+                  You own {community.userShares} shares
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -329,6 +365,12 @@ export const TradeSheet = ({
                     placeholder="Enter amount (max 3 decimals)"
                   />
                 </FormControl>
+                {action === 'sell' && community.userShares && (
+                  <div className="text-xs text-blue-600 cursor-pointer mt-1" 
+                       onClick={() => form.setValue('amount', community.userShares)}>
+                    Sell all my shares ({community.userShares})
+                  </div>
+                )}
                 <FormMessage />
               </FormItem>
             )}
@@ -337,7 +379,7 @@ export const TradeSheet = ({
           <Button 
             type="submit" 
             className="w-full" 
-            disabled={isLoadingPrecheck || insufficientFunds}
+            disabled={isLoadingPrecheck || insufficientFunds || (action === 'sell' && noSharesError)}
           >
             {isLoadingPrecheck ? (
               <>
@@ -375,28 +417,32 @@ export const TradeSheet = ({
           <span className="font-medium">
             {typeof precheckData.sharePrice === 'number' 
               ? precheckData.sharePrice.toFixed(6) 
-              : parseFloat(String(precheckData.sharePrice)).toFixed(6)} ETH 
+              : parseFloat(String(precheckData.sharePrice || '0')).toFixed(6)} ETH 
             <span className="text-xs text-muted-foreground ml-1">
               (${typeof precheckData.sharePriceUsd === 'number' 
                   ? precheckData.sharePriceUsd.toFixed(2) 
-                  : parseFloat(String(precheckData.sharePriceUsd)).toFixed(2)})
+                  : parseFloat(String(precheckData.sharePriceUsd || '0')).toFixed(2)})
             </span>
           </span>
         </div>
         
-        <div className="flex justify-between items-center py-2 border-b">
-          <span className="text-muted-foreground">Total Price</span>
-          <span className="font-medium">
-            {typeof precheckData.totalSharePrice === 'number' 
-              ? precheckData.totalSharePrice.toFixed(6) 
-              : parseFloat(String(precheckData.totalSharePrice)).toFixed(6)} ETH
-            <span className="text-xs text-muted-foreground ml-1">
-              (${typeof precheckData.totalSharePriceUsd === 'number' 
-                  ? precheckData.totalSharePriceUsd.toFixed(2) 
-                  : parseFloat(String(precheckData.totalSharePriceUsd)).toFixed(2)})
+        {action === 'buy' && precheckData.totalSharePrice !== undefined && (
+          <div className="flex justify-between items-center py-2 border-b">
+            <span className="text-muted-foreground">Total Price</span>
+            <span className="font-medium">
+              {typeof precheckData.totalSharePrice === 'number' 
+                ? precheckData.totalSharePrice.toFixed(6) 
+                : parseFloat(String(precheckData.totalSharePrice || '0')).toFixed(6)} ETH
+              {precheckData.totalSharePriceUsd && (
+                <span className="text-xs text-muted-foreground ml-1">
+                  (${typeof precheckData.totalSharePriceUsd === 'number' 
+                      ? precheckData.totalSharePriceUsd.toFixed(2) 
+                      : parseFloat(String(precheckData.totalSharePriceUsd || '0')).toFixed(2)})
+                </span>
+              )}
             </span>
-          </span>
-        </div>
+          </div>
+        )}
         
         <div className="flex justify-between items-center py-2 border-b">
           <span className="text-muted-foreground">Network Fee</span>
@@ -410,6 +456,37 @@ export const TradeSheet = ({
       </div>
     );
   };
+
+  const renderSuccessContent = () => (
+    <div className="text-center space-y-4 animate-scale-in">
+      <div className="relative">
+        <div className="mx-auto rounded-full bg-green-500/20 p-8 w-32 h-32 flex items-center justify-center">
+          <PartyPopper className="h-16 w-16 text-green-500 animate-pulse" />
+        </div>
+        <div className="absolute -top-2 -right-2">
+          <div className="animate-ping absolute inline-flex h-6 w-6 rounded-full bg-green-400 opacity-75"></div>
+          <div className="relative inline-flex rounded-full h-6 w-6 bg-green-500"></div>
+        </div>
+        <div className="absolute -bottom-2 -left-2">
+          <div className="animate-ping absolute inline-flex h-6 w-6 rounded-full bg-blue-400 opacity-75"></div>
+          <div className="relative inline-flex rounded-full h-6 w-6 bg-blue-500"></div>
+        </div>
+      </div>
+      <div className="animate-bounce mt-4">
+        <h2 className="text-3xl font-bold">Success!</h2>
+      </div>
+      <div className="bg-gradient-to-r from-green-500 to-blue-500 bg-clip-text text-transparent">
+        <p className="text-2xl font-semibold">
+          {action === 'buy' 
+            ? `You've purchased ${precheckData?.shareQuantity} shares of ${community?.name}!` 
+            : `You've sold ${precheckData?.shareQuantity} shares of ${community?.name}!`}
+        </p>
+      </div>
+      <div className="mt-2 text-sm text-muted-foreground">
+        Transaction completed successfully
+      </div>
+    </div>
+  );
 
   if (isEmbedded) {
     return (
@@ -448,24 +525,7 @@ export const TradeSheet = ({
         
         {showSuccess && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 animate-fade-in">
-            <div className="text-center space-y-4 animate-scale-in">
-              <div className="mx-auto rounded-full bg-green-500/20 p-6 w-24 h-24 flex items-center justify-center">
-                <PartyPopper className="h-12 w-12 text-green-500 animate-pulse" />
-              </div>
-              <div className="animate-bounce mt-2">
-                <h2 className="text-2xl font-bold">Success!</h2>
-              </div>
-              <div className="bg-gradient-to-r from-green-500 to-blue-500 bg-clip-text text-transparent">
-                <p className="text-xl font-semibold">
-                  {action === 'buy' 
-                    ? `You've purchased ${precheckData?.shareQuantity} shares of ${community?.name}!` 
-                    : `You've sold ${precheckData?.shareQuantity} shares of ${community?.name}!`}
-                </p>
-              </div>
-              <div className="mt-2 text-sm text-muted-foreground">
-                Transaction completed successfully
-              </div>
-            </div>
+            {renderSuccessContent()}
           </div>
         )}
       </>
@@ -548,34 +608,7 @@ export const TradeSheet = ({
         
         {showSuccess && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 animate-fade-in">
-            <div className="text-center space-y-4 animate-scale-in">
-              <div className="relative">
-                <div className="mx-auto rounded-full bg-green-500/20 p-8 w-32 h-32 flex items-center justify-center">
-                  <PartyPopper className="h-16 w-16 text-green-500 animate-pulse" />
-                </div>
-                <div className="absolute -top-2 -right-2">
-                  <div className="animate-ping absolute inline-flex h-6 w-6 rounded-full bg-green-400 opacity-75"></div>
-                  <div className="relative inline-flex rounded-full h-6 w-6 bg-green-500"></div>
-                </div>
-                <div className="absolute -bottom-2 -left-2">
-                  <div className="animate-ping absolute inline-flex h-6 w-6 rounded-full bg-blue-400 opacity-75"></div>
-                  <div className="relative inline-flex rounded-full h-6 w-6 bg-blue-500"></div>
-                </div>
-              </div>
-              <div className="animate-bounce mt-4">
-                <h2 className="text-3xl font-bold">Success!</h2>
-              </div>
-              <div className="bg-gradient-to-r from-green-500 to-blue-500 bg-clip-text text-transparent">
-                <p className="text-2xl font-semibold">
-                  {action === 'buy' 
-                    ? `You've purchased ${precheckData?.shareQuantity} shares of ${community?.name}!` 
-                    : `You've sold ${precheckData?.shareQuantity} shares of ${community?.name}!`}
-                </p>
-              </div>
-              <div className="mt-2 text-sm text-muted-foreground">
-                Transaction completed successfully
-              </div>
-            </div>
+            {renderSuccessContent()}
           </div>
         )}
       </>
@@ -641,34 +674,7 @@ export const TradeSheet = ({
       
       {showSuccess && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 animate-fade-in">
-          <div className="text-center space-y-4 animate-scale-in">
-            <div className="relative">
-              <div className="mx-auto rounded-full bg-green-500/20 p-8 w-32 h-32 flex items-center justify-center">
-                <PartyPopper className="h-16 w-16 text-green-500 animate-pulse" />
-              </div>
-              <div className="absolute -top-2 -right-2">
-                <div className="animate-ping absolute inline-flex h-6 w-6 rounded-full bg-green-400 opacity-75"></div>
-                <div className="relative inline-flex rounded-full h-6 w-6 bg-green-500"></div>
-              </div>
-              <div className="absolute -bottom-2 -left-2">
-                <div className="animate-ping absolute inline-flex h-6 w-6 rounded-full bg-blue-400 opacity-75"></div>
-                <div className="relative inline-flex rounded-full h-6 w-6 bg-blue-500"></div>
-              </div>
-            </div>
-            <div className="animate-bounce mt-4">
-              <h2 className="text-3xl font-bold">Success!</h2>
-            </div>
-            <div className="bg-gradient-to-r from-green-500 to-blue-500 bg-clip-text text-transparent">
-              <p className="text-2xl font-semibold">
-                {action === 'buy' 
-                  ? `You've purchased ${precheckData?.shareQuantity} shares of ${community?.name}!` 
-                  : `You've sold ${precheckData?.shareQuantity} shares of ${community?.name}!`}
-              </p>
-            </div>
-            <div className="mt-2 text-sm text-muted-foreground">
-              Transaction completed successfully
-            </div>
-          </div>
+          {renderSuccessContent()}
         </div>
       )}
     </>
