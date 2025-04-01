@@ -972,10 +972,16 @@ const CommunityPage = () => {
         open={tradeSheetOpen}
         onOpenChange={setTradeSheetOpen}
         community={{
-          name: community?.name || id || '',
+          community: community?.name || id || '',
+          shares: user?.shares || 0,
+          image: community?.image || '',
           currentPrice: {
             eth: community?.prices?.buy_price || 0.001,
             usd: (community?.prices?.buy_price_usd || (community?.prices?.buy_price ? community.prices.buy_price * ethToUsd : 2.5))
+          },
+          value: {
+            eth: user?.share_value?.eth || 0,
+            usd: user?.share_value?.usd || 0
           }
         }}
         action={tradeAction}

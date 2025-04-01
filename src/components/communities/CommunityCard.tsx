@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -159,10 +160,16 @@ const CommunityCard = ({
         open={tradeSheetOpen}
         onOpenChange={setTradeSheetOpen}
         community={{
-          name: name,
+          community: name,
+          shares: 0,
+          image: image,
           currentPrice: {
             eth: pricePerShare,
             usd: priceInUsd
+          },
+          value: {
+            eth: 0,
+            usd: 0
           }
         }}
         action={isMember ? "buy" : "buy"}
