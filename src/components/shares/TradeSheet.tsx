@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from '@/components/ui/drawer';
@@ -8,7 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { CommunityPortfolioItem, SharePrecheckResponse, buySharesPrecheck, sellSharesPrecheck, buySharesConfirm, sellSharesConfirm } from '@/utils/communityApi';
 import { toast } from 'sonner';
-import { Loader2, ArrowRight, Info, Plus, Minus } from 'lucide-react';
+import { Loader2, ArrowRight, Info, Plus, Minus, Check, PartyPopper } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useDebounce } from '@/hooks/useDebounce';
 import confetti from 'canvas-confetti';
@@ -44,6 +45,7 @@ export const TradeSheet = ({
   const [quantityInputValue, setQuantityInputValue] = useState("1");
   const [maxShares, setMaxShares] = useState(100);
   const [loading, setLoading] = useState(false);
+  const [submitLoading, setSubmitLoading] = useState(false);
   const [precheck, setPrecheck] = useState<SharePrecheckResponse | null>(precheckData);
   const [totalCost, setTotalCost] = useState("0");
   const [sharePrice, setSharePrice] = useState("0");
@@ -51,6 +53,7 @@ export const TradeSheet = ({
   const [usdValue, setUsdValue] = useState("0");
   const [totalUsdValue, setTotalUsdValue] = useState("0");
   const [errorMessage, setErrorMessage] = useState("");
+  const [successVisible, setSuccessVisible] = useState(false);
   
   // Debounce the share quantity to avoid frequent API calls
   const debouncedShareQuantity = useDebounce(shareQuantity, 500);
@@ -79,6 +82,7 @@ export const TradeSheet = ({
       // Reset to step 1 when opening
       setStep('quantity');
       setErrorMessage("");
+      setSuccessVisible(false);
       
       // Initialize with 1 share by default
       setShareQuantity(1);
@@ -244,11 +248,39 @@ export const TradeSheet = ({
 
   // Function to trigger confetti animation on successful transaction
   const triggerSuccessAnimation = () => {
-    confetti({
-      particleCount: 100,
-      spread: 70,
-      origin: { y: 0.6 }
-    });
+    // Create a more elaborate confetti display
+    const duration = 5 * 1000;
+    const animationEnd = Date.now() + duration;
+    const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+    
+    function randomInRange(min: number, max: number) {
+      return Math.random() * (max - min) + min;
+    }
+    
+    const interval: any = setInterval(function() {
+      const timeLeft = animationEnd - Date.now();
+      
+      if (timeLeft <= 0) {
+        return clearInterval(interval);
+      }
+      
+      const particleCount = 50 * (timeLeft / duration);
+      
+      // since particles fall down, start a bit higher than random
+      confetti({
+        ...defaults,
+        particleCount,
+        origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 }
+      });
+      confetti({
+        ...defaults,
+        particleCount,
+        origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 }
+      });
+    }, 250);
+    
+    // Show success state
+    setSuccessVisible(true);
   };
 
   const handleConfirm = async () => {
@@ -258,6 +290,7 @@ export const TradeSheet = ({
     }
     
     try {
+      setSubmitLoading(true);
       console.log(`Attempting to ${action} ${shareQuantity} shares of ${community.community}`);
       
       if (action === 'buy') {
@@ -273,7 +306,11 @@ export const TradeSheet = ({
           if (result.status === 'SUCCESS') {
             triggerSuccessAnimation();
             toast.success(`Successfully purchased ${result.shareQuantity} shares of ${community.community}!`);
-            onOpenChange(false);
+            
+            // Close after a short delay to allow animation to be seen
+            setTimeout(() => {
+              onOpenChange(false);
+            }, 3000);
           } else {
             toast.error(result.message || 'Transaction failed');
             return;
@@ -296,7 +333,11 @@ export const TradeSheet = ({
           if (result.status === 'SUCCESS') {
             triggerSuccessAnimation();
             toast.success(`Successfully sold ${result.soldShares} shares of ${community.community}!`);
-            onOpenChange(false);
+            
+            // Close after a short delay to allow animation to be seen
+            setTimeout(() => {
+              onOpenChange(false);
+            }, 3000);
           } else {
             toast.error(result.message || 'Transaction failed');
             return;
@@ -309,6 +350,8 @@ export const TradeSheet = ({
     } catch (error) {
       console.error(`Error during ${action} operation:`, error);
       toast.error(`Failed to ${action} shares. Please try again.`);
+    } finally {
+      setSubmitLoading(false);
     }
   };
   
@@ -334,7 +377,23 @@ export const TradeSheet = ({
   // Component for both quantity and confirm steps
   const ContentView = () => (
     <div className="space-y-6">
-      {step === 'quantity' ? (
+      {successVisible && (
+        <div className="bg-green-50 border border-green-100 p-4 rounded-lg text-center animate-fade-in">
+          <div className="flex justify-center mb-2">
+            <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
+              <Check className="h-6 w-6 text-green-600" />
+            </div>
+          </div>
+          <h3 className="font-bold text-lg text-green-700">Transaction Successful!</h3>
+          <p className="text-green-600 mt-1">
+            {action === 'buy' 
+              ? `You've successfully purchased ${shareQuantity} shares of ${community?.community}` 
+              : `You've successfully sold ${shareQuantity} shares of ${community?.community}`}
+          </p>
+        </div>
+      )}
+      
+      {!successVisible && step === 'quantity' ? (
         /* Step 1: Select Quantity */
         <>
           {/* Community Info */}
@@ -482,7 +541,7 @@ export const TradeSheet = ({
             Continue <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
         </>
-      ) : (
+      ) : !successVisible ? (
         /* Step 2: Confirm Order */
         <>
           <div className="bg-muted p-4 rounded-lg space-y-4">
@@ -549,21 +608,21 @@ export const TradeSheet = ({
               variant="outline"
               className="sm:flex-1"
               onClick={goBackToQuantityStep}
-              disabled={loading || loadingAction}
+              disabled={loading || loadingAction || submitLoading}
             >
               Back
             </Button>
             <Button
               className="sm:flex-1"
               onClick={handleConfirm}
-              disabled={loading || loadingAction || !!errorMessage}
+              disabled={loading || loadingAction || !!errorMessage || submitLoading}
             >
-              {(loading || loadingAction) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {(loading || loadingAction || submitLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {action === 'buy' ? 'Buy Shares' : 'Sell Shares'}
             </Button>
           </div>
         </>
-      )}
+      ) : null}
     </div>
   );
   
@@ -579,13 +638,16 @@ export const TradeSheet = ({
       <DrawerContent className="px-4 pt-3 pb-6 max-h-[85vh]">
         <DrawerHeader className="px-0 pb-2">
           <DrawerTitle>
-            {action === 'buy' ? 'Buy Shares' : 'Sell Shares'}
-            {step === 'confirm' && ' - Confirm Order'}
+            {successVisible 
+              ? 'Transaction Complete!' 
+              : `${action === 'buy' ? 'Buy' : 'Sell'} Shares${step === 'confirm' ? ' - Confirm Order' : ''}`}
           </DrawerTitle>
           <DrawerDescription>
-            {action === 'buy' 
-              ? 'Purchase shares of this community' 
-              : 'Sell your shares of this community'}
+            {successVisible 
+              ? 'Congratulations on your successful transaction!' 
+              : (action === 'buy' 
+                ? 'Purchase shares of this community' 
+                : 'Sell your shares of this community')}
           </DrawerDescription>
         </DrawerHeader>
         <ContentView />
@@ -597,13 +659,16 @@ export const TradeSheet = ({
       <SheetContent className="sm:max-w-md overflow-y-auto">
         <SheetHeader>
           <SheetTitle>
-            {action === 'buy' ? 'Buy Shares' : 'Sell Shares'}
-            {step === 'confirm' && ' - Confirm Order'}
+            {successVisible 
+              ? 'Transaction Complete!' 
+              : `${action === 'buy' ? 'Buy' : 'Sell'} Shares${step === 'confirm' ? ' - Confirm Order' : ''}`}
           </SheetTitle>
           <SheetDescription>
-            {action === 'buy' 
-              ? 'Purchase shares of this community' 
-              : 'Sell your shares of this community'}
+            {successVisible 
+              ? 'Congratulations on your successful transaction!' 
+              : (action === 'buy' 
+                ? 'Purchase shares of this community' 
+                : 'Sell your shares of this community')}
           </SheetDescription>
         </SheetHeader>
         <ContentView />
@@ -611,3 +676,4 @@ export const TradeSheet = ({
     </Sheet>
   );
 };
+
