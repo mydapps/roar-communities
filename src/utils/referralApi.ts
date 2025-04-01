@@ -26,7 +26,14 @@ export const fetchReferralEarnings = async () => {
   } catch (error) {
     console.error('Error in fetchReferralEarnings:', error);
     toast.error('Failed to load referral earnings. Please try again later.');
-    return null;
+    return {
+      success: false,
+      wallet: '',
+      referral_earnings: 0,
+      address_balance: 0,
+      total_withdrawn: 0,
+      available_to_withdraw: 0
+    };
   }
 };
 

@@ -92,6 +92,19 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
               
               console.log('PrivyAuthProvider - Registration status:', data.registered);
               
+              // Don't redirect if we're already on a protected page that requires authentication
+              // This fixes the refresh issue on pages like referral and my-shares
+              if (location.pathname === '/referral' || 
+                  location.pathname === '/my-shares' ||
+                  location.pathname === '/account' ||
+                  location.pathname === '/communities' ||
+                  location.pathname === '/search' ||
+                  location.pathname.startsWith('/u/')) {
+                console.log('Already on a protected page, skipping redirect');
+                setAuthProcessed(true);
+                return;
+              }
+              
               // Don't redirect if we're already on community or post page
               if (isCommunityPage || isPostPage) {
                 console.log('Already on community/post page, skipping redirect');
