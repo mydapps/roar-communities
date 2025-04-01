@@ -985,7 +985,7 @@ const CommunityPage = () => {
           }
         }}
         action={tradeAction}
-        userEthBalance="0.536"
+        userEthBalance={userEthBalance || "0.536"}
       />
     </div>
   );
