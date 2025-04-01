@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -689,4 +690,233 @@ const CommunityPage = () => {
                           
                           <div className="flex items-center justify-between p-3 rounded-lg border border-primary/20 shadow-sm">
                             <div className="flex items-center gap-3">
-                              <div className="bg-primary/10 rounded-full h-8 w-8 flex items
+                              <div className="bg-primary/10 rounded-full h-8 w-8 flex items-center justify-center text-primary font-bold">
+                                2
+                              </div>
+                              <div>
+                                <div className="font-medium">bob.lens</div>
+                                <div className="text-sm text-muted-foreground line-clamp-1">"Here's my analysis of the recent EIP..."</div>
+                              </div>
+                            </div>
+                            <div className="font-bold">0.32 ETH</div>
+                          </div>
+                          
+                          <div className="flex items-center justify-between p-3 rounded-lg border border-border shadow-sm">
+                            <div className="flex items-center gap-3">
+                              <div className="bg-primary/5 rounded-full h-8 w-8 flex items-center justify-center text-primary font-bold">
+                                3
+                              </div>
+                              <div>
+                                <div className="font-medium">charlie.sol</div>
+                                <div className="text-sm text-muted-foreground line-clamp-1">"I created this tutorial for beginners..."</div>
+                              </div>
+                            </div>
+                            <div className="font-bold">0.18 ETH</div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        )}
+      </div>
+      
+      {/* Right side panel (community info) */}
+      <div className="w-full md:w-80 lg:w-96 order-1 md:order-2 flex-shrink-0">
+        <TradeDialog
+          open={tradeDialogOpen}
+          onOpenChange={setTradeDialogOpen}
+          community={community ? {
+            community: community.name,
+            image: community.image || '',
+            shares: user?.shares || 0,
+            percentageChange: priceChange.toString(),
+            currentPrice: {
+              eth: community.prices.buy_price,
+              usd: community.prices.buy_price_usd
+            },
+            value: {
+              eth: (user?.shares || 0) * community.prices.buy_price,
+              usd: (user?.shares || 0) * community.prices.buy_price_usd
+            }
+          } : null}
+          action={tradeAction}
+          userEthBalance="0.0" // You need to implement this
+          onBuyConfirm={(communityName, quantity) => {
+            // Implement buy functionality
+            toast.success(`Would purchase ${quantity} shares of ${communityName}`);
+            setTradeDialogOpen(false);
+          }}
+          onSellConfirm={(communityName, quantity) => {
+            // Implement sell functionality
+            toast.success(`Would sell ${quantity} shares of ${communityName}`);
+            setTradeDialogOpen(false);
+          }}
+        />
+        
+        {!isMobile && (
+          <div className="sticky top-20">
+            <Card className="mb-6 border border-border/60">
+              <CardHeader className="pb-4">
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-16 w-16">
+                    <AvatarImage src={community?.image} alt={community?.name} />
+                    <AvatarFallback>{community?.name ? community.name[0].toUpperCase() : id?.[0].toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <CardTitle className="text-2xl">{community?.name || id}</CardTitle>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant="outline" className="bg-background/80 text-xs flex items-center">
+                        <Users className="h-3 w-3 mr-1" />
+                        {community?.members_count || 0} members
+                      </Badge>
+                      {priceChange > 0 ? (
+                        <Badge className="bg-green-500/10 text-green-600 text-xs">
+                          <ArrowUp className="h-3 w-3 mr-1" />
+                          {priceChange.toFixed(1)}%
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-red-500/10 text-red-600 text-xs">
+                          <ArrowDown className="h-3 w-3 mr-1" />
+                          {Math.abs(priceChange).toFixed(1)}%
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0 pb-6">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-3 mb-6">
+                  <div>
+                    <div className="text-xs text-muted-foreground">Share Price</div>
+                    <div className="font-semibold flex items-center">
+                      ${community?.prices?.buy_price_usd?.toFixed(2) || '0.00'}
+                      <span className="text-xs text-muted-foreground ml-1">({community?.prices?.buy_price?.toFixed(6) || '0.000000'} ETH)</span>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground">Market Cap</div>
+                    <div className="font-semibold">
+                      ${community?.market_cap?.usd >= 1000000 
+                        ? (community.market_cap.usd / 1000000).toFixed(1) + 'M' 
+                        : community?.market_cap?.usd?.toLocaleString(undefined, { maximumFractionDigits: 0 }) || '0'}
+                    </div>
+                  </div>
+                  {hasShares && (
+                    <>
+                      <div>
+                        <div className="text-xs text-muted-foreground">Your Shares</div>
+                        <div className="font-semibold">{user?.shares || 0}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-muted-foreground">Value</div>
+                        <div className="font-semibold">${((user?.shares || 0) * (community?.prices?.buy_price_usd || 0)).toFixed(2)}</div>
+                      </div>
+                    </>
+                  )}
+                </div>
+                
+                {hasShares ? (
+                  <div className="flex gap-3">
+                    <Button 
+                      className="flex-1 bg-purple-600 hover:bg-purple-700"
+                      onClick={handleBuyAction}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Buy More
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="flex-1"
+                      onClick={handleSellAction}
+                    >
+                      <Minus className="h-4 w-4 mr-2" />
+                      Sell
+                    </Button>
+                  </div>
+                ) : (
+                  <Button 
+                    className="w-full bg-purple-600 hover:bg-purple-700"
+                    onClick={handleBuyAction}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Join Community
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+            
+            <Card className="mb-6 border border-border/60">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  Monthly Rewards
+                </CardTitle>
+                <CardDescription>
+                  Top posts earn ETH from the community reward pool each month
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="bg-primary/5 rounded-lg p-4 mb-4 border border-primary/20 relative overflow-hidden animate-pulse">
+                  <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0"></div>
+                  <div className="relative z-10">
+                    <div className="text-sm text-primary mb-1">Current Reward Pool</div>
+                    <div className="flex justify-between items-end">
+                      <div className="font-bold text-lg">
+                        {availableRewards.toFixed(5) || '0.00000'} ETH
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        ${(availableRewards * ethToUsd).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="text-sm text-muted-foreground">
+                  <div className="flex justify-between mb-1.5">
+                    <span>Distribution</span>
+                    <span>Last day of the month</span>
+                  </div>
+                  <div className="flex justify-between mb-1.5">
+                    <span>Transaction Fee</span>
+                    <span>{community?.fees?.reward_fees || 2}%</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="mb-6 border border-border/60">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2">
+                  <BookOpen className="h-5 w-5 text-primary" />
+                  About
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <p className="text-sm text-muted-foreground mb-4 line-clamp-3">
+                  {community?.description || 'No description available.'}
+                </p>
+                
+                <div className="text-sm">
+                  <div className="flex justify-between mb-1.5">
+                    <span className="text-muted-foreground">Created</span>
+                    <span>{community?.created_on ? new Date(community.created_on).toLocaleDateString() : 'Unknown'}</span>
+                  </div>
+                  <div className="flex justify-between mb-1.5">
+                    <span className="text-muted-foreground">Admin</span>
+                    <span>{community?.owner ? `${community.owner.substring(0, 6)}...${community.owner.substring(community.owner.length - 4)}` : 'Unknown'}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default CommunityPage;
