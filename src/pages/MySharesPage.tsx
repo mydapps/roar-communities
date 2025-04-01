@@ -5,129 +5,51 @@ import {
   CardHeader, 
   CardTitle 
 } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { 
-  ArrowUp, 
-  ArrowDown,  
-  Wallet,
   RefreshCw,
   SendHorizontal,
-  Plus,
-  Minus,
   Loader2
 } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { cn } from '@/lib/utils';
-import { PortfolioSummary } from '@/components/shares/PortfolioSummary';
-import { DepositSheet } from '@/components/shares/DepositSheet';
-import { SendSheet } from '@/components/shares/SendSheet';
-import { TradeSheet } from '@/components/shares/TradeSheet';
-import { getWalletBalance, fetchCommunities, Community } from '@/utils/communityApi';
+import { getWalletBalance, CommunityPortfolioItem } from '@/utils/communityApi';
 import { 
   Drawer,
   DrawerContent,
   DrawerHeader,
   DrawerTitle,
   DrawerDescription,
-  DrawerFooter,
-  DrawerTrigger
+  DrawerFooter
 } from "@/components/ui/drawer";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-  SheetFooter
-} from "@/components/ui/sheet";
-
-// Define the community data type with userShares explicitly declared
-interface CommunityData {
-  name: string;
-  image: string;
-  shares: number;
-  value: number;
-  avgBuyPrice: number;
-  currentPrice: number;
-  change: number;
-  userShares: number; // Required property according to the interface
-}
-
-// Dummy data for sample portfolio - updated to include userShares
-const portfolioData: CommunityData[] = [
-  { 
-    name: "Ethereum Devs", 
-    image: "https://github.com/shadcn.png",
-    shares: 120, 
-    value: 2.76, 
-    avgBuyPrice: 0.021, 
-    currentPrice: 0.023, 
-    change: 9.52,
-    userShares: 120 // Adding the required property
-  },
-  { 
-    name: "DeFi Explorers", 
-    image: "https://github.com/radix-ui.png",
-    shares: 85, 
-    value: 2.89, 
-    avgBuyPrice: 0.037, 
-    currentPrice: 0.034, 
-    change: -8.11,
-    userShares: 85 // Adding the required property
-  },
-  { 
-    name: "NFT Creators", 
-    image: "https://avatars.githubusercontent.com/u/124599?v=4",
-    shares: 200, 
-    value: 3.4, 
-    avgBuyPrice: 0.015, 
-    currentPrice: 0.017, 
-    change: 13.33,
-    userShares: 200 // Adding the required property
-  },
-  { 
-    name: "DAOs United", 
-    image: "https://avatars.githubusercontent.com/u/6412038?v=4",
-    shares: 50, 
-    value: 0.45, 
-    avgBuyPrice: 0.008, 
-    currentPrice: 0.009, 
-    change: 12.5,
-    userShares: 50 // Adding the required property
-  },
-];
-
-// Calculate total portfolio value
-const totalValue = portfolioData.reduce((sum, item) => sum + item.value, 0);
-const ethToUsd = 3521.89; // Mock ETH/USD exchange rate
-const totalValueUsd = totalValue * ethToUsd;
-
-// Mock user ETH balance
-const userEthBalance = "3.75";
-
-// Define the CommunityShareCardProps interface
-interface CommunityShareCardProps {
-  community: CommunityData;
-  onBuyClick: () => void;
-  onSellClick: () => void;
-  onSendClick: () => void;
-}
+import { PortfolioSummary } from '@/components/shares/PortfolioSummary';
+import { DepositSheet } from '@/components/shares/DepositSheet';
+import { SendSheet } from '@/components/shares/SendSheet';
+import { TradeSheet } from '@/components/shares/TradeSheet';
+import { CommunityShareCard } from '@/components/shares/CommunityShareCard';
+import { usePortfolio } from '@/hooks/usePortfolio';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const MySharesPage = () => {
   const [depositOpen, setDepositOpen] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
-  const [selectedCommunity, setSelectedCommunity] = useState<CommunityData | null>(null);
+  const [selectedCommunity, setSelectedCommunity] = useState<CommunityPortfolioItem | null>(null);
   const [tradeAction, setTradeAction] = useState<'buy' | 'sell' | null>(null);
   const [tradeOpen, setTradeOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [userEthBalance, setUserEthBalance] = useState("0.000");
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
-  const [portfolioItems, setPortfolioItems] = useState<CommunityData[]>(portfolioData);
   const { toast } = useToast();
   const isMobile = useIsMobile();
+
+  const {
+    portfolioItems,
+    portfolioSummary,
+    isLoading,
+    isRefreshing,
+    refreshPortfolio,
+    loadMoreRef
+  } = usePortfolio();
 
   useEffect(() => {
     fetchWalletBalance();
@@ -150,17 +72,15 @@ const MySharesPage = () => {
     }
   };
 
-  const handleTradeClick = (community: CommunityData, action: 'buy' | 'sell') => {
-    setSelectedCommunity({
-      ...community,
-      userShares: community.shares // Ensure userShares is set properly
-    });
+  const handleTradeClick = (community: CommunityPortfolioItem, action: 'buy' | 'sell') => {
+    setSelectedCommunity(community);
     setTradeAction(action);
     setTradeOpen(true);
   };
 
   const handleRefresh = () => {
     fetchWalletBalance();
+    refreshPortfolio();
     toast({
       title: "Refreshing",
       description: "Fetching latest portfolio data...",
@@ -175,11 +95,15 @@ const MySharesPage = () => {
     setDrawerOpen(false);
   };
 
+  // Format portfolio value for display
+  const totalEthValue = portfolioSummary?.total_value_eth || 0;
+  const totalUsdValue = portfolioSummary?.total_value_usd || 0;
+
   return (
     <div className="space-y-6 animate-fade-in pb-20 md:pb-10">
       <PortfolioSummary 
-        ethValue={totalValue.toFixed(4)} 
-        usdValue={(totalValueUsd).toFixed(2)}
+        ethValue={totalEthValue.toFixed(4)} 
+        usdValue={totalUsdValue.toFixed(2)}
         ethBalance={userEthBalance}
         onDepositClick={() => {
           resetState();
@@ -199,17 +123,17 @@ const MySharesPage = () => {
           </CardTitle>
           <div className="flex items-center gap-4">
             <div className="text-sm text-muted-foreground hidden md:block">
-              Portfolio Value: <span className="font-semibold text-foreground">{totalValue.toFixed(4)} ETH</span> 
-              <span className="text-xs ml-1 text-muted-foreground">(${totalValueUsd.toFixed(2)})</span>
+              Portfolio Value: <span className="font-semibold text-foreground">{totalEthValue.toFixed(4)} ETH</span> 
+              <span className="text-xs ml-1 text-muted-foreground">(${totalUsdValue.toFixed(2)})</span>
             </div>
             <Button 
               variant="outline" 
               size="sm" 
               onClick={handleRefresh} 
               className="rounded-full hover:bg-primary/10"
-              disabled={isLoadingBalance}
+              disabled={isRefreshing || isLoadingBalance}
             >
-              {isLoadingBalance ? (
+              {isRefreshing || isLoadingBalance ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <>
@@ -223,31 +147,64 @@ const MySharesPage = () => {
         <CardContent className="pt-4">
           <div className="flex items-center justify-between mb-4 md:hidden">
             <div className="text-sm text-muted-foreground">
-              Portfolio Value: <span className="font-semibold text-foreground">{totalValue.toFixed(4)} ETH</span> 
-              <span className="text-xs ml-1 text-muted-foreground">(${totalValueUsd.toFixed(2)})</span>
+              Portfolio Value: <span className="font-semibold text-foreground">{totalEthValue.toFixed(4)} ETH</span> 
+              <span className="text-xs ml-1 text-muted-foreground">(${totalUsdValue.toFixed(2)})</span>
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {portfolioItems.map((community) => (
-              <CommunityShareCard 
-                key={community.name}
-                community={community}
-                onBuyClick={() => {
-                  resetState();
-                  handleTradeClick(community, 'buy');
-                }}
-                onSellClick={() => {
-                  resetState(); 
-                  handleTradeClick(community, 'sell');
-                }}
-                onSendClick={() => {
-                  resetState();
-                  setSelectedCommunity(community);
-                  setSendOpen(true);
-                }}
-              />
-            ))}
-          </div>
+          
+          <ScrollArea className="max-h-[calc(100vh-300px)] md:max-h-none">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-6">
+              {portfolioItems.map((community) => (
+                <CommunityShareCard 
+                  key={community.community}
+                  community={community}
+                  onBuyClick={(community) => {
+                    resetState();
+                    handleTradeClick(community, 'buy');
+                  }}
+                  onSellClick={(community) => {
+                    resetState(); 
+                    handleTradeClick(community, 'sell');
+                  }}
+                  onSendClick={(community) => {
+                    resetState();
+                    setSelectedCommunity(community);
+                    setSendOpen(true);
+                  }}
+                />
+              ))}
+              
+              {/* Loading indicator and load more trigger */}
+              {portfolioItems.length > 0 && (
+                <div 
+                  ref={loadMoreRef} 
+                  className="col-span-full flex justify-center py-4 mt-2"
+                >
+                  {isLoading && portfolioItems.length > 0 && (
+                    <div className="flex items-center justify-center">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                      <span className="ml-2 text-sm text-muted-foreground">Loading more...</span>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {/* Empty state */}
+              {portfolioItems.length === 0 && !isLoading && (
+                <div className="col-span-full p-8 text-center bg-muted/20 rounded-lg border border-border/40">
+                  <h3 className="font-medium text-lg">No shares yet</h3>
+                  <p className="text-muted-foreground mt-2">Once you buy shares of communities, they will appear here.</p>
+                </div>
+              )}
+              
+              {/* Initial loading state */}
+              {isLoading && portfolioItems.length === 0 && (
+                <div className="col-span-full flex justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              )}
+            </div>
+          </ScrollArea>
         </CardContent>
       </Card>
 
@@ -264,11 +221,11 @@ const MySharesPage = () => {
           <Drawer open={sendOpen} onOpenChange={setSendOpen}>
             <DrawerContent className="max-h-[85vh] overflow-y-auto">
               <DrawerHeader>
-                <DrawerTitle>{!selectedCommunity ? 'Send ETH' : `Send ${selectedCommunity?.name} Shares`}</DrawerTitle>
+                <DrawerTitle>{!selectedCommunity ? 'Send ETH' : `Send ${selectedCommunity?.community} Shares`}</DrawerTitle>
                 <DrawerDescription>
                   {!selectedCommunity 
                     ? 'Send ETH to another wallet address' 
-                    : `Send your ${selectedCommunity?.name} shares to another user`}
+                    : `Send your ${selectedCommunity?.community} shares to another user`}
                 </DrawerDescription>
               </DrawerHeader>
               
@@ -291,8 +248,8 @@ const MySharesPage = () => {
                 <DrawerTitle>{tradeAction === 'buy' ? 'Buy Shares' : 'Sell Shares'}</DrawerTitle>
                 <DrawerDescription>
                   {tradeAction === 'buy' 
-                    ? `Purchase shares of ${selectedCommunity?.name}` 
-                    : `Sell your ${selectedCommunity?.name} shares`}
+                    ? `Purchase shares of ${selectedCommunity?.community}` 
+                    : `Sell your ${selectedCommunity?.community} shares`}
                 </DrawerDescription>
               </DrawerHeader>
               
@@ -395,64 +352,6 @@ const MySharesPage = () => {
         </DrawerContent>
       </Drawer>
     </div>
-  );
-};
-
-const CommunityShareCard = ({ 
-  community,
-  onBuyClick,
-  onSellClick,
-  onSendClick
-}: CommunityShareCardProps) => {
-  const { name, image, shares, value, currentPrice, change } = community;
-  
-  return (
-    <Card className="hover:shadow-md transition-all duration-300 hover:scale-[1.02] overflow-hidden">
-      <div className={`h-1.5 w-full ${change >= 0 ? "bg-green-500" : "bg-red-500"}`} />
-      <CardContent className="p-4">
-        <div className="flex items-center gap-3 mb-4">
-          <Avatar>
-            <AvatarImage src={image} alt={name} />
-            <AvatarFallback>{name.charAt(0)}</AvatarFallback>
-          </Avatar>
-          <div className="flex-1">
-            <div className="font-bold">{name}</div>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className={change >= 0 ? "text-green-600" : "text-red-600"}>
-                {change >= 0 ? <ArrowUp className="h-3 w-3 mr-1" /> : <ArrowDown className="h-3 w-3 mr-1" />}
-                {change >= 0 ? "+" : ""}{change.toFixed(2)}%
-              </Badge>
-              <span className="text-xs text-muted-foreground">{currentPrice.toFixed(3)} ETH</span>
-            </div>
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-2 gap-y-4 mb-4">
-          <div>
-            <div className="text-xs text-muted-foreground">Shares Owned</div>
-            <div className="font-medium text-lg">{shares}</div>
-          </div>
-          <div>
-            <div className="text-xs text-muted-foreground">Total Value</div>
-            <div className="font-medium text-lg">{value.toFixed(2)} ETH</div>
-          </div>
-        </div>
-        
-        <div className="flex justify-between space-x-2 mt-4">
-          <Button variant="outline" className="flex-1 hover:bg-green-500/10" onClick={onBuyClick}>
-            <Plus className="h-4 w-4 mr-1" />
-            Buy
-          </Button>
-          <Button variant="outline" className="flex-1 text-red-600 hover:bg-red-500/10" onClick={onSellClick}>
-            <Minus className="h-4 w-4 mr-1" />
-            Sell
-          </Button>
-          <Button variant="outline" className="flex-grow-0 aspect-square p-2" onClick={onSendClick}>
-            <SendHorizontal className="h-4 w-4" />
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
   );
 };
 

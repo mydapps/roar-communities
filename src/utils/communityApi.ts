@@ -23,6 +23,48 @@ export interface Community {
   metaUserInfo?: number;
 }
 
+// Portfolio interfaces
+export interface CommunityPortfolioItem {
+  community: string;
+  shares: number;
+  description: string;
+  image: string;
+  price: {
+    eth: number;
+    usd: number;
+    sell_eth: number;
+    sell_usd: number;
+  };
+  price_change_percentage: number;
+  price_direction: 'up' | 'down';
+  value: {
+    eth: number;
+    usd: number;
+  };
+}
+
+export interface PortfolioPagination {
+  current_page: number;
+  total_pages: number;
+  total_items: number;
+  has_next_page: boolean;
+  has_prev_page: boolean;
+}
+
+export interface PortfolioSummaryData {
+  total_value_eth: number;
+  total_value_usd: number;
+}
+
+export interface UserPortfolioResponse {
+  success: boolean;
+  data: {
+    communities: CommunityPortfolioItem[];
+    pagination: PortfolioPagination;
+    portfolio: PortfolioSummaryData;
+  };
+}
+
 /**
  * Options for fetching communities
  */
@@ -576,6 +618,48 @@ export const getShareValue = async (communityName: string): Promise<ShareValueRe
     return data;
   } catch (error) {
     console.error('Error fetching share value:', error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch user portfolio data with pagination
+ */
+export const getUserPortfolio = async (page = 1, limit = 10): Promise<UserPortfolioResponse> => {
+  try {
+    const userKey = getUserApiKey();
+    if (!userKey) {
+      throw new Error('User key not found');
+    }
+    
+    const url = `${API_BASE_URL}/user_portfolio?page=${page}&limit=${limit}`;
+    
+    console.log(`Fetching user portfolio from: ${url}`);
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'x-user-key': userKey
+      }
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Portfolio fetch failed: ${errorText}`);
+      throw new Error(`Failed to fetch portfolio: ${errorText}`);
+    }
+    
+    const data = await response.json();
+    console.log('User portfolio response:', data);
+    
+    if (!data.success) {
+      throw new Error(data.message || 'Failed to fetch portfolio data');
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Error fetching user portfolio:', error);
+    toast.error('Failed to load portfolio. Please try again.');
     throw error;
   }
 };
