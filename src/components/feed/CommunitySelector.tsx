@@ -12,14 +12,16 @@ interface CommunitySelectorProps {
 }
 
 export function CommunitySelector({ onSelect, selectedCommunity }: CommunitySelectorProps) {
+  const [searchTerm, setSearchTerm] = useState('');
+  
   const { 
     communities, 
-    loading, 
-    searchTerm, 
-    setSearchTerm,
-    loadMore,
-    hasMore
-  } = useCommunities();
+    isLoading, 
+    hasMore,
+    loadMore
+  } = useCommunities({
+    search: searchTerm
+  });
   
   // Handle scrolling to load more
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -42,7 +44,7 @@ export function CommunitySelector({ onSelect, selectedCommunity }: CommunitySele
         className="max-h-[300px] overflow-auto custom-scrollbar"
         onScroll={handleScroll}
       >
-        {loading && communities.length === 0 ? (
+        {isLoading && communities.length === 0 ? (
           <div className="py-6 text-center">
             <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
             <p className="text-sm text-muted-foreground mt-2">Loading communities...</p>
@@ -86,7 +88,7 @@ export function CommunitySelector({ onSelect, selectedCommunity }: CommunitySele
               </CommandItem>
             ))}
             
-            {loading && communities.length > 0 && (
+            {isLoading && communities.length > 0 && (
               <div className="py-2 text-center">
                 <Loader2 className="h-4 w-4 animate-spin mx-auto text-muted-foreground" />
               </div>
