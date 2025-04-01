@@ -53,11 +53,11 @@ interface CommunityData {
   avgBuyPrice: number;
   currentPrice: number;
   change: number;
-  userShares: number; // Ensure this is explicit
+  userShares: number; // Required property according to the interface
 }
 
-// Dummy data for sample portfolio
-const portfolioData = [
+// Dummy data for sample portfolio - updated to include userShares
+const portfolioData: CommunityData[] = [
   { 
     name: "Ethereum Devs", 
     image: "https://github.com/shadcn.png",
@@ -65,7 +65,8 @@ const portfolioData = [
     value: 2.76, 
     avgBuyPrice: 0.021, 
     currentPrice: 0.023, 
-    change: 9.52 
+    change: 9.52,
+    userShares: 120 // Adding the required property
   },
   { 
     name: "DeFi Explorers", 
@@ -74,7 +75,8 @@ const portfolioData = [
     value: 2.89, 
     avgBuyPrice: 0.037, 
     currentPrice: 0.034, 
-    change: -8.11 
+    change: -8.11,
+    userShares: 85 // Adding the required property
   },
   { 
     name: "NFT Creators", 
@@ -83,7 +85,8 @@ const portfolioData = [
     value: 3.4, 
     avgBuyPrice: 0.015, 
     currentPrice: 0.017, 
-    change: 13.33 
+    change: 13.33,
+    userShares: 200 // Adding the required property
   },
   { 
     name: "DAOs United", 
@@ -92,7 +95,8 @@ const portfolioData = [
     value: 0.45, 
     avgBuyPrice: 0.008, 
     currentPrice: 0.009, 
-    change: 12.5 
+    change: 12.5,
+    userShares: 50 // Adding the required property
   },
 ];
 
@@ -103,18 +107,6 @@ const totalValueUsd = totalValue * ethToUsd;
 
 // Mock user ETH balance
 const userEthBalance = "3.75";
-
-// Define the community data type
-interface CommunityData {
-  name: string;
-  image: string;
-  shares: number;
-  value: number;
-  avgBuyPrice: number;
-  currentPrice: number;
-  change: number;
-  userShares: number; // Ensure this is explicit
-}
 
 // Define the CommunityShareCardProps interface
 interface CommunityShareCardProps {
