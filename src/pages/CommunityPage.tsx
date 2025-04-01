@@ -42,7 +42,7 @@ import {
   MoreHorizontal,
   Loader2
 } from 'lucide-react';
-import { TradeSheet } from '@/components/shares/TradeSheet';
+import { TradeDialog } from '@/components/shares/TradeDialog';
 import { Post } from '@/components/feed/Post';
 import CreatePostCard from '@/components/feed/CreatePostCard';
 import { MembersList } from '@/components/community/MembersList';
@@ -51,7 +51,7 @@ import { toggleRoar } from '@/utils/api';
 
 const LionIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-5 w-5">
-    <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 2 12C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
     <path d="M8 15C8.5 13.5 10 12 12 12C14 12 15.5 13.5 16 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
     <path d="M8.5 9C8.5 9.82843 7.82843 10.5 7 10.5C6.17157 10.5 5.5 9.82843 5.5 9C5.5 8.17157 6.17157 7.5 7 7.5C7.82843 7.5 8.5 8.17157 8.5 9Z" fill="currentColor"/>
     <path d="M18.5 9C18.5 9.82843 17.8284 10.5 17 10.5C16.1716 10.5 15.5 9.82843 15.5 9C15.5 8.17157 16.1716 7.5 17 7.5C17.8284 7.5 18.5 8.17157 18.5 9Z" fill="currentColor"/>
@@ -62,7 +62,7 @@ const CommunityPage = () => {
   usePreventZoom();
   const { id } = useParams<{ id: string }>();
   const isMobile = useIsMobile();
-  const [tradeSheetOpen, setTradeSheetOpen] = useState(false);
+  const [tradeDialogOpen, setTradeDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("posts");
   const [tradeAction, setTradeAction] = useState<"buy" | "sell">("buy");
   const [localPosts, setLocalPosts] = useState<Partial<CommunityPost>[]>([]);
@@ -109,12 +109,12 @@ const CommunityPage = () => {
   
   const handleBuyAction = () => {
     setTradeAction("buy");
-    setTradeSheetOpen(true);
+    setTradeDialogOpen(true);
   };
   
   const handleSellAction = () => {
     setTradeAction("sell");
-    setTradeSheetOpen(true);
+    setTradeDialogOpen(true);
   };
   
   const handleRoar = async (postCode: string) => {
@@ -211,7 +211,7 @@ const CommunityPage = () => {
                       className="bg-purple-600 hover:bg-purple-700 text-white shadow-sm flex-shrink-0"
                       onClick={() => {
                         setTradeAction("buy");
-                        setTradeSheetOpen(true);
+                        setTradeDialogOpen(true);
                       }}
                     >
                       Buy
@@ -222,7 +222,7 @@ const CommunityPage = () => {
                       className="shadow-sm flex-shrink-0"
                       onClick={() => {
                         setTradeAction("sell");
-                        setTradeSheetOpen(true);
+                        setTradeDialogOpen(true);
                       }}
                     >
                       Sell
@@ -235,7 +235,7 @@ const CommunityPage = () => {
                     className="bg-purple-600 hover:bg-purple-700 text-white shadow-sm flex-shrink-0"
                     onClick={() => {
                       setTradeAction("buy");
-                      setTradeSheetOpen(true);
+                      setTradeDialogOpen(true);
                     }}
                   >
                     Join
@@ -689,306 +689,4 @@ const CommunityPage = () => {
                           
                           <div className="flex items-center justify-between p-3 rounded-lg border border-primary/20 shadow-sm">
                             <div className="flex items-center gap-3">
-                              <div className="bg-primary/10 rounded-full h-8 w-8 flex items-center justify-center text-primary font-bold">
-                                2
-                              </div>
-                              <div>
-                                <div className="font-medium">bob.lens</div>
-                                <div className="text-sm text-muted-foreground line-clamp-1">"Here's my analysis of the recent EIP..."</div>
-                              </div>
-                            </div>
-                            <div className="font-bold">0.32 ETH</div>
-                          </div>
-                          
-                          <div className="flex items-center justify-between p-3 rounded-lg border border-border shadow-sm">
-                            <div className="flex items-center gap-3">
-                              <div className="bg-primary/5 rounded-full h-8 w-8 flex items-center justify-center text-primary font-bold">
-                                3
-                              </div>
-                              <div>
-                                <div className="font-medium">charlie.sol</div>
-                                <div className="text-sm text-muted-foreground line-clamp-1">"I created this tutorial for beginners..."</div>
-                              </div>
-                            </div>
-                            <div className="font-bold">0.18 ETH</div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="about" className="animate-fade-in mt-0">
-              <Card>
-                <CardHeader>
-                  <CardTitle>About {community?.name || id}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div>
-                    <h3 className="font-medium mb-2">Community Description</h3>
-                    <p className="text-muted-foreground">{community?.description || 'No description available.'}</p>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <h3 className="font-medium">Details</h3>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Created On</span>
-                          <span>{community?.created_on ? new Date(community.created_on).toLocaleDateString() : 'Unknown'}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Admin</span>
-                          <span>{community?.owner ? `${community.owner.substring(0, 6)}...${community.owner.substring(community.owner.length - 4)}` : 'Unknown'}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Total Members</span>
-                          <span>{community?.members_count || 0}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Total Shares</span>
-                          <span>{community?.shares?.toLocaleString() || 0}</span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <h3 className="font-medium">Fee Structure</h3>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Admin Fee</span>
-                          <span>{community?.fees?.admin_fees || 0}%</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Reward Pool</span>
-                          <span>{community?.fees?.reward_fees || 0}%</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Platform Fee</span>
-                          <span>{community?.fees?.platform_fees || 0}%</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Current Share Price</span>
-                          <span>{community?.prices?.buy_price?.toFixed(6) || 0} ETH</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <h3 className="font-medium">Community Rules</h3>
-                    <ul className="space-y-2 text-sm text-muted-foreground list-disc pl-5">
-                      <li>Be respectful to all members and maintain a professional tone</li>
-                      <li>No spam, excessive self-promotion, or plagiarism</li>
-                      <li>Content should be relevant to {community?.name || id}</li>
-                      <li>Provide evidence and sources for technical claims when possible</li>
-                      <li>Abide by the community guidelines for posting and commenting</li>
-                    </ul>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        )}
-      </div>
-      
-      {!isMobile && (
-        <div className="w-full md:w-80 order-1 md:order-2 flex-shrink-0">
-          <div className="sticky top-4 space-y-4">
-            <Card className="overflow-hidden relative">
-              <div className="absolute inset-0 opacity-[0.05] pointer-events-none">
-                <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-                  <path 
-                    d={chartPoints + " V100 H0 Z"} 
-                    fill={priceChange > 0 ? "#10B981" : "#EF4444"} 
-                  />
-                </svg>
-              </div>
-              
-              <div className="relative">
-                <div 
-                  className="h-32 w-full bg-cover bg-center" 
-                  style={{ backgroundImage: `url(${community?.image || 'https://images.unsplash.com/photo-1639322537228-f710d846310a?q=80&w=2532&auto=format&fit=crop'})` }}
-                />
-                <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-background to-transparent"></div>
-                
-                <Avatar className="absolute bottom-0 left-4 transform translate-y-1/2 h-16 w-16 border-4 border-background">
-                  <AvatarImage src={community?.image} alt={community?.name} />
-                  <AvatarFallback>{community?.name ? community.name[0].toUpperCase() : id?.[0].toUpperCase()}</AvatarFallback>
-                </Avatar>
-              </div>
-              
-              <CardHeader className="pt-10 pb-2">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle>{community?.name || id}</CardTitle>
-                    <CardDescription className="mt-1 line-clamp-2">
-                      {community?.members_count || 0} members
-                    </CardDescription>
-                  </div>
-                  
-                  {priceChange > 0 ? (
-                    <Badge className="bg-green-500/10 text-green-600">
-                      <ArrowUp className="h-3 w-3 mr-1" />
-                      {priceChange.toFixed(1)}%
-                    </Badge>
-                  ) : (
-                    <Badge className="bg-red-500/10 text-red-600">
-                      <ArrowDown className="h-3 w-3 mr-1" />
-                      {Math.abs(priceChange).toFixed(1)}%
-                    </Badge>
-                  )}
-                </div>
-              </CardHeader>
-              
-              <CardContent className="pb-4">
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Price per Share</span>
-                    <div className="text-right">
-                      <div className="font-semibold text-[15px]">${community?.prices?.buy_price_usd?.toFixed(2) || '0.00'}</div>
-                      <div className="text-xs text-muted-foreground">{community?.prices?.buy_price?.toFixed(6) || '0.000000'} ETH</div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Market Cap</span>
-                    <div className="text-right">
-                      <div className="font-semibold text-[15px]">${community?.market_cap?.usd?.toLocaleString(undefined, { maximumFractionDigits: 0 }) || '0'}</div>
-                      <div className="text-xs text-muted-foreground">{community?.market_cap?.eth?.toFixed(2) || '0.00'} ETH</div>
-                    </div>
-                  </div>
-                  
-                  <Separator />
-                  
-                  <div className="pt-1">
-                    <div className="text-sm font-medium mb-2">Your Holdings</div>
-                    {hasShares ? (
-                      <div className="bg-primary/5 p-3 rounded-lg">
-                        <div className="flex justify-between mb-1">
-                          <span className="text-sm text-muted-foreground">Shares Owned</span>
-                          <span className="font-medium">{user?.shares?.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Value</span>
-                          <div className="text-right">
-                            <div className="font-semibold">${user?.share_value?.usd?.toFixed(2)}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {user?.share_value?.eth?.toFixed(6)} ETH
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-center py-2 text-sm text-muted-foreground">
-                        You don't own any shares yet
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="bg-primary/5 rounded-lg p-3 mb-2 border border-primary/20 shadow-sm relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 animate-pulse"></div>
-                    <div className="relative z-10">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="font-medium text-primary">Reward Pool</span>
-                        <div className="text-right">
-                          <div className="font-bold text-lg">
-                            ${(availableRewards * ethToUsd).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {availableRewards.toFixed(5) || '0.00000'} ETH
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-              
-              <CardFooter className="flex flex-col gap-3 pt-0">
-                {hasShares ? (
-                  <>
-                    <div className="grid grid-cols-2 gap-2 w-full">
-                      <Button 
-                        className="w-full bg-purple-600 hover:bg-purple-700 text-white shadow-md hover:shadow-lg" 
-                        onClick={handleBuyAction}
-                      >
-                        Buy More
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        className="w-full" 
-                        onClick={handleSellAction}
-                      >
-                        Sell
-                      </Button>
-                    </div>
-                  </>
-                ) : (
-                  <Button 
-                    className="w-full bg-purple-600 hover:bg-purple-700 text-white shadow-md hover:shadow-lg" 
-                    onClick={handleBuyAction}
-                  >
-                    Join Community
-                  </Button>
-                )}
-              </CardFooter>
-            </Card>
-            
-            <Card className="mt-4 border rounded-lg shadow-sm">
-              <div className="p-4 border-b">
-                <h3 className="font-medium text-lg">Community Navigation</h3>
-              </div>
-              <div className="p-2">
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                  <TabsList className="w-full p-0 flex flex-col gap-1 bg-transparent">
-                    <TabsTrigger value="posts" className="w-full justify-start px-4 py-2 data-[state=active]:bg-primary/10">
-                      <MessageCircle className="h-4 w-4 mr-3" />
-                      Posts
-                    </TabsTrigger>
-                    <TabsTrigger value="members" className="w-full justify-start px-4 py-2 data-[state=active]:bg-primary/10">
-                      <Users className="h-4 w-4 mr-3" />
-                      Members
-                    </TabsTrigger>
-                    <TabsTrigger value="rewards" className="w-full justify-start px-4 py-2 data-[state=active]:bg-primary/10">
-                      <DollarSign className="h-4 w-4 mr-3" />
-                      Rewards
-                    </TabsTrigger>
-                    <TabsTrigger value="about" className="w-full justify-start px-4 py-2 data-[state=active]:bg-primary/10">
-                      <Info className="h-4 w-4 mr-3" />
-                      About
-                    </TabsTrigger>
-                  </TabsList>
-                </Tabs>
-              </div>
-            </Card>
-          </div>
-        </div>
-      )}
-      
-      <TradeSheet
-        open={tradeSheetOpen}
-        onOpenChange={setTradeSheetOpen}
-        community={{
-          community: community?.name || id || '',
-          shares: user?.shares || 0,
-          image: community?.image || '',
-          currentPrice: {
-            eth: community?.prices?.buy_price || 0.001,
-            usd: (community?.prices?.buy_price_usd || (community?.prices?.buy_price ? community.prices.buy_price * ethToUsd : 2.5))
-          },
-          value: {
-            eth: user?.share_value?.eth || 0,
-            usd: user?.share_value?.usd || 0
-          }
-        }}
-        action={tradeAction}
-        userEthBalance="0.536"
-      />
-    </div>
-  );
-};
-
-export default CommunityPage;
+                              <div className="bg-primary/10 rounded-full h-8 w-8 flex items

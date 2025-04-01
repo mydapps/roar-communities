@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Card, 
@@ -39,17 +38,17 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PortfolioSummary } from '@/components/shares/PortfolioSummary';
 import { DepositSheet } from '@/components/shares/DepositSheet';
 import { SendSheet } from '@/components/shares/SendSheet';
-import { TradeSheet } from '@/components/shares/TradeSheet';
 import { CommunityShareCard } from '@/components/shares/CommunityShareCard';
 import { usePortfolio } from '@/hooks/usePortfolio';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { TradeDialog } from '@/components/shares/TradeDialog';
 
 const MySharesPage = () => {
   const [depositOpen, setDepositOpen] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
   const [selectedCommunity, setSelectedCommunity] = useState<CommunityPortfolioItem | null>(null);
   const [tradeAction, setTradeAction] = useState<'buy' | 'sell' | null>(null);
-  const [tradeOpen, setTradeOpen] = useState(false);
+  const [tradeDialogOpen, setTradeDialogOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [userEthBalance, setUserEthBalance] = useState("0.000");
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
@@ -87,7 +86,7 @@ const MySharesPage = () => {
   const handleTradeClick = async (community: CommunityPortfolioItem, action: 'buy' | 'sell') => {
     setSelectedCommunity(community);
     setTradeAction(action);
-    setTradeOpen(true);
+    setTradeDialogOpen(true);
     
     // Initialize precheck for buy/sell
     try {
@@ -122,7 +121,7 @@ const MySharesPage = () => {
         // Refresh portfolio data and wallet balance
         refreshPortfolio();
         fetchWalletBalance();
-        setTradeOpen(false);
+        setTradeDialogOpen(false);
       } else {
         toast.error(result.message || 'Transaction failed');
       }
@@ -144,7 +143,7 @@ const MySharesPage = () => {
         // Refresh portfolio data and wallet balance
         refreshPortfolio();
         fetchWalletBalance();
-        setTradeOpen(false);
+        setTradeDialogOpen(false);
       } else {
         toast.error(result.message || 'Transaction failed');
       }
@@ -166,7 +165,7 @@ const MySharesPage = () => {
     // Reset all state to prevent UI getting stuck
     setDepositOpen(false);
     setSendOpen(false);
-    setTradeOpen(false);
+    setTradeDialogOpen(false);
     setDrawerOpen(false);
     setPrecheckData(null);
   };
@@ -318,7 +317,7 @@ const MySharesPage = () => {
           </Drawer>
 
           {/* Trade (Buy/Sell) Drawer for Mobile */}
-          <Drawer open={tradeOpen} onOpenChange={setTradeOpen}>
+          <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
             <DrawerContent className="max-h-[85vh] overflow-y-auto">
               <DrawerHeader>
                 <DrawerTitle>{tradeAction === 'buy' ? 'Buy Shares' : 'Sell Shares'}</DrawerTitle>
@@ -330,18 +329,7 @@ const MySharesPage = () => {
               </DrawerHeader>
               
               <div className="px-4 py-4 flex-1 overflow-y-auto">
-                <TradeSheet 
-                  open={true}
-                  onOpenChange={() => setTradeOpen(false)}
-                  community={selectedCommunity}
-                  action={tradeAction}
-                  userEthBalance={userEthBalance}
-                  isEmbedded={true}
-                  onBuyConfirm={handleBuySharesConfirm}
-                  onSellConfirm={handleSellSharesConfirm}
-                  loadingAction={loadingAction}
-                  precheckData={precheckData}
-                />
+                
               </div>
             </DrawerContent>
           </Drawer>
@@ -363,87 +351,21 @@ const MySharesPage = () => {
             community={selectedCommunity}
             isEthSend={!selectedCommunity}
           />
-
-          {/* Trade (Buy/Sell) Sheet for Desktop */}
-          <TradeSheet 
-            open={tradeOpen} 
-            onOpenChange={setTradeOpen} 
-            community={selectedCommunity}
-            action={tradeAction}
-            userEthBalance={userEthBalance}
-            onBuyConfirm={handleBuySharesConfirm}
-            onSellConfirm={handleSellSharesConfirm}
-            loadingAction={loadingAction}
-            precheckData={precheckData}
-          />
         </>
       )}
-
-      {/* Community details drawer - mobile only */}
-      <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <DrawerContent className="max-h-[85vh]">
-          <DrawerHeader>
-            <DrawerTitle>Community Share Details</DrawerTitle>
-            <DrawerDescription>
-              View detailed information about your shares
-            </DrawerDescription>
-          </DrawerHeader>
-          <div className="p-4 overflow-y-auto">
-            {selectedCommunity && (
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={selectedCommunity.image} alt={selectedCommunity.community} />
-                    <AvatarFallback>{selectedCommunity.community.charAt(0).toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h3 className="font-bold text-lg">{selectedCommunity.community}</h3>
-                    <p className="text-muted-foreground">
-                      Current Price: {selectedCommunity.currentPrice?.eth?.toFixed(6) || '0.000000'} ETH
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-muted/50 rounded-lg p-4">
-                    <p className="text-xs text-muted-foreground">Shares Owned</p>
-                    <p className="text-2xl font-bold">{selectedCommunity.shares}</p>
-                  </div>
-                  <div className="bg-muted/50 rounded-lg p-4">
-                    <p className="text-xs text-muted-foreground">Total Value</p>
-                    <p className="text-2xl font-bold">{selectedCommunity.value?.eth?.toFixed(4) || '0.0000'} ETH</p>
-                  </div>
-                </div>
-                
-                <div className="flex gap-4">
-                  <Button 
-                    className="flex-1 gap-2" 
-                    onClick={() => handleTradeClick(selectedCommunity, 'buy')}
-                    disabled={loadingAction}
-                  >
-                    <Plus className="h-4 w-4" />
-                    Buy More
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    className="flex-1 gap-2 text-red-600 hover:text-red-700" 
-                    onClick={() => handleTradeClick(selectedCommunity, 'sell')}
-                    disabled={loadingAction}
-                  >
-                    <Minus className="h-4 w-4" />
-                    Sell
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-          <DrawerFooter>
-            <Button variant="outline" onClick={() => setDrawerOpen(false)}>
-              Close
-            </Button>
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
+      
+      {/* Replace the TradeSheet with TradeDialog */}
+      <TradeDialog 
+        open={tradeDialogOpen} 
+        onOpenChange={setTradeDialogOpen} 
+        community={selectedCommunity}
+        action={tradeAction}
+        userEthBalance={userEthBalance}
+        onBuyConfirm={handleBuySharesConfirm}
+        onSellConfirm={handleSellSharesConfirm}
+        loadingAction={loadingAction}
+        precheckData={precheckData}
+      />
     </div>
   );
 };
