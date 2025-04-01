@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Card, 
@@ -9,7 +10,11 @@ import { Button } from '@/components/ui/button';
 import { 
   RefreshCw,
   SendHorizontal,
-  Loader2
+  Loader2,
+  ArrowUp,
+  ArrowDown,
+  Plus,
+  Minus
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -22,6 +27,7 @@ import {
   DrawerDescription,
   DrawerFooter
 } from "@/components/ui/drawer";
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PortfolioSummary } from '@/components/shares/PortfolioSummary';
 import { DepositSheet } from '@/components/shares/DepositSheet';
 import { SendSheet } from '@/components/shares/SendSheet';
@@ -309,13 +315,13 @@ const MySharesPage = () => {
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
                   <Avatar className="h-12 w-12">
-                    <AvatarImage src={selectedCommunity.image} alt={selectedCommunity.name} />
-                    <AvatarFallback>{selectedCommunity.name.charAt(0)}</AvatarFallback>
+                    <AvatarImage src={selectedCommunity.image} alt={selectedCommunity.community} />
+                    <AvatarFallback>{selectedCommunity.community.charAt(0).toUpperCase()}</AvatarFallback>
                   </Avatar>
                   <div>
-                    <h3 className="font-bold text-lg">{selectedCommunity.name}</h3>
+                    <h3 className="font-bold text-lg">{selectedCommunity.community}</h3>
                     <p className="text-muted-foreground">
-                      Current Price: {selectedCommunity.currentPrice.toFixed(3)} ETH
+                      Current Price: {selectedCommunity.price.eth.toFixed(6)} ETH
                     </p>
                   </div>
                 </div>
@@ -327,7 +333,7 @@ const MySharesPage = () => {
                   </div>
                   <div className="bg-muted/50 rounded-lg p-4">
                     <p className="text-xs text-muted-foreground">Total Value</p>
-                    <p className="text-2xl font-bold">{selectedCommunity.value.toFixed(2)} ETH</p>
+                    <p className="text-2xl font-bold">{selectedCommunity.value.eth.toFixed(4)} ETH</p>
                   </div>
                 </div>
                 
