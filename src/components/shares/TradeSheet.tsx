@@ -298,23 +298,25 @@ export const TradeSheet = ({
         </div>
       )}
       
-      {action === 'sell' && community.userShares && (
+      {action === 'sell' && (
         <div className="mb-4 p-3 rounded-md bg-blue-500/10 border border-blue-500/20">
           <div className="flex items-center justify-between">
             <div>
               <div className="text-sm text-muted-foreground">Your Shares</div>
               <div className="font-medium text-lg flex items-center gap-2">
-                {community.userShares} shares
+                {community?.userShares || 0} shares
               </div>
             </div>
-            <Button 
-              size="sm" 
-              variant="outline" 
-              className="border-blue-500/30 text-blue-600 hover:bg-blue-500/10"
-              onClick={handleSellAll}
-            >
-              Sell All
-            </Button>
+            {community?.userShares > 0 && (
+              <Button 
+                size="sm" 
+                variant="outline" 
+                className="border-blue-500/30 text-blue-600 hover:bg-blue-500/10"
+                onClick={handleSellAll}
+              >
+                Sell All
+              </Button>
+            )}
           </div>
         </div>
       )}
@@ -347,25 +349,41 @@ export const TradeSheet = ({
         </div>
       )}
       
-      {sharePriceInfo && (
+      {sharePriceInfo && watchAmount > 0 && (
         <div className="mb-4 p-3 rounded-md bg-muted/30 border border-border">
-          <div className="text-sm text-muted-foreground mb-1">Current Price</div>
           <div className="font-medium">
-            {action === 'buy' ? sharePriceInfo.currentBuyPrice : sharePriceInfo.currentSellPrice} ETH per share
+            {watchAmount !== 1 && (
+              <div>
+                <div className="text-sm text-muted-foreground mb-1">Total for {watchAmount} shares</div>
+                <div className="text-lg font-semibold">
+                  {action === 'buy' 
+                    ? `${sharePriceInfo.buyTotalRequired} ETH` 
+                    : `${sharePriceInfo.sellTotalReturn} ETH`}
+                  <span className="text-xs ml-2 text-muted-foreground">
+                    (~${action === 'buy' 
+                      ? ((parseFloat(sharePriceInfo.buyTotalRequired) * ethToUsd) || 0).toFixed(2)
+                      : ((parseFloat(sharePriceInfo.sellTotalReturn) * ethToUsd) || 0).toFixed(2)})
+                  </span>
+                </div>
+              </div>
+            )}
+            
+            {watchAmount === 1 && (
+              <div>
+                <div className="text-sm text-muted-foreground mb-1">Price per share</div>
+                <div className="text-lg font-semibold">
+                  {action === 'buy' ? sharePriceInfo.currentBuyPrice : sharePriceInfo.currentSellPrice} ETH
+                  <span className="text-xs ml-2 text-muted-foreground">
+                    (~${action === 'buy'
+                      ? ((parseFloat(sharePriceInfo.currentBuyPrice) * ethToUsd) || 0).toFixed(2)
+                      : ((parseFloat(sharePriceInfo.currentSellPrice) * ethToUsd) || 0).toFixed(2)})
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
           
-          {watchAmount > 0 && watchAmount !== 1 && (
-            <div className="mt-2 text-sm">
-              <div className="text-muted-foreground mb-1">Total for {watchAmount} shares</div>
-              <div className="font-medium">
-                {action === 'buy' 
-                  ? `${sharePriceInfo.buyTotalRequired} ETH` 
-                  : `${sharePriceInfo.sellTotalReturn} ETH`}
-              </div>
-            </div>
-          )}
-          
-          {action === 'sell' && community.userShares && (
+          {action === 'sell' && community?.userShares && (
             <div className="flex items-center mt-2 text-xs text-muted-foreground">
               <TooltipProvider>
                 <Tooltip>
@@ -408,7 +426,7 @@ export const TradeSheet = ({
                     placeholder="Enter amount (max 3 decimals)"
                   />
                 </FormControl>
-                {action === 'sell' && community.userShares && (
+                {action === 'sell' && community?.userShares > 0 && (
                   <div className="flex justify-between items-center mt-1">
                     <div className="text-xs text-blue-600 cursor-pointer"
                          onClick={() => form.setValue('amount', community.userShares)}>
