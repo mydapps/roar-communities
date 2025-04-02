@@ -1,4 +1,3 @@
-
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
@@ -27,6 +26,7 @@ const buttonVariants = cva(
         telegram: "bg-[#26A5E4] text-white hover:bg-[#26A5E4]/90",
         twitter: "bg-black text-white hover:bg-black/90", // Changed from Twitter blue to X black
         facebook: "bg-[#1877F2] text-white hover:bg-[#1877F2]/90",
+        whatsapp: "bg-[#25D366] text-white hover:bg-[#25D366]/90",
       },
       size: {
         default: "h-10 px-4 py-2",

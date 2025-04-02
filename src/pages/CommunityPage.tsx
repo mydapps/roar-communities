@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePreventZoom } from '@/hooks/usePreventZoom';
@@ -50,6 +50,7 @@ import { useCommunityPosts, CommunityPost } from '@/hooks/useCommunityPosts';
 import { toggleRoar } from '@/utils/api';
 import { getWalletBalance } from '@/utils/communityApi';
 import { buySharesConfirm, sellSharesConfirm } from '@/utils/api';
+import { Helmet } from 'react-helmet-async';
 
 const LionIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-5 w-5">
@@ -275,39 +276,106 @@ const CommunityPage = () => {
   console.log("Rendered with available rewards:", availableRewards);
   const hasLastDistributed = community?.rewards?.last_distributed && community.rewards.last_distributed !== null;
   
+  // Prepare metadata for SEO
+  const communityMetadata = useMemo(() => {
+    if (!community) return null;
+    
+    const title = `${community.name} Community | ROAR`;
+    const description = community.description || `Join the ${community.name} community on ROAR. Buy, sell, and discuss with other members.`;
+    const imageUrl = community.image || 'https://dapps.co/og-default.jpg';
+    const url = `${window.location.origin}/c/${community.name.toLowerCase().replace(/\s+/g, '-')}`;
+    const priceInfo = community.prices 
+      ? `Current price: ${community.prices.buy_price} ETH ($${community.prices.buy_price_usd?.toFixed(2) || '0.00'})` 
+      : '';
+    
+    return { title, description, imageUrl, url, priceInfo };
+  }, [community]);
+  
   return (
-    <div className="flex flex-col md:flex-row gap-4 animate-fade-in max-w-full overflow-x-hidden pt-4 md:pt-0">
-      <div className="flex-1 order-2 md:order-1">
-        {isMobile && (
-          <div className="sticky top-16 z-10 bg-background/95 backdrop-blur-sm pb-3 mb-3 border-b pt-4">
-            <div className="flex items-center gap-3 mb-2">
-              <Avatar className="h-10 w-10">
-                <AvatarImage src={community?.image} alt={community?.name} />
-                <AvatarFallback>{community?.name ? community.name[0].toUpperCase() : id?.[0].toUpperCase()}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <h1 className="text-xl font-bold truncate">{community?.name || id}</h1>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="bg-background/80 text-xs flex items-center">
-                    <Users className="h-3 w-3 mr-1" />
-                    {community?.members_count || 0}
-                  </Badge>
-                  {priceChange > 0 ? (
-                    <Badge className="bg-green-500/10 text-green-600 text-xs">
-                      <ArrowUp className="h-3 w-3 mr-1" />
-                      {priceChange.toFixed(1)}%
+    <div className="space-y-6 animate-fade-in pb-20 md:pb-10">
+      {/* SEO Metadata */}
+      {communityMetadata && (
+        <Helmet>
+          <title>{communityMetadata.title}</title>
+          <meta name="description" content={communityMetadata.description} />
+          
+          {/* OpenGraph Tags */}
+          <meta property="og:title" content={communityMetadata.title} />
+          <meta property="og:description" content={communityMetadata.description} />
+          <meta property="og:image" content={communityMetadata.imageUrl} />
+          <meta property="og:url" content={communityMetadata.url} />
+          <meta property="og:type" content="website" />
+          <meta property="og:site_name" content="ROAR Communities" />
+          
+          {/* Twitter Card Tags */}
+          <meta name="twitter:card" content="summary_large_image" />
+          <meta name="twitter:title" content={communityMetadata.title} />
+          <meta name="twitter:description" content={communityMetadata.description} />
+          <meta name="twitter:image" content={communityMetadata.imageUrl} />
+          
+          {/* Additional Meta Tags */}
+          <meta name="keywords" content={`${community.name}, community, crypto, social, roar, dapps.co`} />
+          <meta name="author" content="ROAR Communities" />
+          <link rel="canonical" href={communityMetadata.url} />
+        </Helmet>
+      )}
+      
+      <div className="flex flex-col md:flex-row gap-4 animate-fade-in max-w-full overflow-x-hidden pt-4 md:pt-0">
+        <div className="flex-1 order-2 md:order-1">
+          {isMobile && (
+            <div className="sticky top-16 z-10 bg-background/95 backdrop-blur-sm pb-3 mb-3 border-b pt-4">
+              <div className="flex items-center gap-3 mb-2">
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src={community?.image} alt={community?.name} />
+                  <AvatarFallback>{community?.name ? community.name[0].toUpperCase() : id?.[0].toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <h1 className="text-xl font-bold truncate">{community?.name || id}</h1>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="bg-background/80 text-xs flex items-center">
+                      <Users className="h-3 w-3 mr-1" />
+                      {community?.members_count || 0}
                     </Badge>
-                  ) : (
-                    <Badge className="bg-red-500/10 text-red-600 text-xs">
-                      <ArrowDown className="h-3 w-3 mr-1" />
-                      {Math.abs(priceChange).toFixed(1)}%
-                    </Badge>
-                  )}
+                    {priceChange > 0 ? (
+                      <Badge className="bg-green-500/10 text-green-600 text-xs">
+                        <ArrowUp className="h-3 w-3 mr-1" />
+                        {priceChange.toFixed(1)}%
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-red-500/10 text-red-600 text-xs">
+                        <ArrowDown className="h-3 w-3 mr-1" />
+                        {Math.abs(priceChange).toFixed(1)}%
+                      </Badge>
+                    )}
+                  </div>
                 </div>
-              </div>
-              {isMobile && (
-                hasShares ? (
-                  <div className="flex gap-2">
+                {isMobile && (
+                  hasShares ? (
+                    <div className="flex gap-2">
+                      <Button 
+                        size="sm"
+                        variant="default"
+                        className="bg-purple-600 hover:bg-purple-700 text-white shadow-sm flex-shrink-0"
+                        onClick={() => {
+                          setTradeAction("buy");
+                          setTradeSheetOpen(true);
+                        }}
+                      >
+                        Buy
+                      </Button>
+                      <Button 
+                        size="sm"
+                        variant="outline"
+                        className="shadow-sm flex-shrink-0"
+                        onClick={() => {
+                          setTradeAction("sell");
+                          setTradeSheetOpen(true);
+                        }}
+                      >
+                        Sell
+                      </Button>
+                    </div>
+                  ) : (
                     <Button 
                       size="sm"
                       variant="default"
@@ -317,779 +385,756 @@ const CommunityPage = () => {
                         setTradeSheetOpen(true);
                       }}
                     >
-                      Buy
+                      Join
                     </Button>
-                    <Button 
-                      size="sm"
-                      variant="outline"
-                      className="shadow-sm flex-shrink-0"
-                      onClick={() => {
-                        setTradeAction("sell");
-                        setTradeSheetOpen(true);
-                      }}
-                    >
-                      Sell
-                    </Button>
-                  </div>
-                ) : (
-                  <Button 
-                    size="sm"
-                    variant="default"
-                    className="bg-purple-600 hover:bg-purple-700 text-white shadow-sm flex-shrink-0"
-                    onClick={() => {
-                      setTradeAction("buy");
-                      setTradeSheetOpen(true);
-                    }}
-                  >
-                    Join
-                  </Button>
-                )
-              )}
-            </div>
-            
-            <div className="grid grid-cols-2 gap-2 mb-2">
-              <div className="bg-muted/50 rounded-lg p-2">
-                <div className="text-xs text-muted-foreground">Share Price</div>
-                <div className="font-semibold text-sm flex items-center">
-                  ${community?.prices?.buy_price_usd?.toFixed(2) || '0.00'}
-                </div>
+                  )
+                )}
               </div>
-              <div className="bg-muted/50 rounded-lg p-2">
-                <div className="text-xs text-muted-foreground">Market Cap</div>
-                <div className="font-semibold text-sm flex items-center">
-                  ${community?.market_cap?.usd >= 1000000 
-                    ? (community.market_cap.usd / 1000000).toFixed(1) + 'M' 
-                    : community?.market_cap?.usd?.toLocaleString(undefined, { maximumFractionDigits: 0 }) || '0'}
+              
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                <div className="bg-muted/50 rounded-lg p-2">
+                  <div className="text-xs text-muted-foreground">Share Price</div>
+                  <div className="font-semibold text-sm flex items-center">
+                    ${community?.prices?.buy_price_usd?.toFixed(2) || '0.00'}
+                  </div>
+                </div>
+                <div className="bg-muted/50 rounded-lg p-2">
+                  <div className="text-xs text-muted-foreground">Market Cap</div>
+                  <div className="font-semibold text-sm flex items-center">
+                    ${community?.market_cap?.usd >= 1000000 
+                      ? (community.market_cap.usd / 1000000).toFixed(1) + 'M' 
+                      : community?.market_cap?.usd?.toLocaleString(undefined, { maximumFractionDigits: 0 }) || '0'}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
-        
-        <Card className="mb-6 bg-gradient-to-br from-primary/5 to-secondary/5 border-primary/20 mt-6 md:mt-8">
-          <CardContent className={`pt-6 ${isMobile ? 'mt-12' : ''}`}>
-            <h2 className="text-xl font-semibold mb-3 flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              What's on your mind?
-            </h2>
-            <CreatePostCard 
-              onPostCreated={handlePostCreated}
-              communityName={community?.name || id || ''}
-            />
-          </CardContent>
-        </Card>
-        
-        {isMobile && (
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mb-6 mt-8">
-            <TabsList className="w-full grid grid-cols-4 bg-muted/50">
-              <TabsTrigger value="posts" className="data-[state=active]:bg-background">
-                <MessageCircle className="h-4 w-4 mr-1" />
-                Posts
-              </TabsTrigger>
-              <TabsTrigger value="members" className="data-[state=active]:bg-background">
-                <Users className="h-4 w-4 mr-1" />
-                Members
-              </TabsTrigger>
-              <TabsTrigger value="rewards" className="data-[state=active]:bg-background">
-                <DollarSign className="h-4 w-4 mr-1" />
-                Rewards
-              </TabsTrigger>
-              <TabsTrigger value="about" className="data-[state=active]:bg-background">
-                <Info className="h-4 w-4 mr-1" />
-                About
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="posts" className="animate-fade-in mt-0">
-              <div className="space-y-6">
-                {postsLoading && allPosts.length === 0 ? (
-                  <div className="flex justify-center p-8">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  </div>
-                ) : allPosts.length > 0 ? (
-                  <>
-                    {allPosts.map((post, index) => (
-                      <Post 
-                        key={`post-${post.code || index}-${index}`}
-                        username={post.handle || ''}
-                        community={post.community || ''}
-                        timeAgo={post.timeAgo || ''}
-                        content={post.is_mirror === 1 ? (post.mirror_quote || '') : (post.body || '')}
-                        roarCount={post.upvotes || 0}
-                        commentCount={post.reply_count || 0}
-                        shareCount={post.engagement || 0}
-                        images={post.multiple_images ? post.images || [] : (post.image ? [post.image_url || ''] : [])}
-                        video={undefined}
-                        postCode={post.code || ''}
-                        avatar={post.avatar || ''}
-                        roared={post.roar === 1}
-                        onRoar={() => post.code ? handleRoar(post.code) : null}
-                        isMirror={post.is_mirror === 1}
-                        mirrorData={post.is_mirror === 1 ? {
-                          quote: post.mirror_quote || '',
-                          originalAuthor: post.original_author || '',
-                          originalCommunity: post.original_community || '',
-                          originalBody: post.original_body || '',
-                          originalTimeAgo: post.original_created_on || '',
-                          originalAvatar: post.original_author_avatar || '',
-                          originalImages: post.original_images || [],
-                          originalTitle: post.original_title || ''
-                        } : undefined}
-                        ipfs={post.code || ''}
-                        isLoggedIn={!!localStorage.getItem('dapps_user_key')}
-                        hideComments={false}
-                      />
-                    ))}
-                    
-                    <div 
-                      ref={loadingElementRef}
-                      className="flex justify-center py-8 my-4"
-                      id="infinite-scroll-marker"
-                    >
-                      {postsLoading && (
-                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                      )}
-                      
-                      {!postsLoading && !hasMorePosts && posts.length > 0 && (
-                        <p className="text-sm text-muted-foreground">You've reached the end</p>
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-center p-8 border border-dashed rounded-lg">
-                    <MessageCircle className="h-10 w-10 text-muted-foreground/50 mx-auto mb-2" />
-                    <p className="text-muted-foreground">No posts in this community yet. Be the first to post!</p>
-                  </div>
-                )}
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="members" className="animate-fade-in mt-0">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Community Members</CardTitle>
-                  <CardDescription>
-                    {community?.members_count || 0} members have purchased shares in this community
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <MembersList 
-                    members={members} 
-                    loading={membersLoading} 
-                    hasMore={hasMoreMembers} 
-                    loadMore={loadMoreMembers}
-                    ethToUsd={ethToUsd}
-                  />
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="rewards" className="animate-fade-in mt-0">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Monthly Rewards</CardTitle>
-                  <CardDescription>
-                    The community reward pool is distributed monthly to the top posts
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-6">
-                    <div className="bg-primary/5 rounded-lg p-4 mb-4 border border-primary/20 shadow-sm relative overflow-hidden animate-pulse">
-                      <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0"></div>
-                      <div className="relative z-10">
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="font-medium text-primary">Current Reward Pool</span>
-                          <div className="text-right">
-                            <div className="font-bold text-lg">
-                              {availableRewards.toFixed(5) || '0.00000'} ETH
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              ${(availableRewards * ethToUsd).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="bg-muted/40 p-4 rounded-lg">
-                      <h3 className="font-medium mb-2 flex items-center">
-                        <Sparkles className="h-4 w-4 mr-2 text-primary" />
-                        How Rewards Work
-                      </h3>
-                      <ul className="space-y-2 text-sm text-muted-foreground list-disc pl-5">
-                        <li>{community?.fees?.reward_fees || 2}% of all buy/sell transactions go to the reward pool</li>
-                        <li>Rewards are distributed on the last day of each month</li>
-                        <li>60% goes to the top 3 most roared posts</li>
-                        <li>40% is split among the next 7 top posts</li>
-                        <li>You must hold at least 5 shares to be eligible for rewards</li>
-                      </ul>
-                    </div>
-                    
-                    {hasLastDistributed && (
-                      <div>
-                        <h3 className="font-medium mb-3">Last Month's Winners</h3>
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between p-3 rounded-lg border border-primary/30 bg-primary/5 shadow-sm">
-                            <div className="flex items-center gap-3">
-                              <div className="bg-primary text-primary-foreground rounded-full h-8 w-8 flex items-center justify-center font-bold">
-                                1
-                              </div>
-                              <div>
-                                <div className="font-medium">alice.eth</div>
-                                <div className="text-sm text-muted-foreground line-clamp-1">"The future of layer 2 solutions is here..."</div>
-                              </div>
-                            </div>
-                            <div className="font-bold">0.45 ETH</div>
-                          </div>
-                          
-                          <div className="flex items-center justify-between p-3 rounded-lg border border-primary/20 shadow-sm">
-                            <div className="flex items-center gap-3">
-                              <div className="bg-primary/10 rounded-full h-8 w-8 flex items-center justify-center text-primary font-bold">
-                                2
-                              </div>
-                              <div>
-                                <div className="font-medium">bob.lens</div>
-                                <div className="text-sm text-muted-foreground line-clamp-1">"Here's my analysis of the recent EIP..."</div>
-                              </div>
-                            </div>
-                            <div className="font-bold">0.32 ETH</div>
-                          </div>
-                          
-                          <div className="flex items-center justify-between p-3 rounded-lg border border-border shadow-sm">
-                            <div className="flex items-center gap-3">
-                              <div className="bg-primary/5 rounded-full h-8 w-8 flex items-center justify-center text-primary font-bold">
-                                3
-                              </div>
-                              <div>
-                                <div className="font-medium">charlie.sol</div>
-                                <div className="text-sm text-muted-foreground line-clamp-1">"I created this tutorial for beginners..."</div>
-                              </div>
-                            </div>
-                            <div className="font-bold">0.18 ETH</div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="about" className="animate-fade-in mt-0">
-              <Card>
-                <CardHeader>
-                  <CardTitle>About {community?.name || id}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div>
-                    <h3 className="font-medium mb-2">Community Description</h3>
-                    <p className="text-muted-foreground">{community?.description || 'No description available.'}</p>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <h3 className="font-medium">Details</h3>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Created On</span>
-                          <span>{community?.created_on ? new Date(community.created_on).toLocaleDateString() : 'Unknown'}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Admin</span>
-                          <span>{community?.owner ? `${community.owner.substring(0, 6)}...${community.owner.substring(community.owner.length - 4)}` : 'Unknown'}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Total Members</span>
-                          <span>{community?.members_count || 0}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Total Shares</span>
-                          <span>{community?.shares?.toLocaleString() || 0}</span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <h3 className="font-medium">Fee Structure</h3>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Admin Fee</span>
-                          <span>{community?.fees?.admin_fees || 0}%</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Reward Pool</span>
-                          <span>{community?.fees?.reward_fees || 0}%</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Platform Fee</span>
-                          <span>{community?.fees?.platform_fees || 0}%</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Current Share Price</span>
-                          <span>{community?.prices?.buy_price?.toFixed(6) || 0} ETH</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <h3 className="font-medium">Community Rules</h3>
-                    <ul className="space-y-2 text-sm text-muted-foreground list-disc pl-5">
-                      <li>Be respectful to all members and maintain a professional tone</li>
-                      <li>No spam, excessive self-promotion, or plagiarism</li>
-                      <li>Content should be relevant to {community?.name || id}</li>
-                      <li>Provide evidence and sources for technical claims when possible</li>
-                      <li>Abide by the community guidelines for posting and commenting</li>
-                    </ul>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        )}
-        
-        {!isMobile && (
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="w-full lg:w-auto flex justify-start mb-6 pb-px bg-transparent p-0 overflow-x-auto flex-nowrap h-auto border-b rounded-none">
-              <TabsTrigger value="posts" className="flex-shrink-0 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none data-[state=active]:shadow-none">
-                <MessageCircle className="h-4 w-4 mr-2" />
-                Posts
-              </TabsTrigger>
-              <TabsTrigger value="members" className="flex-shrink-0 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none data-[state=active]:shadow-none">
-                <Users className="h-4 w-4 mr-2" />
-                Members
-              </TabsTrigger>
-              <TabsTrigger value="rewards" className="flex-shrink-0 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none data-[state=active]:shadow-none">
-                <DollarSign className="h-4 w-4 mr-2" />
-                Rewards
-              </TabsTrigger>
-              <TabsTrigger value="about" className="flex-shrink-0 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none data-[state=active]:shadow-none">
-                <Info className="h-4 w-4 mr-2" />
-                About
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="posts" className="animate-fade-in mt-0">
-              <div className="space-y-6">
-                {postsLoading && allPosts.length === 0 ? (
-                  <div className="flex justify-center p-8">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                  </div>
-                ) : allPosts.length > 0 ? (
-                  <>
-                    {allPosts.map((post, index) => (
-                      <Post 
-                        key={`post-${post.code || index}-${index}`}
-                        username={post.handle || ''}
-                        community={post.community || ''}
-                        timeAgo={post.timeAgo || ''}
-                        content={post.is_mirror === 1 ? (post.mirror_quote || '') : (post.body || '')}
-                        roarCount={post.upvotes || 0}
-                        commentCount={post.reply_count || 0}
-                        shareCount={post.engagement || 0}
-                        images={post.multiple_images ? post.images || [] : (post.image ? [post.image_url || ''] : [])}
-                        video={undefined}
-                        postCode={post.code || ''}
-                        avatar={post.avatar || ''}
-                        roared={post.roar === 1}
-                        onRoar={() => post.code ? handleRoar(post.code) : null}
-                        isMirror={post.is_mirror === 1}
-                        mirrorData={post.is_mirror === 1 ? {
-                          quote: post.mirror_quote || '',
-                          originalAuthor: post.original_author || '',
-                          originalCommunity: post.original_community || '',
-                          originalBody: post.original_body || '',
-                          originalTimeAgo: post.original_created_on || '',
-                          originalAvatar: post.original_author_avatar || '',
-                          originalImages: post.original_images || [],
-                          originalTitle: post.original_title || ''
-                        } : undefined}
-                        ipfs={post.code || ''}
-                        isLoggedIn={!!localStorage.getItem('dapps_user_key')}
-                        hideComments={false}
-                      />
-                    ))}
-                    
-                    <div 
-                      ref={loadingElementRef}
-                      className="flex justify-center py-8"
-                    >
-                      {postsLoading && (
-                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                      )}
-                      
-                      {!postsLoading && !hasMorePosts && posts.length > 0 && (
-                        <p className="text-sm text-muted-foreground">You've reached the end</p>
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-center p-8 border border-dashed rounded-lg">
-                    <MessageCircle className="h-10 w-10 text-muted-foreground/50 mx-auto mb-2" />
-                    <p className="text-muted-foreground">No posts in this community yet. Be the first to post!</p>
-                  </div>
-                )}
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="members" className="animate-fade-in mt-0">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Community Members</CardTitle>
-                  <CardDescription>
-                    {community?.members_count || 0} members have purchased shares in this community
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <MembersList 
-                    members={members} 
-                    loading={membersLoading} 
-                    hasMore={hasMoreMembers} 
-                    loadMore={loadMoreMembers}
-                    ethToUsd={ethToUsd}
-                  />
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="rewards" className="animate-fade-in mt-0">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Monthly Rewards</CardTitle>
-                  <CardDescription>
-                    The community reward pool is distributed monthly to the top posts
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-6">
-                    <div className="bg-primary/5 rounded-lg p-4 mb-4 border border-primary/20 shadow-sm relative overflow-hidden animate-pulse">
-                      <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0"></div>
-                      <div className="relative z-10">
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="font-medium text-primary">Current Reward Pool</span>
-                          <div className="text-right">
-                            <div className="font-bold text-lg">
-                              {availableRewards.toFixed(5) || '0.00000'} ETH
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              ${(availableRewards * ethToUsd).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="bg-muted/40 p-4 rounded-lg">
-                      <h3 className="font-medium mb-2 flex items-center">
-                        <Sparkles className="h-4 w-4 mr-2 text-primary" />
-                        How Rewards Work
-                      </h3>
-                      <ul className="space-y-2 text-sm text-muted-foreground list-disc pl-5">
-                        <li>{community?.fees?.reward_fees || 2}% of all buy/sell transactions go to the reward pool</li>
-                        <li>Rewards are distributed on the last day of each month</li>
-                        <li>60% goes to the top 3 most roared posts</li>
-                        <li>40% is split among the next 7 top posts</li>
-                        <li>You must hold at least 5 shares to be eligible for rewards</li>
-                      </ul>
-                    </div>
-                    
-                    {hasLastDistributed && (
-                      <div>
-                        <h3 className="font-medium mb-3">Last Month's Winners</h3>
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between p-3 rounded-lg border border-primary/30 bg-primary/5 shadow-sm">
-                            <div className="flex items-center gap-3">
-                              <div className="bg-primary text-primary-foreground rounded-full h-8 w-8 flex items-center justify-center font-bold">
-                                1
-                              </div>
-                              <div>
-                                <div className="font-medium">alice.eth</div>
-                                <div className="text-sm text-muted-foreground line-clamp-1">"The future of layer 2 solutions is here..."</div>
-                              </div>
-                            </div>
-                            <div className="font-bold">0.45 ETH</div>
-                          </div>
-                          
-                          <div className="flex items-center justify-between p-3 rounded-lg border border-primary/20 shadow-sm">
-                            <div className="flex items-center gap-3">
-                              <div className="bg-primary/10 rounded-full h-8 w-8 flex items-center justify-center text-primary font-bold">
-                                2
-                              </div>
-                              <div>
-                                <div className="font-medium">bob.lens</div>
-                                <div className="text-sm text-muted-foreground line-clamp-1">"Here's my analysis of the recent EIP..."</div>
-                              </div>
-                            </div>
-                            <div className="font-bold">0.32 ETH</div>
-                          </div>
-                          
-                          <div className="flex items-center justify-between p-3 rounded-lg border border-border shadow-sm">
-                            <div className="flex items-center gap-3">
-                              <div className="bg-primary/5 rounded-full h-8 w-8 flex items-center justify-center text-primary font-bold">
-                                3
-                              </div>
-                              <div>
-                                <div className="font-medium">charlie.sol</div>
-                                <div className="text-sm text-muted-foreground line-clamp-1">"I created this tutorial for beginners..."</div>
-                              </div>
-                            </div>
-                            <div className="font-bold">0.18 ETH</div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            
-            <TabsContent value="about" className="animate-fade-in mt-0">
-              <Card>
-                <CardHeader>
-                  <CardTitle>About {community?.name || id}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div>
-                    <h3 className="font-medium mb-2">Community Description</h3>
-                    <p className="text-muted-foreground">{community?.description || 'No description available.'}</p>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <h3 className="font-medium">Details</h3>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Created On</span>
-                          <span>{community?.created_on ? new Date(community.created_on).toLocaleDateString() : 'Unknown'}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Admin</span>
-                          <span>{community?.owner ? `${community.owner.substring(0, 6)}...${community.owner.substring(community.owner.length - 4)}` : 'Unknown'}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Total Members</span>
-                          <span>{community?.members_count || 0}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Total Shares</span>
-                          <span>{community?.shares?.toLocaleString() || 0}</span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <h3 className="font-medium">Fee Structure</h3>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Admin Fee</span>
-                          <span>{community?.fees?.admin_fees || 0}%</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Reward Pool</span>
-                          <span>{community?.fees?.reward_fees || 0}%</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Platform Fee</span>
-                          <span>{community?.fees?.platform_fees || 0}%</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Current Share Price</span>
-                          <span>{community?.prices?.buy_price?.toFixed(6) || 0} ETH</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <h3 className="font-medium">Community Rules</h3>
-                    <ul className="space-y-2 text-sm text-muted-foreground list-disc pl-5">
-                      <li>Be respectful to all members and maintain a professional tone</li>
-                      <li>No spam, excessive self-promotion, or plagiarism</li>
-                      <li>Content should be relevant to {community?.name || id}</li>
-                      <li>Provide evidence and sources for technical claims when possible</li>
-                      <li>Abide by the community guidelines for posting and commenting</li>
-                    </ul>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        )}
-      </div>
-      
-      {!isMobile && (
-        <div className="w-full md:w-80 order-1 md:order-2 flex-shrink-0">
-          <div className="sticky top-4 space-y-4">
-            <Card className="overflow-hidden relative">
-              <div className="absolute inset-0 opacity-[0.05] pointer-events-none">
-                <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-                  <path 
-                    d={chartPoints + " V100 H0 Z"} 
-                    fill={priceChange > 0 ? "#10B981" : "#EF4444"} 
-                  />
-                </svg>
-              </div>
+          )}
+          
+          <Card className="mb-6 bg-gradient-to-br from-primary/5 to-secondary/5 border-primary/20 mt-6 md:mt-8">
+            <CardContent className={`pt-6 ${isMobile ? 'mt-12' : ''}`}>
+              <h2 className="text-xl font-semibold mb-3 flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" />
+                What's on your mind?
+              </h2>
+              <CreatePostCard 
+                onPostCreated={handlePostCreated}
+                communityName={community?.name || id || ''}
+              />
+            </CardContent>
+          </Card>
+          
+          {isMobile && (
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mb-6 mt-8">
+              <TabsList className="w-full grid grid-cols-4 bg-muted/50">
+                <TabsTrigger value="posts" className="data-[state=active]:bg-background">
+                  <MessageCircle className="h-4 w-4 mr-1" />
+                  Posts
+                </TabsTrigger>
+                <TabsTrigger value="members" className="data-[state=active]:bg-background">
+                  <Users className="h-4 w-4 mr-1" />
+                  Members
+                </TabsTrigger>
+                <TabsTrigger value="rewards" className="data-[state=active]:bg-background">
+                  <DollarSign className="h-4 w-4 mr-1" />
+                  Rewards
+                </TabsTrigger>
+                <TabsTrigger value="about" className="data-[state=active]:bg-background">
+                  <Info className="h-4 w-4 mr-1" />
+                  About
+                </TabsTrigger>
+              </TabsList>
               
-              <div className="relative">
-                <div 
-                  className="h-32 w-full bg-cover bg-center" 
-                  style={{ backgroundImage: `url(${community?.image || 'https://images.unsplash.com/photo-1639322537228-f710d846310a?q=80&w=2532&auto=format&fit=crop'})` }}
-                />
-                <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-background to-transparent"></div>
-                
-                <Avatar className="absolute bottom-0 left-4 transform translate-y-1/2 h-16 w-16 border-4 border-background">
-                  <AvatarImage src={community?.image} alt={community?.name} />
-                  <AvatarFallback>{community?.name ? community.name[0].toUpperCase() : id?.[0].toUpperCase()}</AvatarFallback>
-                </Avatar>
-              </div>
-              
-              <CardHeader className="pt-10 pb-2">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle>{community?.name || id}</CardTitle>
-                    <CardDescription className="mt-1 line-clamp-2">
-                      {community?.members_count || 0} members
-                    </CardDescription>
-                  </div>
-                  
-                  {priceChange > 0 ? (
-                    <Badge className="bg-green-500/10 text-green-600">
-                      <ArrowUp className="h-3 w-3 mr-1" />
-                      {priceChange.toFixed(1)}%
-                    </Badge>
+              <TabsContent value="posts" className="animate-fade-in mt-0">
+                <div className="space-y-6">
+                  {postsLoading && allPosts.length === 0 ? (
+                    <div className="flex justify-center p-8">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    </div>
+                  ) : allPosts.length > 0 ? (
+                    <>
+                      {allPosts.map((post, index) => (
+                        <Post 
+                          key={`post-${post.code || index}-${index}`}
+                          username={post.handle || ''}
+                          community={post.community || ''}
+                          timeAgo={post.timeAgo || ''}
+                          content={post.is_mirror === 1 ? (post.mirror_quote || '') : (post.body || '')}
+                          roarCount={post.upvotes || 0}
+                          commentCount={post.reply_count || 0}
+                          shareCount={post.engagement || 0}
+                          images={post.multiple_images ? post.images || [] : (post.image ? [post.image_url || ''] : [])}
+                          video={undefined}
+                          postCode={post.code || ''}
+                          avatar={post.avatar || ''}
+                          roared={post.roar === 1}
+                          onRoar={() => post.code ? handleRoar(post.code) : null}
+                          isMirror={post.is_mirror === 1}
+                          mirrorData={post.is_mirror === 1 ? {
+                            quote: post.mirror_quote || '',
+                            originalAuthor: post.original_author || '',
+                            originalCommunity: post.original_community || '',
+                            originalBody: post.original_body || '',
+                            originalTimeAgo: post.original_created_on || '',
+                            originalAvatar: post.original_author_avatar || '',
+                            originalImages: post.original_images || [],
+                            originalTitle: post.original_title || ''
+                          } : undefined}
+                          ipfs={post.code || ''}
+                          isLoggedIn={!!localStorage.getItem('dapps_user_key')}
+                          hideComments={false}
+                        />
+                      ))}
+                      
+                      <div 
+                        ref={loadingElementRef}
+                        className="flex justify-center py-8 my-4"
+                        id="infinite-scroll-marker"
+                      >
+                        {postsLoading && (
+                          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        )}
+                        
+                        {!postsLoading && !hasMorePosts && posts.length > 0 && (
+                          <p className="text-sm text-muted-foreground">You've reached the end</p>
+                        )}
+                      </div>
+                    </>
                   ) : (
-                    <Badge className="bg-red-500/10 text-red-600">
-                      <ArrowDown className="h-3 w-3 mr-1" />
-                      {Math.abs(priceChange).toFixed(1)}%
-                    </Badge>
+                    <div className="text-center p-8 border border-dashed rounded-lg">
+                      <MessageCircle className="h-10 w-10 text-muted-foreground/50 mx-auto mb-2" />
+                      <p className="text-muted-foreground">No posts in this community yet. Be the first to post!</p>
+                    </div>
                   )}
                 </div>
-              </CardHeader>
+              </TabsContent>
               
-              <CardContent className="pb-4">
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Price per Share</span>
-                    <div className="text-right">
-                      <div className="font-semibold text-[15px]">${community?.prices?.buy_price_usd?.toFixed(2) || '0.00'}</div>
-                      <div className="text-xs text-muted-foreground">{community?.prices?.buy_price?.toFixed(6) || '0.000000'} ETH</div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Market Cap</span>
-                    <div className="text-right">
-                      <div className="font-semibold text-[15px]">${community?.market_cap?.usd?.toLocaleString(undefined, { maximumFractionDigits: 0 }) || '0'}</div>
-                      <div className="text-xs text-muted-foreground">{community?.market_cap?.eth?.toFixed(2) || '0.00'} ETH</div>
-                    </div>
-                  </div>
-                  
-                  <Separator />
-                  
-                  <div className="pt-1">
-                    <div className="text-sm font-medium mb-2">Your Holdings</div>
-                    {hasShares ? (
-                      <div className="bg-primary/5 p-3 rounded-lg">
-                        <div className="flex justify-between mb-1">
-                          <span className="text-sm text-muted-foreground">Shares Owned</span>
-                          <span className="font-medium">{user?.shares?.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-sm text-muted-foreground">Value</span>
-                          <div className="text-right">
-                            <div className="font-semibold">${user?.share_value?.usd?.toFixed(2)}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {user?.share_value?.eth?.toFixed(6)} ETH
+              <TabsContent value="members" className="animate-fade-in mt-0">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Community Members</CardTitle>
+                    <CardDescription>
+                      {community?.members_count || 0} members have purchased shares in this community
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <MembersList 
+                      members={members} 
+                      loading={membersLoading} 
+                      hasMore={hasMoreMembers} 
+                      loadMore={loadMoreMembers}
+                      ethToUsd={ethToUsd}
+                    />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="rewards" className="animate-fade-in mt-0">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Monthly Rewards</CardTitle>
+                    <CardDescription>
+                      The community reward pool is distributed monthly to the top posts
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-6">
+                      <div className="bg-primary/5 rounded-lg p-4 mb-4 border border-primary/20 shadow-sm relative overflow-hidden animate-pulse">
+                        <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0"></div>
+                        <div className="relative z-10">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="font-medium text-primary">Current Reward Pool</span>
+                            <div className="text-right">
+                              <div className="font-bold text-lg">
+                                {availableRewards.toFixed(5) || '0.00000'} ETH
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                ${(availableRewards * ethToUsd).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
-                    ) : (
-                      <div className="text-center py-2 text-sm text-muted-foreground">
-                        You don't own any shares yet
+                      
+                      <div className="bg-muted/40 p-4 rounded-lg">
+                        <h3 className="font-medium mb-2 flex items-center">
+                          <Sparkles className="h-4 w-4 mr-2 text-primary" />
+                          How Rewards Work
+                        </h3>
+                        <ul className="space-y-2 text-sm text-muted-foreground list-disc pl-5">
+                          <li>{community?.fees?.reward_fees || 2}% of all buy/sell transactions go to the reward pool</li>
+                          <li>Rewards are distributed on the last day of each month</li>
+                          <li>60% goes to the top 3 most roared posts</li>
+                          <li>40% is split among the next 7 top posts</li>
+                          <li>You must hold at least 5 shares to be eligible for rewards</li>
+                        </ul>
                       </div>
+                      
+                      {hasLastDistributed && (
+                        <div>
+                          <h3 className="font-medium mb-3">Last Month's Winners</h3>
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between p-3 rounded-lg border border-primary/30 bg-primary/5 shadow-sm">
+                              <div className="flex items-center gap-3">
+                                <div className="bg-primary text-primary-foreground rounded-full h-8 w-8 flex items-center justify-center font-bold">
+                                  1
+                                </div>
+                                <div>
+                                  <div className="font-medium">alice.eth</div>
+                                  <div className="text-sm text-muted-foreground line-clamp-1">"The future of layer 2 solutions is here..."</div>
+                                </div>
+                              </div>
+                              <div className="font-bold">0.45 ETH</div>
+                            </div>
+                            
+                            <div className="flex items-center justify-between p-3 rounded-lg border border-primary/20 shadow-sm">
+                              <div className="flex items-center gap-3">
+                                <div className="bg-primary/10 rounded-full h-8 w-8 flex items-center justify-center text-primary font-bold">
+                                  2
+                                </div>
+                                <div>
+                                  <div className="font-medium">bob.lens</div>
+                                  <div className="text-sm text-muted-foreground line-clamp-1">"Here's my analysis of the recent EIP..."</div>
+                                </div>
+                              </div>
+                              <div className="font-bold">0.32 ETH</div>
+                            </div>
+                            
+                            <div className="flex items-center justify-between p-3 rounded-lg border border-border shadow-sm">
+                              <div className="flex items-center gap-3">
+                                <div className="bg-primary/5 rounded-full h-8 w-8 flex items-center justify-center text-primary font-bold">
+                                  3
+                                </div>
+                                <div>
+                                  <div className="font-medium">charlie.sol</div>
+                                  <div className="text-sm text-muted-foreground line-clamp-1">"I created this tutorial for beginners..."</div>
+                                </div>
+                              </div>
+                              <div className="font-bold">0.18 ETH</div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="about" className="animate-fade-in mt-0">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>About {community?.name || id}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div>
+                      <h3 className="font-medium mb-2">Community Description</h3>
+                      <p className="text-muted-foreground">{community?.description || 'No description available.'}</p>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <h3 className="font-medium">Details</h3>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Created On</span>
+                            <span>{community?.created_on ? new Date(community.created_on).toLocaleDateString() : 'Unknown'}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Admin</span>
+                            <span>{community?.owner ? `${community.owner.substring(0, 6)}...${community.owner.substring(community.owner.length - 4)}` : 'Unknown'}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Total Members</span>
+                            <span>{community?.members_count || 0}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Total Shares</span>
+                            <span>{community?.shares?.toLocaleString() || 0}</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <h3 className="font-medium">Fee Structure</h3>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Admin Fee</span>
+                            <span>{community?.fees?.admin_fees || 0}%</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Reward Pool</span>
+                            <span>{community?.fees?.reward_fees || 0}%</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Platform Fee</span>
+                            <span>{community?.fees?.platform_fees || 0}%</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Current Share Price</span>
+                            <span>{community?.prices?.buy_price?.toFixed(6) || 0} ETH</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <h3 className="font-medium">Community Rules</h3>
+                      <ul className="space-y-2 text-sm text-muted-foreground list-disc pl-5">
+                        <li>Be respectful to all members and maintain a professional tone</li>
+                        <li>No spam, excessive self-promotion, or plagiarism</li>
+                        <li>Content should be relevant to {community?.name || id}</li>
+                        <li>Provide evidence and sources for technical claims when possible</li>
+                        <li>Abide by the community guidelines for posting and commenting</li>
+                      </ul>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          )}
+          
+          {!isMobile && (
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="w-full lg:w-auto flex justify-start mb-6 pb-px bg-transparent p-0 overflow-x-auto flex-nowrap h-auto border-b rounded-none">
+                <TabsTrigger value="posts" className="flex-shrink-0 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none data-[state=active]:shadow-none">
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                  Posts
+                </TabsTrigger>
+                <TabsTrigger value="members" className="flex-shrink-0 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none data-[state=active]:shadow-none">
+                  <Users className="h-4 w-4 mr-2" />
+                  Members
+                </TabsTrigger>
+                <TabsTrigger value="rewards" className="flex-shrink-0 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none data-[state=active]:shadow-none">
+                  <DollarSign className="h-4 w-4 mr-2" />
+                  Rewards
+                </TabsTrigger>
+                <TabsTrigger value="about" className="flex-shrink-0 data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none data-[state=active]:shadow-none">
+                  <Info className="h-4 w-4 mr-2" />
+                  About
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="posts" className="animate-fade-in mt-0">
+                <div className="space-y-6">
+                  {postsLoading && allPosts.length === 0 ? (
+                    <div className="flex justify-center p-8">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    </div>
+                  ) : allPosts.length > 0 ? (
+                    <>
+                      {allPosts.map((post, index) => (
+                        <Post 
+                          key={`post-${post.code || index}-${index}`}
+                          username={post.handle || ''}
+                          community={post.community || ''}
+                          timeAgo={post.timeAgo || ''}
+                          content={post.is_mirror === 1 ? (post.mirror_quote || '') : (post.body || '')}
+                          roarCount={post.upvotes || 0}
+                          commentCount={post.reply_count || 0}
+                          shareCount={post.engagement || 0}
+                          images={post.multiple_images ? post.images || [] : (post.image ? [post.image_url || ''] : [])}
+                          video={undefined}
+                          postCode={post.code || ''}
+                          avatar={post.avatar || ''}
+                          roared={post.roar === 1}
+                          onRoar={() => post.code ? handleRoar(post.code) : null}
+                          isMirror={post.is_mirror === 1}
+                          mirrorData={post.is_mirror === 1 ? {
+                            quote: post.mirror_quote || '',
+                            originalAuthor: post.original_author || '',
+                            originalCommunity: post.original_community || '',
+                            originalBody: post.original_body || '',
+                            originalTimeAgo: post.original_created_on || '',
+                            originalAvatar: post.original_author_avatar || '',
+                            originalImages: post.original_images || [],
+                            originalTitle: post.original_title || ''
+                          } : undefined}
+                          ipfs={post.code || ''}
+                          isLoggedIn={!!localStorage.getItem('dapps_user_key')}
+                          hideComments={false}
+                        />
+                      ))}
+                      
+                      <div 
+                        ref={loadingElementRef}
+                        className="flex justify-center py-8"
+                      >
+                        {postsLoading && (
+                          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        )}
+                        
+                        {!postsLoading && !hasMorePosts && posts.length > 0 && (
+                          <p className="text-sm text-muted-foreground">You've reached the end</p>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center p-8 border border-dashed rounded-lg">
+                      <MessageCircle className="h-10 w-10 text-muted-foreground/50 mx-auto mb-2" />
+                      <p className="text-muted-foreground">No posts in this community yet. Be the first to post!</p>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="members" className="animate-fade-in mt-0">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Community Members</CardTitle>
+                    <CardDescription>
+                      {community?.members_count || 0} members have purchased shares in this community
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <MembersList 
+                      members={members} 
+                      loading={membersLoading} 
+                      hasMore={hasMoreMembers} 
+                      loadMore={loadMoreMembers}
+                      ethToUsd={ethToUsd}
+                    />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="rewards" className="animate-fade-in mt-0">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Monthly Rewards</CardTitle>
+                    <CardDescription>
+                      The community reward pool is distributed monthly to the top posts
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-6">
+                      <div className="bg-primary/5 rounded-lg p-4 mb-4 border border-primary/20 shadow-sm relative overflow-hidden animate-pulse">
+                        <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0"></div>
+                        <div className="relative z-10">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="font-medium text-primary">Current Reward Pool</span>
+                            <div className="text-right">
+                              <div className="font-bold text-lg">
+                                {availableRewards.toFixed(5) || '0.00000'} ETH
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                ${(availableRewards * ethToUsd).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-muted/40 p-4 rounded-lg">
+                        <h3 className="font-medium mb-2 flex items-center">
+                          <Sparkles className="h-4 w-4 mr-2 text-primary" />
+                          How Rewards Work
+                        </h3>
+                        <ul className="space-y-2 text-sm text-muted-foreground list-disc pl-5">
+                          <li>{community?.fees?.reward_fees || 2}% of all buy/sell transactions go to the reward pool</li>
+                          <li>Rewards are distributed on the last day of each month</li>
+                          <li>60% goes to the top 3 most roared posts</li>
+                          <li>40% is split among the next 7 top posts</li>
+                          <li>You must hold at least 5 shares to be eligible for rewards</li>
+                        </ul>
+                      </div>
+                      
+                      {hasLastDistributed && (
+                        <div>
+                          <h3 className="font-medium mb-3">Last Month's Winners</h3>
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between p-3 rounded-lg border border-primary/30 bg-primary/5 shadow-sm">
+                              <div className="flex items-center gap-3">
+                                <div className="bg-primary text-primary-foreground rounded-full h-8 w-8 flex items-center justify-center font-bold">
+                                  1
+                                </div>
+                                <div>
+                                  <div className="font-medium">alice.eth</div>
+                                  <div className="text-sm text-muted-foreground line-clamp-1">"The future of layer 2 solutions is here..."</div>
+                                </div>
+                              </div>
+                              <div className="font-bold">0.45 ETH</div>
+                            </div>
+                            
+                            <div className="flex items-center justify-between p-3 rounded-lg border border-primary/20 shadow-sm">
+                              <div className="flex items-center gap-3">
+                                <div className="bg-primary/10 rounded-full h-8 w-8 flex items-center justify-center text-primary font-bold">
+                                  2
+                                </div>
+                                <div>
+                                  <div className="font-medium">bob.lens</div>
+                                  <div className="text-sm text-muted-foreground line-clamp-1">"Here's my analysis of the recent EIP..."</div>
+                                </div>
+                              </div>
+                              <div className="font-bold">0.32 ETH</div>
+                            </div>
+                            
+                            <div className="flex items-center justify-between p-3 rounded-lg border border-border shadow-sm">
+                              <div className="flex items-center gap-3">
+                                <div className="bg-primary/5 rounded-full h-8 w-8 flex items-center justify-center text-primary font-bold">
+                                  3
+                                </div>
+                                <div>
+                                  <div className="font-medium">charlie.sol</div>
+                                  <div className="text-sm text-muted-foreground line-clamp-1">"I created this tutorial for beginners..."</div>
+                                </div>
+                              </div>
+                              <div className="font-bold">0.18 ETH</div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="about" className="animate-fade-in mt-0">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>About {community?.name || id}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div>
+                      <h3 className="font-medium mb-2">Community Description</h3>
+                      <p className="text-muted-foreground">{community?.description || 'No description available.'}</p>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <h3 className="font-medium">Details</h3>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Created On</span>
+                            <span>{community?.created_on ? new Date(community.created_on).toLocaleDateString() : 'Unknown'}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Admin</span>
+                            <span>{community?.owner ? `${community.owner.substring(0, 6)}...${community.owner.substring(community.owner.length - 4)}` : 'Unknown'}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Total Members</span>
+                            <span>{community?.members_count || 0}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Total Shares</span>
+                            <span>{community?.shares?.toLocaleString() || 0}</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <h3 className="font-medium">Fee Structure</h3>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Admin Fee</span>
+                            <span>{community?.fees?.admin_fees || 0}%</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Reward Pool</span>
+                            <span>{community?.fees?.reward_fees || 0}%</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Platform Fee</span>
+                            <span>{community?.fees?.platform_fees || 0}%</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Current Share Price</span>
+                            <span>{community?.prices?.buy_price?.toFixed(6) || 0} ETH</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <h3 className="font-medium">Community Rules</h3>
+                      <ul className="space-y-2 text-sm text-muted-foreground list-disc pl-5">
+                        <li>Be respectful to all members and maintain a professional tone</li>
+                        <li>No spam, excessive self-promotion, or plagiarism</li>
+                        <li>Content should be relevant to {community?.name || id}</li>
+                        <li>Provide evidence and sources for technical claims when possible</li>
+                        <li>Abide by the community guidelines for posting and commenting</li>
+                      </ul>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          )}
+        </div>
+        
+        {!isMobile && (
+          <div className="w-full md:w-80 order-1 md:order-2 flex-shrink-0">
+            <div className="sticky top-4 space-y-4">
+              <Card className="overflow-hidden relative">
+                <div className="absolute inset-0 opacity-[0.05] pointer-events-none">
+                  <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                    <path 
+                      d={chartPoints + " V100 H0 Z"} 
+                      fill={priceChange > 0 ? "#10B981" : "#EF4444"} 
+                    />
+                  </svg>
+                </div>
+                
+                <div className="relative">
+                  <div 
+                    className="h-32 w-full bg-cover bg-center" 
+                    style={{ backgroundImage: `url(${community?.image || 'https://images.unsplash.com/photo-1639322537228-f710d846310a?q=80&w=2532&auto=format&fit=crop'})` }}
+                  />
+                  <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-background to-transparent"></div>
+                  
+                  <Avatar className="absolute bottom-0 left-4 transform translate-y-1/2 h-16 w-16 border-4 border-background">
+                    <AvatarImage src={community?.image} alt={community?.name} />
+                    <AvatarFallback>{community?.name ? community.name[0].toUpperCase() : id?.[0].toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                </div>
+                
+                <CardHeader className="pt-10 pb-2">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle>{community?.name || id}</CardTitle>
+                      <CardDescription className="mt-1 line-clamp-2">
+                        {community?.members_count || 0} members
+                      </CardDescription>
+                    </div>
+                    
+                    {priceChange > 0 ? (
+                      <Badge className="bg-green-500/10 text-green-600">
+                        <ArrowUp className="h-3 w-3 mr-1" />
+                        {priceChange.toFixed(1)}%
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-red-500/10 text-red-600">
+                        <ArrowDown className="h-3 w-3 mr-1" />
+                        {Math.abs(priceChange).toFixed(1)}%
+                      </Badge>
                     )}
                   </div>
-                  
-                  <div className="bg-primary/5 rounded-lg p-3 mb-2 border border-primary/20 shadow-sm relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 animate-pulse"></div>
-                    <div className="relative z-10">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="font-medium text-primary">Reward Pool</span>
-                        <div className="text-right">
-                          <div className="font-bold text-lg">
-                            ${(availableRewards * ethToUsd).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                </CardHeader>
+                
+                <CardContent className="pb-4">
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Price per Share</span>
+                      <div className="text-right">
+                        <div className="font-semibold text-[15px]">${community?.prices?.buy_price_usd?.toFixed(2) || '0.00'}</div>
+                        <div className="text-xs text-muted-foreground">{community?.prices?.buy_price?.toFixed(6) || '0.000000'} ETH</div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Market Cap</span>
+                      <div className="text-right">
+                        <div className="font-semibold text-[15px]">${community?.market_cap?.usd?.toLocaleString(undefined, { maximumFractionDigits: 0 }) || '0'}</div>
+                        <div className="text-xs text-muted-foreground">{community?.market_cap?.eth?.toFixed(2) || '0.00'} ETH</div>
+                      </div>
+                    </div>
+                    
+                    <Separator />
+                    
+                    <div className="pt-1">
+                      <div className="text-sm font-medium mb-2">Your Holdings</div>
+                      {hasShares ? (
+                        <div className="bg-primary/5 p-3 rounded-lg">
+                          <div className="flex justify-between mb-1">
+                            <span className="text-sm text-muted-foreground">Shares Owned</span>
+                            <span className="font-medium">{user?.shares?.toFixed(2)}</span>
                           </div>
-                          <div className="text-xs text-muted-foreground">
-                            {availableRewards.toFixed(5) || '0.00000'} ETH
+                          <div className="flex justify-between">
+                            <span className="text-sm text-muted-foreground">Value</span>
+                            <div className="text-right">
+                              <div className="font-semibold">${user?.share_value?.usd?.toFixed(2)}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {user?.share_value?.eth?.toFixed(6)} ETH
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-2 text-sm text-muted-foreground">
+                          You don't own any shares yet
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="bg-primary/5 rounded-lg p-3 mb-2 border border-primary/20 shadow-sm relative overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/5 to-primary/0 animate-pulse"></div>
+                      <div className="relative z-10">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="font-medium text-primary">Reward Pool</span>
+                          <div className="text-right">
+                            <div className="font-bold text-lg">
+                              ${(availableRewards * ethToUsd).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {availableRewards.toFixed(5) || '0.00000'} ETH
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </CardContent>
+                </CardContent>
+                
+                <CardFooter className="flex flex-col gap-3 pt-0">
+                  {hasShares ? (
+                    <>
+                      <div className="grid grid-cols-2 gap-2 w-full">
+                        <Button 
+                          className="w-full bg-purple-600 hover:bg-purple-700 text-white shadow-md hover:shadow-lg" 
+                          onClick={handleBuyAction}
+                        >
+                          Buy More
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          className="w-full" 
+                          onClick={handleSellAction}
+                        >
+                          Sell
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <Button 
+                      className="w-full bg-purple-600 hover:bg-purple-700 text-white shadow-md hover:shadow-lg" 
+                      onClick={handleBuyAction}
+                    >
+                      Join Community
+                    </Button>
+                  )}
+                </CardFooter>
+              </Card>
               
-              <CardFooter className="flex flex-col gap-3 pt-0">
-                {hasShares ? (
-                  <>
-                    <div className="grid grid-cols-2 gap-2 w-full">
-                      <Button 
-                        className="w-full bg-purple-600 hover:bg-purple-700 text-white shadow-md hover:shadow-lg" 
-                        onClick={handleBuyAction}
-                      >
-                        Buy More
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        className="w-full" 
-                        onClick={handleSellAction}
-                      >
-                        Sell
-                      </Button>
-                    </div>
-                  </>
-                ) : (
-                  <Button 
-                    className="w-full bg-purple-600 hover:bg-purple-700 text-white shadow-md hover:shadow-lg" 
-                    onClick={handleBuyAction}
-                  >
-                    Join Community
-                  </Button>
-                )}
-              </CardFooter>
-            </Card>
-            
-            <Card className="mt-4 border rounded-lg shadow-sm">
-              <div className="p-4 border-b">
-                <h3 className="font-medium text-lg">Community Navigation</h3>
-              </div>
-              <div className="p-2">
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                  <TabsList className="w-full p-0 flex flex-col gap-1 bg-transparent">
-                    <TabsTrigger value="posts" className="w-full justify-start px-4 py-2 data-[state=active]:bg-primary/10">
-                      <MessageCircle className="h-4 w-4 mr-3" />
-                      Posts
-                    </TabsTrigger>
-                    <TabsTrigger value="members" className="w-full justify-start px-4 py-2 data-[state=active]:bg-primary/10">
-                      <Users className="h-4 w-4 mr-3" />
-                      Members
-                    </TabsTrigger>
-                    <TabsTrigger value="rewards" className="w-full justify-start px-4 py-2 data-[state=active]:bg-primary/10">
-                      <DollarSign className="h-4 w-4 mr-3" />
-                      Rewards
-                    </TabsTrigger>
-                    <TabsTrigger value="about" className="w-full justify-start px-4 py-2 data-[state=active]:bg-primary/10">
-                      <Info className="h-4 w-4 mr-3" />
-                      About
-                    </TabsTrigger>
-                  </TabsList>
-                </Tabs>
-              </div>
-            </Card>
+              <Card className="mt-4 border rounded-lg shadow-sm">
+                <div className="p-4 border-b">
+                  <h3 className="font-medium text-lg">Community Navigation</h3>
+                </div>
+                <div className="p-2">
+                  <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                    <TabsList className="w-full p-0 flex flex-col gap-1 bg-transparent">
+                      <TabsTrigger value="posts" className="w-full justify-start px-4 py-2 data-[state=active]:bg-primary/10">
+                        <MessageCircle className="h-4 w-4 mr-3" />
+                        Posts
+                      </TabsTrigger>
+                      <TabsTrigger value="members" className="w-full justify-start px-4 py-2 data-[state=active]:bg-primary/10">
+                        <Users className="h-4 w-4 mr-3" />
+                        Members
+                      </TabsTrigger>
+                      <TabsTrigger value="rewards" className="w-full justify-start px-4 py-2 data-[state=active]:bg-primary/10">
+                        <DollarSign className="h-4 w-4 mr-3" />
+                        Rewards
+                      </TabsTrigger>
+                      <TabsTrigger value="about" className="w-full justify-start px-4 py-2 data-[state=active]:bg-primary/10">
+                        <Info className="h-4 w-4 mr-3" />
+                        About
+                      </TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                </div>
+              </Card>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
       
       <TradeSheet
         open={tradeSheetOpen}

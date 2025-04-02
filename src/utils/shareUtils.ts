@@ -1,4 +1,4 @@
-export type SharePlatform = 'twitter' | 'facebook' | 'linkedin' | 'telegram' | 'farcaster' | 'copy' | 'native';
+export type SharePlatform = 'twitter' | 'facebook' | 'linkedin' | 'telegram' | 'farcaster' | 'whatsapp' | 'copy' | 'native';
 
 interface ShareOptions {
   url: string;
@@ -21,6 +21,9 @@ export const shareToSocialMedia = (platform: SharePlatform, options: ShareOption
       break;
     case 'facebook':
       shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`;
+      break;
+    case 'whatsapp':
+      shareUrl = `https://wa.me/?text=${encodedText}%20${encodedUrl}`;
       break;
     case 'linkedin':
       shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`;
