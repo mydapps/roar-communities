@@ -276,9 +276,17 @@ const CommunityPage = () => {
   console.log("Rendered with available rewards:", availableRewards);
   const hasLastDistributed = community?.rewards?.last_distributed && community.rewards.last_distributed !== null;
   
-  // Prepare metadata for SEO
+  // Fix: Prepare metadata for SEO (always initialize, but may return empty values)
   const communityMetadata = useMemo(() => {
-    if (!community) return null;
+    if (!community) {
+      return { 
+        title: 'Community | ROAR',
+        description: 'Join communities on ROAR. Buy, sell, and discuss with other members.',
+        imageUrl: 'https://dapps.co/og-default.jpg',
+        url: window.location.href,
+        priceInfo: ''
+      };
+    }
     
     const title = `${community.name} Community | ROAR`;
     const description = community.description || `Join the ${community.name} community on ROAR. Buy, sell, and discuss with other members.`;
@@ -293,32 +301,30 @@ const CommunityPage = () => {
   
   return (
     <div className="space-y-6 animate-fade-in pb-20 md:pb-10">
-      {/* SEO Metadata */}
-      {communityMetadata && (
-        <Helmet>
-          <title>{communityMetadata.title}</title>
-          <meta name="description" content={communityMetadata.description} />
-          
-          {/* OpenGraph Tags */}
-          <meta property="og:title" content={communityMetadata.title} />
-          <meta property="og:description" content={communityMetadata.description} />
-          <meta property="og:image" content={communityMetadata.imageUrl} />
-          <meta property="og:url" content={communityMetadata.url} />
-          <meta property="og:type" content="website" />
-          <meta property="og:site_name" content="ROAR Communities" />
-          
-          {/* Twitter Card Tags */}
-          <meta name="twitter:card" content="summary_large_image" />
-          <meta name="twitter:title" content={communityMetadata.title} />
-          <meta name="twitter:description" content={communityMetadata.description} />
-          <meta name="twitter:image" content={communityMetadata.imageUrl} />
-          
-          {/* Additional Meta Tags */}
-          <meta name="keywords" content={`${community.name}, community, crypto, social, roar, dapps.co`} />
-          <meta name="author" content="ROAR Communities" />
-          <link rel="canonical" href={communityMetadata.url} />
-        </Helmet>
-      )}
+      {/* SEO Metadata - always render the Helmet, content changes based on community data */}
+      <Helmet>
+        <title>{communityMetadata.title}</title>
+        <meta name="description" content={communityMetadata.description} />
+        
+        {/* OpenGraph Tags */}
+        <meta property="og:title" content={communityMetadata.title} />
+        <meta property="og:description" content={communityMetadata.description} />
+        <meta property="og:image" content={communityMetadata.imageUrl} />
+        <meta property="og:url" content={communityMetadata.url} />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="ROAR Communities" />
+        
+        {/* Twitter Card Tags */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={communityMetadata.title} />
+        <meta name="twitter:description" content={communityMetadata.description} />
+        <meta name="twitter:image" content={communityMetadata.imageUrl} />
+        
+        {/* Additional Meta Tags */}
+        <meta name="keywords" content={`${community?.name || 'community'}, crypto, social, roar, dapps.co`} />
+        <meta name="author" content="ROAR Communities" />
+        <link rel="canonical" href={communityMetadata.url} />
+      </Helmet>
       
       <div className="flex flex-col md:flex-row gap-4 animate-fade-in max-w-full overflow-x-hidden pt-4 md:pt-0">
         <div className="flex-1 order-2 md:order-1">
