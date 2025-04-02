@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
@@ -254,6 +253,7 @@ export const Post = ({
         timeAgo={timeAgo}
         avatar={avatar}
         ipfsHash={ipfsHash}
+        postCode={postCode}
         onVerifyIpfs={handleVerifyIpfs}
         ipfsSheetOpen={ipfsSheetOpen}
         setIpfsSheetOpen={setIpfsSheetOpen}

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
@@ -16,6 +15,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { createAuthHeaders } from '@/utils/apiBase';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -42,28 +42,49 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const [communities, setCommunities] = useState<Community[]>([]);
   const [loadingCommunities, setLoadingCommunities] = useState(false);
   const [hasCommunities, setHasCommunities] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   
   useEffect(() => {
     const userKey = localStorage.getItem('dapps_user_key');
     setIsLoggedIn(!!userKey);
     
     if (userKey) {
-      fetchCommunities(userKey);
+      fetchCommunities();
     }
   }, []);
   
-  const fetchCommunities = async (userKey: string) => {
+  const fetchCommunities = async () => {
     setLoadingCommunities(true);
     
     try {
+      // Use auth headers utility from apiBase to ensure proper authentication
+      const headers = createAuthHeaders(false);
+      
+      // Double check if we have headers (if not, user not authenticated)
+      if (!headers['x-user-key']) {
+        console.log('No auth headers available, retrying in 1 second...');
+        // If no headers but retry count is low, try again after a delay
+        if (retryCount < 3) {
+          setTimeout(() => {
+            setRetryCount(prev => prev + 1);
+            fetchCommunities();
+          }, 1000);
+          return;
+        } else {
+          throw new Error('Authentication required. Please log in again.');
+        }
+      }
+      
+      console.log('Fetching communities with auth headers');
+      
       const response = await fetch("https://api.dapps.co/get_communities?personal=1&category=popular&page=1&limit=5", {
         method: 'GET',
-        headers: {
-          'x-user-key': userKey
-        }
+        headers: headers
       });
       
       if (!response.ok) {
+        const errText = await response.text();
+        console.error(`API error response: ${response.status}`, errText);
         throw new Error(`API error: ${response.status}`);
       }
       
@@ -77,7 +98,22 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
       }
     } catch (error) {
       console.error('Error fetching communities:', error);
-      toast.error('Failed to load communities');
+      
+      // If 401 error and retries < 3, try again after delay (auth might still be initializing)
+      if (error instanceof Error && error.message.includes('401') && retryCount < 3) {
+        console.log(`Auth error, retrying (${retryCount + 1}/3)...`);
+        setTimeout(() => {
+          setRetryCount(prev => prev + 1);
+          fetchCommunities();
+        }, 1500);
+        return;
+      }
+      
+      if (retryCount >= 3) {
+        toast.error('Unable to load communities. Please refresh the page.');
+      } else {
+        toast.error('Failed to load communities');
+      }
     } finally {
       setLoadingCommunities(false);
     }
@@ -181,7 +217,22 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                         </NavLink>
                       )}
                     </>
-                  ) : null}
+                  ) : (
+                    <div className="p-3 text-sm text-muted-foreground">
+                      <p>Join communities to see them here</p>
+                      <Button 
+                        variant="link" 
+                        className="h-auto p-0 text-primary text-sm"
+                        onClick={() => {
+                          // Reset retry count and try again
+                          setRetryCount(0);
+                          fetchCommunities();
+                        }}
+                      >
+                        Retry
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

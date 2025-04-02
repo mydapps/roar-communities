@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 import { API_BASE_URL, getUserApiKey, createAuthHeaders, setupEventListener } from './apiBase';
 import { POST_MIRRORED_EVENT } from '@/components/feed/post/MirrorButton';
@@ -290,7 +289,7 @@ export const mirrorPost = async (params: {
     
     console.log(`Mirroring post:`, params);
     
-    // Use the exact field names expected by the API (postCode instead of post_code)
+    // Use the exact field names expected by the API
     const requestBody = {
       postCode,
       communityTo,
@@ -301,7 +300,10 @@ export const mirrorPost = async (params: {
     
     const response = await fetch(`${API_BASE_URL}/mirror_post`, {
       method: 'POST',
-      headers: createAuthHeaders(),
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-key': userKey
+      },
       body: JSON.stringify(requestBody)
     });
     
@@ -327,7 +329,7 @@ export const mirrorPost = async (params: {
     const data = await response.json();
     console.log('Mirror API response:', data);
     
-    return data.status === "SUCCESS";
+    return data.status === "SUCCESS" || data.success === true;
   } catch (error) {
     console.error('Error mirroring post:', error);
     throw error;

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from '@/components/ui/drawer';
@@ -64,49 +63,49 @@ export const TradeSheet = ({
   // Use the mobile hook outside of the embedded check
   const isMobile = useIsMobile();
 
-  // For debugging
-  console.log('TradeSheet received callbacks:', {
-    onBuyConfirm: onBuyConfirm ? 'defined' : 'undefined',
-    onSellConfirm: onSellConfirm ? 'defined' : 'undefined',
-    action
-  });
+  // Add a state variable to track if an operation is in progress
+  const [operationInProgress, setOperationInProgress] = useState(false);
+  
+  // For debugging - cleaned up to only log essential information
+  const hasCallbacks = {
+    buy: !!onBuyConfirm,
+    sell: !!onSellConfirm
+  };
 
   useEffect(() => {
     if (community && action && open) {
-      console.log(`TradeSheet opened for ${action} of ${community.community} shares`);
-      console.log('Available callbacks:', {
-        onBuyConfirm: onBuyConfirm ? 'defined' : 'undefined',
-        onSellConfirm: onSellConfirm ? 'defined' : 'undefined',
-      });
-      
-      // Reset to step 1 when opening
-      setStep('quantity');
-      setErrorMessage("");
-      setSuccessVisible(false);
-      
-      // Initialize with 1 share by default
-      setShareQuantity(1);
-      setQuantityInputValue("1");
-      
-      // Set max shares based on action (buy: arbitrary max, sell: owned shares)
-      if (action === 'sell') {
-        const ownedShares = Math.floor(community.shares * 100) / 100;
-        setMaxShares(ownedShares > 0 ? ownedShares : 0.01);
-      } else {
-        setMaxShares(100); // Default max for buying
+      // Never reset if success is visible or operation is in progress
+      if (!operationInProgress && !successVisible) {
+        setStep('quantity');
       }
       
-      // If we already have precheck data from parent, use it
-      if (precheckData) {
-        console.log(`Using parent-provided precheck data:`, precheckData);
-        setPrecheck(precheckData);
-        updatePrices(precheckData);
-      } else {
-        // Otherwise, fetch initial precheck data
-        fetchPrecheckData(1);
+      setErrorMessage("");
+      
+      // Only initialize these values if we're not in the middle of an operation
+      if (!operationInProgress && !successVisible) {
+        // Initialize with 1 share by default
+        setShareQuantity(1);
+        setQuantityInputValue("1");
+        
+        // Set max shares based on action (buy: arbitrary max, sell: owned shares)
+        if (action === 'sell') {
+          const ownedShares = Math.floor(community.shares * 100) / 100;
+          setMaxShares(ownedShares > 0 ? ownedShares : 0.01);
+        } else {
+          setMaxShares(100); // Default max for buying
+        }
+        
+        // If we already have precheck data from parent, use it
+        if (precheckData) {
+          setPrecheck(precheckData);
+          updatePrices(precheckData);
+        } else {
+          // Otherwise, fetch initial precheck data
+          fetchPrecheckData(1);
+        }
       }
     }
-  }, [community, action, open, precheckData, onBuyConfirm, onSellConfirm]);
+  }, [community, action, open, onBuyConfirm, onSellConfirm, operationInProgress, successVisible, precheckData]);
 
   // Use the debounced value for API calls
   useEffect(() => {
@@ -117,11 +116,8 @@ export const TradeSheet = ({
 
   const updatePrices = (data: SharePrecheckResponse) => {
     if (!data) {
-      console.log("No precheck data provided to updatePrices");
       return;
     }
-    
-    console.log(`Updating prices with data:`, data);
     
     if (data.sharePrice) {
       setSharePrice(typeof data.sharePrice === 'string' 
@@ -163,15 +159,12 @@ export const TradeSheet = ({
 
   const fetchPrecheckData = async (quantity: number) => {
     if (!community || !action) {
-      console.log("Missing community or action in fetchPrecheckData");
       return;
     }
     
     try {
       setLoading(true);
       setErrorMessage("");
-      
-      console.log(`Fetching ${action} precheck for ${community.community}, quantity: ${quantity}`);
       
       let result: SharePrecheckResponse | null = null;
       
@@ -181,28 +174,22 @@ export const TradeSheet = ({
         result = await sellSharesPrecheck(community.community, quantity);
       }
       
-      console.log(`Precheck result for ${action}:`, result);
-      
       if (!result) {
-        console.error("No result returned from precheck");
         throw new Error(`No result returned from ${action} precheck`);
       }
       
       // Handle possible error states
       if (result.status === 'ERROR' || result.status === 'DEPOSIT') {
         setErrorMessage(result.error || `Unable to ${action} shares at this time`);
-        console.error(`Precheck error: ${result.status}`, result.error);
       } else if (result.status === 'SUCCESS') {
         setPrecheck(result);
         updatePrices(result);
         setErrorMessage("");
       } else {
         // Unknown status
-        console.warn(`Unknown precheck status: ${result.status}`, result);
         setErrorMessage(`Unexpected response. Unable to ${action} shares at this time.`);
       }
     } catch (error) {
-      console.error('Precheck error:', error);
       setErrorMessage(`Failed to get ${action} quote. Please try again.`);
     } finally {
       setLoading(false);
@@ -246,7 +233,30 @@ export const TradeSheet = ({
     }
   };
 
-  // Function to trigger confetti animation on successful transaction
+  // Replace the loadingAction effect with a more accurate implementation
+  useEffect(() => {
+    // Only show success when loadingAction transitions from true to false
+    // while an operation is in progress
+    if (operationInProgress && !loadingAction && step === 'confirm') {
+      // Set success state with a small delay to ensure UI stability
+      setTimeout(() => {
+        // Keep these operations in order for proper state transitions
+        setStep('confirm');
+        setSuccessVisible(true);
+        setOperationInProgress(false);
+        
+        // Extra feedback - do confetti animation
+        triggerSuccessAnimation();
+        
+        // Vibrate on mobile devices for physical feedback if available
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+          navigator.vibrate([100, 50, 100]);
+        }
+      }, 150); // slightly longer delay for stability
+    }
+  }, [loadingAction, step, operationInProgress]);
+  
+  // Updated triggerSuccessAnimation to not re-set the successVisible state
   const triggerSuccessAnimation = () => {
     // Create a more elaborate confetti display
     const duration = 5 * 1000;
@@ -279,119 +289,186 @@ export const TradeSheet = ({
       });
     }, 250);
     
-    // Show success state
-    setSuccessVisible(true);
+    // We no longer set successVisible here
+    // It's now set in the useEffect to ensure proper state ordering
   };
 
   const handleConfirm = async () => {
     if (!community || !action) {
-      console.error("Missing community or action in handleConfirm");
       return;
     }
     
     try {
       setSubmitLoading(true);
-      console.log(`Attempting to ${action} ${shareQuantity} shares of ${community.community}`);
+      // Set that an operation is in progress and ensure we stay on the confirm step
+      setOperationInProgress(true);
+      setStep('confirm'); // Explicitly set step to confirm to ensure it stays there
       
       if (action === 'buy') {
         // If there's a callback provided by parent, use it
         if (onBuyConfirm) {
-          console.log(`Using provided onBuyConfirm callback for ${community.community}`);
+          // The parent component will handle the API call and set loadingAction
+          // We'll show success via the useEffect when loadingAction becomes false
           await onBuyConfirm(community.community, shareQuantity);
+          
+          // If parent component doesn't properly toggle loadingAction:
+          // Only show success if not already showing and operation still in progress
+          if (operationInProgress && !successVisible) {
+            setTimeout(() => {
+              if (operationInProgress && !successVisible) {
+                setStep('confirm');
+                setSuccessVisible(true);
+                setOperationInProgress(false);
+                triggerSuccessAnimation();
+              }
+            }, 200);
+          }
         } else {
           // Otherwise use our internal function for direct API call
-          console.log(`No onBuyConfirm callback provided, using direct API call for ${community.community}`);
-          const result = await buySharesConfirm(community.community, shareQuantity);
-          
-          if (result.status === 'SUCCESS') {
-            triggerSuccessAnimation();
-            toast.success(`Successfully purchased ${result.shareQuantity} shares of ${community.community}!`);
+          try {
+            const result = await buySharesConfirm(community.community, shareQuantity);
             
-            // Close after a short delay to allow animation to be seen
-            setTimeout(() => {
-              onOpenChange(false);
-            }, 3000);
-          } else {
-            toast.error(result.message || 'Transaction failed');
-            return;
+            if (result && result.status === 'SUCCESS') {
+              // Only show success after API confirms success
+              setStep('confirm');
+              setSuccessVisible(true);
+              setOperationInProgress(false);
+              
+              // Show the confetti animation
+              triggerSuccessAnimation();
+              
+              toast.success(`Successfully purchased ${result.shareQuantity} shares of ${community.community}!`);
+              
+              // Close after a short delay to allow animation to be seen
+              setTimeout(() => {
+                onOpenChange(false);
+              }, 3000);
+            } else {
+              setOperationInProgress(false); // Reset operation flag on failure
+              toast.error(result?.message || 'Transaction failed');
+              return;
+            }
+          } catch (error) {
+            setOperationInProgress(false);
+            toast.error(`Failed to buy shares. Please try again.`);
           }
         }
-        
-        // Show success animation even when using callback
-        triggerSuccessAnimation();
-        
       } else if (action === 'sell') {
         // If there's a callback provided by parent, use it
         if (onSellConfirm) {
-          console.log(`Using provided onSellConfirm callback for ${community.community}`);
+          // The parent component will handle the API call and set loadingAction
+          // We'll show success via the useEffect when loadingAction becomes false
           await onSellConfirm(community.community, shareQuantity);
+          
+          // If parent component doesn't properly toggle loadingAction:
+          // Only show success if not already showing and operation still in progress
+          if (operationInProgress && !successVisible) {
+            setTimeout(() => {
+              if (operationInProgress && !successVisible) {
+                setStep('confirm');
+                setSuccessVisible(true);
+                setOperationInProgress(false);
+                triggerSuccessAnimation();
+              }
+            }, 200);
+          }
         } else {
           // Otherwise use our internal function for direct API call
-          console.log(`No onSellConfirm callback provided, using direct API call for ${community.community}`);
-          const result = await sellSharesConfirm(community.community, shareQuantity);
-          
-          if (result.status === 'SUCCESS') {
-            triggerSuccessAnimation();
-            toast.success(`Successfully sold ${result.soldShares} shares of ${community.community}!`);
+          try {
+            const result = await sellSharesConfirm(community.community, shareQuantity);
             
-            // Close after a short delay to allow animation to be seen
-            setTimeout(() => {
-              onOpenChange(false);
-            }, 3000);
-          } else {
-            toast.error(result.message || 'Transaction failed');
-            return;
+            if (result && result.status === 'SUCCESS') {
+              // Only show success after API confirms success
+              setStep('confirm');
+              setSuccessVisible(true);
+              setOperationInProgress(false);
+              
+              // Show the confetti animation
+              triggerSuccessAnimation();
+              
+              toast.success(`Successfully sold ${result.soldShares} shares of ${community.community}!`);
+              
+              // Close after a short delay to allow animation to be seen
+              setTimeout(() => {
+                onOpenChange(false);
+              }, 3000);
+            } else {
+              setOperationInProgress(false); // Reset operation flag on failure
+              toast.error(result?.message || 'Transaction failed');
+              return;
+            }
+          } catch (error) {
+            setOperationInProgress(false);
+            toast.error(`Failed to sell shares. Please try again.`);
           }
         }
-        
-        // Show success animation even when using callback
-        triggerSuccessAnimation();
       }
     } catch (error) {
-      console.error(`Error during ${action} operation:`, error);
       toast.error(`Failed to ${action} shares. Please try again.`);
+      setOperationInProgress(false); // Reset operation flag on error
     } finally {
       setSubmitLoading(false);
+      // Note: We don't reset operationInProgress here for parent callbacks because 
+      // we need it to remain true until loadingAction becomes false
     }
   };
   
   const goToConfirmStep = () => {
-    console.log(`Moving to confirm step for ${action} of ${shareQuantity} shares`);
-    console.log('Available callbacks for confirmation:', {
-      onBuyConfirm: onBuyConfirm ? 'defined' : 'undefined',
-      onSellConfirm: onSellConfirm ? 'defined' : 'undefined',
-    });
+    // Don't allow step changes during API calls
+    if (loading || loadingAction) {
+      return;
+    }
+    
     setStep('confirm');
   };
   
   const goBackToQuantityStep = () => {
+    // Don't allow step changes during API calls
+    if (loading || loadingAction || submitLoading) {
+      return;
+    }
+    
     setStep('quantity');
   };
   
   const handleDialogClose = () => {
     // Reset the state when dialog is closed
     setStep('quantity');
+    setSuccessVisible(false);
+    setOperationInProgress(false);
+    setSubmitLoading(false);
     onOpenChange(false);
   };
+
+  // Enhanced success screen with more engaging visuals
+  const SuccessScreen = () => (
+    <div className="bg-green-50 border border-green-100 p-6 rounded-lg text-center animate-fade-in">
+      <div className="flex justify-center mb-3 relative">
+        <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center animate-bounce-small">
+          <Check className="h-8 w-8 text-green-600" />
+        </div>
+        <div className="absolute -right-2 -top-2">
+          <PartyPopper className="h-8 w-8 text-amber-500 animate-wiggle" />
+        </div>
+      </div>
+      <h3 className="font-bold text-xl text-green-700 mb-2">Transaction Successful!</h3>
+      <p className="text-green-600 text-lg">
+        {action === 'buy' 
+          ? `You've successfully purchased ${shareQuantity} shares of ${community?.community}!` 
+          : `You've successfully sold ${shareQuantity} shares of ${community?.community}!`}
+      </p>
+      <div className="mt-4 text-sm text-green-500">
+        {action === 'buy' 
+          ? "You're now a community member!" 
+          : "Thanks for being part of the community."}
+      </div>
+    </div>
+  );
 
   // Component for both quantity and confirm steps
   const ContentView = () => (
     <div className="space-y-6">
-      {successVisible && (
-        <div className="bg-green-50 border border-green-100 p-4 rounded-lg text-center animate-fade-in">
-          <div className="flex justify-center mb-2">
-            <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
-              <Check className="h-6 w-6 text-green-600" />
-            </div>
-          </div>
-          <h3 className="font-bold text-lg text-green-700">Transaction Successful!</h3>
-          <p className="text-green-600 mt-1">
-            {action === 'buy' 
-              ? `You've successfully purchased ${shareQuantity} shares of ${community?.community}` 
-              : `You've successfully sold ${shareQuantity} shares of ${community?.community}`}
-          </p>
-        </div>
-      )}
+      {successVisible ? <SuccessScreen /> : null}
       
       {!successVisible && step === 'quantity' ? (
         /* Step 1: Select Quantity */
@@ -617,8 +694,12 @@ export const TradeSheet = ({
               onClick={handleConfirm}
               disabled={loading || loadingAction || !!errorMessage || submitLoading}
             >
-              {(loading || loadingAction || submitLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {action === 'buy' ? 'Buy Shares' : 'Sell Shares'}
+              {(loading || loadingAction || submitLoading) && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              {(loading || loadingAction || submitLoading) 
+                ? `${action === 'buy' ? 'Buying' : 'Selling'}...` 
+                : `${action === 'buy' ? 'Buy' : 'Sell'} Shares`}
             </Button>
           </div>
         </>
@@ -634,7 +715,13 @@ export const TradeSheet = ({
   // For non-embedded usage, use responsive components
   return isMobile ? (
     // Mobile: Use Drawer
-    <Drawer open={open} onOpenChange={onOpenChange}>
+    <Drawer open={open} onOpenChange={(isOpen) => {
+      if (!isOpen) {
+        handleDialogClose();
+      } else {
+        onOpenChange(true);
+      }
+    }}>
       <DrawerContent className="px-4 pt-3 pb-6 max-h-[85vh]">
         <DrawerHeader className="px-0 pb-2">
           <DrawerTitle>
@@ -655,7 +742,13 @@ export const TradeSheet = ({
     </Drawer>
   ) : (
     // Desktop: Use Sheet
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={(isOpen) => {
+      if (!isOpen) {
+        handleDialogClose();
+      } else {
+        onOpenChange(true);
+      }
+    }}>
       <SheetContent className="sm:max-w-md overflow-y-auto">
         <SheetHeader>
           <SheetTitle>

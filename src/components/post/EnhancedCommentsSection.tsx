@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -103,7 +102,8 @@ export const EnhancedCommentsSection = ({
         // Log the created reply with its ID to verify it's correct
         console.log("Created new comment with server-assigned ID:", newReply.id);
         
-        setReplies(prev => [newReply, ...prev]);
+        // Add new comments at the end of the array instead of the beginning
+        setReplies(prev => [...prev, newReply]);
         setReplyCount(prev => prev + 1);
         setNewComment('');
         toast.success('Comment added successfully');

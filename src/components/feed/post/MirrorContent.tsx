@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -107,7 +106,7 @@ export const MirrorContent = ({
     // Set a timeout to execute the search after a delay (debounce)
     const timeout = setTimeout(() => {
       executeSearch(query);
-    }, 500); // 500ms debounce
+    }, 300); // Reduced debounce time for better responsiveness
     
     setSearchTimeout(timeout as unknown as NodeJS.Timeout);
   };
@@ -118,24 +117,26 @@ export const MirrorContent = ({
     try {
       setLoading(true);
       
-      // For longer queries, search on the server
-      if (query.length >= 2) {
-        console.log('Searching communities from server...');
-        const searchResults = await fetchCommunities({
-          search: query,
-          limit: 20
-        });
-        
-        console.log(`Search returned ${searchResults.length} communities`);
-        setFilteredCommunities(searchResults);
-      } else {
-        // For very short queries, filter client-side for better responsiveness
-        console.log('Filtering communities client-side...');
+      // Always search on the server for accurate results
+      console.log('Searching communities from server...');
+      const searchResults = await fetchCommunities({
+        search: query,
+        limit: 50 // Increased limit for better search results
+      });
+      
+      console.log(`Search returned ${searchResults.length} communities`);
+      
+      if (searchResults.length === 0 && query.length >= 2) {
+        // If no results from API but we have a meaningful query, try to search client-side as fallback
+        console.log('No server results, falling back to client-side filtering...');
         const filtered = communities.filter(community => 
           community.name.toLowerCase().includes(query.toLowerCase())
         );
-        console.log(`Filtered to ${filtered.length} communities`);
+        console.log(`Client-side filtered to ${filtered.length} communities`);
         setFilteredCommunities(filtered);
+      } else {
+        // Use server results
+        setFilteredCommunities(searchResults);
       }
     } catch (error) {
       console.error('Error searching communities:', error);

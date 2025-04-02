@@ -115,68 +115,82 @@ const MySharesPage = () => {
   };
 
   const handleBuySharesConfirm = async (communityName: string, quantity: number) => {
-    console.log(`handleBuySharesConfirm called with communityName=${communityName}, quantity=${quantity}`);
     try {
+      // Set loading state FIRST, before doing anything else
       setLoadingAction(true);
-      console.log(`Confirming buy of ${quantity} shares for ${communityName}`);
-      console.log(`User ETH balance before purchase: ${userEthBalance}`);
+      
+      // Small delay to ensure state is updated before proceeding
+      await new Promise(resolve => setTimeout(resolve, 50));
       
       if (!communityName) {
-        console.error("Community name is empty in handleBuySharesConfirm");
         throw new Error("Invalid community name");
       }
       
       if (quantity <= 0) {
-        console.error(`Invalid quantity (${quantity}) in handleBuySharesConfirm`);
         throw new Error("Quantity must be greater than 0");
       }
       
-      console.log('Calling buySharesConfirm API...');
       const result = await buySharesConfirm(communityName, quantity);
-      console.log('Buy shares confirmation result:', result);
       
       if (result.status === 'SUCCESS') {
-        setTradeOpen(false);
-        triggerSuccessAnimation();
-        toast.success(`Successfully purchased ${result.shareQuantity} shares of ${communityName}`);
+        // Update portfolio data in the background
         refreshPortfolio();
         fetchWalletBalance();
+        
+        // Success toast notification
+        toast.success(`Successfully purchased ${result.shareQuantity} shares of ${communityName}`);
+        
+        // IMPORTANT: Keep the modal open to show success screen
+        // We'll only close it after a longer delay
+        
+        // Close the modal after a delay to give user time to see the success screen
+        setTimeout(() => {
+          setTradeOpen(false);
+        }, 5000);
       } else {
-        console.error('Buy shares failed with status:', result.status);
-        console.error('Error message:', result.message || 'Unknown error');
         toast.error(result.message || 'Transaction failed');
       }
     } catch (error) {
-      console.error('Buy shares error:', error);
       toast.error('Failed to complete purchase');
     } finally {
+      // Now it's safe to set loadingAction to false
       setLoadingAction(false);
     }
   };
 
   const handleSellSharesConfirm = async (communityName: string, quantity: number) => {
-    console.log(`handleSellSharesConfirm called with communityName=${communityName}, quantity=${quantity}`);
     try {
+      // Set loading state FIRST, before doing anything else
       setLoadingAction(true);
-      console.log(`Confirming sell of ${quantity} shares for ${communityName}`);
+      
+      // Small delay to ensure state is updated before proceeding
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      // This API call may take some time - during this time, the TradeSheet will show loading
       const result = await sellSharesConfirm(communityName, quantity);
-      console.log('Sell shares confirmation result:', result);
       
       if (result.status === 'SUCCESS') {
-        setTradeOpen(false);
-        triggerSuccessAnimation();
-        toast.success(`Successfully sold ${result.soldShares} shares of ${communityName}`);
+        // Update portfolio data in the background
         refreshPortfolio();
         fetchWalletBalance();
+        
+        // Success toast notification
+        toast.success(`Successfully sold ${result.soldShares} shares of ${communityName}`);
+        
+        // IMPORTANT: Keep the modal open to show success screen
+        // We'll only close it after a longer delay
+        
+        // Close the modal after a delay to give user time to see the success screen
+        setTimeout(() => {
+          setTradeOpen(false);
+        }, 5000);
       } else {
-        console.error('Sell shares failed with status:', result.status);
-        console.error('Error message:', result.message || 'Unknown error');
         toast.error(result.message || 'Transaction failed');
       }
     } catch (error) {
-      console.error('Sell shares error:', error);
       toast.error('Failed to complete sale');
     } finally {
+      // Now it's safe to set loadingAction to false
       setLoadingAction(false);
     }
   };
@@ -197,14 +211,8 @@ const MySharesPage = () => {
   const totalEthValue = portfolioSummary?.totalValueEth || 0;
   const totalUsdValue = portfolioSummary?.totalValueUsd || 0;
 
-  console.log('Rendering MySharesPage with:', {
-    selectedCommunity: selectedCommunity?.community,
-    tradeAction,
-    tradeOpen,
-    buyCallback: handleBuySharesConfirm ? 'defined' : 'undefined',
-    sellCallback: handleSellSharesConfirm ? 'defined' : 'undefined',
-  });
-
+  // Don't log every render, it's too noisy
+  
   return (
     <div className="space-y-6 animate-fade-in pb-20 md:pb-10 pt-20 md:pt-16">
       <PortfolioSummary 

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -50,6 +49,7 @@ import { MembersList } from '@/components/community/MembersList';
 import { useCommunityPosts, CommunityPost } from '@/hooks/useCommunityPosts';
 import { toggleRoar } from '@/utils/api';
 import { getWalletBalance } from '@/utils/communityApi';
+import { buySharesConfirm, sellSharesConfirm } from '@/utils/api';
 
 const LionIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-5 w-5">
@@ -70,6 +70,7 @@ const CommunityPage = () => {
   const [localPosts, setLocalPosts] = useState<Partial<CommunityPost>[]>([]);
   const [userEthBalance, setUserEthBalance] = useState("0.000");
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
+  const [tradeLoading, setTradeLoading] = useState(false);
   
   console.log("CommunityPage rendering, id:", id, "activeTab:", activeTab);
   
@@ -108,13 +109,77 @@ const CommunityPage = () => {
     setIsLoadingBalance(true);
     try {
       const balanceData = await getWalletBalance();
-      console.log('Wallet balance data:', balanceData);
       setUserEthBalance(balanceData.balance.eth);
     } catch (error) {
       console.error('Failed to fetch wallet balance:', error);
       toast.error("Failed to load wallet balance");
+      setUserEthBalance("0.000");
     } finally {
       setIsLoadingBalance(false);
+    }
+  };
+  
+  const handleBuySharesConfirm = async (communityName: string, quantity: number) => {
+    try {
+      setTradeLoading(true);
+      
+      // Small delay to ensure state is updated before proceeding
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      // Call the API to buy shares
+      const result = await buySharesConfirm(communityName, quantity);
+      
+      if (result.status === 'SUCCESS') {
+        toast.success(`Successfully purchased ${result.shareQuantity} shares of ${communityName}`);
+        
+        // Refresh data by re-fetching things (no direct access to fetchCommunityData)
+        // This will force the hooks to re-fetch the data
+        fetchWalletBalance();
+        window.location.reload(); // Simple way to refresh community data
+        
+        // Close the sheet after a delay to allow success animation to show
+        setTimeout(() => {
+          setTradeSheetOpen(false);
+        }, 5000);
+      } else {
+        toast.error(result.message || 'Transaction failed');
+      }
+    } catch (error) {
+      toast.error('Failed to complete purchase');
+    } finally {
+      setTradeLoading(false);
+    }
+  };
+  
+  const handleSellSharesConfirm = async (communityName: string, quantity: number) => {
+    try {
+      setTradeLoading(true);
+      
+      // Small delay to ensure state is updated before proceeding
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      // Call the API to sell shares
+      const result = await sellSharesConfirm(communityName, quantity);
+      
+      if (result.status === 'SUCCESS') {
+        toast.success(`Successfully sold ${result.soldShares} shares of ${communityName}`);
+        
+        // Refresh data by re-fetching things (no direct access to fetchCommunityData)
+        // This will force the hooks to re-fetch the data
+        fetchWalletBalance();
+        window.location.reload(); // Simple way to refresh community data
+        
+        // Close the sheet after a delay to allow success animation to show
+        setTimeout(() => {
+          setTradeSheetOpen(false);
+        }, 5000);
+      } else {
+        toast.error(result.message || 'Transaction failed');
+      }
+    } catch (error) {
+      toast.error('Failed to complete sale');
+    } finally {
+      setTradeLoading(false);
     }
   };
   
@@ -1005,6 +1070,9 @@ const CommunityPage = () => {
         }}
         action={tradeAction}
         userEthBalance={userEthBalance}
+        loadingAction={tradeLoading}
+        onBuyConfirm={handleBuySharesConfirm}
+        onSellConfirm={handleSellSharesConfirm}
       />
     </div>
   );

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -23,6 +22,7 @@ const Index = () => {
   const [referrerHandle, setReferrerHandle] = useState('');
   const [referrerAvatar, setReferrerAvatar] = useState('');
   const [totalWaitlist, setTotalWaitlist] = useState<number | null>(null);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const { login } = usePrivy();
   const isMobile = useIsMobile();
 
@@ -157,7 +157,31 @@ const Index = () => {
     }
   }, [displayText, currentTextIndex, isTyping, headlines]);
 
+  // Handle Privy auth events
+  useEffect(() => {
+    // Listen for Privy modal close event
+    const handleMessage = (event: MessageEvent) => {
+      // Check if the message is from Privy closing its modal
+      if (
+        event.data && 
+        typeof event.data === 'object' && 
+        'type' in event.data && 
+        event.data.type === 'privy:modalClosed'
+      ) {
+        // Keep loading state active for a few more seconds after modal closes
+        // since auth processing might still be happening in the background
+        setTimeout(() => {
+          setIsLoggingIn(false);
+        }, 5000); // 5 second timeout as auth processing may take some time
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
   const handleGetStarted = () => {
+    setIsLoggingIn(true);
     login();
   };
 
@@ -281,6 +305,7 @@ const Index = () => {
               <Button 
                 size="lg" 
                 onClick={handleGetStarted}
+                disabled={isLoggingIn}
                 className="bg-gradient-to-r from-[#31bcc3] to-[#31bcc3]/90 hover:from-[#31bcc3]/90 hover:to-[#31bcc3] text-white shadow-lg group px-10 py-6 text-lg"
               >
                 <motion.div 
@@ -288,14 +313,23 @@ const Index = () => {
                   whileHover={{ scale: 1.05 }}
                   transition={{ type: "spring", stiffness: 400, damping: 10 }}
                 >
-                  <span>Login / Sign Up</span>
-                  <motion.span
-                    initial={{ x: 0 }}
-                    whileHover={{ x: 5 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 10 }}
-                  >
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </motion.span>
+                  {isLoggingIn ? (
+                    <>
+                      <span className="animate-spin mr-2">↻</span>
+                      <span>Processing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Login / Sign Up</span>
+                      <motion.span
+                        initial={{ x: 0 }}
+                        whileHover={{ x: 5 }}
+                        transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                      >
+                        <ArrowRight className="ml-2 h-5 w-5" />
+                      </motion.span>
+                    </>
+                  )}
                 </motion.div>
               </Button>
             </motion.div>
@@ -390,10 +424,20 @@ const Index = () => {
             <Button 
               size="lg" 
               onClick={handleGetStarted}
+              disabled={isLoggingIn}
               className="bg-gradient-to-r from-[#31bcc3] to-[#31bcc3]/90 hover:from-[#31bcc3]/90 hover:to-[#31bcc3] text-white shadow-lg group px-10 py-6 text-lg"
             >
-              <span>Login / Sign Up</span>
-              <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+              {isLoggingIn ? (
+                <span className="flex items-center">
+                  <span className="animate-spin mr-2">↻</span>
+                  Processing...
+                </span>
+              ) : (
+                <span className="flex items-center">
+                  <span>Login / Sign Up</span>
+                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                </span>
+              )}
             </Button>
           </div>
         </div>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
@@ -47,6 +46,7 @@ interface ApiResponse {
     tweet: number;
     quote_tweet: number;
   };
+  registered: number;
 }
 
 const RequestInvitePage = () => {
@@ -67,6 +67,7 @@ const RequestInvitePage = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [authWindow, setAuthWindow] = useState<Window | null>(null);
   const [checkIntervalId, setCheckIntervalId] = useState<NodeJS.Timeout | null>(null);
+  const [loadingTimeoutId, setLoadingTimeoutId] = useState<NodeJS.Timeout | null>(null);
   const [tasks, setTasks] = useState<Task[]>([
     {
       id: 'connect-twitter',
@@ -118,13 +119,17 @@ const RequestInvitePage = () => {
     const userKey = localStorage.getItem('dapps_user_key');
     const isRegistered = localStorage.getItem('dapps_user_registered');
     
+    console.log('RequestInvitePage - User registration status:', isRegistered);
+    
     if (!userKey) {
+      console.log('RequestInvitePage - No user key found, redirecting to home');
       localStorage.clear();
       navigate('/');
       return;
     }
     
     if (isRegistered === '1') {
+      console.log('RequestInvitePage - User is registered, redirecting to feed');
       navigate('/feed');
       return;
     }
@@ -135,10 +140,31 @@ const RequestInvitePage = () => {
       setShowCodeInput(true);
     }
     
+    // Set a timeout to prevent indefinite loading
+    const timeout = setTimeout(() => {
+      // If still loading after 15 seconds, show the page anyway
+      if (isLoading) {
+        console.log('RequestInvitePage - Loading timeout reached, showing page');
+        setIsLoading(false);
+        
+        // Double-check registration status before showing page
+        const currentIsRegistered = localStorage.getItem('dapps_user_registered');
+        if (currentIsRegistered === '1') {
+          navigate('/feed');
+        }
+      }
+    }, 15000);
+    
+    setLoadingTimeoutId(timeout);
+    
     fetchInviteStatus(userKey);
+    
+    return () => {
+      if (timeout) clearTimeout(timeout);
+    };
   }, [navigate]);
 
-  // Clean up any auth windows and intervals when component unmounts
+  // Clean up any auth windows, intervals, and timeouts when component unmounts
   useEffect(() => {
     return () => {
       if (authWindow && !authWindow.closed) {
@@ -147,8 +173,11 @@ const RequestInvitePage = () => {
       if (checkIntervalId) {
         clearInterval(checkIntervalId);
       }
+      if (loadingTimeoutId) {
+        clearTimeout(loadingTimeoutId);
+      }
     };
-  }, [authWindow, checkIntervalId]);
+  }, [authWindow, checkIntervalId, loadingTimeoutId]);
 
   useEffect(() => {
     if (displayQueuePosition !== queuePosition) {
@@ -178,6 +207,14 @@ const RequestInvitePage = () => {
   const fetchInviteStatus = async (userKey: string) => {
     setIsLoading(true);
     try {
+      // Double-check registration status before fetching
+      const currentIsRegistered = localStorage.getItem('dapps_user_registered');
+      if (currentIsRegistered === '1') {
+        console.log('RequestInvitePage - User is registered (pre-fetch check), redirecting to feed');
+        navigate('/feed');
+        return;
+      }
+      
       const response = await fetch('https://api.dapps.co/request_invite_status', {
         method: 'GET',
         headers: {
@@ -189,6 +226,14 @@ const RequestInvitePage = () => {
         const data: ApiResponse = await response.json();
         
         if (data.success) {
+          // Check if the API response indicates the user is now registered
+          if (data.registered === 1) {
+            console.log('RequestInvitePage - User is registered (API response), redirecting to feed');
+            localStorage.setItem('dapps_user_registered', '1');
+            navigate('/feed');
+            return;
+          }
+          
           const previousPosition = queuePosition;
           
           setQueuePosition(data.rank);
@@ -678,6 +723,14 @@ const RequestInvitePage = () => {
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
           <p className="text-lg text-muted-foreground">Loading your invite status...</p>
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => setIsLoading(false)}
+            className="mt-4 text-muted-foreground"
+          >
+            Taking too long? Click here
+          </Button>
         </div>
       </div>
     );

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CardHeader } from '@/components/ui/card';
@@ -12,6 +11,7 @@ interface PostHeaderProps {
   timeAgo: string;
   avatar?: string;
   ipfsHash: string;
+  postCode?: string;
   onVerifyIpfs?: () => void;
   ipfsSheetOpen?: boolean;
   setIpfsSheetOpen?: (open: boolean) => void;
@@ -23,6 +23,7 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
   timeAgo,
   avatar,
   ipfsHash,
+  postCode,
   onVerifyIpfs = () => {},
   ipfsSheetOpen = false,
   setIpfsSheetOpen = () => {}
@@ -38,6 +39,18 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
     e.stopPropagation();
     if (community) {
       navigate(`/c/${community.toLowerCase().replace(/\s+/g, '-')}`);
+    }
+  };
+
+  const handleTimeClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (!postCode) return;
+    
+    if (community) {
+      navigate(`/c/${community.toLowerCase().replace(/\s+/g, '-')}/${postCode}`);
+    } else {
+      navigate(`/${username.split('.')[0]}/${postCode}`);
     }
   };
 
@@ -65,7 +78,12 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
                 {formatUsername(username)}
               </span>
               <span className="text-muted-foreground text-sm mx-1">·</span>
-              <span className="text-muted-foreground text-sm">{timeAgo}</span>
+              <span 
+                className="text-muted-foreground text-sm cursor-pointer hover:text-muted-foreground/80"
+                onClick={handleTimeClick}
+              >
+                {timeAgo}
+              </span>
             </div>
             {community && (
               <Badge 

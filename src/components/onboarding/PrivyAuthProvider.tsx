@@ -1,17 +1,21 @@
-
 import React, { ReactNode, useEffect, useState } from 'react';
 import { PrivyProvider, usePrivy } from '@privy-io/react-auth';
 import { toast } from 'sonner';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { Loader2 } from 'lucide-react';
 
 interface PrivyAuthProviderProps {
   children: ReactNode;
 }
 
+// Create a context to expose global authentication loading state
+export const AuthLoadingContext = React.createContext<boolean>(false);
+
 // Wrapper component to handle Privy auth state and login flow
 const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
   const { ready, authenticated, user, login, getAccessToken } = usePrivy();
   const [authProcessed, setAuthProcessed] = useState(false);
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   
@@ -50,6 +54,7 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
     if (ready && authenticated && user && !authProcessed) {
       const handlePrivyAuth = async () => {
         try {
+          setIsAuthLoading(true);
           // Get JWT token from Privy
           const token = await getAccessToken();
           
@@ -57,6 +62,7 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
             console.error('No JWT token available from Privy');
             toast.error('Authentication error: No token available');
             setAuthProcessed(true);
+            setIsAuthLoading(false);
             return;
           }
           
@@ -102,6 +108,7 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
                   location.pathname.startsWith('/u/')) {
                 console.log('Already on a protected page, skipping redirect');
                 setAuthProcessed(true);
+                setIsAuthLoading(false);
                 return;
               }
               
@@ -109,6 +116,7 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
               if (isCommunityPage || isPostPage) {
                 console.log('Already on community/post page, skipping redirect');
                 setAuthProcessed(true);
+                setIsAuthLoading(false);
                 return;
               }
               
@@ -148,10 +156,12 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
           
           // Mark auth as processed to prevent loops
           setAuthProcessed(true);
+          setIsAuthLoading(false);
         } catch (error) {
           console.error('Error during authentication:', error);
           toast.error('Could not complete authentication');
           setAuthProcessed(true);
+          setIsAuthLoading(false);
         }
       };
 
@@ -159,7 +169,26 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
     }
   }, [ready, authenticated, user, getAccessToken, authProcessed, isCommunityPage, isPostPage, location.pathname, navigate]);
 
-  return <>{children}</>;
+  // Show global loading overlay when authentication is processing
+  if (isAuthLoading) {
+    return (
+      <AuthLoadingContext.Provider value={isAuthLoading}>
+        {children}
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 pointer-events-none">
+          <div className="bg-background rounded-lg shadow-lg p-6 flex items-center gap-3">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            <p className="text-sm font-medium">Authenticating...</p>
+          </div>
+        </div>
+      </AuthLoadingContext.Provider>
+    );
+  }
+
+  return (
+    <AuthLoadingContext.Provider value={isAuthLoading}>
+      {children}
+    </AuthLoadingContext.Provider>
+  );
 };
 
 // Main Provider component

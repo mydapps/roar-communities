@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 import { API_BASE_URL, getUserApiKey, createAuthHeaders } from './apiBase';
 
@@ -132,6 +131,8 @@ export const createReply = async (postCode: string, content: string, parentId = 
 export const toggleMeow = async (commentId: number): Promise<{
   success: boolean;
   message?: string;
+  action?: string;
+  meow_count?: number;
 }> => {
   try {
     const userKey = getUserApiKey();
@@ -143,11 +144,11 @@ export const toggleMeow = async (commentId: number): Promise<{
     
     console.log(`Toggling meow for comment: ${commentId}`);
     
-    const response = await fetch(`${API_BASE_URL}/toggle_meow`, {
+    const response = await fetch(`${API_BASE_URL}/meow_reply`, {
       method: 'POST',
       headers: createAuthHeaders(),
       body: JSON.stringify({
-        commentId
+        replyId: commentId
       })
     });
     
@@ -164,7 +165,9 @@ export const toggleMeow = async (commentId: number): Promise<{
     
     return {
       success: data.success === true,
-      message: data.message
+      message: data.message,
+      action: data.action,
+      meow_count: data.meow_count
     };
   } catch (error) {
     console.error('Error toggling meow:', error);
