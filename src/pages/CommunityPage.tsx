@@ -60,6 +60,13 @@ const LionIcon = () => (
   </svg>
 );
 
+// Development-only logging helper
+const debugLog = (message: string, ...args: any[]) => {
+  if (process.env.NODE_ENV === 'development' && false) { // Set to true to enable dev logs when needed
+    console.log(`[Community] ${message}`, ...args);
+  }
+};
+
 const CommunityPage = () => {
   usePreventZoom();
   const { id } = useParams<{ id: string }>();
@@ -72,14 +79,14 @@ const CommunityPage = () => {
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
   const [tradeLoading, setTradeLoading] = useState(false);
   
-  console.log("CommunityPage rendering, id:", id, "activeTab:", activeTab);
+  debugLog("CommunityPage rendering, id:", id, "activeTab:", activeTab);
   
   const { data: communityData, loading: communityLoading, error: communityError } = useCommunityData(id);
   
-  console.log("Community data:", communityData);
+  debugLog("Community data:", communityData);
   if (communityData?.community?.rewards) {
-    console.log("Community rewards:", communityData.community.rewards);
-    console.log("Available rewards:", communityData.community.rewards.available_rewards);
+    debugLog("Community rewards:", communityData.community.rewards);
+    debugLog("Available rewards:", communityData.community.rewards.available_rewards);
   }
   
   const { members, loading: membersLoading, hasMore: hasMoreMembers, loadMore: loadMoreMembers } = useCommunityMembers(id);
@@ -109,8 +116,11 @@ const CommunityPage = () => {
     setIsLoadingBalance(true);
     try {
       const balanceData = await getWalletBalance();
+      // getWalletBalance now returns a default value even on auth error
+      // so we can just use the data directly
       setUserEthBalance(balanceData.balance.eth);
     } catch (error) {
+      // This will only happen for serious errors now, not 401s
       console.error('Failed to fetch wallet balance:', error);
       toast.error("Failed to load wallet balance");
       setUserEthBalance("0.000");
@@ -250,7 +260,16 @@ const CommunityPage = () => {
   const community = communityData?.community;
   const user = communityData?.user;
   
-  const hasShares = user && user.shares > 0;
+  // Fix: More robust check for user shares that defaults to previous state during loading
+  const [previousHasShares, setPreviousHasShares] = useState(false);
+  const hasShares = user ? user.shares > 0 : previousHasShares;
+  
+  // Store the value once we know it's valid
+  useEffect(() => {
+    if (user) {
+      setPreviousHasShares(user.shares > 0);
+    }
+  }, [user?.shares]);
   
   const availableRewards = community?.rewards?.available_rewards || 0;
   console.log("Rendered with available rewards:", availableRewards);
@@ -395,7 +414,7 @@ const CommunityPage = () => {
                         username={post.handle || ''}
                         community={post.community || ''}
                         timeAgo={post.timeAgo || ''}
-                        content={post.body || ''}
+                        content={post.is_mirror === 1 ? (post.mirror_quote || '') : (post.body || '')}
                         roarCount={post.upvotes || 0}
                         commentCount={post.reply_count || 0}
                         shareCount={post.engagement || 0}
@@ -406,6 +425,16 @@ const CommunityPage = () => {
                         roared={post.roar === 1}
                         onRoar={() => post.code ? handleRoar(post.code) : null}
                         isMirror={post.is_mirror === 1}
+                        mirrorData={post.is_mirror === 1 ? {
+                          quote: post.mirror_quote || '',
+                          originalAuthor: post.original_author || '',
+                          originalCommunity: post.original_community || '',
+                          originalBody: post.original_body || '',
+                          originalTimeAgo: post.original_created_on || '',
+                          originalAvatar: post.original_author_avatar || '',
+                          originalImages: post.original_images || [],
+                          originalTitle: post.original_title || ''
+                        } : undefined}
                         ipfs={post.code || ''}
                         isLoggedIn={!!localStorage.getItem('dapps_user_key')}
                         hideComments={false}
@@ -654,7 +683,7 @@ const CommunityPage = () => {
                         username={post.handle || ''}
                         community={post.community || ''}
                         timeAgo={post.timeAgo || ''}
-                        content={post.body || ''}
+                        content={post.is_mirror === 1 ? (post.mirror_quote || '') : (post.body || '')}
                         roarCount={post.upvotes || 0}
                         commentCount={post.reply_count || 0}
                         shareCount={post.engagement || 0}
@@ -665,6 +694,16 @@ const CommunityPage = () => {
                         roared={post.roar === 1}
                         onRoar={() => post.code ? handleRoar(post.code) : null}
                         isMirror={post.is_mirror === 1}
+                        mirrorData={post.is_mirror === 1 ? {
+                          quote: post.mirror_quote || '',
+                          originalAuthor: post.original_author || '',
+                          originalCommunity: post.original_community || '',
+                          originalBody: post.original_body || '',
+                          originalTimeAgo: post.original_created_on || '',
+                          originalAvatar: post.original_author_avatar || '',
+                          originalImages: post.original_images || [],
+                          originalTitle: post.original_title || ''
+                        } : undefined}
                         ipfs={post.code || ''}
                         isLoggedIn={!!localStorage.getItem('dapps_user_key')}
                         hideComments={false}

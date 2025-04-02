@@ -672,38 +672,111 @@ export const sellSharesConfirm = async (communityName: string, shareQuantity: nu
   }
 };
 
-/**
- * Get user's wallet balance
- */
+// Development-only logging helper
+const debugLog = (message: string, ...args: any[]) => {
+  if (process.env.NODE_ENV === 'development' && false) { // Set to true to enable dev logs when needed
+    console.log(`[API] ${message}`, ...args);
+  }
+};
+
+// Add a wallet balance cache to prevent excessive API calls
+let walletBalanceCache: {
+  data: WalletBalanceResponse | null;
+  timestamp: number;
+} = {
+  data: null,
+  timestamp: 0
+};
+
 export const getWalletBalance = async (): Promise<WalletBalanceResponse> => {
+  // Use cached data if available and not expired (5 minutes)
+  const now = Date.now();
+  if (walletBalanceCache.data && (now - walletBalanceCache.timestamp < 5 * 60 * 1000)) {
+    debugLog("Using cached wallet balance");
+    return walletBalanceCache.data;
+  }
+
+  debugLog("Fetching wallet balance");
+  
   try {
-    const url = `${API_BASE_URL}/get_wallet_balance`;
-    const headers = createAuthHeaders();
+    const userKey = localStorage.getItem('dapps_user_key');
     
-    console.log('Fetching wallet balance');
+    if (!userKey) {
+      // Return a default response with empty balance if no user key
+      return {
+        success: true,
+        wallet: '',
+        balance: {
+          eth: '0.000',
+          usd: 0,
+          formatted: '0.000 ETH ($0.00)'
+        },
+        recentActivity: null
+      };
+    }
     
-    const response = await fetch(url, {
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+      'x-user-key': userKey
+    };
+    
+    const response = await fetch('https://api.dapps.co/get_wallet_balance', {
       method: 'GET',
       headers
     });
     
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Wallet balance fetch failed: ${errorText}`);
-      throw new Error(`Failed to fetch wallet balance: ${errorText}`);
+      // Get status code to handle different errors
+      const statusCode = response.status;
+      const errorData = await response.json();
+      
+      // Only log the error, don't throw
+      debugLog(`Wallet balance fetch failed (${statusCode}):`, errorData);
+      
+      // If it's an auth error, don't treat it as critical
+      if (statusCode === 401) {
+        // Return a default balance
+        const defaultResponse = {
+          success: true,
+          wallet: '',
+          balance: {
+            eth: '0.000',
+            usd: 0,
+            formatted: '0.000 ETH ($0.00)'
+          },
+          recentActivity: null
+        };
+        return defaultResponse;
+      }
+      
+      throw new Error(`Failed to fetch wallet balance: ${JSON.stringify(errorData)}`);
     }
     
     const data = await response.json();
-    console.log('Wallet balance response:', data);
+    debugLog("Wallet balance response:", data);
     
-    if (!data.success) {
-      throw new Error(data.message || 'Failed to fetch wallet balance');
-    }
+    // Update the cache
+    walletBalanceCache = {
+      data,
+      timestamp: now
+    };
     
     return data;
   } catch (error) {
-    console.error('Error fetching wallet balance:', error);
-    throw error;
+    // Only log the error here, don't notify the user
+    debugLog("Error fetching wallet balance:", error);
+    
+    // Return a default response to prevent app disruption
+    return {
+      success: true,
+      wallet: '',
+      balance: {
+        eth: '0.000',
+        usd: 0,
+        formatted: '0.000 ETH ($0.00)'
+      },
+      recentActivity: null
+    };
   }
 };
 

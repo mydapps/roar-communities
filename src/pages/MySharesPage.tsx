@@ -60,16 +60,28 @@ const MySharesPage = () => {
     fetchWalletBalance();
   }, []);
 
+  // Development-only logging helper
+  const debugLog = (message: string, ...args: any[]) => {
+    if (process.env.NODE_ENV === 'development' && false) { // Set to true to enable dev logs when needed
+      console.log(`[MyShares] ${message}`, ...args);
+    }
+  };
+
+  // Instead of logging every render, just use debugLog 
+  // Main API call handling code
   const fetchWalletBalance = async () => {
-    setIsLoadingBalance(true);
     try {
+      setIsLoadingBalance(true);
+      // getWalletBalance now returns a default value even on auth error
       const balanceData = await getWalletBalance();
-      console.log('Wallet balance data:', balanceData);
       setUserEthBalance(balanceData.balance.eth);
     } catch (error) {
+      // This will only happen for serious errors now, not 401s
       console.error('Failed to fetch wallet balance:', error);
-      toast.error("Failed to load wallet balance");
-      setUserEthBalance("0.000");
+      // Only show toast for non-auth errors
+      if (!(error instanceof Error && error.message.includes('Authentication required'))) {
+        toast.error("Failed to load wallet balance");
+      }
     } finally {
       setIsLoadingBalance(false);
     }

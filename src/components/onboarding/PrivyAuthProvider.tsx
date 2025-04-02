@@ -19,30 +19,38 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
   const navigate = useNavigate();
   
+  // Development-only logging helper
+  const debugLog = (message: string, ...args: any[]) => {
+    if (process.env.NODE_ENV === 'development' && false) { // Set to true to enable dev logs when needed
+      console.log(`[Auth] ${message}`, ...args);
+    }
+  };
+
   // Debug for routing and auth issues
-  console.log("PrivyAuthWrapper - Current path:", location.pathname);
+  const pathname = location.pathname;
+  debugLog("Current path:", pathname);
   
   // Don't redirect if we're already on community page or detailed post page
-  const isCommunityPage = location.pathname.startsWith('/c/');
-  const isPostPage = location.pathname.includes('/post/') || 
-                    (location.pathname.includes('/c/') && location.pathname.split('/').length > 3) ||
-                    (/^\/[\w-]+\/[\w-]+$/.test(location.pathname) && !location.pathname.startsWith('/u/')); // Handle username/postId format
+  const isCommunityPage = pathname.startsWith('/c/');
+  const isPostPage = pathname.includes('/post/') || 
+                    (pathname.includes('/c/') && pathname.split('/').length > 3) ||
+                    (/^\/[\w-]+\/[\w-]+$/.test(pathname) && !pathname.startsWith('/u/')); // Handle username/postId format
                     
-  console.log("PrivyAuthWrapper - Is post page:", isPostPage);
+  debugLog("Is post page:", isPostPage);
                     
   // Flag for publicly accessible routes
   const isPublicRoute = 
-    location.pathname === '/' || 
-    location.pathname === '/index' || 
-    location.pathname === '/login' || 
-    location.pathname === '/request-invite' ||
-    location.pathname === '/avatar-handle' ||
-    location.pathname.startsWith('/invite/') ||
+    pathname === '/' || 
+    pathname === '/index' || 
+    pathname === '/login' || 
+    pathname === '/request-invite' ||
+    pathname === '/avatar-handle' ||
+    pathname.startsWith('/invite/') ||
     isCommunityPage ||
     isPostPage;
     
-  console.log("PrivyAuthWrapper - Is public route:", isPublicRoute);
-  console.log("PrivyAuthWrapper - Auth status:", { ready, authenticated, authProcessed });
+  debugLog("Is public route:", isPublicRoute);
+  debugLog("Auth status:", { ready, authenticated, authProcessed });
   
   useEffect(() => {
     // Reset auth processed state when authentication status changes
@@ -100,12 +108,12 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
               
               // Don't redirect if we're already on a protected page that requires authentication
               // This fixes the refresh issue on pages like referral and my-shares
-              if (location.pathname === '/referral' || 
-                  location.pathname === '/my-shares' ||
-                  location.pathname === '/account' ||
-                  location.pathname === '/communities' ||
-                  location.pathname === '/search' ||
-                  location.pathname.startsWith('/u/')) {
+              if (pathname === '/referral' || 
+                  pathname === '/my-shares' ||
+                  pathname === '/account' ||
+                  pathname === '/communities' ||
+                  pathname === '/search' ||
+                  pathname.startsWith('/u/')) {
                 console.log('Already on a protected page, skipping redirect');
                 setAuthProcessed(true);
                 setIsAuthLoading(false);
@@ -123,7 +131,7 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
               // Check registration status
               if (data.registered === "1") {
                 // User is fully registered, redirect to feed if on login/index page
-                if (location.pathname === '/' || location.pathname === '/login' || location.pathname === '/index') {
+                if (pathname === '/' || pathname === '/login' || pathname === '/index') {
                   console.log("Redirecting to feed from public route");
                   navigate('/feed');
                   toast.success('Successfully logged in!');
@@ -132,13 +140,13 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
                 // User needs to complete registration
                 if (data.handle && data.avatar) {
                   // Both handle and avatar are set, redirect to request-invite
-                  if (location.pathname !== '/request-invite' && location.pathname !== '/feed') {
+                  if (pathname !== '/request-invite' && pathname !== '/feed') {
                     console.log("Redirecting to request-invite");
                     navigate('/request-invite');
                   }
                 } else {
                   // Missing handle or avatar, redirect to avatar-handle page
-                  if (location.pathname !== '/avatar-handle') {
+                  if (pathname !== '/avatar-handle') {
                     console.log("Redirecting to avatar-handle");
                     navigate('/avatar-handle');
                     toast.info('Please complete your profile');
@@ -167,7 +175,7 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
 
       handlePrivyAuth();
     }
-  }, [ready, authenticated, user, getAccessToken, authProcessed, isCommunityPage, isPostPage, location.pathname, navigate]);
+  }, [ready, authenticated, user, getAccessToken, authProcessed, isCommunityPage, isPostPage, pathname, navigate]);
 
   // Show global loading overlay when authentication is processing
   if (isAuthLoading) {

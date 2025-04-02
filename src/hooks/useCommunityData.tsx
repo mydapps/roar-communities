@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 
@@ -57,6 +56,13 @@ export interface CommunityApiResponse {
   user?: CommunityUser;
 }
 
+// Development-only logging helper
+const debugLog = (message: string, ...args: any[]) => {
+  if (process.env.NODE_ENV === 'development' && false) { // Set to true to enable dev logs when needed
+    console.log(`[CommunityData] ${message}`, ...args);
+  }
+};
+
 export const useCommunityData = (communityName: string | undefined) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -83,7 +89,7 @@ export const useCommunityData = (communityName: string | undefined) => {
           headers['x-user-key'] = userKey;
         }
 
-        console.log(`Fetching community data for: ${communityName}`);
+        debugLog(`Fetching community data for: ${communityName}`);
 
         const response = await fetch(`https://api.dapps.co/get_community?name=${encodeURIComponent(communityName)}`, {
           method: 'GET',
@@ -96,46 +102,33 @@ export const useCommunityData = (communityName: string | undefined) => {
 
         const responseData = await response.json();
         
-        console.log("Community API response:", responseData);
+        debugLog("Community API response:", responseData);
         
         if (!responseData.success) {
           throw new Error(responseData.message || 'Failed to fetch community data');
         }
-
-        // Enhanced debug logging for rewards data
-        if (responseData.community) {
-          console.log("Full community data received:", responseData.community);
+        
+        // Process rewards data if available
+        if (responseData.community && responseData.community.rewards) {
+          debugLog("Full community data received:", responseData.community);
           
-          if (responseData.community.rewards) {
-            console.log("Raw rewards data:", responseData.community.rewards);
-            console.log("Rewards type:", typeof responseData.community.rewards);
-            console.log("Available rewards type:", typeof responseData.community.rewards.available_rewards);
-            console.log("Available rewards value:", responseData.community.rewards.available_rewards);
+          try {
+            const rawRewards = responseData.community.rewards;
+            debugLog("Raw rewards data:", rawRewards);
+            debugLog("Rewards type:", typeof rawRewards);
+            debugLog("Available rewards type:", typeof rawRewards.available_rewards);
+            debugLog("Available rewards value:", rawRewards.available_rewards);
             
-            // Make sure rewards.available_rewards is a number
-            if (responseData.community.rewards.available_rewards === null || 
-                responseData.community.rewards.available_rewards === undefined) {
-              console.warn("Rewards available was null or undefined, defaulting to 0");
-              responseData.community.rewards.available_rewards = 0;
-            } else if (typeof responseData.community.rewards.available_rewards === 'string') {
-              console.log("Converting rewards from string to number:", responseData.community.rewards.available_rewards);
-              const parsedValue = parseFloat(responseData.community.rewards.available_rewards);
-              if (isNaN(parsedValue)) {
-                console.warn("Failed to parse rewards as number, defaulting to 0");
-                responseData.community.rewards.available_rewards = 0;
-              } else {
-                responseData.community.rewards.available_rewards = parsedValue;
-              }
+            // Format available rewards to 8 decimal places
+            if (typeof rawRewards.available_rewards === 'number') {
+              responseData.community.rewards.available_rewards = parseFloat(
+                rawRewards.available_rewards.toFixed(8)
+              );
             }
             
-            console.log("Processed rewards data:", responseData.community.rewards);
-          } else {
-            console.warn("No rewards data found in the community object");
-            // Initialize rewards if missing
-            responseData.community.rewards = {
-              available_rewards: 0,
-              last_distributed: ""
-            };
+            debugLog("Processed rewards data:", responseData.community.rewards);
+          } catch (rewardsError) {
+            console.error('Error processing rewards data:', rewardsError);
           }
         }
 
