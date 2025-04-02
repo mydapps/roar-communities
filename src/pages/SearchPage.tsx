@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Users, Search as SearchIcon, Sparkles, Filter, ArrowUp, ArrowDown, Loader2, Lock, MessageCircle } from 'lucide-react';
+import { Users, Search as SearchIcon, Sparkles, Filter, ArrowUp, ArrowDown, Loader2, Lock, MessageCircle, Cat } from 'lucide-react';
 import { Post } from '@/components/feed/Post';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -447,9 +447,6 @@ interface CommunityResultProps {
 }
 
 const CommunityResult = ({ community }: CommunityResultProps) => {
-  const pricePerShare = 0.02; // Default price - would normally come from API
-  const priceChange = Math.random() * 20 - 10; // Placeholder - would normally come from API
-  
   return (
     <Card className="overflow-hidden hover:shadow-md transition-all duration-300 animate-scale-in relative">
       {community.encrypted && (
@@ -459,37 +456,25 @@ const CommunityResult = ({ community }: CommunityResultProps) => {
         </Badge>
       )}
       <CardHeader className="pb-2">
-        <div className="flex justify-between items-start">
+        <div className="flex items-center gap-3">
+          <Avatar className="h-10 w-10 border border-border/50">
+            <AvatarImage src={community.image} />
+            <AvatarFallback>{community.name[0].toUpperCase()}</AvatarFallback>
+          </Avatar>
           <Link 
             to={`/c/${community.name.toLowerCase().replace(/\s+/g, '-')}`}
             className="text-lg font-bold hover:text-primary transition-colors"
           >
             {community.name}
           </Link>
-          {priceChange > 0 ? (
-            <Badge className="bg-green-500/10 text-green-600 hover:bg-green-500/20">
-              <ArrowUp className="h-3 w-3 mr-1" />
-              {priceChange.toFixed(1)}%
-            </Badge>
-          ) : (
-            <Badge className="bg-red-500/10 text-red-600 hover:bg-red-500/20">
-              <ArrowDown className="h-3 w-3 mr-1" />
-              {Math.abs(priceChange).toFixed(1)}%
-            </Badge>
-          )}
         </div>
       </CardHeader>
       <CardContent>
         <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{community.description}</p>
         
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <Users className="h-4 w-4 mr-1 text-muted-foreground" />
-            <span className="text-sm">{community.members_count.toLocaleString()} members</span>
-          </div>
-          <div className="text-sm">
-            <span className="font-medium">{pricePerShare.toFixed(3)} ETH</span> per share
-          </div>
+        <div className="flex items-center">
+          <Users className="h-4 w-4 mr-1 text-muted-foreground" />
+          <span className="text-sm">{community.members_count.toLocaleString()} members</span>
         </div>
       </CardContent>
     </Card>
@@ -555,7 +540,11 @@ const PostSearchResult = ({ post, onClick }: PostSearchResultProps) => {
           
           <div className="flex items-center gap-3 text-sm text-muted-foreground">
             <div className="flex items-center gap-1">
-              <ArrowUp className="h-4 w-4" />
+              {post.type === 'reply' ? (
+                <Cat className="h-4 w-4 text-amber-500" />
+              ) : (
+                <span role="img" aria-label="lion" className="text-lg">🦁</span>
+              )}
               {post.upvotes}
             </div>
             {post.reply_count > 0 && (
