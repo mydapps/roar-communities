@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -76,8 +75,9 @@ export const CommunityShareCard = ({
             <Minus className="h-4 w-4 mr-1" />
             Sell
           </Button>
-          <Button variant="outline" className="flex-grow-0 aspect-square p-2" onClick={() => onSendClick(community)}>
-            <SendHorizontal className="h-4 w-4" />
+          <Button variant="outline" className="flex-1 hover:bg-blue-500/10" onClick={() => onSendClick(community)}>
+            <SendHorizontal className="h-4 w-4 mr-1" />
+            Transfer
           </Button>
         </div>
       </CardContent>

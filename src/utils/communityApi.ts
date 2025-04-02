@@ -896,3 +896,149 @@ export const getUserPortfolio = async (page = 1, limit = 10): Promise<UserPortfo
     throw error;
   }
 };
+
+/**
+ * Transfer shares to another user or wallet address
+ */
+export interface ShareTransferResponse {
+  success: boolean;
+  message: string;
+  transaction?: {
+    hash: string;
+    from: string;
+    to: string;
+    amount: string;
+    community: string;
+  };
+  error?: string;
+}
+
+/**
+ * Transfer shares to another user or wallet address
+ */
+export const transferShares = async (
+  communityName: string, 
+  amount: string, 
+  toAddress: string
+): Promise<ShareTransferResponse> => {
+  try {
+    const url = `${API_BASE_URL}/transfer_shares`;
+    const headers = createAuthHeaders();
+    
+    console.log(`Transferring ${amount} shares of ${communityName} to ${toAddress}`);
+    
+    if (!communityName) {
+      throw new Error('Community name is required');
+    }
+    
+    if (!amount || parseFloat(amount) <= 0) {
+      throw new Error('Amount must be greater than 0');
+    }
+    
+    if (!toAddress) {
+      throw new Error('Recipient address is required');
+    }
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        communityName,
+        amount,
+        toAddress
+      })
+    });
+    
+    console.log(`Transfer shares response status: ${response.status}`);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Transfer shares failed with status ${response.status}: ${errorText}`);
+      
+      try {
+        // Try to parse error as JSON
+        const errorJson = JSON.parse(errorText);
+        return {
+          success: false,
+          message: errorJson.message || `Error: ${response.status}`,
+          error: errorJson.message
+        };
+      } catch {
+        // If not JSON, return the error text
+        return {
+          success: false,
+          message: errorText || `Error: ${response.status}`,
+          error: errorText
+        };
+      }
+    }
+    
+    const data = await response.json();
+    console.log('Transfer shares response:', data);
+    
+    return data as ShareTransferResponse;
+  } catch (error) {
+    console.error('Error in transferring shares:', error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Unknown error occurred',
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
+  }
+};
+
+/**
+ * Search for users by handle
+ */
+export interface UserSearchResponse {
+  success: boolean;
+  users?: {
+    items: Array<{
+      id: number;
+      handle: string;
+      avatar_url: string;
+    }>;
+    pagination: {
+      total: number;
+      page: number;
+      limit: number;
+      pages: number;
+      has_next: boolean;
+      has_prev: boolean;
+    }
+  };
+  error?: string;
+}
+
+/**
+ * Search for users by handle
+ */
+export const searchUsers = async (query: string, page: number = 1, limit: number = 5): Promise<UserSearchResponse> => {
+  try {
+    const url = `${API_BASE_URL}/search?user=${encodeURIComponent(query)}&page=${page}&limit=${limit}`;
+    const headers = createAuthHeaders();
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`User search failed: ${errorText}`);
+      return {
+        success: false,
+        error: errorText
+      };
+    }
+    
+    const data = await response.json();
+    return data as UserSearchResponse;
+  } catch (error) {
+    console.error('Error searching users:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
+  }
+};

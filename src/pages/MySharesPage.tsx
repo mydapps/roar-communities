@@ -31,6 +31,7 @@ import { DepositSheet } from '@/components/shares/DepositSheet';
 import { SendSheet } from '@/components/shares/SendSheet';
 import { TradeSheet } from '@/components/shares/TradeSheet';
 import { CommunityShareCard } from '@/components/shares/CommunityShareCard';
+import { ShareTransferSheet } from '@/components/shares/ShareTransferSheet';
 import { usePortfolio } from '@/hooks/usePortfolio';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import confetti from 'canvas-confetti';
@@ -38,6 +39,7 @@ import confetti from 'canvas-confetti';
 const MySharesPage = () => {
   const [depositOpen, setDepositOpen] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
   const [selectedCommunity, setSelectedCommunity] = useState<CommunityPortfolioItem | null>(null);
   const [tradeAction, setTradeAction] = useState<'buy' | 'sell' | null>(null);
   const [tradeOpen, setTradeOpen] = useState(false);
@@ -126,6 +128,11 @@ const MySharesPage = () => {
     }
   };
 
+  const handleTransferClick = (community: CommunityPortfolioItem) => {
+    setSelectedCommunity(community);
+    setTransferOpen(true);
+  };
+
   const handleBuySharesConfirm = async (communityName: string, quantity: number) => {
     try {
       // Set loading state FIRST, before doing anything else
@@ -207,6 +214,12 @@ const MySharesPage = () => {
     }
   };
 
+  const handleTransferSuccess = () => {
+    // Update portfolio data
+    refreshPortfolio();
+    triggerSuccessAnimation();
+  };
+
   const handleRefresh = () => {
     fetchWalletBalance();
     refreshPortfolio();
@@ -217,6 +230,7 @@ const MySharesPage = () => {
     setDepositOpen(false);
     setSendOpen(false);
     setTradeOpen(false);
+    setTransferOpen(false);
     setPrecheckData(null);
   };
 
@@ -293,8 +307,7 @@ const MySharesPage = () => {
                 }}
                 onSendClick={(community) => {
                   resetState();
-                  setSelectedCommunity(community);
-                  setSendOpen(true);
+                  handleTransferClick(community);
                 }}
               />
             ))}
@@ -351,6 +364,13 @@ const MySharesPage = () => {
         onSellConfirm={handleSellSharesConfirm}
         loadingAction={loadingAction}
         precheckData={precheckData}
+      />
+
+      <ShareTransferSheet
+        open={transferOpen}
+        onOpenChange={setTransferOpen}
+        community={selectedCommunity}
+        onTransferSuccess={handleTransferSuccess}
       />
     </div>
   );
