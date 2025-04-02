@@ -230,20 +230,20 @@ const SearchPage = () => {
         <div className="relative flex gap-2">
           <div className="relative flex-1 group">
             <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-primary/20 to-purple-500/20 opacity-0 group-focus-within:opacity-100 -z-10 blur-md transition-opacity duration-300"></div>
-            <div className="relative flex-1">
+        <div className="relative flex-1">
               <SearchIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground transition-colors group-focus-within:text-primary" />
-              <Input
-                placeholder="Search communities, posts, users..."
+          <Input
+            placeholder="Search communities, posts, users..."
                 className="pl-9 pr-16 py-6 transition-all border-primary/20 focus-visible:ring-1 focus-visible:ring-primary/30"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
                 ref={searchInputRef}
-              />
+          />
               <kbd className="absolute right-3 top-2.5 pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
                 <span className="text-xs">{isMobile ? '' : navigator.platform.includes('Mac') ? '⌘' : 'Ctrl+'}</span>K
               </kbd>
             </div>
-          </div>
+        </div>
           <Button 
             type="submit" 
             disabled={isSearching} 
@@ -253,12 +253,12 @@ const SearchPage = () => {
             {isSearching ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
-              <SearchIcon className="h-4 w-4 mr-2" />
+          <SearchIcon className="h-4 w-4 mr-2" />
             )}
-            Search
-          </Button>
-        </div>
-        
+          Search
+        </Button>
+      </div>
+      
         {searchQuery.trim().length > 0 && (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -315,8 +315,8 @@ const SearchPage = () => {
               </div>
               <h2 className="text-2xl font-semibold mb-2">Discover Communities and Content</h2>
               <p className="text-muted-foreground max-w-md mb-6">
-                Search for communities, posts, or users to find exactly what you're looking for in the dapps.co ecosystem.
-              </p>
+              Search for communities, posts, or users to find exactly what you're looking for in the dapps.co ecosystem.
+            </p>
               <div className="flex flex-wrap justify-center gap-3 mt-2">
                 <Badge variant="secondary" className="py-2 gap-1 text-sm">
                   <Users className="h-3 w-3" /> Communities
@@ -328,8 +328,8 @@ const SearchPage = () => {
                   <User className="h-3 w-3" /> Users
                 </Badge>
               </div>
-            </CardContent>
-          </Card>
+          </CardContent>
+        </Card>
         </motion.div>
       ) : (
         <motion.div
@@ -368,7 +368,7 @@ const SearchPage = () => {
                 >
                   <span className="relative z-10">Users</span>
                 </TabsTrigger>
-              </TabsList>
+          </TabsList>
             </motion.div>
             
             <AnimatePresence mode="wait">
@@ -390,24 +390,24 @@ const SearchPage = () => {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.3 }}
                       >
-                        <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <Users className="h-5 w-5 text-primary" />
-                            <h2 className="text-lg font-medium">Communities</h2>
+                <h2 className="text-lg font-medium">Communities</h2>
                           </div>
                           {communityResults.length > 0 && (
                             <Button variant="ghost" size="sm" onClick={() => handleTabChange('communities')} className="text-primary">
                               View All
-                            </Button>
+                </Button>
                           )}
-                        </div>
-                        
+              </div>
+              
                         {communityError ? (
                           <div className="p-4 border border-red-200 bg-red-50 rounded-md">
                             <p className="text-red-700 text-sm">{communityError}</p>
                           </div>
                         ) : communityResults.length > 0 ? (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {communityResults.map((community, index) => (
                               <motion.div
                                 key={community.name}
@@ -418,8 +418,8 @@ const SearchPage = () => {
                               >
                                 <CommunityResult community={community} />
                               </motion.div>
-                            ))}
-                          </div>
+                ))}
+              </div>
                         ) : (
                           <EmptySearchResults type="communities" query={searchQuery} />
                         )}
@@ -431,18 +431,18 @@ const SearchPage = () => {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.3, delay: 0.1 }}
                       >
-                        <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <MessageCircle className="h-5 w-5 text-primary" />
-                            <h2 className="text-lg font-medium">Posts</h2>
+                <h2 className="text-lg font-medium">Posts</h2>
                           </div>
                           {postResults.length > 0 && (
                             <Button variant="ghost" size="sm" onClick={() => handleTabChange('posts')} className="text-primary">
                               View All
-                            </Button>
+                </Button>
                           )}
-                        </div>
-                        
+              </div>
+              
                         {postError ? (
                           <div className="p-4 border border-red-200 bg-red-50 rounded-md">
                             <p className="text-red-700 text-sm">{postError}</p>
@@ -462,8 +462,8 @@ const SearchPage = () => {
                                   onClick={() => navigate(`/c/${post.community}/${post.code}`)} 
                                 />
                               </motion.div>
-                            ))}
-                          </div>
+                ))}
+              </div>
                         ) : (
                           <EmptySearchResults type="posts" query={searchQuery} />
                         )}
@@ -475,18 +475,18 @@ const SearchPage = () => {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.3, delay: 0.2 }}
                       >
-                        <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <User className="h-5 w-5 text-primary" />
-                            <h2 className="text-lg font-medium">Users</h2>
+                <h2 className="text-lg font-medium">Users</h2>
                           </div>
                           {userResults.length > 0 && (
                             <Button variant="ghost" size="sm" onClick={() => handleTabChange('users')} className="text-primary">
                               View All
                             </Button>
                           )}
-                        </div>
-                        
+              </div>
+              
                         {userError ? (
                           <div className="p-4 border border-red-200 bg-red-50 rounded-md">
                             <p className="text-red-700 text-sm">{userError}</p>
@@ -503,27 +503,27 @@ const SearchPage = () => {
                               >
                                 <UserResult user={user} />
                               </motion.div>
-                            ))}
-                          </div>
+                ))}
+              </div>
                         ) : (
                           <EmptySearchResults type="users" query={searchQuery} />
                         )}
                       </motion.div>
                     </>
                   )}
-                </TabsContent>
-                
+          </TabsContent>
+          
                 <TabsContent value="communities" className="mt-0">
                   {isSearching ? (
                     <SearchLoadingState />
                   ) : communityError ? (
                     <div className="p-4 border border-red-200 bg-red-50 rounded-md">
                       <p className="text-red-700 text-sm">{communityError}</p>
-                    </div>
+            </div>
                   ) : communityResults.length > 0 ? (
                     <div className="space-y-4">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {communityResults.map((community, index) => (
+              {communityResults.map((community, index) => (
                           <motion.div
                             key={community.name}
                             initial={{ opacity: 0, y: 20 }}
@@ -533,8 +533,8 @@ const SearchPage = () => {
                           >
                             <CommunityResult community={community} />
                           </motion.div>
-                        ))}
-                      </div>
+              ))}
+            </div>
                       
                       {communityPagination && communityPagination.has_next && (
                         <motion.div 
@@ -556,19 +556,19 @@ const SearchPage = () => {
                   ) : (
                     <EmptySearchResults type="communities" query={searchQuery} />
                   )}
-                </TabsContent>
-                
+          </TabsContent>
+          
                 <TabsContent value="posts" className="mt-0">
                   {isSearching ? (
                     <SearchLoadingState />
                   ) : postError ? (
                     <div className="p-4 border border-red-200 bg-red-50 rounded-md">
                       <p className="text-red-700 text-sm">{postError}</p>
-                    </div>
+            </div>
                   ) : postResults.length > 0 ? (
-                    <div className="space-y-4">
+            <div className="space-y-4">
                       <div className="grid grid-cols-1 gap-4">
-                        {postResults.map((post, index) => (
+              {postResults.map((post, index) => (
                           <motion.div
                             key={post.id}
                             initial={{ opacity: 0, y: 20 }}
@@ -581,8 +581,8 @@ const SearchPage = () => {
                               onClick={() => navigate(`/c/${post.community}/${post.code}`)} 
                             />
                           </motion.div>
-                        ))}
-                      </div>
+              ))}
+            </div>
                       
                       {postPagination && postPagination.has_next && (
                         <motion.div 
@@ -604,19 +604,19 @@ const SearchPage = () => {
                   ) : (
                     <EmptySearchResults type="posts" query={searchQuery} />
                   )}
-                </TabsContent>
-                
+          </TabsContent>
+          
                 <TabsContent value="users" className="mt-0">
                   {isSearching ? (
                     <SearchLoadingState />
                   ) : userError ? (
                     <div className="p-4 border border-red-200 bg-red-50 rounded-md">
                       <p className="text-red-700 text-sm">{userError}</p>
-                    </div>
+            </div>
                   ) : userResults.length > 0 ? (
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                        {userResults.map((user, index) => (
+              {userResults.map((user, index) => (
                           <motion.div
                             key={user.id}
                             initial={{ opacity: 0, y: 20 }}
@@ -626,8 +626,8 @@ const SearchPage = () => {
                           >
                             <UserResult user={user} />
                           </motion.div>
-                        ))}
-                      </div>
+              ))}
+            </div>
                       
                       {userPagination && userPagination.has_next && (
                         <motion.div 
@@ -649,10 +649,10 @@ const SearchPage = () => {
                   ) : (
                     <EmptySearchResults type="users" query={searchQuery} />
                   )}
-                </TabsContent>
+          </TabsContent>
               </motion.div>
             </AnimatePresence>
-          </Tabs>
+        </Tabs>
         </motion.div>
       )}
     </div>
@@ -703,8 +703,8 @@ const CommunityResult = ({ community }: CommunityResultProps) => {
       <CardContent>
         <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{community.description}</p>
         
-        <div className="flex items-center">
-          <Users className="h-4 w-4 mr-1 text-muted-foreground" />
+          <div className="flex items-center">
+            <Users className="h-4 w-4 mr-1 text-muted-foreground" />
           <span className="text-sm">{community.members_count.toLocaleString()} members</span>
         </div>
       </CardContent>
@@ -729,7 +729,7 @@ const UserResult = ({ user }: UserResultProps) => {
               <Avatar className="h-16 w-16 border-2 border-border/30 group-hover:border-primary/30 transition-colors">
                 <AvatarImage src={user.avatar_url} />
                 <AvatarFallback className="bg-primary/10 text-primary">{user.handle[0].toUpperCase()}</AvatarFallback>
-              </Avatar>
+          </Avatar>
             </motion.div>
             <motion.div
               className="absolute inset-0 rounded-full bg-primary/20 opacity-0 group-hover:opacity-50 -z-0 blur-md"
