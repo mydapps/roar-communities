@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -11,6 +11,7 @@ import { PostFooter } from './post/PostFooter';
 import { usePostMedia } from './post/usePostMedia';
 import { CommentSection } from './post/CommentSection';
 import { fetchReplies, CommentReply } from '@/utils/commentApi';
+import { ImageViewer } from './post/ImageViewer';
 
 export interface PostProps {
   username: string;
@@ -78,7 +79,22 @@ export const Post = ({
   const [ipfsSheetOpen, setIpfsSheetOpen] = useState(false);
   const isMobile = useIsMobile();
   
-  const { parsedContent, allMedia, allImages, hasMedia } = usePostMedia(content, images, video);
+  const { parsedContent, allMedia, allImages: normalImages, hasMedia } = usePostMedia(content, images, video);
+  
+  // Combine normal images with mirrored post images if this is a mirrored post
+  const allImages = useMemo(() => {
+    if (isMirror && mirrorData?.originalImages && mirrorData.originalImages.length > 0) {
+      // Filter out any invalid URLs or duplicate images
+      const mirrorImages = mirrorData.originalImages.filter(img => 
+        img && img.trim() !== '' && img !== 'https://dapps.co/dapps.png'
+      );
+      
+      // Combine normal images (if any) with mirror images
+      return normalImages ? [...normalImages, ...mirrorImages] : mirrorImages;
+    }
+    
+    return normalImages;
+  }, [normalImages, isMirror, mirrorData]);
   
   const { toast } = useToast();
   
@@ -139,7 +155,24 @@ export const Post = ({
       if (index !== -1) {
         setSelectedImageIndex(index);
         setImageViewerOpen(true);
+      } else {
+        // Fallback for cases where the image isn't found in allImages
+        // This should not happen with our fixes, but as a safety measure
+        console.warn("Image clicked but not found in allImages:", imageSrc);
+        
+        // Create a temporary array with just this image and show it
+        setSelectedImageIndex(0);
+        // Update allImages temporarily to include this image
+        // We don't actually modify allImages since it's derived from useMemo
+        const tempImages = [imageSrc];
+        // Show the image viewer
+        setImageViewerOpen(true);
       }
+    } else if (imageSrc) {
+      // No allImages array, but we have an image source
+      // Create a temporary array with just this image
+      setSelectedImageIndex(0);
+      setImageViewerOpen(true);
     }
   };
 
@@ -299,9 +332,9 @@ export const Post = ({
                 <Loader2 className="w-6 h-6 text-primary animate-spin" />
               </div>
             ) : (
-              <CommentSection 
-                comments={comments}
+              <CommentSection
                 postCode={postCode || ''}
+                comments={comments}
                 onAddComment={handleAddComment}
                 username={username}
                 community={community}
@@ -310,6 +343,16 @@ export const Post = ({
           </div>
         )}
       </PostFooter>
+      
+      {/* Always include the image viewer, even for mirrored posts */}
+      {allImages && allImages.length > 0 && (
+        <ImageViewer 
+          images={allImages} 
+          selectedImageIndex={selectedImageIndex}
+          open={imageViewerOpen} 
+          onOpenChange={setImageViewerOpen} 
+        />
+      )}
     </Card>
   );
 };

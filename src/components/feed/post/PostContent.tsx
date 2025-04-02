@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { CardContent } from '@/components/ui/card';
 import { MediaCarousel } from './MediaCarousel';
@@ -40,6 +39,7 @@ export const PostContent: React.FC<PostContentProps> = ({
             ...mirrorData,
             originalImages: mirrorData.originalImages || []
           }} 
+          onImageClick={onImageClick}
         />
       )}
       

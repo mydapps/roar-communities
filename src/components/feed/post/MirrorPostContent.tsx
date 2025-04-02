@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
@@ -15,9 +14,10 @@ interface MirrorPostContentProps {
     originalImages?: string[];
     originalTitle?: string;
   };
+  onImageClick?: (imageSrc: string) => void;
 }
 
-export const MirrorPostContent = ({ mirrorData }: MirrorPostContentProps) => {
+export const MirrorPostContent = ({ mirrorData, onImageClick }: MirrorPostContentProps) => {
   const formatUsername = (name: string) => {
     return '@' + name.split('.')[0];
   };
@@ -93,10 +93,15 @@ export const MirrorPostContent = ({ mirrorData }: MirrorPostContentProps) => {
     return media.length > 0 ? media : undefined;
   }, [mediaImages, mediaVideos, parsedImages, parsedVideos]);
   
-  // Simple function to handle image click (could be expanded for a fullscreen viewer)
+  // Replace the handleImageClick function
   const handleImageClick = (imageSrc: string) => {
-    // For now, just open the image in a new tab
-    window.open(imageSrc, '_blank');
+    if (onImageClick) {
+      // Use the parent's image click handler if provided
+      onImageClick(imageSrc);
+    } else {
+      // Fallback to opening in a new tab if no handler provided
+      window.open(imageSrc, '_blank');
+    }
   };
   
   return (
