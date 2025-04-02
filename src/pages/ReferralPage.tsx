@@ -136,6 +136,19 @@ const ReferralPage = () => {
     }
   };
   
+  // Add confetti burst function
+  const triggerConfetti = (intensity = 'medium') => {
+    const options = {
+      particleCount: intensity === 'high' ? 150 : intensity === 'medium' ? 100 : 50,
+      spread: intensity === 'high' ? 90 : intensity === 'medium' ? 70 : 50,
+      origin: { y: 0.6 },
+      colors: ['#4F46E5', '#10B981', '#F59E0B', '#EC4899']
+    };
+    
+    confetti(options);
+  };
+  
+  // Enhanced copy function
   const handleCopy = () => {
     navigator.clipboard.writeText(referralUrl);
     setCopied(true);
@@ -147,12 +160,8 @@ const ReferralPage = () => {
     setShowCopyNotification(true);
     setTimeout(() => setShowCopyNotification(false), 2000);
     
-    // Trigger confetti effect
-    confetti({
-      particleCount: 100,
-      spread: 70,
-      origin: { y: 0.6 }
-    });
+    // Trigger enhanced confetti effect
+    triggerConfetti('medium');
     
     // Reset copied state after 2s
     setTimeout(() => setCopied(false), 2000);
@@ -232,35 +241,62 @@ const ReferralPage = () => {
 
   return (
     <div className="space-y-5 max-w-3xl mx-auto px-4 pb-20 pt-20">
-      {/* Header Section */}
+      {/* Header Section with animated background */}
       <motion.div 
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-r from-primary/10 to-primary/5 rounded-xl p-5 border border-primary/20 relative overflow-hidden"
+        className="bg-gradient-to-r from-primary/20 to-primary/10 rounded-xl p-5 border border-primary/20 relative overflow-hidden"
+        whileHover={{ scale: 1.01 }}
+        transition={{ duration: 0.2 }}
       >
-        <div className="absolute -top-16 -right-16 w-32 h-32 bg-primary/20 rounded-full blur-xl"></div>
-        <div className="absolute -bottom-20 -left-10 w-32 h-32 bg-primary/10 rounded-full blur-xl"></div>
+        {/* Animated background elements */}
+        <motion.div 
+          className="absolute -top-16 -right-16 w-32 h-32 bg-primary/20 rounded-full blur-xl"
+          animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.8, 0.5] }}
+          transition={{ duration: 8, repeat: Infinity, repeatType: "reverse" }}
+        ></motion.div>
+        <motion.div 
+          className="absolute -bottom-20 -left-10 w-32 h-32 bg-primary/10 rounded-full blur-xl"
+          animate={{ scale: [1, 1.3, 1], opacity: [0.3, 0.6, 0.3] }}
+          transition={{ duration: 10, repeat: Infinity, repeatType: "reverse", delay: 1 }}
+        ></motion.div>
         
         <div className="flex items-center justify-between">
           <div className="space-y-1">
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Gift className="h-6 w-6 text-primary" />
+            <motion.h1 
+              className="text-2xl font-bold flex items-center gap-2"
+              whileHover={{ scale: 1.02 }}
+            >
+              <motion.div
+                animate={{ rotate: [0, 10, -10, 0] }}
+                transition={{ duration: 2, repeat: Infinity, repeatDelay: 5 }}
+              >
+                <Gift className="h-6 w-6 text-primary" />
+              </motion.div>
               Share the Love
-            </h1>
+            </motion.h1>
             <p className="text-sm max-w-sm">
               Skip the 75,000+ waitlist for your friends and earn rewards
             </p>
           </div>
           
           <motion.div 
-            className="bg-primary/10 px-3 py-2 rounded-lg border border-primary/20 text-center"
+            className="bg-primary/15 px-3 py-2 rounded-lg border border-primary/30 text-center"
             whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.98 }}
           >
             <div className="text-sm text-muted-foreground">Your Invites</div>
             {isLoading ? (
               <Skeleton className="h-8 w-12 mx-auto" />
             ) : (
-              <div className="text-2xl font-bold text-primary">{totalInvites}</div>
+              <motion.div 
+                className="text-2xl font-bold text-primary"
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: "spring" }}
+              >
+                {totalInvites}
+              </motion.div>
             )}
           </motion.div>
         </div>
@@ -273,17 +309,27 @@ const ReferralPage = () => {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
+          whileHover={{ y: -3 }}
         >
-          <Card className="border-primary/20 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-48 h-48 -mt-20 -mr-20 bg-primary/5 rounded-full blur-2xl"></div>
+          <Card className="border-primary/20 relative overflow-hidden shadow-md">
+            <motion.div 
+              className="absolute top-0 right-0 w-48 h-48 -mt-20 -mr-20 bg-primary/5 rounded-full blur-2xl"
+              animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.7, 0.5] }}
+              transition={{ duration: 8, repeat: Infinity, repeatType: "reverse" }}
+            ></motion.div>
             
             <CardHeader className="pb-0">
               <CardTitle className="flex items-center gap-2 text-xl">
-                <LinkIcon className="h-5 w-5 text-primary" />
+                <motion.div
+                  animate={{ rotate: [0, 10, -10, 0] }}
+                  transition={{ duration: 5, repeat: Infinity, repeatType: "loop", repeatDelay: 3 }}
+                >
+                  <LinkIcon className="h-5 w-5 text-primary" />
+                </motion.div>
                 Your Invite Link
               </CardTitle>
               <CardDescription className="text-sm">
-                Share to give friends <span className="font-medium text-primary">instant access</span> and a <span className="font-medium text-primary">free share</span>
+                Share to give friends <span className="font-medium text-primary">instant access</span> and <span className="font-medium text-primary">500 🦁</span>
               </CardDescription>
             </CardHeader>
             
@@ -369,12 +415,12 @@ const ReferralPage = () => {
             
             <CardFooter className="pt-0 pb-4">
               <motion.div 
-                className="text-xs text-muted-foreground text-center w-full"
+                className="text-xs text-muted-foreground text-center w-full font-medium"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.3 }}
               >
-                You earn <span className="font-medium text-primary">2% of all buy amounts</span> from your referrals forever!
+                New users get <span className="font-medium text-primary">500 🦁</span> and you earn <span className="font-medium text-primary">2% of all buy amounts</span> from your referrals forever!
               </motion.div>
             </CardFooter>
           </Card>
@@ -415,7 +461,8 @@ const ReferralPage = () => {
                     initial={{ opacity: 0, y: 5 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 }}
-                    className="flex items-center justify-between"
+                    className="flex items-center justify-between rounded-lg p-3 bg-gradient-to-r from-primary/5 to-transparent border border-primary/10"
+                    whileHover={{ scale: 1.02 }}
                   >
                     <div className="flex items-center gap-1.5">
                       <div className="p-1.5 bg-primary/10 rounded-full">
@@ -524,10 +571,18 @@ const ReferralPage = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
       >
-        <Card className="border-primary/20">
+        <Card className="border-primary/20 shadow-md">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-xl">
-              <Sparkles className="h-5 w-5 text-primary" />
+              <motion.div
+                animate={{ 
+                  rotate: [0, 10, -10, 0],
+                  scale: [1, 1.1, 1]
+                }}
+                transition={{ duration: 5, repeat: Infinity, repeatType: "loop", repeatDelay: 2 }}
+              >
+                <Sparkles className="h-5 w-5 text-primary" />
+              </motion.div>
               How Invites Work
             </CardTitle>
             <CardDescription className="text-sm">
@@ -538,12 +593,24 @@ const ReferralPage = () => {
           <CardContent className="pt-0">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <motion.div 
-                className="rounded-lg border border-primary/20 p-4 relative overflow-hidden bg-gradient-to-b from-primary/5 to-transparent"
-                whileHover={{ y: -5 }}
+                className="rounded-lg border border-primary/20 p-4 relative overflow-hidden bg-gradient-to-b from-primary/10 to-transparent"
+                whileHover={{ y: -5, boxShadow: "0 10px 30px -10px rgba(79, 70, 229, 0.2)" }}
                 transition={{ type: "spring", stiffness: 300, damping: 15 }}
               >
-                <div className="absolute top-0 right-0 w-16 h-16 bg-primary/10 rounded-full -mt-8 -mr-8 blur-xl"></div>
-                <Gift className="h-8 w-8 text-primary mb-3" />
+                <motion.div 
+                  className="absolute top-0 right-0 w-16 h-16 bg-primary/10 rounded-full -mt-8 -mr-8 blur-xl"
+                  animate={{ scale: [1, 1.3, 1], opacity: [0.5, 0.8, 0.5] }}
+                  transition={{ duration: 8, repeat: Infinity, repeatType: "reverse" }}
+                ></motion.div>
+                <motion.div
+                  animate={{ 
+                    rotate: [0, 10, -10, 0],
+                    y: [0, -3, 0]
+                  }}
+                  transition={{ duration: 5, repeat: Infinity, repeatType: "loop", repeatDelay: 3 }}
+                >
+                  <Gift className="h-8 w-8 text-primary mb-3" />
+                </motion.div>
                 <h3 className="font-semibold text-lg mb-1">For Your Friends</h3>
                 <p className="text-sm text-muted-foreground">
                   They <span className="text-foreground font-medium">skip the 75,000+ waitlist</span> and get <span className="text-foreground font-medium">instant access</span>.
@@ -559,7 +626,7 @@ const ReferralPage = () => {
                 <Sparkles className="h-8 w-8 text-primary mb-3" />
                 <h3 className="font-semibold text-lg mb-1">Free Share</h3>
                 <p className="text-sm text-muted-foreground">
-                  Your friends receive a <span className="text-foreground font-medium">free share in a community</span> when they join.
+                  Your friends receive <span className="text-foreground font-medium">500 🦁</span> and a <span className="text-foreground font-medium">free share in a community</span> when they join.
                 </p>
               </motion.div>
               
@@ -587,10 +654,17 @@ const ReferralPage = () => {
         transition={{ delay: 0.4 }}
         className="mb-10"
       >
-        <Card className="border-primary/20">
+        <Card className="border-primary/20 shadow-md">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-xl">
-              <Users className="h-5 w-5 text-primary" />
+              <motion.div
+                animate={{ 
+                  scale: [1, 1.1, 1],
+                }}
+                transition={{ duration: 3, repeat: Infinity, repeatType: "loop", repeatDelay: 2 }}
+              >
+                <Users className="h-5 w-5 text-primary" />
+              </motion.div>
               Your Invites
             </CardTitle>
             <CardDescription className="text-sm">
@@ -606,28 +680,31 @@ const ReferralPage = () => {
                 ))}
               </div>
             ) : invitedUsers.length > 0 ? (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {invitedUsers.map((user, index) => (
                   <motion.div 
                     key={user.id}
                     initial={{ opacity: 0, y: 5 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 * index + 0.5 }}
-                    className="flex items-center justify-between p-3 rounded-lg border border-border/40 hover:bg-muted/20 transition-colors"
+                    className="flex items-center justify-between p-4 rounded-lg border border-border/40 hover:bg-primary/5 transition-colors"
+                    whileHover={{ 
+                      scale: 1.02,
+                      boxShadow: "0 5px 15px -5px rgba(0, 0, 0, 0.1)"
+                    }}
                   >
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-8 w-8">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-10 w-10 border-2 border-primary/20">
                         <AvatarImage src={user.avatar_url || `https://avatar.vercel.sh/${user.handle}`} />
                         <AvatarFallback>{user.handle[0].toUpperCase()}</AvatarFallback>
                       </Avatar>
                       <div>
-                        <div className="font-medium text-sm">@{user.handle}</div>
-                        <div className="text-xs text-muted-foreground">{formatDate(user.invited_on)}</div>
+                        <div className="font-medium">@{user.handle}</div>
                       </div>
                     </div>
                     
                     <div className="text-right">
-                      <div className="text-xs flex items-center gap-1 text-muted-foreground">
+                      <div className="text-xs flex items-center gap-1.5 text-muted-foreground bg-muted/30 px-2 py-1 rounded-full">
                         <Calendar className="h-3 w-3" />
                         <span>Joined {formatDate(user.invited_on)}</span>
                       </div>
@@ -636,13 +713,32 @@ const ReferralPage = () => {
                 ))}
               </div>
             ) : (
-              <div className="text-center p-6">
-                <Users className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-                <h3 className="text-lg font-medium mb-1">No invites yet</h3>
-                <p className="text-muted-foreground text-sm max-w-sm mx-auto">
+              <motion.div 
+                className="text-center p-8 border border-dashed border-primary/20 rounded-lg bg-muted/10"
+                whileHover={{ scale: 1.01 }}
+              >
+                <motion.div
+                  animate={{ 
+                    y: [0, -5, 0],
+                  }}
+                  transition={{ duration: 3, repeat: Infinity, repeatType: "loop" }}
+                  className="mx-auto mb-3"
+                >
+                  <Users className="h-12 w-12 text-primary/60 mx-auto" />
+                </motion.div>
+                <h3 className="text-lg font-medium mb-2">No invites yet</h3>
+                <p className="text-muted-foreground text-sm max-w-sm mx-auto mb-4">
                   Start sharing your invite link with friends to earn rewards!
                 </p>
-              </div>
+                <Button 
+                  variant="outline" 
+                  className="border-primary/20 text-primary"
+                  onClick={handleCopy}
+                >
+                  <CopyIcon className="h-4 w-4 mr-2" />
+                  Copy Invite Link
+                </Button>
+              </motion.div>
             )}
           </CardContent>
         </Card>
