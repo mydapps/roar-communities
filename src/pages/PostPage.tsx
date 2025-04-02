@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback, memo } from 'react';
+import React, { useState, useEffect, useCallback, memo, useRef, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useResponsive } from '@/hooks/use-mobile';
 import { useToast } from '@/hooks/use-toast';
 import { usePreventZoom } from '@/hooks/usePreventZoom';
+import { Helmet } from 'react-helmet-async';
 
 // UI Components
 import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator, BreadcrumbPage } from '@/components/ui/breadcrumb';
@@ -334,6 +335,45 @@ const PostPage = () => {
   const [roarTextAnimation, setRoarTextAnimation] = useState(false);
   const [expandedReplies, setExpandedReplies] = useState<Record<string, boolean>>({});
   const [meowedComments, setMeowedComments] = useState<Record<string, boolean>>({});
+  const commentInputRef = useRef<HTMLTextAreaElement>(null);
+  
+  // Generate metadata for SEO
+  const postMetadata = useMemo(() => {
+    if (!post) {
+      return {
+        title: 'Post | dapps.co',
+        description: 'Join conversations on dapps.co. Engage with crypto communities.',
+        imageUrl: 'https://dapps.co/og-default.jpg',
+        url: window.location.href,
+      };
+    }
+    
+    // Get the first 160 characters of content for description (or less if content is shorter)
+    const cleanContent = post.content.replace(/<[^>]*>/g, '');
+    const description = cleanContent.length > 160 
+      ? cleanContent.substring(0, 157) + '...' 
+      : cleanContent;
+    
+    // Get the first image if available, otherwise use default
+    const imageUrl = post.images && post.images.length > 0 
+      ? post.images[0] 
+      : 'https://dapps.co/og-default.jpg';
+    
+    const community = post.community || communityId || '';
+    const author = post.username || '';
+    
+    const title = `${cleanContent.substring(0, 60)}${cleanContent.length > 60 ? '...' : ''} | ${author} | dapps.co`;
+    const url = `${window.location.origin}/${post.community ? `c/${post.community}/` : ''}${postId}`;
+    
+    return { title, description, imageUrl, url, author, community };
+  }, [post, communityId, postId]);
+  
+  // Function to handle when comment button is clicked in the Post component
+  const focusCommentInput = useCallback(() => {
+    if (commentInputRef.current) {
+      commentInputRef.current.focus();
+    }
+  }, []);
   
   useEffect(() => {
     setTimeout(() => {
@@ -481,6 +521,10 @@ const PostPage = () => {
   
   if (loading) {
     return <div className="space-y-6 animate-fade-in">
+        <Helmet>
+          <title>Loading Post | dapps.co</title>
+          <meta name="description" content="Loading post content on dapps.co, the crypto social platform." />
+        </Helmet>
         <div className="flex items-center gap-2">
           <Skeleton className="h-8 w-32" />
           <Skeleton className="h-8 w-8" />
@@ -497,6 +541,12 @@ const PostPage = () => {
   
   if (!post) {
     return <div className="flex flex-col items-center justify-center py-12 text-center">
+        <Helmet>
+          <title>Post Not Found | dapps.co</title>
+          <meta name="description" content="The requested post could not be found on dapps.co" />
+          <meta property="og:title" content="Post Not Found | dapps.co" />
+          <meta property="og:description" content="The requested post could not be found on dapps.co" />
+        </Helmet>
         <h2 className="text-2xl font-bold mb-2">Post Not Found</h2>
         <p className="text-muted-foreground mb-6">
           The post with ID "{postId}" in community "{communityId}" doesn't exist or has been removed.
@@ -506,6 +556,36 @@ const PostPage = () => {
   }
   
   return <div className="max-w-full overflow-x-hidden animate-fade-in">
+      {/* SEO Metadata */}
+      <Helmet>
+        <title>{postMetadata.title}</title>
+        <meta name="description" content={postMetadata.description} />
+        
+        {/* OpenGraph Tags */}
+        <meta property="og:title" content={postMetadata.title} />
+        <meta property="og:description" content={postMetadata.description} />
+        <meta property="og:image" content={postMetadata.imageUrl} />
+        <meta property="og:url" content={postMetadata.url} />
+        <meta property="og:type" content="article" />
+        <meta property="og:site_name" content="dapps.co" />
+        
+        {/* Article specific tags */}
+        {postMetadata.author && <meta property="article:author" content={postMetadata.author} />}
+        {postMetadata.community && <meta property="article:section" content={postMetadata.community} />}
+        <meta property="article:published_time" content={post?.timeAgo ? new Date().toISOString() : undefined} />
+        
+        {/* Twitter Card Tags */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={postMetadata.title} />
+        <meta name="twitter:description" content={postMetadata.description} />
+        <meta name="twitter:image" content={postMetadata.imageUrl} />
+        
+        {/* Additional Meta Tags */}
+        <meta name="keywords" content={`${postMetadata.community}, ${postMetadata.author}, crypto, discussion, social, dapps.co`} />
+        <meta name="author" content={postMetadata.author || 'dapps.co'} />
+        <link rel="canonical" href={postMetadata.url} />
+      </Helmet>
+
       <div className="mb-6">
         <ScrollArea className="w-full">
           <Breadcrumb>
@@ -531,7 +611,19 @@ const PostPage = () => {
       </div>
       
       <div className="mb-8">
-        <Post username={post.username} community={post.community} timeAgo={post.timeAgo} content={post.content} roarCount={roarCount} commentCount={comments.length} shareCount={post.shareCount} images={post.images} video={post.video} disableNavigation={true} />
+        <Post 
+          username={post.username} 
+          community={post.community} 
+          timeAgo={post.timeAgo} 
+          content={post.content} 
+          roarCount={roarCount} 
+          commentCount={comments.length} 
+          shareCount={post.shareCount} 
+          images={post.images} 
+          video={post.video} 
+          disableNavigation={true}
+          onToggleComments={focusCommentInput}
+        />
       </div>
       
       <div className="space-y-6 mb-10">
@@ -552,7 +644,14 @@ const PostPage = () => {
             <AvatarFallback>Y</AvatarFallback>
           </Avatar>
           <div className="flex-1 space-y-2">
-            <MentionInput placeholder="Add a comment..." className="resize-none bg-background" value={newComment} onChange={setNewComment} minHeight="80px" />
+            <MentionInput 
+              ref={commentInputRef}
+              placeholder="Add a comment..." 
+              className="resize-none bg-background" 
+              value={newComment} 
+              onChange={setNewComment} 
+              minHeight="80px" 
+            />
             <div className="flex justify-end">
               <Button onClick={handleAddComment} disabled={!newComment.trim() || submittingComment} className="gap-1.5">
                 <Send className="h-4 w-4" />

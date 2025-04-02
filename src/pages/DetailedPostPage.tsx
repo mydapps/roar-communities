@@ -305,7 +305,7 @@ const DetailedPostPage = () => {
   return (
     <div className="max-w-2xl mx-auto pt-16 pb-20 px-4 animate-in fade-in" onClick={(e) => e.stopPropagation()}>
       <Helmet>
-        <title>{displayTitle} | Dapps</title>
+        <title>{displayTitle} | dapps.co</title>
         <meta name="description" content={metaDescription} />
         
         <meta property="og:type" content="article" />
@@ -313,7 +313,7 @@ const DetailedPostPage = () => {
         <meta property="og:description" content={metaDescription} />
         {ogImage && <meta property="og:image" content={ogImage} />}
         <meta property="og:url" content={getCanonicalUrl()} />
-        <meta property="og:site_name" content="Dapps" />
+        <meta property="og:site_name" content="dapps.co" />
         
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={displayTitle} />
@@ -325,8 +325,10 @@ const DetailedPostPage = () => {
         <meta name="author" content={post.author.handle} />
         {post.created_at && <meta name="article:published_time" content={post.created_at} />}
         {post.community && <meta name="article:section" content={post.community} />}
+        <meta name="keywords" content={`${post.community || ''}, ${post.author.handle || ''}, crypto, discussion, social, dapps.co`} />
         
         <link rel="canonical" href={getCanonicalUrl()} />
+        <link rel="icon" href="https://dapps.co/favicon.ico" />
       </Helmet>
       
       <div className="mb-8 mt-4">

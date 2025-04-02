@@ -42,6 +42,7 @@ export interface PostProps {
   avatar?: string;
   hideComments?: boolean;
   isLoggedIn?: boolean;
+  onToggleComments?: () => void;
 }
 
 export const Post = ({ 
@@ -63,7 +64,8 @@ export const Post = ({
   ipfs,
   avatar,
   hideComments = false,
-  isLoggedIn
+  isLoggedIn,
+  onToggleComments
 }: PostProps) => {
   const navigate = useNavigate();
   const [localRoared, setLocalRoared] = useState(roared);
@@ -256,6 +258,11 @@ export const Post = ({
     }
     
     setShowComments(!showComments);
+    
+    // Call the external handler if provided (to focus comment inputs)
+    if (onToggleComments) {
+      onToggleComments();
+    }
     
     if (!showComments && !loadingComments && comments.length === 0 && postCode) {
       setLoadingComments(true);

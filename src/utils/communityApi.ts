@@ -123,6 +123,7 @@ export interface ShareConfirmResponse {
     members: number;
     description: string;
   };
+  newShareBalance?: number; // Add this property for current user's updated share balance
   error?: string;
 }
 
@@ -557,7 +558,8 @@ export const buySharesConfirm = async (communityName: string, shareQuantity: num
     
     return {
       ...data,
-      shareQuantity: Number(data.shareQuantity || shareQuantity)
+      shareQuantity: Number(data.shareQuantity || shareQuantity),
+      newShareBalance: data.newShareBalance || (data.communityData?.shares || 0)
     };
   } catch (error) {
     console.error('Error in buy shares confirmation:', error);
@@ -664,7 +666,8 @@ export const sellSharesConfirm = async (communityName: string, shareQuantity: nu
     
     return {
       ...data,
-      soldShares: Number(data.soldShares || shareQuantity)
+      soldShares: Number(data.soldShares || shareQuantity),
+      newShareBalance: data.newShareBalance || (data.communityData?.shares || 0)
     };
   } catch (error) {
     console.error('Error in sell shares confirmation:', error);

@@ -83,7 +83,7 @@ const CommunityPage = () => {
   
   debugLog("CommunityPage rendering, id:", id, "activeTab:", activeTab);
   
-  const { data: communityData, loading: communityLoading, error: communityError } = useCommunityData(id);
+  const { data: communityData, loading: communityLoading, error: communityError, refetch } = useCommunityData(id);
   
   debugLog("Community data:", communityData);
   if (communityData?.community?.rewards) {
@@ -102,6 +102,41 @@ const CommunityPage = () => {
     : 2500;
   
   const [buyAmount, setBuyAmount] = useState<number>(1);
+  
+  // Get community and user data early, regardless of loading state
+  const community = communityData?.community;
+  const user = communityData?.user;
+  
+  // Fix: More robust check for user shares that defaults to previous state during loading
+  const hasShares = user ? user.shares > 0 : previousHasShares;
+  
+  const availableRewards = community?.rewards?.available_rewards || 0;
+  console.log("Rendered with available rewards:", availableRewards);
+  const hasLastDistributed = community?.rewards?.last_distributed && community.rewards.last_distributed !== null;
+  
+  // Fix: Prepare metadata for SEO (always initialize, but may return empty values)
+  // IMPORTANT: This hook MUST be called in the same position on every render
+  const communityMetadata = useMemo(() => {
+    if (!community) {
+      return { 
+        title: 'Community | dapps.co',
+        description: 'Join communities on dapps.co. Buy, sell, and discuss with other members.',
+        imageUrl: 'https://dapps.co/og-default.jpg',
+        url: window.location.href,
+        priceInfo: ''
+      };
+    }
+    
+    const title = `${community.name} Community | dapps.co`;
+    const description = community.description || `Join the ${community.name} community on dapps.co. Buy, sell, and discuss with other members.`;
+    const imageUrl = community.image || 'https://dapps.co/og-default.jpg';
+    const url = `${window.location.origin}/c/${community.name.toLowerCase().replace(/\s+/g, '-')}`;
+    const priceInfo = community.prices 
+      ? `Current price: ${community.prices.buy_price} ETH ($${community.prices.buy_price_usd?.toFixed(2) || '0.00'})` 
+      : '';
+    
+    return { title, description, imageUrl, url, priceInfo };
+  }, [community]);
   
   useEffect(() => {
     setLocalPosts([]);
@@ -151,15 +186,18 @@ const CommunityPage = () => {
       if (result.status === 'SUCCESS') {
         toast.success(`Successfully purchased ${result.shareQuantity} shares of ${communityName}`);
         
-        // Refresh data by re-fetching things (no direct access to fetchCommunityData)
-        // This will force the hooks to re-fetch the data
+        // Refresh data by re-fetching things
         fetchWalletBalance();
-        window.location.reload(); // Simple way to refresh community data
+        
+        // Update community data by triggering a refetch
+        if (refetch) {
+          await refetch();
+        }
         
         // Close the sheet after a delay to allow success animation to show
         setTimeout(() => {
           setTradeSheetOpen(false);
-        }, 5000);
+        }, 2000);
       } else {
         toast.error(result.message || 'Transaction failed');
       }
@@ -183,15 +221,18 @@ const CommunityPage = () => {
       if (result.status === 'SUCCESS') {
         toast.success(`Successfully sold ${result.soldShares} shares of ${communityName}`);
         
-        // Refresh data by re-fetching things (no direct access to fetchCommunityData)
-        // This will force the hooks to re-fetch the data
+        // Refresh data by re-fetching things
         fetchWalletBalance();
-        window.location.reload(); // Simple way to refresh community data
+        
+        // Update community data by triggering a refetch
+        if (refetch) {
+          await refetch();
+        }
         
         // Close the sheet after a delay to allow success animation to show
         setTimeout(() => {
           setTradeSheetOpen(false);
-        }, 5000);
+        }, 2000);
       } else {
         toast.error(result.message || 'Transaction failed');
       }
@@ -238,9 +279,38 @@ const CommunityPage = () => {
     }
   };
   
+  // Always render the Helmet regardless of loading state to ensure consistent hooks
+  const helmetContent = (
+    <Helmet>
+      <title>{communityMetadata.title}</title>
+      <meta name="description" content={communityMetadata.description} />
+      
+      {/* OpenGraph Tags */}
+      <meta property="og:title" content={communityMetadata.title} />
+      <meta property="og:description" content={communityMetadata.description} />
+      <meta property="og:image" content={communityMetadata.imageUrl} />
+      <meta property="og:url" content={communityMetadata.url} />
+      <meta property="og:type" content="website" />
+      <meta property="og:site_name" content="dapps.co" />
+      
+      {/* Twitter Card Tags */}
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:title" content={communityMetadata.title} />
+      <meta name="twitter:description" content={communityMetadata.description} />
+      <meta name="twitter:image" content={communityMetadata.imageUrl} />
+      
+      {/* Additional Meta Tags */}
+      <meta name="keywords" content={`${community?.name || 'community'}, crypto, social, dapps.co`} />
+      <meta name="author" content="dapps.co" />
+      <link rel="canonical" href={communityMetadata.url} />
+    </Helmet>
+  );
+  
+  // Loading state with Helmet included to maintain hook order
   if (communityLoading) {
     return (
       <div className="h-[50vh] flex items-center justify-center">
+        {helmetContent}
         <div className="text-center">
           <Loader2 className="h-8 w-8 mx-auto animate-spin text-primary" />
           <p className="mt-2 text-muted-foreground">Loading community data...</p>
@@ -249,9 +319,11 @@ const CommunityPage = () => {
     );
   }
   
+  // Error state with Helmet included to maintain hook order
   if (communityError) {
     return (
       <div className="h-[50vh] flex items-center justify-center">
+        {helmetContent}
         <div className="text-center max-w-md mx-auto">
           <p className="text-destructive text-lg">Error loading community</p>
           <p className="mt-2 text-muted-foreground">{communityError}</p>
@@ -266,65 +338,10 @@ const CommunityPage = () => {
     );
   }
   
-  const community = communityData?.community;
-  const user = communityData?.user;
-  
-  // Fix: More robust check for user shares that defaults to previous state during loading
-  const hasShares = user ? user.shares > 0 : previousHasShares;
-  
-  const availableRewards = community?.rewards?.available_rewards || 0;
-  console.log("Rendered with available rewards:", availableRewards);
-  const hasLastDistributed = community?.rewards?.last_distributed && community.rewards.last_distributed !== null;
-  
-  // Fix: Prepare metadata for SEO (always initialize, but may return empty values)
-  const communityMetadata = useMemo(() => {
-    if (!community) {
-      return { 
-        title: 'Community | ROAR',
-        description: 'Join communities on ROAR. Buy, sell, and discuss with other members.',
-        imageUrl: 'https://dapps.co/og-default.jpg',
-        url: window.location.href,
-        priceInfo: ''
-      };
-    }
-    
-    const title = `${community.name} Community | ROAR`;
-    const description = community.description || `Join the ${community.name} community on ROAR. Buy, sell, and discuss with other members.`;
-    const imageUrl = community.image || 'https://dapps.co/og-default.jpg';
-    const url = `${window.location.origin}/c/${community.name.toLowerCase().replace(/\s+/g, '-')}`;
-    const priceInfo = community.prices 
-      ? `Current price: ${community.prices.buy_price} ETH ($${community.prices.buy_price_usd?.toFixed(2) || '0.00'})` 
-      : '';
-    
-    return { title, description, imageUrl, url, priceInfo };
-  }, [community]);
-  
   return (
     <div className="space-y-6 animate-fade-in pb-20 md:pb-10">
       {/* SEO Metadata - always render the Helmet, content changes based on community data */}
-      <Helmet>
-        <title>{communityMetadata.title}</title>
-        <meta name="description" content={communityMetadata.description} />
-        
-        {/* OpenGraph Tags */}
-        <meta property="og:title" content={communityMetadata.title} />
-        <meta property="og:description" content={communityMetadata.description} />
-        <meta property="og:image" content={communityMetadata.imageUrl} />
-        <meta property="og:url" content={communityMetadata.url} />
-        <meta property="og:type" content="website" />
-        <meta property="og:site_name" content="ROAR Communities" />
-        
-        {/* Twitter Card Tags */}
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={communityMetadata.title} />
-        <meta name="twitter:description" content={communityMetadata.description} />
-        <meta name="twitter:image" content={communityMetadata.imageUrl} />
-        
-        {/* Additional Meta Tags */}
-        <meta name="keywords" content={`${community?.name || 'community'}, crypto, social, roar, dapps.co`} />
-        <meta name="author" content="ROAR Communities" />
-        <link rel="canonical" href={communityMetadata.url} />
-      </Helmet>
+      {helmetContent}
       
       <div className="flex flex-col md:flex-row gap-4 animate-fade-in max-w-full overflow-x-hidden pt-4 md:pt-0">
         <div className="flex-1 order-2 md:order-1">
