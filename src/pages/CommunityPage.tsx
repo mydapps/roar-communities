@@ -78,6 +78,7 @@ const CommunityPage = () => {
   const [userEthBalance, setUserEthBalance] = useState("0.000");
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
   const [tradeLoading, setTradeLoading] = useState(false);
+  const [previousHasShares, setPreviousHasShares] = useState(false);
   
   debugLog("CommunityPage rendering, id:", id, "activeTab:", activeTab);
   
@@ -105,6 +106,13 @@ const CommunityPage = () => {
     setLocalPosts([]);
     fetchWalletBalance();
   }, [id]);
+  
+  // Store the previousHasShares value when we get valid user data
+  useEffect(() => {
+    if (communityData?.user) {
+      setPreviousHasShares(communityData.user.shares > 0);
+    }
+  }, [communityData?.user?.shares]);
   
   const handlePostCreated = (newPost: Partial<CommunityPost>) => {
     console.log("New post created:", newPost);
@@ -261,15 +269,7 @@ const CommunityPage = () => {
   const user = communityData?.user;
   
   // Fix: More robust check for user shares that defaults to previous state during loading
-  const [previousHasShares, setPreviousHasShares] = useState(false);
   const hasShares = user ? user.shares > 0 : previousHasShares;
-  
-  // Store the value once we know it's valid
-  useEffect(() => {
-    if (user) {
-      setPreviousHasShares(user.shares > 0);
-    }
-  }, [user?.shares]);
   
   const availableRewards = community?.rewards?.available_rewards || 0;
   console.log("Rendered with available rewards:", availableRewards);

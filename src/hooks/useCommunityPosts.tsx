@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 
@@ -32,6 +31,16 @@ export interface CommunityPost {
     body: string;
   }[];
   is_mirror: number;
+  pinned?: number;
+  mirror_quote?: string;
+  original_post_code?: string;
+  original_author?: string;
+  original_community?: string;
+  original_body?: string;
+  original_created_on?: string;
+  original_author_avatar?: string;
+  original_images?: string[];
+  original_title?: string;
 }
 
 export const useCommunityPosts = (communityName: string | undefined) => {
