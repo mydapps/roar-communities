@@ -939,38 +939,45 @@ export const transferShares = async (
       throw new Error('Recipient address is required');
     }
     
+    // Prepare the request body
+    const requestBody = {
+      communityName,
+      amount,
+      toAddress
+    };
+    
+    console.log('Transfer shares request payload:', JSON.stringify(requestBody));
+    
     const response = await fetch(url, {
       method: 'POST',
       headers,
-      body: JSON.stringify({
-        communityName,
-        amount,
-        toAddress
-      })
+      body: JSON.stringify(requestBody)
     });
     
     console.log(`Transfer shares response status: ${response.status}`);
     
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Transfer shares failed with status ${response.status}: ${errorText}`);
-      
+      let errorData;
       try {
-        // Try to parse error as JSON
-        const errorJson = JSON.parse(errorText);
-        return {
-          success: false,
-          message: errorJson.message || `Error: ${response.status}`,
-          error: errorJson.message
-        };
-      } catch {
-        // If not JSON, return the error text
-        return {
-          success: false,
-          message: errorText || `Error: ${response.status}`,
-          error: errorText
-        };
+        const errorText = await response.text();
+        console.error(`Transfer shares failed with status ${response.status}: ${errorText}`);
+        
+        try {
+          // Try to parse error as JSON
+          errorData = JSON.parse(errorText);
+        } catch {
+          // If not JSON, use the text directly
+          errorData = { message: errorText };
+        }
+      } catch (parseError) {
+        errorData = { message: `Error ${response.status}` };
       }
+      
+      return {
+        success: false,
+        message: errorData.message || `Error: ${response.status}`,
+        error: errorData.error || errorData.message
+      };
     }
     
     const data = await response.json();
