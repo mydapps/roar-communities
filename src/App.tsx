@@ -20,6 +20,7 @@ import AvatarHandlePage from '@/pages/AvatarHandlePage';
 import PrivyAuthProvider from '@/components/onboarding/PrivyAuthProvider';
 import { Toaster } from 'sonner';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import UserProfilePage from '@/pages/UserProfilePage';
 
 function App() {
   return (
@@ -57,9 +58,9 @@ function App() {
                 <CommunityPage />
               </ProtectedRoute>
             } />
-            <Route path="u/:username" element={
+            <Route path="u/:handle" element={
               <ProtectedRoute>
-                <AccountPage />
+                <UserProfilePage />
               </ProtectedRoute>
             } />
             <Route path="my-shares" element={

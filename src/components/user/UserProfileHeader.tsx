@@ -87,7 +87,14 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
                   </div>
 
                   {/* Action buttons: Share and Follow/Unfollow */}
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 items-center">
+                    {/* Show follows you badge if the profile user follows the current user */}
+                    {profile.is_followed_by && !isOwnProfile && (
+                      <Badge className="bg-primary/10 text-primary border-primary/20">
+                        Follows you
+                      </Badge>
+                    )}
+                    
                     {/* Share button using the new UserProfileShare component */}
                     <UserProfileShare handle={profile.handle} />
                     

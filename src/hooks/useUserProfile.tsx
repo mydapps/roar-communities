@@ -101,15 +101,24 @@ export const useUserProfile = (handle: string) => {
       const response = await unfollowUser(profile.handle);
       
       if (response.success) {
-        toast.success(`Successfully unfollowed @${profile.handle}`);
+        // API now returns is_following flag directly
+        const isNowFollowing = response.is_following === true;
         
-        // Update local state
+        if (isNowFollowing) {
+          toast.success(`Successfully followed @${profile.handle}`);
+        } else {
+          toast.success(`Successfully unfollowed @${profile.handle}`);
+        }
+        
+        // Update local state based on the API response
         setProfile(prev => {
           if (!prev) return prev;
           return {
             ...prev,
-            is_following: false,
-            followers: Math.max(0, prev.followers - 1)
+            is_following: isNowFollowing,
+            followers: isNowFollowing 
+              ? prev.followers + 1 
+              : Math.max(0, prev.followers - 1)
           };
         });
       } else {
@@ -130,6 +139,31 @@ export const useUserProfile = (handle: string) => {
       fetchProfile();
     }
   }, [handle]);
+
+  // Refresh profile when tab regains focus
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && handle) {
+        refreshProfile();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Also refresh on window focus
+    const handleFocus = () => {
+      if (handle) {
+        refreshProfile();
+      }
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [handle, refreshProfile]);
 
   return {
     profile,
