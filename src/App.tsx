@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
@@ -11,6 +10,7 @@ import PostPage from '@/pages/PostPage';
 import DetailedPostPage from '@/pages/DetailedPostPage';
 import MySharesPage from '@/pages/MySharesPage';
 import AccountPage from '@/pages/AccountPage';
+import WalletPage from '@/pages/WalletPage';
 import SearchPage from '@/pages/SearchPage';
 import ReferralPage from '@/pages/ReferralPage';
 import RequestInvitePage from '@/pages/RequestInvitePage';
@@ -65,6 +65,11 @@ function App() {
             <Route path="my-shares" element={
               <ProtectedRoute>
                 <MySharesPage />
+              </ProtectedRoute>
+            } />
+            <Route path="wallet" element={
+              <ProtectedRoute>
+                <WalletPage />
               </ProtectedRoute>
             } />
             <Route path="account" element={

@@ -28,7 +28,7 @@ import {
 } from '@/utils/communityApi';
 import { PortfolioSummary } from '@/components/shares/PortfolioSummary';
 import { DepositSheet } from '@/components/shares/DepositSheet';
-import { SendSheet } from '@/components/shares/SendSheet';
+import { ETHTransferSheet } from '@/components/eth/ETHTransferSheet';
 import { TradeSheet } from '@/components/shares/TradeSheet';
 import { CommunityShareCard } from '@/components/shares/CommunityShareCard';
 import { ShareTransferSheet } from '@/components/shares/ShareTransferSheet';
@@ -347,11 +347,11 @@ const MySharesPage = () => {
         onOpenChange={setDepositOpen} 
       />
 
-      <SendSheet 
+      <ETHTransferSheet
         open={sendOpen} 
         onOpenChange={setSendOpen} 
-        community={selectedCommunity}
-        isEthSend={!selectedCommunity}
+        currentBalance={userEthBalance}
+        onTransferSuccess={fetchWalletBalance}
       />
 
       <TradeSheet 

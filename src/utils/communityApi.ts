@@ -1049,3 +1049,164 @@ export const searchUsers = async (query: string, page: number = 1, limit: number
     };
   }
 };
+
+/**
+ * ETH gas estimation response
+ */
+export interface ETHGasEstimateResponse {
+  success: boolean;
+  estimatedGasFee?: string;
+  currentBalance?: string;
+  totalCost?: string;
+  hasSufficientBalance?: boolean;
+  recipient?: string;
+  message?: string;
+  error?: string;
+}
+
+/**
+ * ETH withdrawal response
+ */
+export interface ETHWithdrawalResponse {
+  success: boolean;
+  transaction?: {
+    hash: string;
+    from: string;
+    to: string;
+    amount: string;
+  };
+  message?: string;
+  error?: string;
+}
+
+/**
+ * Get estimated gas fee for ETH withdrawal
+ */
+export const getETHWithdrawalGasEstimate = async (
+  amount: string,
+  recipient: string,
+  isAddress: boolean
+): Promise<ETHGasEstimateResponse> => {
+  try {
+    const url = `${API_BASE_URL}/withdraw_eth_gas_estimate`;
+    const headers = createAuthHeaders();
+    
+    // Build request body based on whether recipient is an address or handle
+    const requestBody = {
+      amount,
+      ...(isAddress ? { address: recipient } : { handle: recipient.toLowerCase() })
+    };
+    
+    console.log('ETH gas estimate request payload:', JSON.stringify(requestBody));
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(requestBody)
+    });
+    
+    console.log(`ETH gas estimate response status: ${response.status}`);
+    
+    if (!response.ok) {
+      let errorData;
+      try {
+        const errorText = await response.text();
+        console.error(`ETH gas estimate failed with status ${response.status}: ${errorText}`);
+        
+        try {
+          // Try to parse error as JSON
+          errorData = JSON.parse(errorText);
+        } catch {
+          // If not JSON, use the text directly
+          errorData = { message: errorText };
+        }
+      } catch (parseError) {
+        errorData = { message: `Error ${response.status}` };
+      }
+      
+      return {
+        success: false,
+        message: errorData.message || `Error: ${response.status}`,
+        error: errorData.error || errorData.message
+      };
+    }
+    
+    const data = await response.json();
+    console.log('ETH gas estimate response:', data);
+    
+    return data as ETHGasEstimateResponse;
+  } catch (error) {
+    console.error('Error estimating ETH withdrawal gas:', error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Unknown error occurred',
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
+  }
+};
+
+/**
+ * Withdraw ETH to address or handle
+ */
+export const withdrawETH = async (
+  amount: string,
+  recipient: string,
+  isAddress: boolean
+): Promise<ETHWithdrawalResponse> => {
+  try {
+    const url = `${API_BASE_URL}/withdraw_eth`;
+    const headers = createAuthHeaders();
+    
+    // Build request body based on whether recipient is an address or handle
+    const requestBody = {
+      amount,
+      ...(isAddress ? { address: recipient } : { handle: recipient.toLowerCase() })
+    };
+    
+    console.log('ETH withdrawal request payload:', JSON.stringify(requestBody));
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(requestBody)
+    });
+    
+    console.log(`ETH withdrawal response status: ${response.status}`);
+    
+    if (!response.ok) {
+      let errorData;
+      try {
+        const errorText = await response.text();
+        console.error(`ETH withdrawal failed with status ${response.status}: ${errorText}`);
+        
+        try {
+          // Try to parse error as JSON
+          errorData = JSON.parse(errorText);
+        } catch {
+          // If not JSON, use the text directly
+          errorData = { message: errorText };
+        }
+      } catch (parseError) {
+        errorData = { message: `Error ${response.status}` };
+      }
+      
+      return {
+        success: false,
+        message: errorData.message || `Error: ${response.status}`,
+        error: errorData.error || errorData.message
+      };
+    }
+    
+    const data = await response.json();
+    console.log('ETH withdrawal response:', data);
+    
+    return data as ETHWithdrawalResponse;
+  } catch (error) {
+    console.error('Error withdrawing ETH:', error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'Unknown error occurred',
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
+  }
+};

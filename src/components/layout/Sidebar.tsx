@@ -10,7 +10,8 @@ import {
   X,
   Sparkles,
   Plus,
-  Loader2
+  Loader2,
+  ArrowUpRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';

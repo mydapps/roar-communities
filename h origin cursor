@@ -1,0 +1,5 @@
+[33m1c90773[m[33m ([m[1;36mHEAD -> [m[1;32mcursor[m[33m)[m Enhance referral page UI and fix duplicate dates issue
+[33ma485fc4[m Enhance search page UX with animations, responsive design, and interactive elements
+[33m6f79243[m Improve search page UI: Add community images, replace upvote arrows with lion/cat icons, remove price displays
+[33mfa8eb90[m Add search functionality with API integration for users, communities, and posts
+[33mbc770d0[m Improve SEO and branding: 1) Replace ROAR with dapps.co in all meta tags 2) Add proper SEO meta tags to post pages 3) Add dapps.co favicon throughout the application
