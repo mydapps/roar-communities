@@ -8,6 +8,7 @@ import useUserProfile from '@/hooks/useUserProfile';
 import UserProfileHeader from '@/components/user/UserProfileHeader';
 import UserCommunities from '@/components/user/UserCommunities';
 import { UserPosts } from '@/components/user/UserPosts';
+import { UserReplies } from '@/components/user/UserReplies';
 import EditProfileDialog from '@/components/user/EditProfileDialog';
 import { UserProfile } from '@/utils/userApi';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -99,12 +100,7 @@ const UserProfilePage = () => {
                   </TabsContent>
                   
                   <TabsContent value="replies" className="space-y-4">
-                    <div className="bg-muted/20 rounded-lg p-8 text-center border border-border/20">
-                      <h3 className="text-muted-foreground font-medium">Replies will appear here</h3>
-                      <p className="text-sm text-muted-foreground/80 mt-1">
-                        The replies feature is coming soon
-                      </p>
-                    </div>
+                    <UserReplies handle={profile.handle} />
                   </TabsContent>
                   
                   {/* Mobile-only communities tab content */}

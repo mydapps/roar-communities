@@ -203,4 +203,83 @@ export const getUserPosts = async (
     console.error('Error fetching user posts:', error);
     throw error;
   }
+};
+
+/**
+ * Fetch replies from a specific user 
+ */
+export interface UserReplyPost {
+  id: number;
+  code: string;
+  community: string | null;
+  title: string;
+  body: string;
+  body_shrunk: number;
+  upvotes: number;
+  comments: number;
+  created_at: string;
+  time_ago: string;
+  author: {
+    id: number;
+    handle: string;
+    avatar: string;
+  };
+  image: number;
+  image_url: string;
+  multiple_images: number;
+  images: string[];
+  has_video: number;
+}
+
+export interface UserReply {
+  id: number;
+  post_code: string;
+  content: string;
+  created_at: string;
+  time_ago: string;
+  upvotes: number;
+  meow_count: number;
+}
+
+export interface UserReplyData {
+  post: UserReplyPost;
+  reply: UserReply;
+}
+
+export interface UserRepliesResponse {
+  success: boolean;
+  data: UserReplyData[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    total_pages: number;
+    has_next_page: boolean;
+    has_prev_page: boolean;
+  };
+}
+
+export const getUserReplies = async (
+  handle: string,
+  page: number = 1,
+  limit: number = 10
+): Promise<UserRepliesResponse> => {
+  try {
+    const headers = createAuthHeaders();
+    
+    const response = await fetch(`${API_BASE_URL}/user/${handle}/replies?page=${page}&limit=${limit}`, {
+      method: 'GET',
+      headers
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || `Failed to fetch user replies: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching user replies:', error);
+    throw error;
+  }
 }; 
