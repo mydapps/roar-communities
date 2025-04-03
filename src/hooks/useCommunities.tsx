@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { fetchCommunities, Community } from '@/utils/communityApi';
 import { useInView } from 'react-intersection-observer';
@@ -8,9 +7,19 @@ interface UseCommunitiesProps {
   category?: string;
   search?: string;
   personal?: boolean;
+  trending?: boolean;
+  newest?: boolean;
+  mostRewards?: boolean;
 }
 
-export const useCommunities = ({ category, search, personal }: UseCommunitiesProps = {}) => {
+export const useCommunities = ({
+  category,
+  search,
+  personal,
+  trending,
+  newest,
+  mostRewards
+}: UseCommunitiesProps = {}) => {
   const [communities, setCommunities] = useState<Community[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +44,33 @@ export const useCommunities = ({ category, search, personal }: UseCommunitiesPro
       
       setError(null);
       
-      console.log(`Fetching communities for page ${pageNum}, category: ${category}, search: ${search}, personal: ${personal}`);
+      // Additional logging for personal communities
+      if (personal) {
+        console.log('Attempting to fetch personal communities...');
+        const userKey = localStorage.getItem('dapps_user_key');
+        if (!userKey) {
+          console.warn('User is not authenticated. Cannot fetch personal communities.');
+          setIsLoading(false);
+          setIsRefreshing(false);
+          setHasMore(false);
+          setCommunities([]);
+          
+          // Still return to prevent the API call without auth
+          return;
+        } else {
+          console.log('User is authenticated. Proceeding with personal communities request.');
+        }
+      }
+      
+      console.log(`Fetching communities for page ${pageNum}${personal ? ', personal' : ''}${trending ? ', trending' : ''}${newest ? ', newest' : ''}${mostRewards ? ', most rewards' : ''}`);
+      
+      // Build headers with user key if available
+      const headers: HeadersInit = {};
+      const userKey = localStorage.getItem('dapps_user_key');
+      if (userKey) {
+        headers['x-user-key'] = userKey;
+        console.log('Added user key to request headers');
+      }
       
       const fetchedCommunities = await fetchCommunities({
         page: pageNum,
@@ -43,6 +78,9 @@ export const useCommunities = ({ category, search, personal }: UseCommunitiesPro
         category,
         search,
         personal,
+        trending,
+        newest,
+        mostRewards
       });
       
       console.log(`Fetched ${fetchedCommunities.length} communities`);
@@ -68,7 +106,7 @@ export const useCommunities = ({ category, search, personal }: UseCommunitiesPro
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [category, search, personal]);
+  }, [category, search, personal, trending, newest, mostRewards]);
 
   const refreshCommunities = useCallback(() => {
     return loadCommunities(1, true);
@@ -83,7 +121,7 @@ export const useCommunities = ({ category, search, personal }: UseCommunitiesPro
   // Initial load
   useEffect(() => {
     loadCommunities(1);
-  }, [category, search, personal, loadCommunities]);
+  }, [category, search, personal, trending, newest, mostRewards, loadCommunities]);
 
   // Infinite scroll
   useEffect(() => {

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -13,7 +12,7 @@ interface CommunityShareDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
-  initialAction?: 'buy' | 'sell';
+  action?: 'buy' | 'sell';
 }
 
 export const CommunityShareDialog = ({
@@ -21,7 +20,7 @@ export const CommunityShareDialog = ({
   open,
   onOpenChange,
   onSuccess,
-  initialAction = 'buy'
+  action: initialAction = 'buy'
 }: CommunityShareDialogProps) => {
   const [action, setAction] = useState<'buy' | 'sell'>(initialAction);
   const [quantity, setQuantity] = useState(1);
@@ -34,17 +33,7 @@ export const CommunityShareDialog = ({
     setAction(initialAction);
   }, [initialAction]);
 
-  useEffect(() => {
-    if (community && open) {
-      fetchUserShares();
-      performPrecheck();
-    } else {
-      setQuantity(1);
-      setPrecheckData(null);
-    }
-  }, [community, open, action]);
-
-  const fetchUserShares = async () => {
+  const fetchUserShares = React.useCallback(async () => {
     if (!community?.name) return;
     
     try {
@@ -59,9 +48,9 @@ export const CommunityShareDialog = ({
       console.error("Error fetching user shares:", error);
       setUserShareData(null);
     }
-  };
+  }, [community?.name]);
 
-  const performPrecheck = async () => {
+  const performPrecheck = React.useCallback(async () => {
     if (!community?.name) return;
     
     try {
@@ -82,7 +71,17 @@ export const CommunityShareDialog = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [action, community?.name, quantity]);
+
+  useEffect(() => {
+    if (community && open) {
+      fetchUserShares();
+      performPrecheck();
+    } else {
+      setQuantity(1);
+      setPrecheckData(null);
+    }
+  }, [community, open, action, quantity, fetchUserShares, performPrecheck]);
 
   const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value);

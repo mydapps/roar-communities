@@ -1105,7 +1105,7 @@ const CommunityPage = () => {
                           className="w-full bg-purple-600 hover:bg-purple-700 text-white shadow-md hover:shadow-lg" 
                           onClick={handleBuyAction}
                         >
-                          Buy More
+                          Buy Shares
                         </Button>
                         <Button 
                           variant="outline" 
