@@ -139,4 +139,68 @@ export const updateUserProfile = async (
     console.error('Error updating profile:', error);
     throw error;
   }
+};
+
+/**
+ * Fetch posts from a specific user 
+ */
+export interface UserPost {
+  id: number;
+  code: string;
+  community: string | null;
+  title: string;
+  body: string;
+  upvotes: number;
+  comments: number;
+  created_at: string;
+  time_ago: string;
+  author: {
+    id: number;
+    handle: string;
+    avatar: string;
+  };
+  has_upvoted: boolean;
+  image: number;
+  image_url: string;
+  multiple_images: number;
+  images: string[];
+  has_video: number;
+}
+
+export interface UserPostsResponse {
+  success: boolean;
+  posts: UserPost[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    total_pages: number;
+    has_next_page: boolean;
+    has_prev_page: boolean;
+  };
+}
+
+export const getUserPosts = async (
+  handle: string,
+  page: number = 1,
+  limit: number = 10
+): Promise<UserPostsResponse> => {
+  try {
+    const headers = createAuthHeaders();
+    
+    const response = await fetch(`${API_BASE_URL}/user/${handle}/posts?page=${page}&limit=${limit}`, {
+      method: 'GET',
+      headers
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || `Failed to fetch user posts: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching user posts:', error);
+    throw error;
+  }
 }; 

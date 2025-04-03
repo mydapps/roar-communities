@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import useUserProfile from '@/hooks/useUserProfile';
 import UserProfileHeader from '@/components/user/UserProfileHeader';
 import UserCommunities from '@/components/user/UserCommunities';
+import { UserPosts } from '@/components/user/UserPosts';
 import EditProfileDialog from '@/components/user/EditProfileDialog';
 import { UserProfile } from '@/utils/userApi';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -94,12 +95,7 @@ const UserProfilePage = () => {
                   </TabsList>
                   
                   <TabsContent value="posts" className="space-y-4">
-                    <div className="bg-muted/20 rounded-lg p-8 text-center border border-border/20">
-                      <h3 className="text-muted-foreground font-medium">Posts will appear here</h3>
-                      <p className="text-sm text-muted-foreground/80 mt-1">
-                        The posts feature is coming soon
-                      </p>
-                    </div>
+                    <UserPosts handle={profile.handle} />
                   </TabsContent>
                   
                   <TabsContent value="replies" className="space-y-4">
