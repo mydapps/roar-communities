@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
@@ -30,8 +29,23 @@ const MainLayout = () => {
     // Simulate a refresh delay
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    // Force a refresh of the current route
-    navigate(0);
+    // Check for localStorage values to determine if we're logged in
+    const hasCredentials = localStorage.getItem('dapps_user_key') && 
+                          localStorage.getItem('dapps_user_id');
+    
+    // Only perform a full refresh if necessary
+    if (hasCredentials) {
+      console.log('User has credentials, performing local data refresh only');
+      // Here you could add specific refresh logic for different routes
+      // without reloading the entire page
+      
+      // For now, just reload data related to the current view
+      // by dispatching a custom event
+      window.dispatchEvent(new CustomEvent('app:refresh'));
+    } else {
+      // Force a refresh of the current route if no credentials exist
+      navigate(0);
+    }
   };
   
   return (

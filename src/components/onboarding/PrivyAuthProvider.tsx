@@ -16,6 +16,7 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
   const { ready, authenticated, user, login, getAccessToken } = usePrivy();
   const [authProcessed, setAuthProcessed] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
+  const [authRequestInProgress, setAuthRequestInProgress] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   
@@ -56,13 +57,29 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
     // Reset auth processed state when authentication status changes
     if (!authenticated) {
       setAuthProcessed(false);
+      setAuthRequestInProgress(false);
     }
     
     // If user is authenticated with Privy, send info to backend
-    if (ready && authenticated && user && !authProcessed) {
+    if (ready && authenticated && user && !authProcessed && !authRequestInProgress) {
       const handlePrivyAuth = async () => {
         try {
+          // Check if we already have valid credentials stored
+          const existingUserKey = localStorage.getItem('dapps_user_key');
+          const existingUserId = localStorage.getItem('dapps_user_id');
+          
+          // If we already have credentials and we're just on a route change/refresh,
+          // consider auth as processed without making the API call again
+          if (existingUserKey && existingUserId) {
+            console.log('User already has credentials, skipping authentication request');
+            setAuthProcessed(true);
+            return;
+          }
+          
+          // Set both flags to prevent duplicate requests
+          setAuthRequestInProgress(true);
           setIsAuthLoading(true);
+          
           // Get JWT token from Privy
           const token = await getAccessToken();
           
@@ -71,6 +88,7 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
             toast.error('Authentication error: No token available');
             setAuthProcessed(true);
             setIsAuthLoading(false);
+            setAuthRequestInProgress(false);
             return;
           }
           
@@ -117,6 +135,7 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
                 console.log('Already on a protected page, skipping redirect');
                 setAuthProcessed(true);
                 setIsAuthLoading(false);
+                setAuthRequestInProgress(false);
                 return;
               }
               
@@ -125,6 +144,7 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
                 console.log('Already on community/post page, skipping redirect');
                 setAuthProcessed(true);
                 setIsAuthLoading(false);
+                setAuthRequestInProgress(false);
                 return;
               }
               
@@ -165,17 +185,19 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
           // Mark auth as processed to prevent loops
           setAuthProcessed(true);
           setIsAuthLoading(false);
+          setAuthRequestInProgress(false);
         } catch (error) {
           console.error('Error during authentication:', error);
           toast.error('Could not complete authentication');
           setAuthProcessed(true);
           setIsAuthLoading(false);
+          setAuthRequestInProgress(false);
         }
       };
 
       handlePrivyAuth();
     }
-  }, [ready, authenticated, user, getAccessToken, authProcessed, isCommunityPage, isPostPage, pathname, navigate]);
+  }, [ready, authenticated, user, getAccessToken, authProcessed, authRequestInProgress, isCommunityPage, isPostPage, pathname, navigate]);
 
   // Show global loading overlay when authentication is processing
   if (isAuthLoading) {
