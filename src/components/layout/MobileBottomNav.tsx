@@ -1,11 +1,12 @@
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Home, Search, Users, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const MobileBottomNav = () => {
   const location = useLocation();
+  const [visible, setVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
   
   // Check if we're on a post detail page
   const isPostDetailPage = 
@@ -13,8 +14,41 @@ const MobileBottomNav = () => {
     /^\/[\w-]+\/[\w-]+$/.test(location.pathname) ||    // user post: /handle/postId
     /^\/post\/[\w-]+$/.test(location.pathname);        // generic post: /post/postId
   
-  // Debug check - log the current path and whether it's detected as a post page
-  console.log('Current path:', location.pathname, 'Is post page:', isPostDetailPage);
+  // Only on the feed page, we want to hide/show the bottom nav based on scroll
+  const isScrollSensitive = location.pathname === '/feed';
+  
+  // Handle scroll event to show/hide the bottom nav based on scroll direction
+  useEffect(() => {
+    if (!isScrollSensitive) {
+      setVisible(true);
+      return;
+    }
+    
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      // Simple scroll direction detection with threshold
+      // Show when scrolling up, hide when scrolling down
+      if (currentScrollY < 50) {
+        // Always show at the top of the page
+        setVisible(true);
+      } else if (currentScrollY < lastScrollY - 10) {
+        // Scrolling up - show after 10px of upward movement
+        setVisible(true);
+      } else if (currentScrollY > lastScrollY + 10) {
+        // Scrolling down - hide after 10px of downward movement
+        setVisible(false);
+      }
+      
+      setLastScrollY(currentScrollY);
+    };
+    
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [lastScrollY, isScrollSensitive]);
   
   // Don't render the bottom nav on post detail pages
   if (isPostDetailPage) {
@@ -22,7 +56,10 @@ const MobileBottomNav = () => {
   }
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t md:hidden">
+    <div className={cn(
+      "fixed bottom-0 left-0 right-0 z-50 bg-card border-t md:hidden transition-transform duration-300 ease-in-out",
+      !visible && isScrollSensitive ? "translate-y-full" : "translate-y-0"
+    )}>
       <div className="flex justify-around items-center py-3 px-2">
         <NavItem to="/feed" icon={<Home className="h-5 w-5" />} label="Feed" />
         <NavItem to="/search" icon={<Search className="h-5 w-5" />} label="Search" />

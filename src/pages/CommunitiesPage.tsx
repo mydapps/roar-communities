@@ -318,25 +318,25 @@ const CommunitiesPage = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <div className="overflow-x-auto pb-2">
-          <TabsList className="inline-flex w-auto justify-start mb-6 p-1 bg-muted/30">
-            <TabsTrigger value="popular" className="flex items-center gap-1.5 px-4">
+        <div className="relative overflow-x-auto pb-2 no-scrollbar">
+          <TabsList className="inline-flex w-auto min-w-full md:min-w-0 justify-start mb-6 p-1 bg-muted/30 whitespace-nowrap">
+            <TabsTrigger value="popular" className="flex items-center gap-1.5 px-4 flex-shrink-0">
               <Users className="h-4 w-4" />
               <span>Popular</span>
             </TabsTrigger>
-            <TabsTrigger value="my" className="flex items-center gap-1.5 px-4">
+            <TabsTrigger value="my" className="flex items-center gap-1.5 px-4 flex-shrink-0">
               <User className="h-4 w-4" />
               <span>My Communities</span>
             </TabsTrigger>
-            <TabsTrigger value="trending" className="flex items-center gap-1.5 px-4">
+            <TabsTrigger value="trending" className="flex items-center gap-1.5 px-4 flex-shrink-0">
               <TrendingUp className="h-4 w-4" />
               <span>Trending</span>
             </TabsTrigger>
-            <TabsTrigger value="newest" className="flex items-center gap-1.5 px-4">
+            <TabsTrigger value="newest" className="flex items-center gap-1.5 px-4 flex-shrink-0">
               <Clock className="h-4 w-4" />
               <span>Newest</span>
             </TabsTrigger>
-            <TabsTrigger value="most-rewards" className="flex items-center gap-1.5 px-4">
+            <TabsTrigger value="most-rewards" className="flex items-center gap-1.5 px-4 flex-shrink-0">
               <Gift className="h-4 w-4" />
               <span>Highest Rewards</span>
             </TabsTrigger>
