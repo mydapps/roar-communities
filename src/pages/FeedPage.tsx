@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Post } from '@/components/feed/Post';
 import CreatePostCard from '@/components/feed/CreatePostCard';
@@ -144,20 +143,22 @@ const FeedPage = () => {
       </div>
       
       <Tabs value={activeTab} onValueChange={handleTabChange} className="mb-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="personal" className="flex items-center gap-1.5">
-            <User className="h-3.5 w-3.5" />
-            <span>Personal</span>
-          </TabsTrigger>
-          <TabsTrigger value="global" className="flex items-center gap-1.5">
-            <Globe className="h-3.5 w-3.5" />
-            <span>Global</span>
-          </TabsTrigger>
-          <TabsTrigger value="trending" className="flex items-center gap-1.5">
-            <TrendingUp className="h-3.5 w-3.5" />
-            <span>Trending</span>
-          </TabsTrigger>
-        </TabsList>
+        <div className="relative overflow-x-auto pb-2 no-scrollbar">
+          <TabsList className="inline-flex w-auto min-w-full whitespace-nowrap grid-cols-3">
+            <TabsTrigger value="personal" className="flex items-center gap-1.5 flex-shrink-0">
+              <User className="h-3.5 w-3.5" />
+              <span>Personal</span>
+            </TabsTrigger>
+            <TabsTrigger value="global" className="flex items-center gap-1.5 flex-shrink-0">
+              <Globe className="h-3.5 w-3.5" />
+              <span>Global</span>
+            </TabsTrigger>
+            <TabsTrigger value="trending" className="flex items-center gap-1.5 flex-shrink-0">
+              <TrendingUp className="h-3.5 w-3.5" />
+              <span>Trending</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
       </Tabs>
       
       {error && (

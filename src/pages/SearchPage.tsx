@@ -342,33 +342,34 @@ const SearchPage = () => {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}
+              className="relative overflow-x-auto pb-2 no-scrollbar"
             >
-              <TabsList className="w-full justify-start mb-6 max-w-md bg-background border border-border/40 p-1">
+              <TabsList className="inline-flex w-auto min-w-full md:min-w-0 justify-start mb-6 max-w-md bg-background border border-border/40 p-1 whitespace-nowrap">
                 <TabsTrigger 
                   value="all"
-                  className="data-[state=active]:bg-primary/15 data-[state=active]:text-primary relative overflow-hidden transition-all"
+                  className="flex-shrink-0 data-[state=active]:bg-primary/15 data-[state=active]:text-primary relative overflow-hidden transition-all"
                 >
                   <span className="relative z-10">All Results</span>
                 </TabsTrigger>
                 <TabsTrigger 
                   value="communities"
-                  className="data-[state=active]:bg-primary/15 data-[state=active]:text-primary relative overflow-hidden transition-all"
+                  className="flex-shrink-0 data-[state=active]:bg-primary/15 data-[state=active]:text-primary relative overflow-hidden transition-all"
                 >
                   <span className="relative z-10">Communities</span>
                 </TabsTrigger>
                 <TabsTrigger 
                   value="posts"
-                  className="data-[state=active]:bg-primary/15 data-[state=active]:text-primary relative overflow-hidden transition-all"
+                  className="flex-shrink-0 data-[state=active]:bg-primary/15 data-[state=active]:text-primary relative overflow-hidden transition-all"
                 >
                   <span className="relative z-10">Posts</span>
                 </TabsTrigger>
                 <TabsTrigger 
                   value="users"
-                  className="data-[state=active]:bg-primary/15 data-[state=active]:text-primary relative overflow-hidden transition-all"
+                  className="flex-shrink-0 data-[state=active]:bg-primary/15 data-[state=active]:text-primary relative overflow-hidden transition-all"
                 >
                   <span className="relative z-10">Users</span>
                 </TabsTrigger>
-          </TabsList>
+              </TabsList>
             </motion.div>
             
             <AnimatePresence mode="wait">

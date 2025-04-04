@@ -448,24 +448,26 @@ const CommunityPage = () => {
           
           {isMobile && (
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mb-6 mt-8">
-              <TabsList className="w-full grid grid-cols-4 bg-muted/50">
-                <TabsTrigger value="posts" className="data-[state=active]:bg-background">
-                  <MessageCircle className="h-4 w-4 mr-1" />
-                  Posts
-                </TabsTrigger>
-                <TabsTrigger value="members" className="data-[state=active]:bg-background">
-                  <Users className="h-4 w-4 mr-1" />
-                  Members
-                </TabsTrigger>
-                <TabsTrigger value="rewards" className="data-[state=active]:bg-background">
-                  <DollarSign className="h-4 w-4 mr-1" />
-                  Rewards
-                </TabsTrigger>
-                <TabsTrigger value="about" className="data-[state=active]:bg-background">
-                  <Info className="h-4 w-4 mr-1" />
-                  About
-                </TabsTrigger>
-              </TabsList>
+              <div className="relative overflow-x-auto pb-2 no-scrollbar">
+                <TabsList className="inline-flex w-auto min-w-full justify-center whitespace-nowrap bg-muted/50">
+                  <TabsTrigger value="posts" className="flex-shrink-0 data-[state=active]:bg-background flex items-center">
+                    <MessageCircle className="h-4 w-4 mr-1" />
+                    Posts
+                  </TabsTrigger>
+                  <TabsTrigger value="members" className="flex-shrink-0 data-[state=active]:bg-background flex items-center">
+                    <Users className="h-4 w-4 mr-1" />
+                    Members
+                  </TabsTrigger>
+                  <TabsTrigger value="rewards" className="flex-shrink-0 data-[state=active]:bg-background flex items-center">
+                    <DollarSign className="h-4 w-4 mr-1" />
+                    Rewards
+                  </TabsTrigger>
+                  <TabsTrigger value="about" className="flex-shrink-0 data-[state=active]:bg-background flex items-center">
+                    <Info className="h-4 w-4 mr-1" />
+                    About
+                  </TabsTrigger>
+                </TabsList>
+              </div>
               
               <TabsContent value="posts" className="animate-fade-in mt-0">
                 <div className="space-y-6">

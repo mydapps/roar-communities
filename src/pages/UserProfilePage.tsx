@@ -80,20 +80,22 @@ const UserProfilePage = () => {
               {/* Main content area */}
               <div className="md:col-span-2">
                 <Tabs defaultValue={activeTab} onValueChange={setActiveTab}>
-                  <TabsList className="w-full mb-6 bg-background border border-border/40 p-1">
-                    <TabsTrigger value="posts" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none">
-                      Posts ({profile.post_count})
-                    </TabsTrigger>
-                    <TabsTrigger value="replies" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none">
-                      Replies ({profile.reply_count})
-                    </TabsTrigger>
-                    {/* Communities tab only on mobile */}
-                    {isMobile && (
-                      <TabsTrigger value="communities" className="flex-1 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none">
-                        Communities ({profile.communities.length})
+                  <div className="relative overflow-x-auto pb-2 no-scrollbar">
+                    <TabsList className="inline-flex w-auto min-w-full justify-start mb-6 bg-background border border-border/40 p-1 whitespace-nowrap">
+                      <TabsTrigger value="posts" className="flex-shrink-0 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none">
+                        Posts ({profile.post_count})
                       </TabsTrigger>
-                    )}
-                  </TabsList>
+                      <TabsTrigger value="replies" className="flex-shrink-0 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none">
+                        Replies ({profile.reply_count})
+                      </TabsTrigger>
+                      {/* Communities tab only on mobile */}
+                      {isMobile && (
+                        <TabsTrigger value="communities" className="flex-shrink-0 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none">
+                          Communities ({profile.communities.length})
+                        </TabsTrigger>
+                      )}
+                    </TabsList>
+                  </div>
                   
                   <TabsContent value="posts" className="space-y-4">
                     <UserPosts handle={profile.handle} />
