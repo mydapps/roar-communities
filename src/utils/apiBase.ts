@@ -42,7 +42,6 @@ export const validateUserApiKey = async (): Promise<boolean> => {
   
   try {
     // Use a lightweight API call to check if the key is valid
-    // Most endpoints return 401 if the key is invalid, so we can use any simple endpoint
     const response = await fetch(`${API_BASE_URL}/get_wallet_balance`, {
       method: 'GET',
       headers: {
@@ -51,15 +50,15 @@ export const validateUserApiKey = async (): Promise<boolean> => {
     });
     
     if (response.status === 401) {
-      console.warn('User API key is invalid, triggering authentication refresh');
+      console.warn('User API key is invalid, triggering authentication reset');
       
-      // Clear session storage flag to force auth refresh on next page load
-      sessionStorage.removeItem('is_page_refresh');
+      // Clear auth timestamp to force a refresh on next auth check
+      localStorage.removeItem('dapps_last_auth_time');
       
       // Show a user-friendly message
       toast.info('Your session has expired. Refreshing...');
       
-      // Reload the page after a brief delay
+      // Wait a moment, then reload the page
       setTimeout(() => {
         window.location.reload();
       }, 1000);

@@ -17,13 +17,12 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
   const [authProcessed, setAuthProcessed] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [authRequestInProgress, setAuthRequestInProgress] = useState(false);
-  const [isPageRefresh, setIsPageRefresh] = useState(true); // Track if this is a page refresh
   const location = useLocation();
   const navigate = useNavigate();
   
   // Development-only logging helper
   const debugLog = (message: string, ...args: any[]) => {
-    if (process.env.NODE_ENV === 'development' && false) { // Set to true to enable dev logs when needed
+    if (process.env.NODE_ENV === 'development') { // Set to true to enable dev logs when needed
       console.log(`[Auth] ${message}`, ...args);
     }
   };
@@ -54,37 +53,48 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
   debugLog("Is public route:", isPublicRoute);
   debugLog("Auth status:", { ready, authenticated, authProcessed });
   
-  // On first render, check if this is a page refresh or navigation
-  useEffect(() => {
-    // Use sessionStorage to detect page refresh vs navigation
-    const refreshFlag = 'is_page_refresh';
+  // Helper function to check if we should refresh auth
+  const shouldRefreshAuth = (): boolean => {
+    const REFRESH_INTERVAL = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
     
-    if (sessionStorage.getItem(refreshFlag) === null) {
-      // This is a page refresh
-      console.log('Page was refreshed, forcing authentication refresh');
-      setIsPageRefresh(true);
-      
-      // Clear any existing credentials to force a fresh auth cycle
+    try {
+      // Check if we have existing credentials
       const existingUserKey = localStorage.getItem('dapps_user_key');
-      if (existingUserKey) {
-        console.log('Found existing credentials, marking for refresh');
-        // Only clear the autprocess flag, don't remove credentials yet
-        setAuthProcessed(false);
+      const existingUserId = localStorage.getItem('dapps_user_id');
+      const lastAuthTime = localStorage.getItem('dapps_last_auth_time');
+      
+      debugLog("Auth check:", { existingUserKey: !!existingUserKey, existingUserId: !!existingUserId, lastAuthTime });
+      
+      // If we're missing any credentials, we need to authenticate
+      if (!existingUserKey || !existingUserId) {
+        debugLog("Missing credentials, auth required");
+        return true;
       }
       
-      // Set flag to detect future refreshes
-      sessionStorage.setItem(refreshFlag, 'false');
-    } else {
-      // This is a navigation, not a refresh
-      console.log('Page navigation detected, not a refresh');
-      setIsPageRefresh(false);
+      // If we're missing the last auth time, set it now but don't trigger auth
+      if (!lastAuthTime) {
+        localStorage.setItem('dapps_last_auth_time', Date.now().toString());
+        debugLog("No last auth time, setting it now");
+        return false;
+      }
+      
+      // Check if auth is expired (older than REFRESH_INTERVAL)
+      const timeSinceLastAuth = Date.now() - parseInt(lastAuthTime);
+      const authExpired = timeSinceLastAuth > REFRESH_INTERVAL;
+      
+      debugLog("Auth time check:", { 
+        timeSinceLastAuth: Math.floor(timeSinceLastAuth / 60000) + " minutes", 
+        refreshInterval: Math.floor(REFRESH_INTERVAL / 60000) + " minutes",
+        authExpired
+      });
+      
+      return authExpired;
+    } catch (error) {
+      // If there's any error parsing or checking, assume we need to auth
+      console.error("Error checking auth timestamp:", error);
+      return true;
     }
-    
-    // Clean up on unmount
-    return () => {
-      // No cleanup needed
-    };
-  }, []);
+  };
   
   useEffect(() => {
     // Reset auth processed state when authentication status changes
@@ -93,25 +103,21 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
       setAuthRequestInProgress(false);
     }
     
-    // If user is authenticated with Privy, send info to backend
+    // If user is authenticated with Privy, handle auth flow
     if (ready && authenticated && user && !authProcessed && !authRequestInProgress) {
       const handlePrivyAuth = async () => {
         try {
-          // Check if we already have valid credentials stored
-          const existingUserKey = localStorage.getItem('dapps_user_key');
-          const existingUserId = localStorage.getItem('dapps_user_id');
+          // Check if we need to refresh auth or already have valid credentials
+          const needsAuthRefresh = shouldRefreshAuth();
           
-          // If we already have credentials and this is NOT a page refresh, skip the auth request
-          if (existingUserKey && existingUserId && !isPageRefresh) {
-            console.log('User already has credentials, skipping authentication request');
+          // If we have credentials and don't need to refresh, skip the auth call
+          if (!needsAuthRefresh) {
+            debugLog("Using existing credentials, skipping authentication request");
             setAuthProcessed(true);
             return;
           }
           
-          // If this is a page refresh or we don't have credentials, proceed with auth
-          if (isPageRefresh || !existingUserKey || !existingUserId) {
-            console.log('Refreshing authentication token');
-          }
+          debugLog("Auth refresh needed, proceeding with authentication");
           
           // Set both flags to prevent duplicate requests
           setAuthRequestInProgress(true);
@@ -129,7 +135,7 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
             return;
           }
           
-          console.log('Sending authentication request with token');
+          debugLog('Sending authentication request with token');
           
           const response = await fetch('https://api.dapps.co/privy_auth', {
             method: 'POST',
@@ -152,6 +158,9 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
               localStorage.setItem('dapps_user_id', data.userId.toString());
               localStorage.setItem('dapps_user_key', data.userKey);
               
+              // Set the authentication timestamp
+              localStorage.setItem('dapps_last_auth_time', Date.now().toString());
+              
               // Store additional data if available
               if (data.handle) localStorage.setItem('dapps_user_handle', data.handle);
               if (data.avatar) localStorage.setItem('dapps_user_avatar', data.avatar);
@@ -159,7 +168,7 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
               // Ensure we properly store the registered status
               localStorage.setItem('dapps_user_registered', data.registered || "0");
               
-              console.log('PrivyAuthProvider - Registration status:', data.registered);
+              debugLog('Authentication successful, registered status:', data.registered);
               
               // Don't redirect if we're already on a protected page that requires authentication
               // This fixes the refresh issue on pages like referral and my-shares
@@ -169,7 +178,7 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
                   pathname === '/communities' ||
                   pathname === '/search' ||
                   pathname.startsWith('/u/')) {
-                console.log('Already on a protected page, skipping redirect');
+                debugLog('Already on a protected page, skipping redirect');
                 setAuthProcessed(true);
                 setIsAuthLoading(false);
                 setAuthRequestInProgress(false);
@@ -178,7 +187,7 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
               
               // Don't redirect if we're already on community or post page
               if (isCommunityPage || isPostPage) {
-                console.log('Already on community/post page, skipping redirect');
+                debugLog('Already on community/post page, skipping redirect');
                 setAuthProcessed(true);
                 setIsAuthLoading(false);
                 setAuthRequestInProgress(false);
@@ -189,7 +198,7 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
               if (data.registered === "1") {
                 // User is fully registered, redirect to feed if on login/index page
                 if (pathname === '/' || pathname === '/login' || pathname === '/index') {
-                  console.log("Redirecting to feed from public route");
+                  debugLog("Redirecting to feed from public route");
                   navigate('/feed');
                   toast.success('Successfully logged in!');
                 }
@@ -198,13 +207,13 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
                 if (data.handle && data.avatar) {
                   // Both handle and avatar are set, redirect to request-invite
                   if (pathname !== '/request-invite' && pathname !== '/feed') {
-                    console.log("Redirecting to request-invite");
+                    debugLog("Redirecting to request-invite");
                     navigate('/request-invite');
                   }
                 } else {
                   // Missing handle or avatar, redirect to avatar-handle page
                   if (pathname !== '/avatar-handle') {
-                    console.log("Redirecting to avatar-handle");
+                    debugLog("Redirecting to avatar-handle");
                     navigate('/avatar-handle');
                     toast.info('Please complete your profile');
                   }
@@ -223,9 +232,6 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
           setAuthProcessed(true);
           setIsAuthLoading(false);
           setAuthRequestInProgress(false);
-          
-          // Reset the page refresh flag once auth is processed
-          setIsPageRefresh(false);
         } catch (error) {
           console.error('Error during authentication:', error);
           toast.error('Could not complete authentication');
@@ -237,7 +243,7 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
 
       handlePrivyAuth();
     }
-  }, [ready, authenticated, user, getAccessToken, authProcessed, authRequestInProgress, isCommunityPage, isPostPage, pathname, navigate, isPageRefresh]);
+  }, [ready, authenticated, user, getAccessToken, authProcessed, authRequestInProgress, isCommunityPage, isPostPage, pathname, navigate]);
 
   // Show global loading overlay when authentication is processing
   if (isAuthLoading) {
