@@ -1,10 +1,16 @@
-
 import { toast } from 'sonner';
 
 /**
  * Base API URL for all requests
  */
 export const API_BASE_URL = 'https://api.dapps.co';
+
+// Debug logging function
+export const debugLog = (message: string, ...args: any[]): void => {
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[API] ${message}`, ...args);
+  }
+};
 
 /**
  * Get the user's API key from local storage
@@ -20,6 +26,52 @@ export const getUserApiKey = (): string | null => {
   }
   
   return userKey;
+};
+
+/**
+ * Check if the user's API key is valid
+ * @returns Promise that resolves to true if valid, false otherwise
+ */
+export const validateUserApiKey = async (): Promise<boolean> => {
+  const userKey = localStorage.getItem('dapps_user_key');
+  
+  if (!userKey) {
+    console.error('No user key found for validation');
+    return false;
+  }
+  
+  try {
+    // Use a lightweight API call to check if the key is valid
+    // Most endpoints return 401 if the key is invalid, so we can use any simple endpoint
+    const response = await fetch(`${API_BASE_URL}/get_wallet_balance`, {
+      method: 'GET',
+      headers: {
+        'x-user-key': userKey
+      }
+    });
+    
+    if (response.status === 401) {
+      console.warn('User API key is invalid, triggering authentication refresh');
+      
+      // Clear session storage flag to force auth refresh on next page load
+      sessionStorage.removeItem('is_page_refresh');
+      
+      // Show a user-friendly message
+      toast.info('Your session has expired. Refreshing...');
+      
+      // Reload the page after a brief delay
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+      
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error validating API key:', error);
+    return false;
+  }
 };
 
 /**

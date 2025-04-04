@@ -17,6 +17,7 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
   const [authProcessed, setAuthProcessed] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [authRequestInProgress, setAuthRequestInProgress] = useState(false);
+  const [isPageRefresh, setIsPageRefresh] = useState(true); // Track if this is a page refresh
   const location = useLocation();
   const navigate = useNavigate();
   
@@ -53,6 +54,38 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
   debugLog("Is public route:", isPublicRoute);
   debugLog("Auth status:", { ready, authenticated, authProcessed });
   
+  // On first render, check if this is a page refresh or navigation
+  useEffect(() => {
+    // Use sessionStorage to detect page refresh vs navigation
+    const refreshFlag = 'is_page_refresh';
+    
+    if (sessionStorage.getItem(refreshFlag) === null) {
+      // This is a page refresh
+      console.log('Page was refreshed, forcing authentication refresh');
+      setIsPageRefresh(true);
+      
+      // Clear any existing credentials to force a fresh auth cycle
+      const existingUserKey = localStorage.getItem('dapps_user_key');
+      if (existingUserKey) {
+        console.log('Found existing credentials, marking for refresh');
+        // Only clear the autprocess flag, don't remove credentials yet
+        setAuthProcessed(false);
+      }
+      
+      // Set flag to detect future refreshes
+      sessionStorage.setItem(refreshFlag, 'false');
+    } else {
+      // This is a navigation, not a refresh
+      console.log('Page navigation detected, not a refresh');
+      setIsPageRefresh(false);
+    }
+    
+    // Clean up on unmount
+    return () => {
+      // No cleanup needed
+    };
+  }, []);
+  
   useEffect(() => {
     // Reset auth processed state when authentication status changes
     if (!authenticated) {
@@ -68,12 +101,16 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
           const existingUserKey = localStorage.getItem('dapps_user_key');
           const existingUserId = localStorage.getItem('dapps_user_id');
           
-          // If we already have credentials and we're just on a route change/refresh,
-          // consider auth as processed without making the API call again
-          if (existingUserKey && existingUserId) {
+          // If we already have credentials and this is NOT a page refresh, skip the auth request
+          if (existingUserKey && existingUserId && !isPageRefresh) {
             console.log('User already has credentials, skipping authentication request');
             setAuthProcessed(true);
             return;
+          }
+          
+          // If this is a page refresh or we don't have credentials, proceed with auth
+          if (isPageRefresh || !existingUserKey || !existingUserId) {
+            console.log('Refreshing authentication token');
           }
           
           // Set both flags to prevent duplicate requests
@@ -186,6 +223,9 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
           setAuthProcessed(true);
           setIsAuthLoading(false);
           setAuthRequestInProgress(false);
+          
+          // Reset the page refresh flag once auth is processed
+          setIsPageRefresh(false);
         } catch (error) {
           console.error('Error during authentication:', error);
           toast.error('Could not complete authentication');
@@ -197,7 +237,7 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
 
       handlePrivyAuth();
     }
-  }, [ready, authenticated, user, getAccessToken, authProcessed, authRequestInProgress, isCommunityPage, isPostPage, pathname, navigate]);
+  }, [ready, authenticated, user, getAccessToken, authProcessed, authRequestInProgress, isCommunityPage, isPostPage, pathname, navigate, isPageRefresh]);
 
   // Show global loading overlay when authentication is processing
   if (isAuthLoading) {

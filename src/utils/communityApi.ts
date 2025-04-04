@@ -1,5 +1,5 @@
 import { toast } from 'sonner';
-import { API_BASE_URL, getUserApiKey, createAuthHeaders } from './apiBase';
+import { API_BASE_URL, getUserApiKey, createAuthHeaders, validateUserApiKey } from './apiBase';
 
 /**
  * Interface for community data
@@ -228,6 +228,15 @@ export const fetchCommunities = async (options: FetchCommunitiesOptions): Promis
       return [];
     }
     
+    // If this is a request that requires authentication, validate the key first
+    if (personal && userKey) {
+      const isValidKey = await validateUserApiKey();
+      if (!isValidKey) {
+        console.warn('Invalid user key detected, aborting fetchCommunities request');
+        return [];
+      }
+    }
+    
     // Construct API URL based on options
     let url = `${API_BASE_URL}/get_communities?page=${page}&limit=${limit}`;
     
@@ -347,6 +356,22 @@ export const getSharePrice = async (communityName: string, shareQuantity: number
  */
 export const buySharesPrecheck = async (communityName: string, shareQuantity: number): Promise<SharePrecheckResponse> => {
   try {
+    // First, validate the user's API key
+    const isValidApiKey = await validateUserApiKey();
+    if (!isValidApiKey) {
+      console.error('Invalid API key detected in buySharesPrecheck, aborting request');
+      return {
+        status: 'ERROR',
+        error: 'Authentication error. Please refresh the page and try again.',
+        fee: '',
+        sharePrice: 0,
+        sharePriceUsd: 0,
+        shareQuantity: 0,
+        totalValue: '',
+        communityName: communityName || ''
+      };
+    }
+    
     const url = `${API_BASE_URL}/buy_shares_precheck`;
     const headers = createAuthHeaders();
     
@@ -573,6 +598,22 @@ export const buySharesConfirm = async (communityName: string, shareQuantity: num
  */
 export const sellSharesPrecheck = async (communityName: string, shareQuantity: number): Promise<SharePrecheckResponse> => {
   try {
+    // First, validate the user's API key
+    const isValidApiKey = await validateUserApiKey();
+    if (!isValidApiKey) {
+      console.error('Invalid API key detected in sellSharesPrecheck, aborting request');
+      return {
+        status: 'ERROR',
+        error: 'Authentication error. Please refresh the page and try again.',
+        fee: '',
+        sharePrice: 0,
+        sharePriceUsd: 0,
+        shareQuantity: 0,
+        totalValue: '',
+        communityName: communityName || ''
+      };
+    }
+    
     const url = `${API_BASE_URL}/sell_shares_precheck`;
     const headers = createAuthHeaders();
     
