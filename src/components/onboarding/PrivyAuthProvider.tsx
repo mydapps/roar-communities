@@ -3,6 +3,7 @@ import { PrivyProvider, usePrivy } from '@privy-io/react-auth';
 import { toast } from 'sonner';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
+import { API_BASE_URL, shouldRefreshAuth } from '@/utils/apiBase';
 
 interface PrivyAuthProviderProps {
   children: ReactNode;
@@ -54,16 +55,13 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
   debugLog("Auth status:", { ready, authenticated, authProcessed });
   
   // Helper function to check if we should refresh auth
-  const shouldRefreshAuth = (): boolean => {
-    const REFRESH_INTERVAL = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
-    
+  const shouldCheckAuth = (): boolean => {
     try {
       // Check if we have existing credentials
       const existingUserKey = localStorage.getItem('dapps_user_key');
       const existingUserId = localStorage.getItem('dapps_user_id');
-      const lastAuthTime = localStorage.getItem('dapps_last_auth_time');
       
-      debugLog("Auth check:", { existingUserKey: !!existingUserKey, existingUserId: !!existingUserId, lastAuthTime });
+      debugLog("Auth check:", { existingUserKey: !!existingUserKey, existingUserId: !!existingUserId });
       
       // If we're missing any credentials, we need to authenticate
       if (!existingUserKey || !existingUserId) {
@@ -71,24 +69,8 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
         return true;
       }
       
-      // If we're missing the last auth time, set it now but don't trigger auth
-      if (!lastAuthTime) {
-        localStorage.setItem('dapps_last_auth_time', Date.now().toString());
-        debugLog("No last auth time, setting it now");
-        return false;
-      }
-      
-      // Check if auth is expired (older than REFRESH_INTERVAL)
-      const timeSinceLastAuth = Date.now() - parseInt(lastAuthTime);
-      const authExpired = timeSinceLastAuth > REFRESH_INTERVAL;
-      
-      debugLog("Auth time check:", { 
-        timeSinceLastAuth: Math.floor(timeSinceLastAuth / 60000) + " minutes", 
-        refreshInterval: Math.floor(REFRESH_INTERVAL / 60000) + " minutes",
-        authExpired
-      });
-      
-      return authExpired;
+      // Use the shouldRefreshAuth function from apiBase.ts to check if we need to refresh based on time
+      return shouldRefreshAuth();
     } catch (error) {
       // If there's any error parsing or checking, assume we need to auth
       console.error("Error checking auth timestamp:", error);
@@ -108,7 +90,7 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
       const handlePrivyAuth = async () => {
         try {
           // Check if we need to refresh auth or already have valid credentials
-          const needsAuthRefresh = shouldRefreshAuth();
+          const needsAuthRefresh = shouldCheckAuth();
           
           // If we have credentials and don't need to refresh, skip the auth call
           if (!needsAuthRefresh) {
@@ -158,7 +140,7 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
               localStorage.setItem('dapps_user_id', data.userId.toString());
               localStorage.setItem('dapps_user_key', data.userKey);
               
-              // Set the authentication timestamp
+              // Set the authentication timestamp to track when we last authenticated
               localStorage.setItem('dapps_last_auth_time', Date.now().toString());
               
               // Store additional data if available

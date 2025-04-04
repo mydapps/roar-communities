@@ -54,8 +54,7 @@ export const TradeSheet = ({
   const [errorMessage, setErrorMessage] = useState("");
   const [successVisible, setSuccessVisible] = useState(false);
   
-  // Debounce the share quantity to avoid frequent API calls
-  const debouncedShareQuantity = useDebounce(shareQuantity, 500);
+  // No need to debounce as we're not making API calls on quantity change
   
   // Updated preset amounts to match requirements
   const presetAmounts = [0.01, 0.1, 1, 10];
@@ -99,20 +98,11 @@ export const TradeSheet = ({
         if (precheckData) {
           setPrecheck(precheckData);
           updatePrices(precheckData);
-        } else {
-          // Otherwise, fetch initial precheck data
-          fetchPrecheckData(1);
         }
+        // We no longer fetch initial precheck data on first load
       }
     }
   }, [community, action, open, onBuyConfirm, onSellConfirm, operationInProgress, successVisible, precheckData]);
-
-  // Use the debounced value for API calls
-  useEffect(() => {
-    if (open && community && action && debouncedShareQuantity > 0) {
-      fetchPrecheckData(debouncedShareQuantity);
-    }
-  }, [debouncedShareQuantity, community, action, open]);
 
   const updatePrices = (data: SharePrecheckResponse) => {
     if (!data) {
@@ -157,9 +147,9 @@ export const TradeSheet = ({
     }
   };
 
-  const fetchPrecheckData = async (quantity: number) => {
+  const fetchPrecheckData = async (quantity: number): Promise<boolean> => {
     if (!community || !action) {
-      return;
+      return false;
     }
     
     try {
@@ -181,16 +171,20 @@ export const TradeSheet = ({
       // Handle possible error states
       if (result.status === 'ERROR' || result.status === 'DEPOSIT') {
         setErrorMessage(result.error || `Unable to ${action} shares at this time`);
+        return false;
       } else if (result.status === 'SUCCESS') {
         setPrecheck(result);
         updatePrices(result);
         setErrorMessage("");
+        return true;
       } else {
         // Unknown status
         setErrorMessage(`Unexpected response. Unable to ${action} shares at this time.`);
+        return false;
       }
     } catch (error) {
       setErrorMessage(`Failed to get ${action} quote. Please try again.`);
+      return false;
     } finally {
       setLoading(false);
     }
@@ -204,7 +198,7 @@ export const TradeSheet = ({
     
     setShareQuantity(clampedQuantity);
     setQuantityInputValue(clampedQuantity.toString());
-    // fetchPrecheckData is now triggered by the useEffect with debounced value
+    // No price API call on quantity change
   };
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -288,9 +282,6 @@ export const TradeSheet = ({
         origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 }
       });
     }, 250);
-    
-    // We no longer set successVisible here
-    // It's now set in the useEffect to ensure proper state ordering
   };
 
   const handleConfirm = async () => {
@@ -413,13 +404,19 @@ export const TradeSheet = ({
     }
   };
   
-  const goToConfirmStep = () => {
+  const goToConfirmStep = async () => {
     // Don't allow step changes during API calls
     if (loading || loadingAction) {
       return;
     }
     
-    setStep('confirm');
+    // Fetch the current price when user proceeds to confirmation step
+    const success = await fetchPrecheckData(shareQuantity);
+    
+    // Only proceed to confirm step if precheck was successful
+    if (success) {
+      setStep('confirm');
+    }
   };
   
   const goBackToQuantityStep = () => {
@@ -439,38 +436,29 @@ export const TradeSheet = ({
     setSubmitLoading(false);
     onOpenChange(false);
   };
-
-  // Enhanced success screen with more engaging visuals
-  const SuccessScreen = () => (
-    <div className="bg-green-50 border border-green-100 p-6 rounded-lg text-center animate-fade-in">
-      <div className="flex justify-center mb-3 relative">
-        <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center animate-bounce-small">
-          <Check className="h-8 w-8 text-green-600" />
-        </div>
-        <div className="absolute -right-2 -top-2">
-          <PartyPopper className="h-8 w-8 text-amber-500 animate-wiggle" />
-        </div>
-      </div>
-      <h3 className="font-bold text-xl text-green-700 mb-2">Transaction Successful!</h3>
-      <p className="text-green-600 text-lg">
-        {action === 'buy' 
-          ? `You've successfully purchased ${shareQuantity} shares of ${community?.community}!` 
-          : `You've successfully sold ${shareQuantity} shares of ${community?.community}!`}
-      </p>
-      <div className="mt-4 text-sm text-green-500">
-        {action === 'buy' 
-          ? "You're now a community member!" 
-          : "Thanks for being part of the community."}
-      </div>
-    </div>
-  );
-
+  
   // Component for both quantity and confirm steps
   const ContentView = () => (
     <div className="space-y-6">
-      {successVisible ? <SuccessScreen /> : null}
-      
-      {!successVisible && step === 'quantity' ? (
+      {successVisible ? (
+        /* Success state */
+        <div className="bg-green-50 border border-green-100 p-6 rounded-lg text-center">
+          <div className="flex justify-center mb-3 relative">
+            <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center">
+              <PartyPopper className="h-8 w-8 text-green-600" />
+            </div>
+          </div>
+          <h3 className="font-bold text-xl text-green-700 mb-2">Transaction Successful!</h3>
+          <p className="text-green-600 text-lg">
+            {action === 'buy' 
+              ? `You've successfully purchased ${shareQuantity} shares of ${community?.community}!` 
+              : `You've successfully sold ${shareQuantity} shares of ${community?.community}!`}
+          </p>
+          <div className="mt-4">
+            <Button onClick={() => onOpenChange(false)}>Done</Button>
+          </div>
+        </div>
+      ) : step === 'quantity' ? (
         /* Step 1: Select Quantity */
         <>
           {/* Community Info */}
@@ -483,7 +471,7 @@ export const TradeSheet = ({
               <div>
                 <h3 className="font-semibold text-lg">{community.community}</h3>
                 <p className="text-sm text-muted-foreground">
-                  Current price: {parseFloat(sharePrice).toFixed(6)} ETH (${parseFloat(usdValue).toFixed(2)})
+                  {action === 'buy' ? 'Buy Shares' : 'Sell Shares'}
                 </p>
               </div>
             </div>
@@ -564,61 +552,39 @@ export const TradeSheet = ({
           
           <Separator />
           
-          {/* Price Summary */}
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-sm">Share Price</span>
-              <div className="text-right">
-                <div className="font-medium">{parseFloat(sharePrice).toFixed(6)} ETH</div>
-                <div className="text-xs text-muted-foreground">${parseFloat(usdValue).toFixed(2)}</div>
-              </div>
-            </div>
-            
-            <div className="flex justify-between">
-              <span className="text-sm">Total Share Price</span>
-              <div className="text-right">
-                <div className="font-medium">
-                  {totalSharePrice ? parseFloat(totalSharePrice).toFixed(6) : (parseFloat(sharePrice) * shareQuantity).toFixed(6)} ETH
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  ${totalUsdValue ? parseFloat(totalUsdValue).toFixed(2) : (parseFloat(usdValue) * shareQuantity).toFixed(2)}
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex justify-between">
-              <span className="text-sm">{action === 'buy' ? 'Total Cost (incl. fees)' : 'You Receive'}</span>
-              <div className="text-right">
-                <div className="font-medium">{parseFloat(totalCost).toFixed(6)} ETH</div>
-              </div>
-            </div>
-            
-            {action === 'buy' && (
-              <div className="flex justify-between">
-                <span className="text-sm">Your Balance</span>
-                <div className="text-right">
-                  <div className="font-medium">{parseFloat(userEthBalance).toFixed(6)} ETH</div>
-                </div>
-              </div>
-            )}
-            
-            {loading && (
-              <div className="flex justify-center py-2">
-                <Loader2 className="h-5 w-5 animate-spin text-primary" />
-              </div>
-            )}
+          {/* Price Info Message instead of actual price info */}
+          <div className="py-4 text-center text-sm text-muted-foreground">
+            Share price will be calculated when you continue
           </div>
+          
+          {action === 'buy' && (
+            <div className="flex justify-between">
+              <span className="text-sm">Your Balance</span>
+              <div className="text-right">
+                <div className="font-medium">{parseFloat(userEthBalance).toFixed(6)} ETH</div>
+              </div>
+            </div>
+          )}
           
           {/* Action Buttons */}
           <Button
             className="w-full"
             onClick={goToConfirmStep}
-            disabled={loading || loadingAction || !!errorMessage || shareQuantity <= 0}
+            disabled={loading || loadingAction || shareQuantity <= 0}
           >
-            Continue <ArrowRight className="ml-2 h-4 w-4" />
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Loading price...
+              </>
+            ) : (
+              <>
+                Continue <ArrowRight className="ml-2 h-4 w-4" />
+              </>
+            )}
           </Button>
         </>
-      ) : !successVisible ? (
+      ) : (
         /* Step 2: Confirm Order */
         <>
           <div className="bg-muted p-4 rounded-lg space-y-4">
@@ -699,11 +665,12 @@ export const TradeSheet = ({
               )}
               {(loading || loadingAction || submitLoading) 
                 ? `${action === 'buy' ? 'Buying' : 'Selling'}...` 
-                : `${action === 'buy' ? 'Buy' : 'Sell'} Shares`}
+                : `${action === 'buy' ? 'Buy' : 'Sell'} Shares`
+              }
             </Button>
           </div>
         </>
-      ) : null}
+      )}
     </div>
   );
   

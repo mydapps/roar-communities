@@ -369,7 +369,7 @@ const SearchPage = () => {
                 >
                   <span className="relative z-10">Users</span>
                 </TabsTrigger>
-              </TabsList>
+          </TabsList>
             </motion.div>
             
             <AnimatePresence mode="wait">
