@@ -26,6 +26,7 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
   const location = useLocation();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userAvatar, setUserAvatar] = useState('default');
+  const [searchQuery, setSearchQuery] = useState('');
   
   const isFeedPage = location.pathname === '/feed';
   
@@ -62,6 +63,20 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
   
   const handleBackClick = () => {
     navigate(-1);
+  };
+  
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery('');
+    }
+  };
+  
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearchSubmit(e);
+    }
   };
   
   return (
@@ -103,14 +118,20 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
 
         {isLoggedIn && (
           <div className="hidden md:flex items-center space-x-1">
-            <div className="relative w-64 mx-4">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <form onSubmit={handleSearchSubmit} className="relative w-64 mx-4">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground peer-focus:text-primary transition-colors" />
               <input
                 type="text"
-                placeholder="Search communities..."
-                className="w-full rounded-full bg-muted pl-8 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                placeholder="Search communities, posts, users..."
+                className="peer w-full rounded-full bg-muted pl-8 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={handleSearchKeyDown}
               />
-            </div>
+              <kbd className="absolute right-3 top-2.5 pointer-events-none hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted/50 px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
+                <span className="text-xs">{navigator.platform.includes('Mac') ? '⌘' : 'Ctrl+'}</span>K
+              </kbd>
+            </form>
           </div>
         )}
 

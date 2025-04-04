@@ -25,6 +25,32 @@ const MainLayout = () => {
     setIsLoggedIn(!!userKey);
   }, [location]);
   
+  // Add global search keyboard shortcut
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only respond to Ctrl+K or Cmd+K
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        
+        // If we're already on the search page, focus the input
+        if (location.pathname === '/search') {
+          const searchInput = document.querySelector('input[placeholder*="Search"]') as HTMLInputElement;
+          if (searchInput) {
+            searchInput.focus();
+          }
+        } else {
+          // Navigate to search page
+          navigate('/search');
+        }
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [navigate, location.pathname]);
+  
   const handleRefresh = async () => {
     // Simulate a refresh delay
     await new Promise(resolve => setTimeout(resolve, 1000));

@@ -144,4 +144,44 @@
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
+
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+
+  /* Improve horizontal scrolling smoothness on mobile */
+  .scroll-smooth {
+    scroll-behavior: smooth;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+  }
+
+  .scroll-smooth > * {
+    scroll-snap-align: start;
+  }
+
+  @media (max-width: 768px) {
+    .tab-container {
+      padding-left: 1rem;
+      padding-right: 1rem;
+      margin-left: -1rem;
+      margin-right: -1rem;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Improve tap targets on mobile */
+    .mobile-friendly-tap {
+      min-height: 44px;
+      min-width: 44px;
+    }
+  }
 }

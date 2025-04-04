@@ -256,89 +256,74 @@ const CommunitiesPage = () => {
   const { communities: currentCommunities, isLoading, isRefreshing, loadMoreRef } = getActiveTabData();
 
   return (
-    <div className="space-y-6 animate-fade-in pt-16 sm:pt-10">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b mb-2">
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Communities</h1>
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button size="sm" className="w-full sm:w-auto gap-1 px-3 shadow-sm mt-1">
-              <Plus className="h-3.5 w-3.5" />
-              Create Community
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle className="text-xl">Create a New Community</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Community Name</label>
-                <Input placeholder="E.g., DeFi Explorers" />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Description</label>
-                <textarea 
-                  className="w-full min-h-[100px] rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm" 
-                  placeholder="What is your community about?"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Initial Share Price (ETH)</label>
-                <Input type="number" placeholder="0.01" min="0.001" step="0.001" />
-              </div>
-              <Button className="w-full">Create Community</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      <div className="flex items-center gap-3 bg-muted/25 p-2 rounded-lg">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search communities..."
-            className="pl-9 bg-background border-muted"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+    <div className="px-4 py-6 space-y-6 pb-20">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <h1 className="text-2xl md:text-3xl font-bold">Communities</h1>
+        
+        <div className="w-full md:w-auto flex items-center gap-2">
+          <div className="w-full md:w-64 relative">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search communities..."
+              className="pl-9 pr-4 py-6 bg-background"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleRefresh}
+            className="h-12 w-12 flex-shrink-0"
+          >
+            <RefreshCw className="h-5 w-5" />
+          </Button>
         </div>
-        <Button 
-          variant="outline" 
-          size="icon" 
-          onClick={handleRefresh} 
-          disabled={isRefreshing}
-          className="bg-background hover:bg-muted/50"
-        >
-          {isRefreshing ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <RefreshCw className="h-4 w-4" />
-          )}
-        </Button>
       </div>
-
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-        <div className="relative overflow-x-auto pb-2 no-scrollbar">
-          <TabsList className="inline-flex w-auto min-w-full md:min-w-0 justify-start mb-6 p-1 bg-muted/30 whitespace-nowrap">
-            <TabsTrigger value="popular" className="flex items-center gap-1.5 px-4 flex-shrink-0">
+      
+      <Tabs defaultValue="popular" value={activeTab} onValueChange={handleTabChange}>
+        <div className="scrollbar-hide overflow-x-auto pb-2 -mx-4 px-4">
+          <TabsList className="h-auto p-1 inline-flex whitespace-nowrap w-auto min-w-full sm:w-auto sm:min-w-0 no-scrollbar bg-background border border-border/40 overflow-x-auto overflow-y-hidden scroll-smooth">
+            <TabsTrigger 
+              value="popular"
+              className="flex items-center gap-1.5 text-sm py-2.5 px-4 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none"
+            >
               <Users className="h-4 w-4" />
               <span>Popular</span>
             </TabsTrigger>
-            <TabsTrigger value="my" className="flex items-center gap-1.5 px-4 flex-shrink-0">
+            
+            <TabsTrigger 
+              value="my"
+              className="flex items-center gap-1.5 text-sm py-2.5 px-4 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none"
+            >
               <User className="h-4 w-4" />
               <span>My Communities</span>
             </TabsTrigger>
-            <TabsTrigger value="trending" className="flex items-center gap-1.5 px-4 flex-shrink-0">
+            
+            <TabsTrigger 
+              value="trending"
+              className="flex items-center gap-1.5 text-sm py-2.5 px-4 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none"
+            >
               <TrendingUp className="h-4 w-4" />
               <span>Trending</span>
             </TabsTrigger>
-            <TabsTrigger value="newest" className="flex items-center gap-1.5 px-4 flex-shrink-0">
+            
+            <TabsTrigger 
+              value="newest"
+              className="flex items-center gap-1.5 text-sm py-2.5 px-4 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none"
+            >
               <Clock className="h-4 w-4" />
               <span>Newest</span>
             </TabsTrigger>
-            <TabsTrigger value="most-rewards" className="flex items-center gap-1.5 px-4 flex-shrink-0">
+            
+            <TabsTrigger 
+              value="most-rewards"
+              className="flex items-center gap-1.5 text-sm py-2.5 px-4 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none"
+            >
               <Gift className="h-4 w-4" />
-              <span>Highest Rewards</span>
+              <span>Most Rewards</span>
             </TabsTrigger>
           </TabsList>
         </div>

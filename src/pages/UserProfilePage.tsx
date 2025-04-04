@@ -54,7 +54,34 @@ const UserProfilePage = () => {
   return (
     <>
       <Helmet>
-        <title>{profile ? `@${profile.handle} | Roar Communities` : 'Loading Profile...'}</title>
+        <title>{profile ? `@${profile.handle} | dapps.co` : 'Loading Profile...'}</title>
+        {profile && (
+          <>
+            <meta name="description" content={`Check out @${profile.handle}'s profile on dapps.co. ${profile.answer ? `"${profile.answer}"` : ''}${profile.location ? ` Located in ${profile.location}.` : ''} Join the conversation!`} />
+            
+            {/* Open Graph / Facebook */}
+            <meta property="og:type" content="profile" />
+            <meta property="og:title" content={`@${profile.handle} | dapps.co`} />
+            <meta property="og:description" content={`Check out @${profile.handle}'s profile on dapps.co. ${profile.answer ? `"${profile.answer}"` : ''} Join the conversation!`} />
+            <meta property="og:image" content={profile.avatar_url} />
+            <meta property="og:url" content={`https://dapps.co/u/${profile.handle}`} />
+            <meta property="og:site_name" content="dapps.co" />
+            <meta property="profile:username" content={profile.handle} />
+            
+            {/* Twitter */}
+            <meta name="twitter:card" content="summary_large_image" />
+            <meta name="twitter:title" content={`@${profile.handle} | dapps.co`} />
+            <meta name="twitter:description" content={`Check out @${profile.handle}'s profile on dapps.co. ${profile.answer ? `"${profile.answer}"` : ''} Join the conversation!`} />
+            <meta name="twitter:image" content={profile.avatar_url} />
+            <meta name="twitter:site" content="@dappsco" />
+            
+            {/* Additional SEO tags */}
+            <link rel="canonical" href={`https://dapps.co/u/${profile.handle}`} />
+            <meta name="robots" content="index, follow" />
+            <meta name="author" content={profile.handle} />
+            {profile.location && <meta name="geo.placename" content={profile.location} />}
+          </>
+        )}
       </Helmet>
       
       {isLoading ? (
