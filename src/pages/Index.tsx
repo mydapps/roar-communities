@@ -542,9 +542,9 @@ const Index = () => {
               </div>
               <h3 className="text-xl font-bold mb-3">True Censorship Resistance</h3>
               <p className="text-muted-foreground">
-                <span className="font-semibold text-foreground">Say goodbye to arbitrary banning.</span> Express your views without fear of sudden account deletion or shadowbanning. Your voice matters and will be heard.
+                <span className="font-semibold text-foreground">Say goodbye to arbitrary banning.</span> Express your views without fear of sudden account deletion or shadowbanning.
               </p>
-              <div className="mt-4 pt-4 border-t border-border/50 w-full">
+              <div className="mt-4 pt-4 border-t border-border/50 w-full hidden md:block">
                 <p className="text-sm font-semibold text-[#31bcc3]">What this means for you:</p>
                 <ul className="text-sm text-left mt-2 space-y-1">
                   <li className="flex items-start gap-2">
@@ -573,9 +573,9 @@ const Index = () => {
               </div>
               <h3 className="text-xl font-bold mb-3">Monthly ETH Rewards</h3>
               <p className="text-muted-foreground">
-                <span className="font-semibold text-foreground">Get paid for quality content.</span> Each community has its own ETH reward pool that distributes real money to top creators every month based on engagement.
+                <span className="font-semibold text-foreground">Get paid for quality content.</span> Each community has its own ETH reward pool that distributes real money to top creators every month.
               </p>
-              <div className="mt-4 pt-4 border-t border-border/50 w-full">
+              <div className="mt-4 pt-4 border-t border-border/50 w-full hidden md:block">
                 <p className="text-sm font-semibold text-[#31bcc3]">What this means for you:</p>
                 <ul className="text-sm text-left mt-2 space-y-1">
                   <li className="flex items-start gap-2">
@@ -604,9 +604,9 @@ const Index = () => {
               </div>
               <h3 className="text-xl font-bold mb-3">Community Investments</h3>
               <p className="text-muted-foreground">
-                <span className="font-semibold text-foreground">A whole new asset class.</span> Buy shares in emerging communities and watch your investment grow as the community flourishes and attracts more members.
+                <span className="font-semibold text-foreground">A whole new asset class.</span> Buy shares in emerging communities and watch your investment grow as the community flourishes.
               </p>
-              <div className="mt-4 pt-4 border-t border-border/50 w-full">
+              <div className="mt-4 pt-4 border-t border-border/50 w-full hidden md:block">
                 <p className="text-sm font-semibold text-[#31bcc3]">What this means for you:</p>
                 <ul className="text-sm text-left mt-2 space-y-1">
                   <li className="flex items-start gap-2">

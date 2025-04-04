@@ -1,5 +1,6 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
+import { useLocation } from 'react-router-dom';
 
 interface ZoomDisabledHelmetProps {
   title?: string;
@@ -16,15 +17,35 @@ const ZoomDisabledHelmet: React.FC<ZoomDisabledHelmetProps> = ({
   description,
   children 
 }) => {
+  const location = useLocation();
+  const path = location.pathname;
+  
+  // Pages where we want to ensure zoom is disabled
+  const noZoomPages = [
+    '/feed',
+    '/my-shares',
+    '/communities',
+    '/c/',
+  ];
+  
+  // Check if current path matches any of our no-zoom pages
+  const shouldDisableZoom = noZoomPages.some(page => 
+    path === page || path.startsWith(page)
+  );
+  
   return (
     <Helmet>
       {title && <title>{title}</title>}
       {description && <meta name="description" content={description} />}
       
-      {/* Disable zooming on mobile devices */}
+      {/* Set viewport meta based on current route */}
       <meta 
         name="viewport" 
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" 
+        content={
+          shouldDisableZoom 
+            ? "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" 
+            : "width=device-width, initial-scale=1.0"
+        }
       />
       
       {children}

@@ -905,18 +905,41 @@ export const getUserPortfolio = async (page = 1, limit = 10): Promise<UserPortfo
       success: rawData.success,
       userId: rawData.userId,
       data: {
-        communities: (rawData.data?.communities || []).map((item: any) => ({
-          community: item.community,
-          shares: item.shares,
-          description: item.description,
-          image: item.image,
-          currentPrice: item.currentPrice || item.price,
-          price: item.price,
-          percentageChange: item.percentageChange || (item.price_change_percentage?.toString() || "0"),
-          price_change_percentage: item.price_change_percentage || parseFloat(item.percentageChange || "0"),
-          price_direction: item.price_direction || (parseFloat(item.percentageChange || "0") >= 0 ? 'up' : 'down'),
-          value: item.value
-        })),
+        communities: (rawData.data?.communities || []).map((item: any) => {
+          // Ensure we have valid price change data
+          let priceChangePercentage = 0;
+          if (typeof item.price_change_percentage === 'number') {
+            priceChangePercentage = item.price_change_percentage;
+          } else if (item.percentageChange) {
+            priceChangePercentage = parseFloat(item.percentageChange);
+          }
+          
+          // Format the percentage change with proper precision
+          const formattedPercentage = priceChangePercentage !== 0 
+            ? priceChangePercentage.toFixed(2) 
+            : "0.00";
+          
+          // Log the price change data for debugging
+          console.log(`Community ${item.community} price change:`, {
+            original: item.price_change_percentage,
+            percentageChange: item.percentageChange,
+            normalized: priceChangePercentage,
+            formatted: formattedPercentage
+          });
+          
+          return {
+            community: item.community,
+            shares: item.shares,
+            description: item.description,
+            image: item.image,
+            currentPrice: item.currentPrice || item.price,
+            price: item.price,
+            percentageChange: formattedPercentage,
+            price_change_percentage: priceChangePercentage,
+            price_direction: priceChangePercentage >= 0 ? 'up' : 'down',
+            value: item.value
+          };
+        }),
         pagination: {
           currentPage: rawData.data?.pagination?.currentPage || rawData.data?.pagination?.current_page || 1,
           totalPages: rawData.data?.pagination?.totalPages || rawData.data?.pagination?.total_pages || 1,
