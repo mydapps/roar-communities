@@ -21,6 +21,7 @@ import PrivyAuthProvider from '@/components/onboarding/PrivyAuthProvider';
 import { Toaster } from 'sonner';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import UserProfilePage from '@/pages/UserProfilePage';
+import EditProfilePage from '@/pages/EditProfilePage';
 import ZoomDisabledHelmet from '@/components/shared/ZoomDisabledHelmet';
 
 function App() {
@@ -63,6 +64,11 @@ function App() {
             <Route path="u/:handle" element={
               <ProtectedRoute>
                 <UserProfilePage />
+              </ProtectedRoute>
+            } />
+            <Route path="edit-profile" element={
+              <ProtectedRoute>
+                <EditProfilePage />
               </ProtectedRoute>
             } />
             <Route path="my-shares" element={

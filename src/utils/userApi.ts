@@ -123,7 +123,7 @@ export const updateUserProfile = async (
       throw new Error('Authentication required to update profile');
     }
     
-    const response = await fetch(`${API_BASE_URL}/user/update`, {
+    const response = await fetch(`${API_BASE_URL}/update_user_details`, {
       method: 'POST',
       headers,
       body: JSON.stringify(params)

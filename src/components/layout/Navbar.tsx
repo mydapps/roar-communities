@@ -145,9 +145,15 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
                   <DropdownMenuLabel>My Account</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link to="/account" className="cursor-pointer flex items-center gap-2">
+                    <Link to={`/u/${localStorage.getItem('dapps_user_handle') || ''}`} className="cursor-pointer flex items-center gap-2">
                       <User className="h-4 w-4" />
                       <span>Profile</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/edit-profile" className="cursor-pointer flex items-center gap-2">
+                      <Sparkles className="h-4 w-4" />
+                      <span>Edit Profile</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>

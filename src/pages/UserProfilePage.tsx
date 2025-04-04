@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -9,12 +9,12 @@ import UserProfileHeader from '@/components/user/UserProfileHeader';
 import UserCommunities from '@/components/user/UserCommunities';
 import { UserPosts } from '@/components/user/UserPosts';
 import { UserReplies } from '@/components/user/UserReplies';
-import EditProfileDialog from '@/components/user/EditProfileDialog';
 import { UserProfile } from '@/utils/userApi';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 const UserProfilePage = () => {
   const { handle = '' } = useParams<{ handle: string }>();
+  const navigate = useNavigate();
   const {
     profile,
     isLoading,
@@ -27,11 +27,14 @@ const UserProfilePage = () => {
   } = useUserProfile(handle);
   
   const [activeTab, setActiveTab] = useState('posts');
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const isMobile = useIsMobile();
   
   const handleProfileUpdated = (updatedProfile: UserProfile) => {
     refreshProfile();
+  };
+  
+  const handleEditProfile = () => {
+    navigate('/edit-profile');
   };
   
   if (error) {
@@ -64,7 +67,7 @@ const UserProfilePage = () => {
             isOwnProfile={isOwnProfile}
             onFollow={handleFollow}
             onUnfollow={handleUnfollow}
-            onEdit={() => setEditDialogOpen(true)}
+            onEdit={handleEditProfile}
           />
           
           {/* Main content */}
@@ -115,16 +118,6 @@ const UserProfilePage = () => {
               </div>
             </div>
           </div>
-          
-          {/* Edit Profile Dialog */}
-          {profile && (
-            <EditProfileDialog
-              open={editDialogOpen}
-              onOpenChange={setEditDialogOpen}
-              profile={profile}
-              onProfileUpdated={handleProfileUpdated}
-            />
-          )}
         </div>
       ) : null}
     </>
