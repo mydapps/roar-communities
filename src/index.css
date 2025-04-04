@@ -96,6 +96,19 @@
   h1, h2, h3, h4, h5, h6 {
     @apply font-display;
   }
+  
+  /* Prevent auto-zoom on inputs on iOS devices */
+  input, textarea, select {
+    font-size: 16px;
+  }
+  
+  /* For smaller styled inputs where we want to maintain smaller fonts */
+  input.text-sm, textarea.text-sm, select.text-sm {
+    /* This only applies the visual style while maintaining the base font-size behavior */
+    font-size: 16px;
+    transform: scale(0.875);
+    transform-origin: left center;
+  }
 }
 
 @layer components {

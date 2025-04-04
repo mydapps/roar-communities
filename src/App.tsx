@@ -21,10 +21,12 @@ import PrivyAuthProvider from '@/components/onboarding/PrivyAuthProvider';
 import { Toaster } from 'sonner';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import UserProfilePage from '@/pages/UserProfilePage';
+import ZoomDisabledHelmet from '@/components/shared/ZoomDisabledHelmet';
 
 function App() {
   return (
     <HelmetProvider>
+      <ZoomDisabledHelmet />
       <PrivyAuthProvider>
         <Routes>
           {/* Public routes - accessible to everyone */}
