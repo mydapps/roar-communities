@@ -239,6 +239,11 @@ export interface UserReply {
   time_ago: string;
   upvotes: number;
   meow_count: number;
+  author?: {
+    id: number;
+    handle: string;
+    avatar: string;
+  };
 }
 
 export interface UserReplyData {
@@ -267,6 +272,8 @@ export const getUserReplies = async (
   try {
     const headers = createAuthHeaders();
     
+    console.log(`Fetching replies for ${handle}, page ${page}, limit ${limit}`);
+    
     const response = await fetch(`${API_BASE_URL}/user/${handle}/replies?page=${page}&limit=${limit}`, {
       method: 'GET',
       headers
@@ -277,7 +284,10 @@ export const getUserReplies = async (
       throw new Error(errorData.message || `Failed to fetch user replies: ${response.status}`);
     }
 
-    return await response.json();
+    const result = await response.json();
+    console.log('API raw response:', result);
+    
+    return result;
   } catch (error) {
     console.error('Error fetching user replies:', error);
     throw error;

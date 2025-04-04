@@ -37,11 +37,22 @@ export const useUserReplies = ({
       
       const response = await getUserReplies(handle, pageNum, initialLimit);
       
+      // Debug the response
+      console.log('API Response:', response);
+      
       if (response.success) {
+        // Make validation less strict to handle various API response formats
+        const validReplies = response.data ? response.data.filter(item => 
+          // Basic check that we have post and reply objects
+          item && item.post && item.reply && item.reply.content
+        ) : [];
+        
+        console.log('Valid replies after filtering:', validReplies.length);
+        
         if (replace) {
-          setReplies(response.data);
+          setReplies(validReplies);
         } else {
-          setReplies(prev => [...prev, ...response.data]);
+          setReplies(prev => [...prev, ...validReplies]);
         }
         
         setTotalReplies(response.pagination.total);

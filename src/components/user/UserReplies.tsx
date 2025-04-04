@@ -69,6 +69,19 @@ export const UserReplies: React.FC<UserRepliesProps> = ({ handle }) => {
     }
   };
   
+  // Function to extract just the handle part from avatar URL
+  const extractAvatarHandle = (avatarUrl: string): string => {
+    if (!avatarUrl) return '';
+    
+    // Handle both https://img.dapps.co/avatar/handle.svg and handle formats
+    if (avatarUrl.includes('/avatar/')) {
+      const match = avatarUrl.match(/\/avatar\/([^.]+)/);
+      return match ? match[1] : '';
+    }
+    
+    return avatarUrl;
+  };
+  
   if (loading && replies.length === 0) {
     return (
       <div className="flex justify-center py-12">
@@ -105,72 +118,96 @@ export const UserReplies: React.FC<UserRepliesProps> = ({ handle }) => {
   
   return (
     <div className="space-y-6 mt-6">
-      {replies.map((replyData) => (
-        <Card key={`reply-${replyData.reply.id}`} className="overflow-hidden border border-border/40 shadow-sm">
-          {/* Original post */}
-          <Post
-            username={replyData.post.author.handle}
-            avatar={replyData.post.author.avatar}
-            community={replyData.post.community || undefined}
-            timeAgo={replyData.post.time_ago}
-            content={replyData.post.body}
-            roarCount={replyData.post.upvotes}
-            commentCount={replyData.post.comments}
-            shareCount={0}
-            postCode={replyData.post.code}
-            disableNavigation={true} // Prevent automatic navigation
-            images={replyData.post.images && replyData.post.images.length > 0 
-              ? replyData.post.images 
-              : (replyData.post.image === 1 && replyData.post.image_url ? [replyData.post.image_url] : undefined)}
-            video={replyData.post.has_video === 1 ? replyData.post.image_url : undefined}
-            hideComments={true}
-          />
+      {replies.map((replyData) => {
+        try {
+          // Debug: Log raw data for first item
+          if (replies.indexOf(replyData) === 0) {
+            console.log('First reply data:', JSON.stringify(replyData, null, 2));
+          }
           
-          {/* User's reply */}
-          <div 
-            onClick={() => navigateToPost(replyData)}
-            className="px-4 py-3 border-t border-border/30 bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors"
-          >
-            <div className="flex items-start gap-3">
-              <div className="flex items-center">
-                <Reply className="h-4 w-4 text-primary mr-2" />
-                <Avatar className="h-7 w-7">
-                  <AvatarImage src={`https://img.dapps.co/avatar/${handle}.svg`} alt={handle} />
-                  <AvatarFallback className="text-xs">
-                    {handle.charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-              </div>
+          // Make sure we have all required data with fallbacks
+          const postAuthor = replyData.post.author || { handle: 'unknown', avatar: '' };
+          const replyAuthor = replyData.reply.author || { handle: handle, avatar: '' };
+          
+          const postAvatarHandle = extractAvatarHandle(postAuthor.avatar);
+          const replyAvatarHandle = extractAvatarHandle(replyAuthor.avatar);
+          
+          return (
+            <Card key={`reply-${replyData.reply.id}`} className="overflow-hidden border border-border/40 shadow-sm">
+              {/* Original post */}
+              <Post
+                username={postAuthor.handle}
+                avatar={postAvatarHandle}
+                community={replyData.post.community || undefined}
+                timeAgo={replyData.post.time_ago}
+                content={replyData.post.body}
+                roarCount={replyData.post.upvotes}
+                commentCount={replyData.post.comments}
+                shareCount={0}
+                postCode={replyData.post.code}
+                disableNavigation={true} // Prevent automatic navigation
+                images={replyData.post.images && replyData.post.images.length > 0 
+                  ? replyData.post.images 
+                  : (replyData.post.image === 1 && replyData.post.image_url ? [replyData.post.image_url] : undefined)}
+                video={replyData.post.has_video === 1 ? replyData.post.image_url : undefined}
+                hideComments={true}
+              />
               
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-sm">@{handle}</span>
-                  <span className="text-xs text-muted-foreground">{replyData.reply.time_ago}</span>
-                </div>
-                
-                <p className="text-sm mt-1">{replyData.reply.content}</p>
-                
-                <div className="flex items-center mt-2 gap-2">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="h-8 px-2 text-xs hover:bg-primary/10 hover:text-primary"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleReplyMeow(replyData.reply.id);
-                    }}
-                  >
-                    <span className="text-base mr-1.5" role="img" aria-label="cat">
-                      🐱
-                    </span>
-                    <span>{replyData.reply.meow_count}</span>
-                  </Button>
+              {/* User's reply */}
+              <div 
+                onClick={() => navigateToPost(replyData)}
+                className="px-4 py-3 border-t border-border/30 bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="flex gap-3 items-center">
+                    <div className="flex items-center">
+                      <Reply className="h-4 w-4 text-primary mr-2" />
+                      <Avatar className="h-7 w-7">
+                        <AvatarImage 
+                          src={replyAuthor.avatar}
+                          alt={replyAuthor.handle}
+                        />
+                        <AvatarFallback className="text-xs">
+                          {(replyAuthor.handle).charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                    </div>
+                    
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm">@{replyAuthor.handle}</span>
+                        <span className="text-xs text-muted-foreground">{replyData.reply.time_ago}</span>
+                      </div>
+                      
+                      <p className="text-sm mt-1">{replyData.reply.content}</p>
+                      
+                      <div className="flex items-center mt-2 gap-2">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 px-2 text-xs hover:bg-primary/10 hover:text-primary"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleReplyMeow(replyData.reply.id);
+                          }}
+                        >
+                          <span className="text-base mr-1.5" role="img" aria-label="cat">
+                            🐱
+                          </span>
+                          <span>{replyData.reply.meow_count}</span>
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
-        </Card>
-      ))}
+            </Card>
+          );
+        } catch (error) {
+          console.error('Error rendering reply:', error, replyData);
+          return null; // Skip rendering this reply if there's an error
+        }
+      })}
       
       {/* Loading indicator & intersection observer target */}
       {hasMore && (
