@@ -14,6 +14,7 @@ import {
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePrivy } from '@privy-io/react-auth';
 import { toast } from 'sonner';
+import * as apiBase from '@/utils/apiBase';
 
 interface NavbarProps {
   onMenuClick: () => void;
@@ -38,14 +39,36 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
     if (avatar) {
       setUserAvatar(avatar);
     }
-  }, []);
+    
+    // Listen for auth invalidation events
+    const handleAuthInvalidated = () => {
+      console.log('Auth invalidated event received in Navbar');
+      setIsLoggedIn(false);
+      
+      // If on a protected route, redirect to home
+      const currentPath = location.pathname;
+      if (currentPath.startsWith('/feed') || 
+          currentPath.startsWith('/my-shares') || 
+          currentPath.startsWith('/account') ||
+          currentPath.startsWith('/communities') ||
+          currentPath === '/edit-profile') {
+        navigate('/');
+      }
+    };
+    
+    document.addEventListener('dapps_auth_invalidated', handleAuthInvalidated);
+    
+    return () => {
+      document.removeEventListener('dapps_auth_invalidated', handleAuthInvalidated);
+    };
+  }, [location.pathname, navigate]);
   
   const handleLogout = async () => {
     try {
       console.log('Logging out user...');
       
-      localStorage.clear();
-      console.log('Cleared all localStorage items');
+      await apiBase.logoutCurrentDevice();
+      console.log('Logged out from current device, key invalidated');
       
       await logout();
       console.log('Logged out from Privy');

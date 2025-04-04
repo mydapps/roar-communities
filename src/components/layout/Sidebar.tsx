@@ -16,7 +16,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { createAuthHeaders } from '@/utils/apiBase';
+import { createAuthHeaders, cleanupAuthState } from '@/utils/apiBase';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -45,6 +45,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const [hasCommunities, setHasCommunities] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   
+  // Check authentication status on mount and listen for auth events
   useEffect(() => {
     const userKey = localStorage.getItem('dapps_user_key');
     setIsLoggedIn(!!userKey);
@@ -52,14 +53,39 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     if (userKey) {
       fetchCommunities();
     }
+    
+    // Set up listener for auth invalidation events
+    const handleAuthInvalidated = () => {
+      console.log('Auth invalidated event received');
+      setIsLoggedIn(false);
+      setCommunities([]);
+      setHasCommunities(false);
+    };
+    
+    document.addEventListener('dapps_auth_invalidated', handleAuthInvalidated);
+    
+    return () => {
+      document.removeEventListener('dapps_auth_invalidated', handleAuthInvalidated);
+    };
   }, []);
   
   const fetchCommunities = async () => {
     setLoadingCommunities(true);
     
     try {
+      // Check if we have a user key in localStorage
+      const userKey = localStorage.getItem('dapps_user_key');
+      if (!userKey) {
+        console.log('No user key found in localStorage');
+        setLoadingCommunities(false);
+        return;
+      }
+      
       // Use auth headers utility from apiBase to ensure proper authentication
       const headers = createAuthHeaders(false);
+      
+      // Debug the headers to see what's being sent
+      console.log('Auth headers:', JSON.stringify(headers));
       
       // Double check if we have headers (if not, user not authenticated)
       if (!headers['x-user-key']) {
@@ -86,6 +112,14 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
       if (!response.ok) {
         const errText = await response.text();
         console.error(`API error response: ${response.status}`, errText);
+        
+        if (response.status === 401) {
+          // Use the centralized cleanup function for auth failures
+          cleanupAuthState();
+          setIsLoggedIn(false);
+          return;
+        }
+        
         throw new Error(`API error: ${response.status}`);
       }
       

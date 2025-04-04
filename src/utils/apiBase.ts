@@ -12,6 +12,22 @@ export const debugLog = (message: string, ...args: any[]): void => {
   }
 };
 
+// Key validation state cache
+interface KeyValidationState {
+  lastChecked: number;
+  isValid: boolean;
+  retryCount: number;
+  inProgress: boolean;
+}
+
+// Cache to store validation state and prevent excessive retries
+const keyValidationCache: Record<string, KeyValidationState> = {};
+
+// Time thresholds (in milliseconds)
+const VALIDATION_CACHE_TIME = 5 * 60 * 1000; // 5 minutes 
+const MIN_RETRY_INTERVAL = 10 * 1000; // 10 seconds
+const MAX_RETRY_COUNT = 3; // Maximum number of retries in a short period
+
 /**
  * Get the user's API key from local storage
  * @returns The user's API key or null if not found
@@ -29,6 +45,35 @@ export const getUserApiKey = (): string | null => {
 };
 
 /**
+ * Check if we should refresh authentication based on time
+ * @returns True if we should refresh auth
+ */
+export const shouldRefreshAuth = (): boolean => {
+  const lastAuthTime = localStorage.getItem('dapps_last_auth_time');
+  
+  // If missing the last auth time, set it now but don't trigger auth
+  if (!lastAuthTime) {
+    localStorage.setItem('dapps_last_auth_time', Date.now().toString());
+    return false;
+  }
+  
+  const lastAuthTimestamp = parseInt(lastAuthTime, 10);
+  const currentTime = Date.now();
+  const sixHoursInMs = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
+  
+  // Check if more than 6 hours have passed since last auth
+  const shouldRefresh = currentTime - lastAuthTimestamp > sixHoursInMs;
+  
+  if (shouldRefresh) {
+    console.log(`Time since last auth: ${(currentTime - lastAuthTimestamp) / (60 * 60 * 1000)} hours. Refreshing auth.`);
+  } else {
+    console.log(`Time since last auth: ${(currentTime - lastAuthTimestamp) / (60 * 1000)} minutes. No refresh needed.`);
+  }
+  
+  return shouldRefresh;
+};
+
+/**
  * Check if the user's API key is valid
  * @returns Promise that resolves to true if valid, false otherwise
  */
@@ -40,6 +85,39 @@ export const validateUserApiKey = async (): Promise<boolean> => {
     return false;
   }
   
+  // Check the cache to avoid repeated validation attempts
+  const cacheKey = userKey.substring(0, 8); // Use first 8 chars as cache key
+  const now = Date.now();
+  const cachedState = keyValidationCache[cacheKey];
+  
+  if (cachedState) {
+    // If we checked recently and it was valid, return the cached result
+    if (cachedState.isValid && now - cachedState.lastChecked < VALIDATION_CACHE_TIME) {
+      return true;
+    }
+    
+    // If we're already checking, don't start another check
+    if (cachedState.inProgress) {
+      return cachedState.isValid;
+    }
+    
+    // If we've tried too many times recently and all failed, back off
+    if (!cachedState.isValid && 
+        cachedState.retryCount >= MAX_RETRY_COUNT && 
+        now - cachedState.lastChecked < MIN_RETRY_INTERVAL) {
+      console.warn(`Too many validation attempts for key ${cacheKey}. Backing off.`);
+      return false;
+    }
+  }
+  
+  // Initialize or update the cache entry
+  keyValidationCache[cacheKey] = {
+    lastChecked: now,
+    isValid: cachedState?.isValid || false,
+    retryCount: cachedState?.retryCount || 0,
+    inProgress: true
+  };
+  
   try {
     // Use a lightweight API call to check if the key is valid
     const response = await fetch(`${API_BASE_URL}/get_wallet_balance`, {
@@ -50,25 +128,42 @@ export const validateUserApiKey = async (): Promise<boolean> => {
     });
     
     if (response.status === 401) {
-      console.warn('User API key is invalid, triggering authentication reset');
+      console.warn('User API key is invalid or expired');
       
-      // Clear auth timestamp to force a refresh on next auth check
-      localStorage.removeItem('dapps_last_auth_time');
+      // Update cache
+      keyValidationCache[cacheKey] = {
+        lastChecked: now,
+        isValid: false,
+        retryCount: (cachedState?.retryCount || 0) + 1,
+        inProgress: false
+      };
       
-      // Show a user-friendly message
-      toast.info('Your session has expired. Refreshing...');
-      
-      // Wait a moment, then reload the page
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
+      // Handle recovery process
+      handleAuthRecovery();
       
       return false;
     }
     
+    // Update cache with successful validation
+    keyValidationCache[cacheKey] = {
+      lastChecked: now,
+      isValid: true,
+      retryCount: 0,
+      inProgress: false
+    };
+    
     return true;
   } catch (error) {
     console.error('Error validating API key:', error);
+    
+    // Update cache
+    keyValidationCache[cacheKey] = {
+      lastChecked: now,
+      isValid: false, 
+      retryCount: (cachedState?.retryCount || 0) + 1,
+      inProgress: false
+    };
+    
     return false;
   }
 };
@@ -78,21 +173,32 @@ export const validateUserApiKey = async (): Promise<boolean> => {
  * @returns Headers object with the user's API key
  */
 export const createAuthHeaders = (contentType = true): Record<string, string> => {
-  const userKey = getUserApiKey();
-  
-  if (!userKey) {
+  try {
+    const userKey = localStorage.getItem('dapps_user_key');
+    
+    if (!userKey) {
+      console.warn('createAuthHeaders: No user key found in localStorage');
+      return {};
+    }
+    
+    // Debug log the key (truncated for security)
+    const keyStart = userKey.substring(0, 5);
+    const keyEnd = userKey.substring(userKey.length - 5);
+    console.log(`Using API key: ${keyStart}...${keyEnd}`);
+    
+    const headers: Record<string, string> = {
+      'x-user-key': userKey,
+    };
+    
+    if (contentType) {
+      headers['Content-Type'] = 'application/json';
+    }
+    
+    return headers;
+  } catch (error) {
+    console.error('Error creating auth headers:', error);
     return {};
   }
-  
-  const headers: Record<string, string> = {
-    'x-user-key': userKey,
-  };
-  
-  if (contentType) {
-    headers['Content-Type'] = 'application/json';
-  }
-  
-  return headers;
 };
 
 /**
@@ -106,4 +212,81 @@ export const setupEventListener = (eventName: string, callback: () => void) => {
   return () => {
     document.removeEventListener(eventName, callback);
   };
+};
+
+/**
+ * Logout user from current device by invalidating the current API key
+ * @returns Promise that resolves to true if successful
+ */
+export const logoutCurrentDevice = async (): Promise<boolean> => {
+  const userKey = localStorage.getItem('dapps_user_key');
+  
+  if (!userKey) {
+    // No key to invalidate, just clear local storage
+    localStorage.clear();
+    return true;
+  }
+  
+  try {
+    // Call the logout endpoint to invalidate only this key
+    const response = await fetch(`${API_BASE_URL}/logout`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-key': userKey
+      }
+    });
+    
+    // Clear localStorage regardless of response
+    localStorage.clear();
+    
+    return response.ok;
+  } catch (error) {
+    console.error('Error during logout:', error);
+    
+    // Clear localStorage even if the API call fails
+    localStorage.clear();
+    
+    return false;
+  }
+};
+
+/**
+ * Clean up authentication state when it becomes invalid
+ * This helps prevent loops of failed requests with bad credentials
+ */
+export const cleanupAuthState = (): void => {
+  console.log('Cleaning up auth state due to invalid authentication');
+  
+  // Clear all authentication-related items
+  localStorage.removeItem('dapps_user_key');
+  localStorage.removeItem('dapps_last_auth_time');
+  
+  // We keep the user ID, handle, and avatar to make re-login smoother
+  // but clear the authentication token
+  
+  // Notify any listeners that auth has been invalidated
+  const event = new CustomEvent('dapps_auth_invalidated');
+  document.dispatchEvent(event);
+  
+  // Show a user-friendly message
+  toast.error('Authentication expired. Please sign in again.');
+};
+
+/**
+ * Handle graceful recovery when API key validation fails
+ * This function will try to recover the session by clearing localStorage
+ * and triggering a page reload to re-authenticate
+ */
+export const handleAuthRecovery = (): void => {
+  // Clear auth timestamp to force a refresh on next auth check
+  localStorage.removeItem('dapps_last_auth_time');
+  
+  // Show a user-friendly message
+  toast.info('Your session has expired. Refreshing...');
+  
+  // Wait a moment, then reload the page
+  setTimeout(() => {
+    window.location.reload();
+  }, 1000);
 };
