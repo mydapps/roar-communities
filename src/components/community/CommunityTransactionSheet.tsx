@@ -2,7 +2,7 @@ import React from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
-import { Loader2, Check, AlertCircle, ChevronRight, Sparkles, ArrowRight } from 'lucide-react';
+import { Loader2, Check, AlertCircle, ChevronRight, Sparkles, ArrowRight, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useIsMobile } from '@/hooks/use-mobile';
 import confetti from 'canvas-confetti';
@@ -26,6 +26,13 @@ interface CommunityTransactionSheetProps {
   isAdvanced?: boolean;
   customTitle?: string;
   customDescription?: string;
+  advancedConfig?: {
+    k: number;
+    alpha: number;
+    basePrice: number;
+    rewardPercentage: number;
+    adminEarningPercentage: number;
+  };
 }
 
 export const CommunityTransactionSheet = ({
@@ -45,6 +52,7 @@ export const CommunityTransactionSheet = ({
   isAdvanced = false,
   customTitle,
   customDescription,
+  advancedConfig = { k: 1, alpha: 0.1, basePrice: 0.01, rewardPercentage: 2.5, adminEarningPercentage: 2.5 },
 }: CommunityTransactionSheetProps) => {
   const isMobile = useIsMobile();
   
@@ -90,6 +98,13 @@ export const CommunityTransactionSheet = ({
     onOpenChange(false);
   };
 
+  // Format numbers with specified decimals
+  const formatNumber = (value: number | string | undefined, decimals: number = 6): string => {
+    if (value === undefined) return '0';
+    const num = typeof value === 'string' ? parseFloat(value) : value;
+    return num.toFixed(decimals);
+  };
+
   const Content = () => (
     <div className="px-4 pb-6 pt-2">
       {step === 'initialize' && (
@@ -100,32 +115,57 @@ export const CommunityTransactionSheet = ({
             </div>
             <h3 className="text-xl font-bold mb-2">{customTitle || "Transaction Approval"}</h3>
             <p className="text-sm text-muted-foreground">
-              {customDescription || `You're about to create a new ${isAdvanced ? 'advanced' : communityType} community. Please review and approve the transaction details.`}
+              {customDescription || (
+                isAdvanced 
+                  ? "You're setting up the economic model for your community. This is step 1 of 2 in creating your advanced community."
+                  : `You're about to create a new ${communityType} community. Please review and approve the transaction details.`
+              )}
             </p>
           </div>
           
           <div className="space-y-4 bg-muted/30 rounded-lg p-4 border border-border/50">
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Community Name</span>
-              <span className="text-sm font-medium">{communityName}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Community Handle</span>
-              <span className="text-sm font-medium">dapps.co/c/{communityHandle}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Privacy</span>
-              <Badge variant="outline" className="text-xs">
-                {isEncrypted ? 'Encrypted' : 'Public'}
-              </Badge>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Type</span>
-              <Badge variant="outline" className="text-xs bg-[#31bcc3]/10 text-[#31bcc3] border-[#31bcc3]/30">
-                {communityType.charAt(0).toUpperCase() + communityType.slice(1)}
-                {isAdvanced && ' (Advanced)'}
-              </Badge>
-            </div>
+            {isAdvanced ? (
+              // Show advanced economic parameters for advanced community type
+              <>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">K Value (Curve steepness)</span>
+                  <span className="text-sm font-medium">{advancedConfig.k}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Alpha (Price sensitivity)</span>
+                  <span className="text-sm font-medium">{advancedConfig.alpha} ETH</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Base Price</span>
+                  <span className="text-sm font-medium">{advancedConfig.basePrice} ETH</span>
+                </div>
+              </>
+            ) : (
+              // Show regular community details for non-advanced types
+              <>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Community Name</span>
+                  <span className="text-sm font-medium">{communityName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Community Handle</span>
+                  <span className="text-sm font-medium">dapps.co/c/{communityHandle}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Privacy</span>
+                  <Badge variant="outline" className="text-xs">
+                    {isEncrypted ? 'Encrypted' : 'Public'}
+                  </Badge>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Type</span>
+                  <Badge variant="outline" className="text-xs bg-[#31bcc3]/10 text-[#31bcc3] border-[#31bcc3]/30">
+                    {communityType.charAt(0).toUpperCase() + communityType.slice(1)}
+                    {isAdvanced && ' (Advanced)'}
+                  </Badge>
+                </div>
+              </>
+            )}
           </div>
           
           {totalCost && (
@@ -143,30 +183,35 @@ export const CommunityTransactionSheet = ({
               
               <div className="flex flex-col space-y-4">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Community Creation Fee</span>
-                  <span className="font-medium text-md">{totalCost} ETH</span>
+                  <span className="text-muted-foreground">
+                    {isAdvanced ? "New economic model fee" : "Community Creation Fee"}
+                  </span>
+                  <span className="font-medium text-md">{formatNumber(totalCost, 6)} ETH</span>
                 </div>
                 
                 {estimatedGasFee && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Estimated Gas Fee</span>
-                    <span className="font-medium text-sm">{estimatedGasFee} ETH</span>
+                    <span className="font-medium text-sm">{formatNumber(estimatedGasFee, 9)} ETH</span>
                   </div>
                 )}
                 
                 <div className="border-t border-primary/10 pt-3 mt-1 flex justify-between">
                   <span className="font-medium">Total Amount</span>
-                  <span className="font-bold text-primary text-lg">{totalCost} ETH</span>
+                  <span className="font-bold text-primary text-lg">{formatNumber(totalCost, 6)} ETH</span>
                 </div>
               </div>
               
               <div className="mt-3 text-xs text-muted-foreground bg-muted/50 rounded-md p-2">
-                <strong>Note:</strong> By confirming, you'll create your community and purchase its first share, establishing you as the founder. This transaction uses your hosted wallet with no additional connection needed.
+                <strong>Note:</strong> {isAdvanced 
+                  ? "By confirming, you'll create a custom economic model for your community. This transaction uses your hosted wallet with no additional connection needed."
+                  : "By confirming, you'll create your community and purchase its first share, establishing you as the founder. This transaction uses your hosted wallet with no additional connection needed."
+                }
               </div>
             </motion.div>
           )}
           
-          <div className="flex justify-center pt-4">
+          <div className="flex justify-center pt-4 pb-6">
             <motion.div
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
@@ -175,7 +220,7 @@ export const CommunityTransactionSheet = ({
               <Button
                 onClick={onConfirm}
                 disabled={isLoading}
-                className="w-full bg-gradient-to-r from-[#31bcc3] to-primary text-white py-6 relative overflow-hidden font-bold text-lg"
+                className="w-full bg-gradient-to-r from-[#31bcc3] to-primary text-white py-5 relative overflow-hidden font-bold text-base md:text-lg"
               >
                 {isLoading ? (
                   <>
@@ -242,9 +287,13 @@ export const CommunityTransactionSheet = ({
             <div className="mx-auto flex items-center justify-center w-16 h-16 mb-6 rounded-full bg-[#31bcc3]/10">
               <Check className="h-8 w-8 text-[#31bcc3]" />
             </div>
-            <h3 className="text-xl font-bold mb-2">Community Created!</h3>
+            <h3 className="text-xl font-bold mb-2">
+              {isAdvanced ? "Economic Model Created!" : "Community Created!"}
+            </h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Your community has been successfully created and is now live.
+              {isAdvanced 
+                ? "Your custom economic model has been set up successfully. Now you can proceed to create your community."
+                : "Your community has been successfully created and is now live."}
             </p>
             
             {txHash && (
@@ -274,7 +323,9 @@ export const CommunityTransactionSheet = ({
                   onClick={onComplete}
                   className="w-full bg-gradient-to-r from-[#31bcc3] to-primary text-white py-6"
                 >
-                  Go to Your Community
+                  {isAdvanced 
+                    ? "Continue to Community Creation" 
+                    : "Go to Your Community"}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </motion.div>
@@ -287,15 +338,26 @@ export const CommunityTransactionSheet = ({
 
   return isMobile ? (
     <Drawer open={open} onOpenChange={handleDialogClose}>
-      <DrawerContent className="max-h-[85vh]">
-        <DrawerHeader className="border-b pb-4">
+      <DrawerContent className="max-h-[90vh] overflow-hidden">
+        <DrawerHeader className="border-b pb-4 relative">
+          <button 
+            onClick={() => handleDialogClose()} 
+            className="absolute right-4 top-4 rounded-full p-2 inline-flex items-center justify-center text-muted-foreground hover:bg-muted"
+          >
+            <X className="h-4 w-4" />
+            <span className="sr-only">Close</span>
+          </button>
           <DrawerTitle className="text-center">
-            {step === 'initialize' ? (customTitle || 'Review Transaction') : 
-             step === 'confirm' ? 'Processing Transaction' : 
-             'Community Created'}
+            {step === 'initialize' 
+              ? (customTitle || (isAdvanced ? 'Economic Model Setup' : 'Review Transaction')) 
+              : step === 'confirm' 
+                ? (isAdvanced ? 'Setting Up Economics' : 'Processing Transaction') 
+                : (isAdvanced ? 'Economic Model Created' : 'Community Created')}
           </DrawerTitle>
         </DrawerHeader>
-        <Content />
+        <div className="flex flex-col h-full overflow-y-auto pb-20">
+          <Content />
+        </div>
       </DrawerContent>
     </Drawer>
   ) : (
@@ -303,9 +365,11 @@ export const CommunityTransactionSheet = ({
       <SheetContent className="sm:max-w-[425px] overflow-y-auto">
         <SheetHeader className="border-b pb-4">
           <SheetTitle>
-            {step === 'initialize' ? (customTitle || 'Review Transaction') : 
-             step === 'confirm' ? 'Processing Transaction' : 
-             'Community Created'}
+            {step === 'initialize' 
+              ? (customTitle || (isAdvanced ? 'Economic Model Setup' : 'Review Transaction')) 
+              : step === 'confirm' 
+                ? (isAdvanced ? 'Setting Up Economics' : 'Processing Transaction') 
+                : (isAdvanced ? 'Economic Model Created' : 'Community Created')}
           </SheetTitle>
         </SheetHeader>
         <Content />

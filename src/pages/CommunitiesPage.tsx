@@ -256,7 +256,7 @@ const CommunitiesPage = () => {
   const { communities: currentCommunities, isLoading, isRefreshing, loadMoreRef } = getActiveTabData();
 
   return (
-    <div className="px-4 py-6 space-y-6 pb-20">
+    <div className="px-4 pt-16 pb-6 space-y-6 pb-20">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <h1 className="text-2xl md:text-3xl font-bold">Communities</h1>
         

@@ -123,8 +123,10 @@ const CommunityCard: React.FC<CommunityCardProps> = ({
           <div>
             <div className="text-xs text-muted-foreground mb-0.5">Reward Pool</div>
             <div className="flex flex-col">
-              <span className="font-medium">{rewardPool.toFixed(4)} ETH</span>
-              <span className="text-xs text-muted-foreground">{formatCurrency(rewardPoolInUsd)}</span>
+              <div className="bg-primary/10 rounded-md px-2 py-1 -mx-1">
+                <span className="font-medium text-primary">{rewardPool.toFixed(4)} ETH</span>
+                <span className="text-xs text-primary/80 block">{formatCurrency(rewardPoolInUsd)}</span>
+              </div>
             </div>
           </div>
           

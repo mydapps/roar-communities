@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCommunityCreation, CommunityTypeOption } from '../hooks/useCommunityCreation';
 import { useTitle } from '../hooks/useTitle';
@@ -42,6 +42,7 @@ const CreateCommunityPage = () => {
     validateCommunityCreation,
     confirmCommunityCreation,
     prepareAdvancedTypeCreation,
+    confirmAdvancedTypeCreation,
     advancedTypeGasEstimate
   } = useCommunityCreation();
 
@@ -54,6 +55,8 @@ const CreateCommunityPage = () => {
     estimatedGasFee?: string;
     totalCost?: number;
   } | null>(null);
+  
+  const [formErrors, setErrors] = useState<Record<string, string | undefined>>({});
   
   // Set default values for alpha and base price
   useEffect(() => {
@@ -110,14 +113,25 @@ const CreateCommunityPage = () => {
 
   // Handle input validation - only allow alphanumeric and hyphen
   const handleHandleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    const sanitizedValue = value.replace(/[^a-z0-9-]/g, '');
+    // Allow only lowercase alphanumeric characters and hyphens
+    const sanitizedValue = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
     updateField('handle', sanitizedValue);
+    
+    // Update validation state
+    if (sanitizedValue.length === 0) {
+      setErrors((prev) => ({ ...prev, handle: "Handle is required" }));
+    } else if (sanitizedValue.length < 3) {
+      setErrors((prev) => ({ ...prev, handle: "Handle must be at least 3 characters" }));
+    } else {
+      setErrors((prev) => ({ ...prev, handle: undefined }));
+    }
   };
 
   // Apply handle suggestion
-  const applyHandleSuggestion = () => {
-    updateField('handle', animatedHandle);
+  const applyHandleSuggestion = (suggestion: string) => {
+    console.log("Applying handle suggestion:", suggestion);
+    updateField('handle', suggestion);
+    setErrors((prev) => ({ ...prev, handle: undefined }));
     setShowHandleSuggestion(false);
   };
 
@@ -151,16 +165,6 @@ const CreateCommunityPage = () => {
       // Add error to the local state
       updateField('advancedConfigError' as any, error instanceof Error ? error.message : "Failed to prepare advanced configuration. Please try again.");
       toast.error("Failed to prepare advanced configuration. Please try again.");
-    }
-  };
-
-  // Handler for confirming the advanced type creation
-  const handleConfirmAdvancedType = async () => {
-    try {
-      await handleSubmitAdvancedConfig();
-      // Modal will close automatically when step changes to 'advanced'
-    } catch (error) {
-      console.error("Error creating advanced community type:", error);
     }
   };
 
@@ -592,12 +596,337 @@ const CreateCommunityPage = () => {
             </div>
           </motion.div>
         </div>
+
+        {/* Add a dedicated button for configuring advanced settings */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="mt-8 flex justify-center"
+        >
+          <Button
+            onClick={handleAdvancedConfigTransaction}
+            disabled={isLoading}
+            className="px-8 py-6 bg-gradient-to-r from-[#31bcc3] to-primary text-white rounded-xl shadow-lg shadow-primary/10 hover:shadow-xl hover:shadow-primary/20 transition-all w-full md:w-auto text-lg font-semibold"
+          >
+            {isLoading ? (
+              <>
+                <Sparkles className="mr-2 h-5 w-5 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                Configure Advanced Settings
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </>
+            )}
+          </Button>
+        </motion.div>
+      </motion.div>
+    );
+  };
+
+  // Render privacy settings section
+  const renderPrivacySettings = () => {
+    return (
+      <div className="mb-6">
+        <h3 className="text-lg font-medium mb-4">Privacy Settings</h3>
+        <motion.div
+          whileHover={{ y: -2 }}
+          className="p-4 rounded-xl border border-border/60 bg-muted/30 backdrop-blur-sm"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-start gap-3">
+              <div className={`rounded-full p-2 ${state.isEncrypted ? 'bg-[#31bcc3]/20' : 'bg-muted/50'}`}>
+                <Lock className={`h-5 w-5 ${state.isEncrypted ? 'text-[#31bcc3]' : 'text-muted-foreground'}`} />
+              </div>
+              <div>
+                <h4 className="font-medium text-base mb-1">Encrypted Community</h4>
+                <p className="text-sm text-muted-foreground">
+                  When enabled, community content will be encrypted and only accessible to members.
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={state.isEncrypted}
+              onCheckedChange={value => updateField('isEncrypted', value)}
+              className="data-[state=checked]:bg-[#31bcc3]"
+            />
+          </div>
+        </motion.div>
+      </div>
+    );
+  };
+
+  // Render main form fields
+  const renderFormFields = () => {
+    return (
+      <div className="mb-6">
+        <div className="space-y-6">
+          <div>
+            <Label htmlFor="name" className="mb-2 block font-medium text-base">
+              Community Name
+            </Label>
+            <Input
+              id="name"
+              placeholder="Enter your community name"
+              value={state.name}
+              onChange={e => updateField('name', e.target.value)}
+              className="transition-all duration-200 focus:border-[#31bcc3] focus:ring-[#31bcc3]/30 bg-background/80 backdrop-blur-sm border-border shadow-sm rounded-xl text-foreground font-normal py-6 px-4 text-base"
+            />
+            {errors.name && (
+              <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                <span>{errors.name}</span>
+              </p>
+            )}
+          </div>
+            
+          <div>
+            <Label htmlFor="handle" className="mb-2 block font-medium text-base">
+              Community Handle
+            </Label>
+            <div className="relative">
+              <div className="relative flex items-center">
+                <div className="absolute left-0 inset-y-0 flex items-center pl-3 pointer-events-none bg-background/90 rounded-l-xl border-r border-border/40 pr-3 z-10">
+                  <span className="text-primary font-medium whitespace-nowrap">dapps.co/c/</span>
+                </div>
+                <Input
+                  id="handle"
+                  placeholder="your-handle"
+                  value={state.handle}
+                  onChange={handleHandleChange}
+                  style={{paddingLeft: "120px"}}
+                  className="transition-all duration-200 focus:border-[#31bcc3] focus:ring-[#31bcc3]/30 bg-background/80 backdrop-blur-sm border-border shadow-sm rounded-xl text-foreground font-normal py-6 px-4 text-base"
+                />
+              </div>
+                
+              {showHandleSuggestion && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-2 flex items-center justify-between p-2 border border-[#31bcc3]/30 bg-[#31bcc3]/5 rounded-lg"
+                >
+                  <p className="text-sm text-muted-foreground flex items-center gap-1">
+                    <span>Suggested:</span>
+                    <span className="font-medium text-foreground">{animatedHandle}</span>
+                  </p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => applyHandleSuggestion(animatedHandle)}
+                    className="h-7 text-xs text-[#31bcc3] hover:text-[#31bcc3] hover:bg-[#31bcc3]/10"
+                  >
+                    Use This
+                  </Button>
+                </motion.div>
+              )}
+            </div>
+            {errors.handle && (
+              <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                <span>{errors.handle}</span>
+              </p>
+            )}
+          </div>
+            
+          <div>
+            <Label htmlFor="description" className="mb-2 block font-medium text-base">
+              Description
+            </Label>
+            <Textarea
+              id="description"
+              placeholder="What's your community about?"
+              value={state.description}
+              onChange={e => updateField('description', e.target.value)}
+              className="min-h-[120px] transition-all duration-200 focus:border-[#31bcc3] focus:ring-[#31bcc3]/30 bg-background/80 backdrop-blur-sm border-border shadow-sm rounded-xl text-foreground font-normal resize-none p-4 text-base"
+            />
+            {errors.description && (
+              <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                <span>{errors.description}</span>
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Add advanced config completion screen
+  const renderAdvancedConfigCompleted = () => {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-center py-10"
+      >
+        <motion.div
+          initial={{ scale: 0.8 }}
+          animate={{ scale: 1 }}
+          transition={{ duration: 0.5, type: 'spring' }}
+          className="mx-auto mb-6 w-20 h-20 flex items-center justify-center rounded-full bg-[#31bcc3]/10"
+        >
+          <Trophy className="h-10 w-10 text-[#31bcc3]" />
+          <motion.div
+            initial={{ opacity: 0, scale: 0 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.5 }}
+            className="absolute"
+          >
+            <CheckCircle2 className="h-10 w-10 text-[#31bcc3]" />
+          </motion.div>
+        </motion.div>
+        
+        <motion.h2
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="text-2xl font-bold mb-4 bg-gradient-to-r from-[#31bcc3] to-primary bg-clip-text text-transparent"
+        >
+          Advanced Configuration Complete!
+        </motion.h2>
+        
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="bg-muted/30 backdrop-blur-sm p-6 rounded-xl border border-border/50 max-w-xl mx-auto mb-8"
+        >
+          <h3 className="text-lg font-medium mb-3">Configuration Summary</h3>
+          <dl className="grid grid-cols-2 gap-y-3 text-sm">
+            <dt className="text-muted-foreground text-left">Community Name:</dt>
+            <dd className="font-medium text-right">{state.name}</dd>
+            
+            <dt className="text-muted-foreground text-left">Handle:</dt>
+            <dd className="font-medium text-right">dapps.co/c/{state.handle}</dd>
+            
+            <dt className="text-muted-foreground text-left">Type:</dt>
+            <dd className="font-medium text-right flex items-center justify-end gap-1">
+              <Badge variant="outline" className="bg-[#31bcc3]/10 text-[#31bcc3] border-[#31bcc3]/40">
+                Advanced
+              </Badge>
+            </dd>
+            
+            <dt className="text-muted-foreground text-left">K Value:</dt>
+            <dd className="font-medium text-right">{state.advancedConfig.k}</dd>
+            
+            <dt className="text-muted-foreground text-left">Alpha (Ξ):</dt>
+            <dd className="font-medium text-right">{state.advancedConfig.alpha}</dd>
+            
+            <dt className="text-muted-foreground text-left">Base Price:</dt>
+            <dd className="font-medium text-right">{state.advancedConfig.basePrice} ETH</dd>
+            
+            <dt className="text-muted-foreground text-left">Community Rewards:</dt>
+            <dd className="font-medium text-right">{state.advancedConfig.rewardPercentage}%</dd>
+            
+            <dt className="text-muted-foreground text-left">Admin Earnings:</dt>
+            <dd className="font-medium text-right">{state.advancedConfig.adminEarningPercentage}%</dd>
+          </dl>
+        </motion.div>
+        
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+        >
+          <Button
+            onClick={handleCreateCommunity}
+            disabled={isLoading}
+            className="px-8 py-6 bg-gradient-to-r from-[#31bcc3] to-primary text-white rounded-xl shadow-lg shadow-primary/10 hover:shadow-xl hover:shadow-primary/20 transition-all"
+          >
+            {isLoading ? (
+              <>
+                <Sparkles className="mr-2 h-5 w-5 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                Launch Community
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </>
+            )}
+          </Button>
+        </motion.div>
+      </motion.div>
+    );
+  };
+
+  // Also add the success screen component
+  const renderSuccessScreen = () => {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-center py-10"
+      >
+        <motion.div
+          initial={{ scale: 0.8 }}
+          animate={{ scale: 1 }}
+          transition={{ duration: 0.5, type: 'spring' }}
+          className="mx-auto mb-6 w-20 h-20 flex items-center justify-center rounded-full bg-[#31bcc3]/10"
+        >
+          <CheckCircle2 className="h-10 w-10 text-[#31bcc3]" />
+        </motion.div>
+        
+        <motion.h2
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="text-2xl font-bold mb-4"
+        >
+          Community Created Successfully!
+        </motion.h2>
+        
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="mb-8"
+        >
+          <Badge variant="outline" className="mx-auto bg-muted/40 text-muted-foreground">
+            {state.isEncrypted ? 'Encrypted' : 'Public'} · {state.communityType.charAt(0).toUpperCase() + state.communityType.slice(1)}
+          </Badge>
+          
+          <p className="mt-4 text-muted-foreground">
+            You'll be redirected to your new community page shortly...
+            <Sparkles className="inline-block ml-2 h-4 w-4 animate-pulse" />
+          </p>
+        </motion.div>
+        
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+        >
+          <Button
+            onClick={handleNavigateToCommunity}
+            className="px-8 py-6 bg-gradient-to-r from-[#31bcc3] to-primary text-white rounded-xl shadow-lg shadow-primary/10 hover:shadow-xl hover:shadow-primary/20 transition-all"
+          >
+            Go to Community
+            <ArrowRight className="ml-2 h-5 w-5" />
+          </Button>
+        </motion.div>
       </motion.div>
     );
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden" style={{ marginBottom: '-72px' }}>
+    <div className="relative min-h-screen overflow-hidden">
+      {/* Hide mobile navigation for this page */}
+      <style>{`
+        @media (max-width: 768px) {
+          nav.bottom-0.fixed, 
+          .fixed.bottom-0.left-0.right-0.z-50,
+          div[class*="fixed bottom-0"] {
+            display: none !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            visibility: hidden !important;
+          }
+        }
+      `}</style>
+
       {/* Background elements */}
       <div className="absolute inset-0 -z-10 overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-background to-muted/30" />
@@ -608,533 +937,80 @@ const CreateCommunityPage = () => {
         <div className="absolute top-2/3 right-1/4 w-2 h-2 rounded-full bg-[#31bcc3]/50 animate-pulse delay-1000" />
       </div>
 
-      <div className="container max-w-4xl mx-auto py-8 px-4">
+      <div className="container max-w-4xl mx-auto pt-16 pb-8 px-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-12 text-center mt-14"
+          className="mb-6"
         >
-          <div className="inline-block mb-4">
-            <motion.div
-              animate={{ 
-                boxShadow: ['0 0 0 0px rgba(49, 188, 195, 0.2)', '0 0 0 10px rgba(49, 188, 195, 0)'],
-              }}
-              transition={{ 
-                repeat: Infinity,
-                duration: 2,
-              }}
-              className="rounded-full bg-[#31bcc3]/20 p-4"
-            >
-              <Users className="h-10 w-10 text-[#31bcc3]" />
-            </motion.div>
-          </div>
-          <h1 className="text-4xl font-bold mb-3 text-[#31bcc3]">Create Your Community</h1>
-          <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
-            Create a space where like-minded people truly belong, connect with purpose, and grow together through shared interests and investment.
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+            Create Your Community
+          </h1>
+          <p className="text-muted-foreground mt-2 text-sm md:text-base">
+            Build a space for your audience, members, or team to connect and share.
           </p>
         </motion.div>
 
-        <AnimatePresence mode="wait">
-          {step === 'form' && (
+        {/* Skip forward section */}
+        {step === 'form' && (
+          <>
+            {renderFormFields()}
+            {renderPrivacySettings()}
+            {renderCommunityTypeSelector()}
+            {state.communityType === 'advanced' && renderAdvancedConfig()}
+            
+            {/* Add Create Community Button */}
             <motion.div
-              key="form"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="relative bg-card/80 backdrop-blur-md rounded-xl border border-border/50 shadow-lg overflow-hidden"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="mt-8 flex justify-center"
             >
-              {/* Animated corner accent */}
-              <div className="absolute top-0 right-0 w-40 h-40 overflow-hidden">
-                <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-[#31bcc3]/20 to-transparent transform rotate-45 translate-x-10 -translate-y-10" />
-              </div>
-
-              <div className="p-6 md:p-8">
-                {/* Show API error alert if any field has an error from the API */}
-                {(errors.name || errors.handle) && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mb-6 p-4 border border-red-200 bg-red-50 rounded-lg text-red-700 flex items-start gap-2"
-                  >
-                    <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="font-medium">Community Creation Error</p>
-                      <p className="text-sm mt-1">{errors.name || errors.handle}</p>
-                    </div>
-                  </motion.div>
-                )}
-                
-                <motion.div layout className="space-y-6">
-                  <div>
-                    <Label htmlFor="name" className="mb-2 block text-base">
-                      Community Name <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="name"
-                      value={state.name}
-                      onChange={(e) => updateField('name', e.target.value)}
-                      placeholder="e.g., Crypto Enthusiasts"
-                      className={`${errors.name ? 'border-red-500' : ''} py-6 px-4 text-base transition-all duration-200 focus:border-[#31bcc3] focus:ring-[#31bcc3]/30 bg-background/50 backdrop-blur-sm border-border/60 rounded-xl hover:border-[#31bcc3]/30 text-foreground font-normal`}
-                    />
-                    {errors.name && (
-                      <motion.p
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        className="text-red-500 text-sm mt-1 flex items-center gap-1"
-                      >
-                        <AlertCircle className="h-3 w-3" />
-                        <span>{errors.name}</span>
-                      </motion.p>
-                    )}
-                  </div>
-
-                  <div>
-                    <Label htmlFor="handle" className="mb-2 block text-base">
-                      Community Handle <span className="text-red-500">*</span>
-                    </Label>
-                    <div className="flex items-center mb-1 group">
-                      <div className="bg-muted/80 px-4 py-3 rounded-l-md border border-r-0 border-input text-muted-foreground group-hover:border-[#31bcc3]/50 transition-colors duration-200">
-                        dapps.co/c/
-                      </div>
-                      <Input
-                        id="handle"
-                        value={state.handle}
-                        onChange={handleHandleChange}
-                        placeholder="your-community-handle"
-                        className={`rounded-l-none py-6 px-4 text-base transition-all duration-200 focus:border-[#31bcc3] focus:ring-[#31bcc3]/30 group-hover:border-[#31bcc3]/50 bg-background/50 backdrop-blur-sm text-foreground font-normal ${errors.handle ? 'border-red-500' : ''}`}
-                      />
-                    </div>
-
-                    {showHandleSuggestion && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="flex items-center gap-2 text-sm text-muted-foreground mt-1 mb-2"
-                      >
-                        <span>Suggested:</span>
-                        <Badge
-                          variant="outline"
-                          className="cursor-pointer hover:bg-[#31bcc3]/10 hover:text-[#31bcc3] transition-colors"
-                          onClick={applyHandleSuggestion}
-                        >
-                          {animatedHandle}
-                        </Badge>
-                        <button
-                          onClick={applyHandleSuggestion}
-                          className="text-xs text-[#31bcc3] hover:underline flex items-center"
-                        >
-                          <span>Use this</span>
-                          <CheckCircle2 className="ml-1 h-3 w-3" />
-                        </button>
-                      </motion.div>
-                    )}
-
-                    {errors.handle && (
-                      <motion.p
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        className="text-red-500 text-sm mt-1 flex items-center gap-1"
-                      >
-                        <AlertCircle className="h-3 w-3" />
-                        <span>{errors.handle}</span>
-                      </motion.p>
-                    )}
-                    <p className="text-xs text-muted-foreground mt-1">
-                      This will be your community's unique URL. Only alphanumeric characters and hyphens allowed.
-                    </p>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="description" className="mb-2 block text-base">
-                      Description
-                    </Label>
-                    <Textarea
-                      id="description"
-                      value={state.description}
-                      onChange={(e) => updateField('description', e.target.value)}
-                      placeholder="Tell people what your community is about..."
-                      rows={4}
-                      className="resize-none transition-all duration-200 focus:border-[#31bcc3] focus:ring-[#31bcc3]/30 bg-background/50 backdrop-blur-sm border-border/60 rounded-xl hover:border-[#31bcc3]/30 text-foreground font-normal"
-                    />
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="space-y-0.5">
-                        <Label htmlFor="isEncrypted" className="text-base font-medium">
-                          Privacy Setting
-                        </Label>
-                        <p className="text-sm text-muted-foreground">Choose whether your community content is public or encrypted</p>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id="isEncrypted"
-                          checked={state.isEncrypted}
-                          onCheckedChange={(checked) => updateField('isEncrypted', checked)}
-                          className="data-[state=checked]:bg-[#31bcc3]"
-                        />
-                        <Label htmlFor="isEncrypted" className="cursor-pointer">
-                          {state.isEncrypted ? (
-                            <span className="flex items-center gap-1 text-sm font-medium">
-                              <Lock className="h-3.5 w-3.5" /> Encrypted
-                            </span>
-                          ) : (
-                            <span className="flex items-center gap-1 text-sm font-medium">
-                              <Globe className="h-3.5 w-3.5" /> Public
-                            </span>
-                          )}
-                        </Label>
-                      </div>
-                    </div>
-                    <div className="p-4 bg-muted/40 backdrop-blur-sm rounded-lg text-sm border border-border/50">
-                      {state.isEncrypted ? (
-                        <div className="flex items-start gap-2">
-                          <div className="rounded-full bg-[#31bcc3]/20 p-1.5 mt-0.5">
-                            <Lock className="h-3.5 w-3.5 text-[#31bcc3]" />
-                          </div>
-                          <span>
-                            <span className="font-medium">Encrypted: </span> 
-                            Only community members will be able to view the content. Best for private or exclusive communities.
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="flex items-start gap-2">
-                          <div className="rounded-full bg-[#31bcc3]/20 p-1.5 mt-0.5">
-                            <Globe className="h-3.5 w-3.5 text-[#31bcc3]" />
-                          </div>
-                          <span>
-                            <span className="font-medium">Public: </span>
-                            Anyone can view the content, but only members can post. Best for growing communities and maximum reach.
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {renderCommunityTypeSelector()}
-                  {renderAdvancedConfig()}
-                </motion.div>
-              </div>
-
-              {/* Show advanced config error if present */}
-              {state.advancedConfigError && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mt-4 p-4 border border-red-200 bg-red-50 rounded-lg text-red-700 flex items-start gap-2"
-                >
-                  <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <p className="font-medium">Advanced Configuration Error</p>
-                    <p className="text-sm mt-1">{state.advancedConfigError}</p>
-                  </div>
-                </motion.div>
-              )}
-
-              <motion.div 
-                layout 
-                className="p-6 bg-muted/30 backdrop-blur-sm border-t border-border flex flex-col sm:flex-row justify-end gap-4"
-              >
-                {state.communityType === 'advanced' ? (
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <Button
-                      onClick={handleAdvancedConfigTransaction}
-                      disabled={isLoading}
-                      className="bg-gradient-to-r from-[#31bcc3] to-primary hover:from-primary hover:to-[#31bcc3] text-white shadow-md shadow-[#31bcc3]/20 px-6 py-6 text-base w-full sm:w-auto"
-                    >
-                      {isLoading ? (
-                        <>
-                          <motion.span
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                            className="mr-2"
-                          >
-                            <Sparkles className="h-4 w-4" />
-                          </motion.span>
-                          Processing...
-                        </>
-                      ) : (
-                        <>
-                          Configure Advanced Settings
-                          <ChevronRight className="ml-2 h-4 w-4" />
-                        </>
-                      )}
-                    </Button>
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <Button
-                      onClick={handleCreateCommunity}
-                      disabled={isLoading}
-                      className="bg-gradient-to-r from-[#31bcc3] to-primary hover:from-primary hover:to-[#31bcc3] text-white shadow-md shadow-[#31bcc3]/20 px-6 py-6 text-base w-full sm:w-auto"
-                    >
-                      {isLoading ? (
-                        <>
-                          <motion.span
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                            className="mr-2"
-                          >
-                            <Sparkles className="h-4 w-4" />
-                          </motion.span>
-                          Creating Community...
-                        </>
-                      ) : (
-                        <>
-                          Create Community
-                          <ChevronRight className="ml-2 h-4 w-4" />
-                        </>
-                      )}
-                    </Button>
-                  </motion.div>
-                )}
-              </motion.div>
-            </motion.div>
-          )}
-
-          {step === 'advanced' && (
-            <motion.div
-              key="advanced"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              className="bg-card/80 backdrop-blur-md rounded-xl border border-border/50 shadow-lg overflow-hidden"
-            >
-              <div className="p-6 md:p-8 text-center">
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: "spring", stiffness: 200, damping: 20 }}
-                  className="relative"
-                >
-                  <motion.div
-                    animate={{ 
-                      boxShadow: ['0 0 0 0px rgba(49, 188, 195, 0.2)', '0 0 0 10px rgba(49, 188, 195, 0)'],
-                    }}
-                    transition={{ 
-                      repeat: Infinity,
-                      duration: 2,
-                    }}
-                    className="w-20 h-20 rounded-full bg-[#31bcc3]/20 flex items-center justify-center mx-auto mb-6"
-                  >
-                    <Trophy className="h-10 w-10 text-[#31bcc3]" />
-                  </motion.div>
-                  <motion.div
-                    initial={{ scale: 0, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ delay: 0.5 }}
-                    className="absolute -top-2 -right-2 bg-gradient-to-r from-[#31bcc3] to-primary rounded-full p-1.5 shadow-lg"
-                  >
-                    <Check className="h-4 w-4 text-white" />
-                  </motion.div>
-                </motion.div>
-
-                <motion.h2 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className="text-3xl font-bold mb-3 text-[#31bcc3]"
-                >
-                  Advanced Configuration Complete!
-                </motion.h2>
-                
-                <motion.p 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                  className="text-muted-foreground mb-8 max-w-md mx-auto"
-                >
-                  Your advanced economic parameters have been configured. You're now ready to launch your community!
-                </motion.p>
-
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 }}
-                  className="bg-muted/30 backdrop-blur-sm p-5 rounded-xl mb-6 text-left border border-border/50"
-                >
-                  <h3 className="font-medium mb-4 flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-[#31bcc3]" />
-                    <span>Configuration Summary</span>
-                  </h3>
-                  <ul className="space-y-3 text-sm">
-                    <li className="flex justify-between items-center border-b border-border/30 pb-2">
-                      <span className="text-muted-foreground">Community Name:</span>
-                      <span className="font-medium">{state.name}</span>
-                    </li>
-                    <li className="flex justify-between items-center border-b border-border/30 pb-2">
-                      <span className="text-muted-foreground">Handle:</span>
-                      <span className="font-medium">dapps.co/c/{state.handle}</span>
-                    </li>
-                    <li className="flex justify-between items-center border-b border-border/30 pb-2">
-                      <span className="text-muted-foreground">Type:</span>
-                      <Badge className="bg-[#31bcc3]/10 text-[#31bcc3] border-[#31bcc3]/30">Advanced</Badge>
-                    </li>
-                    <li className="flex justify-between items-center border-b border-border/30 pb-2">
-                      <span className="text-muted-foreground">k Value:</span>
-                      <span className="font-medium">{state.advancedConfig.k}</span>
-                    </li>
-                    <li className="flex justify-between items-center border-b border-border/30 pb-2">
-                      <span className="text-muted-foreground">Alpha:</span>
-                      <span className="font-medium">{state.advancedConfig.alpha} ETH</span>
-                    </li>
-                    <li className="flex justify-between items-center border-b border-border/30 pb-2">
-                      <span className="text-muted-foreground">Base Price:</span>
-                      <span className="font-medium">{state.advancedConfig.basePrice} ETH</span>
-                    </li>
-                    <li className="flex justify-between items-center border-b border-border/30 pb-2">
-                      <span className="text-muted-foreground">Community Rewards:</span>
-                      <span className="font-medium">{state.advancedConfig.rewardPercentage}%</span>
-                    </li>
-                    <li className="flex justify-between items-center">
-                      <span className="text-muted-foreground">Admin Earnings:</span>
-                      <span className="font-medium">{state.advancedConfig.adminEarningPercentage}%</span>
-                    </li>
-                  </ul>
-                </motion.div>
-              </div>
-
-              <div className="p-6 bg-muted/30 backdrop-blur-sm border-t border-border flex justify-center">
-                <motion.div
-                  whileHover={{ scale: 1.03, y: -2 }}
-                  whileTap={{ scale: 0.97 }}
-                >
+              {/* For non-advanced community types, always show the button */}
+              {/* For advanced type, only show when step is 'advanced' */}
+              {(state.communityType !== 'advanced' || 
+                (state.communityType === 'advanced' && (step as string) === 'advanced')) && (
                   <Button
                     onClick={handleCreateCommunity}
                     disabled={isLoading}
-                    size="lg"
-                    className="bg-gradient-to-r from-[#31bcc3] to-primary hover:from-primary hover:to-[#31bcc3] text-white shadow-lg shadow-[#31bcc3]/20 px-8 py-6 text-lg"
+                    className="px-8 py-6 bg-gradient-to-r from-[#31bcc3] to-primary text-white rounded-xl shadow-lg shadow-primary/10 hover:shadow-xl hover:shadow-primary/20 transition-all w-full md:w-auto text-lg font-semibold"
                   >
                     {isLoading ? (
                       <>
-                        <motion.span
-                          animate={{ rotate: 360 }}
-                          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                          className="mr-2"
-                        >
-                          <Sparkles className="h-5 w-5" />
-                        </motion.span>
-                        Creating Community...
+                        <Sparkles className="mr-2 h-5 w-5 animate-spin" />
+                        Processing...
                       </>
                     ) : (
                       <>
-                        Launch Community
+                        Create Community
                         <ArrowRight className="ml-2 h-5 w-5" />
                       </>
                     )}
                   </Button>
-                </motion.div>
-              </div>
+                )}
             </motion.div>
-          )}
-
-          {step === 'complete' && (
-            <motion.div
-              key="complete"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-card/80 backdrop-blur-md rounded-xl border border-border/50 shadow-lg overflow-hidden text-center p-8"
-            >
+            
+            {/* Add error display for general form errors */}
+            {(errors.name || errors.handle || errors.description || errors.advancedConfigError) && (
               <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ 
-                  type: "spring", 
-                  stiffness: 200, 
-                  damping: 20, 
-                  delay: 0.2 
-                }}
-              >
-                <motion.div
-                  animate={{ 
-                    boxShadow: ['0 0 0 0px rgba(49, 188, 195, 0.3)', '0 0 0 15px rgba(49, 188, 195, 0)'],
-                  }}
-                  transition={{ 
-                    repeat: Infinity,
-                    duration: 2,
-                  }}
-                  className="w-24 h-24 rounded-full bg-[#31bcc3]/20 flex items-center justify-center mx-auto mb-6"
-                >
-                  <CheckCircle2 className="h-12 w-12 text-[#31bcc3]" />
-                </motion.div>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
+                className="mt-4 p-4 border border-red-200 bg-red-50 rounded-lg text-red-700 flex items-start gap-2"
               >
-                <h2 className="text-3xl font-bold mb-3 text-[#31bcc3]">Community Created Successfully!</h2>
-                <p className="text-muted-foreground mb-8 max-w-md mx-auto text-lg">
-                  Congratulations! Your new community is now live. You'll be redirected to your community page shortly.
-                </p>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                className="inline-block mb-8"
-              >
-                <Badge className="bg-[#31bcc3]/20 text-[#31bcc3] border-[#31bcc3]/30 px-4 py-1.5 text-base">
-                  {state.isEncrypted ? 'Encrypted' : 'Public'} · {state.communityType.charAt(0).toUpperCase() + state.communityType.slice(1)} Community
-                </Badge>
-              </motion.div>
-
-              <motion.div
-                animate={{ 
-                  y: [0, -5, 0],
-                }}
-                transition={{ 
-                  duration: 2, 
-                  repeat: Infinity, 
-                  repeatType: "reverse" 
-                }}
-                className="mt-8 text-muted-foreground flex flex-col items-center"
-              >
-                <span>Redirecting to your new community...</span>
-                <div className="mt-3">
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                  >
-                    <Sparkles className="h-6 w-6 text-[#31bcc3]" />
-                  </motion.div>
+                <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="font-medium">Please fix the form errors</p>
+                  <p className="text-sm mt-1">{errors.name || errors.handle || errors.description || errors.advancedConfigError}</p>
                 </div>
               </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Advanced Type Creation Transaction Sheet/Modal */}
-        <CommunityTransactionSheet
-          open={showAdvancedTypeModal}
-          onOpenChange={(open) => {
-            if (!open) {
-              setShowAdvancedTypeModal(false);
-            }
-          }}
-          step={isLoading ? 'confirm' : 'initialize'}
-          isLoading={isLoading}
-          communityName={state.name}
-          communityHandle={state.handle}
-          isEncrypted={state.isEncrypted}
-          communityType="Advanced"
-          estimatedGasFee={advancedTypeData?.estimatedGasFee}
-          totalCost={advancedTypeData?.totalCost}
-          onConfirm={handleConfirmAdvancedType}
-          isAdvanced={true}
-          customTitle="Advanced Economics Setup"
-          customDescription="You're about to set up advanced economic parameters for your community. This requires a transaction on the blockchain."
-        />
-
-        {/* Main community creation transaction sheet (existing) */}
+            )}
+          </>
+        )}
+        
+        {step === 'advanced' && renderAdvancedConfigCompleted()}
+        {step === 'complete' && renderSuccessScreen()}
+        
+        {/* Transaction sheets */}
         <CommunityTransactionSheet
           open={step === 'transaction'}
           onOpenChange={(open) => {
@@ -1162,6 +1038,38 @@ const CreateCommunityPage = () => {
           onComplete={handleNavigateToCommunity}
           txHash={txHash}
           isAdvanced={state.communityType === 'advanced'}
+          advancedConfig={state.advancedConfig}
+        />
+        
+        {/* Advanced type modal */}
+        <CommunityTransactionSheet
+          open={showAdvancedTypeModal}
+          onOpenChange={setShowAdvancedTypeModal}
+          step={transactionStep}
+          isLoading={isLoading}
+          communityName={state.name}
+          communityHandle={state.handle}
+          isEncrypted={state.isEncrypted}
+          communityType={state.communityType}
+          estimatedGasFee={advancedTypeData?.estimatedGasFee}
+          totalCost={advancedTypeData?.totalCost}
+          customTitle="Advanced Community Type"
+          customDescription="You're creating a custom economic model for your community. This transaction will set up your community's unique share price curve and reward distribution."
+          onConfirm={async () => {
+            // Call the confirm function for advanced type
+            try {
+              await confirmAdvancedTypeCreation();
+            } catch (error) {
+              console.error("Error during advanced type creation:", error);
+            }
+          }}
+          onComplete={() => {
+            // Close the modal and continue to the advanced configuration summary
+            setShowAdvancedTypeModal(false);
+          }}
+          txHash={txHash}
+          isAdvanced={true}
+          advancedConfig={state.advancedConfig}
         />
       </div>
     </div>

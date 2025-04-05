@@ -37,6 +37,7 @@ interface CommunityCreationErrors {
   'advancedConfig.basePrice'?: string;
   'advancedConfig.rewardPercentage'?: string;
   'advancedConfig.adminEarningPercentage'?: string;
+  advancedConfigError?: string;
 }
 
 interface GasEstimate {
@@ -201,6 +202,13 @@ export const useCommunityCreation = () => {
       newErrors.handle = 'Handle can only contain lowercase letters, numbers, and hyphens';
     }
     
+    // Description is optional, so no validation needed
+    
+    // Validate description - make it required
+    if (!state.description.trim()) {
+      newErrors.description = 'Community description is required';
+    }
+    
     // Validate advanced config if applicable
     if (state.communityType === 'advanced') {
       if (state.advancedConfig.k < 1 || state.advancedConfig.k > 3) {
@@ -247,7 +255,16 @@ export const useCommunityCreation = () => {
         throw new Error('Authentication required. Please log in again.');
       }
       
-      const response = await fetch('https://api.dapps.co/estimate_community_type_gas', {
+      console.log('Requesting gas estimate with params:', {
+        basePrice: basePrice.toString(),
+        alpha: alpha.toString(),
+        k: k.toString(),
+        adminFeeBps: adminFeeBps.toString(),
+        memberRewardsBps: memberRewardsBps.toString(),
+      });
+      
+      // Use the correct endpoint
+      const response = await fetch('https://api.dapps.co/community_type_gas_estimator', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -289,10 +306,15 @@ export const useCommunityCreation = () => {
       const data = await response.json();
       console.log('Gas estimate response:', data);
       
+      if (!data.success) {
+        throw new Error(data.message || data.error || 'Failed to get gas estimate');
+      }
+      
+      // Parse the response according to the sample API format
       return {
         success: true,
-        estimatedGasFee: data.estimatedGasFee || "0.001", // Fallback values if API doesn't provide them
-        totalCost: data.totalCost || 0.002
+        estimatedGasFee: data.gasEstimate?.gasCostInEth || "0.001", 
+        totalCost: parseFloat(data.gasEstimate?.gasCostInEth || "0.002")
       };
     } catch (error) {
       console.error('Error getting gas estimate:', error);
@@ -314,30 +336,35 @@ export const useCommunityCreation = () => {
   };
 
   const prepareAdvancedTypeCreation = async (): Promise<AdvancedTypeGasEstimate> => {
+    // Validate form before proceeding
     if (!validateForm()) {
-      return { success: false, error: 'Validation failed' };
+      return {
+        success: false,
+        error: 'Please fix the form errors before continuing'
+      };
     }
     
+    // First, get a gas estimate
     try {
+      // Get the gas estimate for the advanced type
       const gasEstimate = await getAdvancedTypeGasEstimate();
-      setAdvancedTypeGasEstimate(gasEstimate);
+      if (!gasEstimate.success) {
+        return gasEstimate; // Return the error from gas estimation
+      }
+      
+      console.log('Got gas estimate for advanced type:', gasEstimate);
       return gasEstimate;
+      
     } catch (error) {
       console.error('Error preparing advanced type creation:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Failed to prepare advanced type creation'
       };
     }
   };
 
-  const initializeCommunityType = async () => {
-    if (!validateForm()) {
-      return false;
-    }
-    
-    setIsLoading(true);
-    
+  const initializeCommunityType = async (): Promise<boolean> => {
     try {
       const { k, alpha, basePrice, rewardPercentage, adminEarningPercentage } = state.advancedConfig;
       
@@ -351,6 +378,15 @@ export const useCommunityCreation = () => {
         throw new Error('Authentication required. Please log in again.');
       }
       
+      console.log('Initializing community type with params:', {
+        basePrice: basePrice.toString(),
+        alpha: alpha.toString(),
+        k: k.toString(),
+        adminFeeBps: adminFeeBps.toString(),
+        memberRewardsBps: memberRewardsBps.toString(),
+      });
+      
+      // Call the initialize_community_type API
       const response = await fetch('https://api.dapps.co/initialize_community_type', {
         method: 'POST',
         headers: {
@@ -366,27 +402,44 @@ export const useCommunityCreation = () => {
         }),
       });
       
-      const data: CommunityTypeResponse = await response.json();
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage = `API Error (${response.status}): ${response.statusText}`;
+        
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch (e) {
+          // If parsing fails, use the error text
+          if (errorText) errorMessage = errorText;
+        }
+        
+        console.error('Error initializing community type:', errorMessage);
+        throw new Error(errorMessage);
+      }
+      
+      const data = await response.json();
+      console.log('Initialize community type response:', data);
       
       if (!data.success) {
-        throw new Error(data.message || 'Failed to initialize community type');
+        throw new Error(data.message || data.error || 'Failed to initialize community type');
       }
       
-      // Store the community type ID for later use
-      if (data.communityType && data.communityType.id) {
-        // Convert to string as we use string values in our API calls
-        setAdvancedTypeId(data.communityType.id.toString());
-        console.log(`Advanced community type ID set to: ${data.communityType.id}`);
+      // Save the advanced community type ID for later use
+      const advancedTypeId = data.communityType?.id?.toString();
+      if (advancedTypeId) {
+        setAdvancedTypeId(advancedTypeId);
+        console.log('Set advanced community type ID:', advancedTypeId);
+      } else {
+        console.error('Missing community type ID in response:', data);
+        throw new Error('Failed to get community type ID from response');
       }
       
-      setStep('advanced');
       return true;
     } catch (error) {
-      console.error('Error initializing community type:', error);
-      toast.error('Failed to initialize community type. Please try again.');
+      console.error('Error during community type initialization:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to initialize community type');
       return false;
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -414,9 +467,11 @@ export const useCommunityCreation = () => {
         throw new Error('Authentication required. Please log in again.');
       }
       
+      // Fix the payload to use correct field names and values
       const requestPayload = {
-        name: state.handle,
-        description: state.description,
+        communityName: state.name, // Use the community NAME not handle
+        name: state.handle, // Keep name for backward compatibility
+        description: state.description || '', // Ensure description is at least an empty string
         type: typeValue,
         encrypt: state.isEncrypted ? '1' : '0',
       };
@@ -451,10 +506,14 @@ export const useCommunityCreation = () => {
         // Set specific error from the API or fallback to a general error
         const errorMessage = data.message || data.error || 'Failed to validate community creation';
         
-        // If it's a name/handle conflict, set the error specifically on the handle field
+        // If it's a name conflict, set the error specifically on the name field
         if (errorMessage.toLowerCase().includes('name already exists')) {
-          setErrors({ handle: errorMessage });
+          setErrors({ name: errorMessage });
           setStep('form'); // Make sure we're back on the form
+        } else if (errorMessage.toLowerCase().includes('name must be between')) {
+          // If it's a name length error, set it on the name field
+          setErrors({ name: errorMessage });
+          setStep('form');
         } else {
           // Otherwise set it as a general error
           setErrors({ name: errorMessage });
@@ -503,17 +562,20 @@ export const useCommunityCreation = () => {
         ? '0' 
         : state.communityType === 'niche' 
           ? '1' 
-          : advancedTypeId || '2'; // Fallback to '2' if for some reason we don't have the ID
+          : advancedTypeId || '2'; // Fallback to '2' if missing
       
-      // Get user API key from localStorage
+      // Get user API key
       const userKey = getUserApiKey();
       if (!userKey) {
+        setErrors({ name: 'Authentication required. Please log in again.' });
         throw new Error('Authentication required. Please log in again.');
       }
       
+      // Fix the payload structure to match what the API expects
       const requestPayload = {
-        name: state.handle,
-        description: state.description,
+        communityName: state.name, // Use the community NAME not handle
+        name: state.handle, // Keep name for backward compatibility
+        description: state.description || '', // Ensure description is at least an empty string
         type: typeValue,
         encrypt: state.isEncrypted ? '1' : '0',
       };
@@ -573,18 +635,52 @@ export const useCommunityCreation = () => {
     }
   }, [state.communityType, state.advancedConfig]);
 
-  const handleCreateCommunity = useCallback(async () => {
-    if (state.communityType === 'advanced' && step !== 'advanced') {
-      toast.error('Please complete the advanced configuration first.');
+  const handleCreateCommunity = async (): Promise<void> => {
+    console.log('handleCreateCommunity called, current step:', step);
+    console.log('communityType:', state.communityType);
+    console.log('advancedTypeId:', advancedTypeId);
+    
+    // For advanced community type, we need to check if the advanced type has been created
+    if (state.communityType === 'advanced') {
+      // If we're already in the advanced step, it means the advanced type was created
+      if (step === 'advanced') {
+        // Continue with community creation
+        console.log('Advanced config completed, proceeding with community creation');
+        const isValid = await validateCommunityCreation();
+        if (isValid) {
+          setStep('transaction');
+        }
+        return;
+      }
+      
+      // Check if we have an advanced type ID (meaning it was created)
+      if (advancedTypeId) {
+        console.log('Advanced type ID exists:', advancedTypeId);
+        // Continue with community creation
+        const isValid = await validateCommunityCreation();
+        if (isValid) {
+          setStep('transaction');
+        }
+        return;
+      }
+      
+      // If we get here, advanced type hasn't been created yet
+      console.log('Advanced type not configured yet');
+      // Show message and trigger the advanced config transaction
+      setErrors({ 
+        advancedConfigError: 'Please complete advanced configurations first by clicking the "Configure Advanced Settings" button' 
+      });
+      toast.error('Please complete advanced configurations first');
       return;
     }
     
-    setStep('transaction');
-    const validationSuccess = await validateCommunityCreation();
-    
-    // Don't automatically call confirmCommunityCreation
-    // Let the user confirm the transaction in the modal
-  }, [state, step]);
+    // For non-advanced community types, just validate and proceed
+    console.log('Regular community type, proceeding with validation');
+    const isValid = await validateCommunityCreation();
+    if (isValid) {
+      setStep('transaction');
+    }
+  };
 
   const resetForm = () => {
     setState(initialState);
@@ -593,6 +689,35 @@ export const useCommunityCreation = () => {
     setTransactionStep('initialize');
     setTransactionData(null);
     setTxHash(null);
+  };
+
+  // Add a new function to handle the actual creation of the advanced type
+  const confirmAdvancedTypeCreation = async (): Promise<boolean> => {
+    setIsLoading(true);
+    try {
+      // Start the transaction steps
+      setTransactionStep('initialize');
+      
+      // Now initialize the community type
+      const success = await initializeCommunityType();
+      if (!success) {
+        throw new Error('Failed to initialize community type');
+      }
+      
+      // If successful, set the state to show the advanced config completed screen
+      setStep('advanced');
+      setTransactionStep('complete');
+      
+      return true;
+    } catch (error) {
+      console.error('Error during advanced type creation:', error);
+      setErrors({ 
+        advancedConfigError: error instanceof Error ? error.message : 'Failed to create advanced type'
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return {
@@ -615,5 +740,6 @@ export const useCommunityCreation = () => {
     validateCommunityCreation,
     confirmCommunityCreation,
     prepareAdvancedTypeCreation,
+    confirmAdvancedTypeCreation,
   };
 }; 

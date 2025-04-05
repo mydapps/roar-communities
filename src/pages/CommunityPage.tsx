@@ -243,9 +243,7 @@ const CommunityPage = () => {
     }
   };
   
-  const priceChange = communityData?.community ? 
-    ((communityData.community.prices.buy_price - 0.002) / 0.002) * 100 : 
-    12.5;
+  const priceChange = communityData?.community?.prices?.price_change_percent || 0;
   
   const chartPoints = priceChange > 0 
     ? "M0,50 Q25,30 50,20 T100,10" 

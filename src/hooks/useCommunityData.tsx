@@ -6,6 +6,7 @@ export interface CommunityPrices {
   sell_price: number;
   buy_price_usd: number;
   sell_price_usd: number;
+  price_change_percent: number;
 }
 
 export interface CommunityMarketCap {
