@@ -207,38 +207,43 @@ export const Post = ({
     Math.floor(Math.random() * 36).toString(36)).join('')
   ).current;
 
-  const handleAddComment = (text: string) => {
-    if (!text.trim()) return;
-    
-    if (!userIsLoggedIn) {
-      toast({
-        title: "Login Required",
-        description: "You need to login to comment on this post",
-        variant: "destructive",
-        action: <button 
-          className="bg-primary text-white px-3 py-1 rounded text-xs"
-          onClick={() => navigate('/index')}
-        >
-          Login
-        </button>
-      });
-      return;
+  const handleAddComment = (commentOrText: string | CommentReply) => {
+    if (typeof commentOrText === 'string') {
+      if (!commentOrText.trim()) return;
+      
+      if (!userIsLoggedIn) {
+        toast({
+          title: "Login Required",
+          description: "You need to login to comment on this post",
+          variant: "destructive",
+          action: <button 
+            className="bg-primary text-white px-3 py-1 rounded text-xs"
+            onClick={() => navigate('/index')}
+          >
+            Login
+          </button>
+        });
+        return;
+      }
+      
+      const newComment: CommentReply = {
+        id: Date.now(),
+        uid: 0,
+        handle: localStorage.getItem('dapps_user_handle') || 'You',
+        avatar_url: localStorage.getItem('dapps_user_avatar') || 'default',
+        content: commentOrText,
+        created_on: new Date().toISOString(),
+        time_ago: 'just now',
+        upvotes: 0,
+        meow_count: 0,
+        has_meowed: false
+      };
+      
+      setComments(prev => [...prev, newComment]);
+    } else {
+      // If we received a complete CommentReply object
+      setComments(prev => [...prev, commentOrText]);
     }
-    
-    const newComment: CommentReply = {
-      id: Date.now(),
-      uid: 0,
-      handle: 'You',
-      avatar_url: localStorage.getItem('dapps_user_avatar') || 'default',
-      content: text,
-      created_on: new Date().toISOString(),
-      time_ago: 'just now',
-      upvotes: 0,
-      meow_count: 0,
-      has_meowed: false
-    };
-    
-    setComments(prev => [...prev, newComment]);
   };
 
   const handleToggleComments = async () => {

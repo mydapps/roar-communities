@@ -17,6 +17,7 @@ import RequestInvitePage from '@/pages/RequestInvitePage';
 import LoginPage from '@/pages/LoginPage';
 import NotFound from '@/pages/NotFound';
 import AvatarHandlePage from '@/pages/AvatarHandlePage';
+import CreateCommunityPage from '@/pages/CreateCommunityPage';
 import PrivyAuthProvider from '@/components/onboarding/PrivyAuthProvider';
 import { Toaster } from 'sonner';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
@@ -59,6 +60,11 @@ function App() {
             <Route path="c/:id" element={
               <ProtectedRoute>
                 <CommunityPage />
+              </ProtectedRoute>
+            } />
+            <Route path="create-community" element={
+              <ProtectedRoute>
+                <CreateCommunityPage />
               </ProtectedRoute>
             } />
             <Route path="u/:handle" element={

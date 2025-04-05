@@ -84,6 +84,10 @@ export const createReply = async (postCode: string, content: string, parentId = 
       return { success: false };
     }
     
+    // Get user handle and avatar from localStorage
+    const userHandle = localStorage.getItem('dapps_user_handle');
+    const userAvatar = localStorage.getItem('dapps_user_avatar');
+    
     console.log(`Creating reply to post ${postCode}, parent ${parentId}, content: ${content}`);
     
     const response = await fetch(`${API_BASE_URL}/create_reply`, {
@@ -111,8 +115,8 @@ export const createReply = async (postCode: string, content: string, parentId = 
       return {
         success: true,
         reply_id: data.reply_id || data.id,
-        handle: data.handle,
-        avatar_url: data.avatar_url,
+        handle: data.handle || userHandle || 'you',
+        avatar_url: data.avatar_url || userAvatar || 'default',
         created_on: data.created_on
       };
     } else {

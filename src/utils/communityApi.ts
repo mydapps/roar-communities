@@ -1275,3 +1275,265 @@ export const withdrawETH = async (
     };
   }
 };
+
+/**
+ * Interface for creating a community
+ */
+export interface CreateCommunityConfig {
+  name: string;
+  handle: string;
+  description?: string;
+  isEncrypted: boolean;
+  communityType: number; // 0 for General, 1 for Niche, 2 for Custom
+  advancedConfig?: {
+    k: number; // 1, 2, or 3
+    alpha: number; // in ETH
+    basePrice: number; // in ETH
+    rewardPercentage: number; // max 5%
+    adminEarningPercentage: number; // max 5%
+  };
+}
+
+/**
+ * Validates community creation parameters
+ * @param config Community creation configuration
+ * @returns Validation result with success flag and any error messages
+ */
+export const validateCommunityConfig = (config: CreateCommunityConfig): { 
+  isValid: boolean; 
+  errors: Record<string, string>;
+} => {
+  const errors: Record<string, string> = {};
+  
+  // Validate name
+  if (!config.name) {
+    errors.name = "Community name is required";
+  } else if (config.name.length < 3) {
+    errors.name = "Community name must be at least 3 characters";
+  } else if (config.name.length > 50) {
+    errors.name = "Community name must be less than 50 characters";
+  }
+  
+  // Validate handle
+  if (!config.handle) {
+    errors.handle = "Community handle is required";
+  } else {
+    // Handle must be alphanumeric with hyphens only
+    const handleRegex = /^[a-zA-Z0-9-]+$/;
+    if (!handleRegex.test(config.handle)) {
+      errors.handle = "Handle can only contain letters, numbers, and hyphens";
+    } else if (config.handle.length > 64) {
+      errors.handle = "Handle must be less than 64 characters";
+    }
+  }
+  
+  // Validate advanced config if applicable
+  if (config.communityType === 2 && config.advancedConfig) {
+    const { k, alpha, basePrice, rewardPercentage, adminEarningPercentage } = config.advancedConfig;
+    
+    // Validate k
+    if (![1, 2, 3].includes(k)) {
+      errors.k = "k must be 1, 2, or 3";
+    }
+    
+    // Validate alpha
+    if (alpha <= 0) {
+      errors.alpha = "Alpha must be greater than 0";
+    }
+    
+    // Validate basePrice
+    if (basePrice < 0) {
+      errors.basePrice = "Base price cannot be negative";
+    }
+    
+    // Validate reward percentage
+    if (rewardPercentage < 0 || rewardPercentage > 5) {
+      errors.rewardPercentage = "Reward percentage must be between 0 and 5%";
+    }
+    
+    // Validate admin earning percentage
+    if (adminEarningPercentage < 0 || adminEarningPercentage > 5) {
+      errors.adminEarningPercentage = "Admin earning percentage must be between 0 and 5%";
+    }
+    
+    // Validate sum of percentages
+    if (rewardPercentage + adminEarningPercentage > 5) {
+      errors.totalPercentage = "Total of reward and admin percentages cannot exceed 5%";
+    }
+  }
+  
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors
+  };
+};
+
+/**
+ * Creates a community with advanced configuration
+ * @param config Advanced community configuration
+ * @returns Promise with the creation response
+ */
+export const createCommunityConfig = async (config: CreateCommunityConfig): Promise<any> => {
+  try {
+    // Validate the configuration first
+    const validation = validateCommunityConfig(config);
+    if (!validation.isValid) {
+      return {
+        success: false,
+        errors: validation.errors,
+        message: "Invalid community configuration"
+      };
+    }
+
+    // Check if we have a valid API key
+    if (!(await validateUserApiKey())) {
+      return {
+        success: false,
+        message: "Authentication failed. Please log in again."
+      };
+    }
+
+    // Prepare the request body
+    const requestBody: any = {
+      name: config.name,
+      handle: config.handle,
+      description: config.description || "",
+      is_encrypted: config.isEncrypted,
+      community_type: config.communityType
+    };
+
+    // Add advanced config if applicable
+    if (config.communityType === 2 && config.advancedConfig) {
+      requestBody.advanced_config = {
+        k: config.advancedConfig.k,
+        alpha: config.advancedConfig.alpha,
+        base_price: config.advancedConfig.basePrice,
+        reward_percentage: config.advancedConfig.rewardPercentage,
+        admin_earning_percentage: config.advancedConfig.adminEarningPercentage
+      };
+    }
+
+    // Make the API call
+    const response = await fetch(`${API_BASE_URL}/create_community_config`, {
+      method: 'POST',
+      headers: createAuthHeaders(),
+      body: JSON.stringify(requestBody)
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return {
+        success: false,
+        message: data.message || "Failed to create community configuration",
+        errors: data.errors
+      };
+    }
+
+    return {
+      success: true,
+      data,
+      message: "Community configuration created successfully"
+    };
+  } catch (error) {
+    console.error("Error creating community config:", error);
+    return {
+      success: false,
+      message: "An unexpected error occurred. Please try again."
+    };
+  }
+};
+
+/**
+ * Creates a community with the given configuration
+ * @param config Community configuration
+ * @returns Promise with the creation response
+ */
+export const createCommunity = async (config: CreateCommunityConfig): Promise<any> => {
+  try {
+    // For advanced communities, we need a two-step process
+    if (config.communityType === 2) {
+      // First create the config
+      const configResult = await createCommunityConfig(config);
+      if (!configResult.success) {
+        return configResult;
+      }
+      
+      // Then create the community with the config ID
+      const requestBody = {
+        config_id: configResult.data.config_id
+      };
+      
+      const response = await fetch(`${API_BASE_URL}/create_community`, {
+        method: 'POST',
+        headers: createAuthHeaders(),
+        body: JSON.stringify(requestBody)
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        return {
+          success: false,
+          message: data.message || "Failed to create community",
+          errors: data.errors
+        };
+      }
+      
+      return {
+        success: true,
+        data,
+        message: "Community created successfully!"
+      };
+    } else {
+      // For standard communities, we can create directly
+      // Validate the configuration first
+      const validation = validateCommunityConfig(config);
+      if (!validation.isValid) {
+        return {
+          success: false,
+          errors: validation.errors,
+          message: "Invalid community configuration"
+        };
+      }
+      
+      // Prepare the request body
+      const requestBody = {
+        name: config.name,
+        handle: config.handle,
+        description: config.description || "",
+        is_encrypted: config.isEncrypted,
+        community_type: config.communityType
+      };
+      
+      // Make the API call
+      const response = await fetch(`${API_BASE_URL}/create_community`, {
+        method: 'POST',
+        headers: createAuthHeaders(),
+        body: JSON.stringify(requestBody)
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        return {
+          success: false,
+          message: data.message || "Failed to create community",
+          errors: data.errors
+        };
+      }
+      
+      return {
+        success: true,
+        data,
+        message: "Community created successfully!"
+      };
+    }
+  } catch (error) {
+    console.error("Error creating community:", error);
+    return {
+      success: false,
+      message: "An unexpected error occurred. Please try again."
+    };
+  }
+};

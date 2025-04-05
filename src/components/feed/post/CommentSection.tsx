@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -36,7 +35,7 @@ const CommentItem: React.FC<CommentItemProps> = ({ user, text, timeAgo, avatarUr
 interface CommentSectionProps {
   comments: CommentReply[];
   postCode: string;
-  onAddComment: (text: string) => void;
+  onAddComment: (comment: string | CommentReply) => void;
   username?: string;
   community?: string;
 }
@@ -63,7 +62,20 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
       const response = await createReply(postCode, newComment);
       
       if (response.success) {
-        onAddComment(newComment);
+        const newCommentData: CommentReply = {
+          id: response.reply_id || 0,
+          handle: response.handle || 'you',
+          content: newComment,
+          time_ago: response.created_on || 'just now',
+          avatar_url: response.avatar_url || 'https://img.dapps.co/avatar/default.svg',
+          created_on: response.created_on || new Date().toISOString(),
+          uid: 0, // Default value
+          upvotes: 0,
+          meow_count: 0,
+          has_meowed: false
+        };
+        
+        onAddComment(newCommentData);
         setNewComment('');
         toast.success('Comment added successfully');
       } else {

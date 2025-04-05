@@ -276,7 +276,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
             {isLoggedIn && (
               <div className="py-4">
                 <Button asChild className="w-full" size="sm">
-                  <NavLink to="/new-community" className="flex items-center gap-1.5">
+                  <NavLink to="/create-community" className="flex items-center gap-1.5">
                     <Plus className="h-4 w-4" />
                     Create Community
                   </NavLink>

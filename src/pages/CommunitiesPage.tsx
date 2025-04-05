@@ -280,6 +280,16 @@ const CommunitiesPage = () => {
           >
             <RefreshCw className="h-5 w-5" />
           </Button>
+
+          <Link to="/create-community" className="hidden md:block">
+            <Button
+              variant="default"
+              className="h-12 bg-[#31bcc3] hover:bg-[#31bcc3]/90 text-white"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Create Community
+            </Button>
+          </Link>
         </div>
       </div>
       
@@ -408,6 +418,19 @@ const CommunitiesPage = () => {
           onSellConfirm={handleSellSharesConfirm}
         />
       )}
+      
+      {/* Mobile FAB for creating community */}
+      <Link 
+        to="/create-community" 
+        className="md:hidden fixed bottom-20 right-4 z-50"
+      >
+        <Button 
+          size="icon" 
+          className="h-14 w-14 rounded-full bg-[#31bcc3] hover:bg-[#31bcc3]/90 text-white shadow-lg"
+        >
+          <Plus className="h-6 w-6" />
+        </Button>
+      </Link>
     </div>
   );
 };

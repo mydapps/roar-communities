@@ -231,34 +231,32 @@ const SearchPage = () => {
           <div className="relative flex-1 group">
             <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-primary/20 to-purple-500/20 opacity-0 group-focus-within:opacity-100 -z-10 blur-md transition-opacity duration-300"></div>
         <div className="relative flex-1">
-              <SearchIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground transition-colors group-focus-within:text-primary" />
+              <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
-            placeholder="Search communities, posts, users..."
-                className="pl-9 pr-16 py-6 transition-all border-primary/20 focus-visible:ring-1 focus-visible:ring-primary/30"
+            ref={searchInputRef}
+            type="text"
+            placeholder="Search for users, communities, posts..."
+            className="pl-10 pr-4 py-6 border-2 border-muted rounded-full text-foreground focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:border-primary/70 focus-visible:ring-offset-0 transition-colors"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-                ref={searchInputRef}
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
           />
-              <kbd className="absolute right-3 top-2.5 pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
-                <span className="text-xs">{isMobile ? '' : navigator.platform.includes('Mac') ? '⌘' : 'Ctrl+'}</span>K
-              </kbd>
             </div>
         </div>
           <Button 
             type="submit" 
-            disabled={isSearching} 
-            className="transition-all duration-200 shadow-md hover:shadow-lg"
-            size="lg"
+            variant="default" 
+            size="icon"
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 rounded-full"
+            disabled={isSearching || !searchQuery.trim()}
           >
-            {isSearching ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-          <SearchIcon className="h-4 w-4 mr-2" />
-            )}
-          Search
-        </Button>
-      </div>
-      
+            {isSearching ? 
+              <Loader2 className="h-5 w-5 animate-spin" /> : 
+              <SearchIcon className="h-4 w-4" />
+            }
+          </Button>
+        </div>
+        
         {searchQuery.trim().length > 0 && (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
