@@ -24,6 +24,7 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import UserProfilePage from '@/pages/UserProfilePage';
 import EditProfilePage from '@/pages/EditProfilePage';
 import ZoomDisabledHelmet from '@/components/shared/ZoomDisabledHelmet';
+import NotificationsPage from '@/pages/NotificationsPage';
 
 function App() {
   return (
@@ -100,6 +101,11 @@ function App() {
             <Route path="referral" element={
               <ProtectedRoute>
                 <ReferralPage />
+              </ProtectedRoute>
+            } />
+            <Route path="notifications" element={
+              <ProtectedRoute>
+                <NotificationsPage />
               </ProtectedRoute>
             } />
             

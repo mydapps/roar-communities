@@ -254,9 +254,9 @@ const SearchPage = () => {
               <Loader2 className="h-5 w-5 animate-spin" /> : 
               <SearchIcon className="h-4 w-4" />
             }
-          </Button>
-        </div>
-        
+        </Button>
+      </div>
+      
         {searchQuery.trim().length > 0 && (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -663,40 +663,43 @@ interface CommunityResultProps {
 }
 
 const CommunityResult = ({ community }: CommunityResultProps) => {
+  const communityUrl = `/c/${community.name.toLowerCase().replace(/\s+/g, '-')}`;
+  
   return (
-    <Card className="overflow-hidden hover:shadow-md transition-all duration-300 animate-scale-in relative border-primary/20 group">
-      <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-      
-      {community.encrypted && (
-        <Badge className="absolute right-2 top-2 bg-foreground/10 gap-1 z-10">
-          <Lock className="h-3 w-3" />
-          Private
-        </Badge>
-      )}
-      <CardHeader className="pb-2">
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <motion.div
-              whileHover={{ scale: 1.1 }}
-              className="relative z-10"
-            >
-              <Avatar className="h-10 w-10 border border-border/50 group-hover:border-primary/30 transition-colors">
-                <AvatarImage src={community.image} />
-                <AvatarFallback className="bg-primary/10 text-primary">{community.name[0].toUpperCase()}</AvatarFallback>
-              </Avatar>
-            </motion.div>
-            <motion.div
-              className="absolute inset-0 rounded-full bg-primary/20 opacity-0 group-hover:opacity-50 -z-0 blur-md"
-              animate={{ scale: [1, 1.2, 1] }}
-              transition={{ duration: 3, repeat: Infinity, repeatType: "reverse" }}
-            ></motion.div>
-          </div>
           <Link 
-            to={`/c/${community.name.toLowerCase().replace(/\s+/g, '-')}`}
-            className="text-lg font-bold hover:text-primary transition-colors"
-          >
-            {community.name}
-          </Link>
+      to={communityUrl}
+      className="block group cursor-pointer"
+    >
+      <Card className="overflow-hidden hover:shadow-md transition-all duration-300 animate-scale-in relative border-primary/20 group-hover:border-primary/30">
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        
+        {community.encrypted && (
+          <Badge className="absolute right-2 top-2 bg-foreground/10 gap-1 z-10">
+            <Lock className="h-3 w-3" />
+            Private
+            </Badge>
+          )}
+        <CardHeader className="pb-2">
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <motion.div
+                whileHover={{ scale: 1.1 }}
+                className="relative z-10"
+              >
+                <Avatar className="h-10 w-10 border border-border/50 group-hover:border-primary/30 transition-colors">
+                  <AvatarImage src={community.image} />
+                  <AvatarFallback className="bg-primary/10 text-primary">{community.name[0].toUpperCase()}</AvatarFallback>
+                </Avatar>
+              </motion.div>
+              <motion.div
+                className="absolute inset-0 rounded-full bg-primary/20 opacity-0 group-hover:opacity-50 -z-0 blur-md"
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ duration: 3, repeat: Infinity, repeatType: "reverse" }}
+              ></motion.div>
+            </div>
+            <span className="text-lg font-bold group-hover:text-primary transition-colors">
+              {community.name}
+            </span>
         </div>
       </CardHeader>
       <CardContent>
@@ -704,10 +707,11 @@ const CommunityResult = ({ community }: CommunityResultProps) => {
         
           <div className="flex items-center">
             <Users className="h-4 w-4 mr-1 text-muted-foreground" />
-          <span className="text-sm">{community.members_count.toLocaleString()} members</span>
+            <span className="text-sm">{community.members_count.toLocaleString()} members</span>
         </div>
       </CardContent>
     </Card>
+    </Link>
   );
 };
 
