@@ -109,6 +109,10 @@ export default {
           '0%, 100%': { opacity: '1' },
           '50%': { opacity: '0.5' }
         },
+        'subtle-pulse': {
+          '0%, 100%': { transform: 'scale(1)', opacity: '1' },
+          '50%': { transform: 'scale(1.05)', opacity: '0.9' }
+        },
 				'float': {
 					'0%, 100%': { transform: 'translateY(0)' },
 					'50%': { transform: 'translateY(-10px)' }
@@ -169,6 +173,7 @@ export default {
         'slide-up': 'slide-up 0.25s ease-out',
         'slide-up-full': 'slide-up-full 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
 				'pulse': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'subtle-pulse': 'subtle-pulse 3s ease-in-out infinite',
 				'float': 'float 3s ease-in-out infinite',
 				'shimmer': 'shimmer 2s linear infinite',
 				'roar-icon': 'roar-icon 1.8s cubic-bezier(0.22, 1, 0.36, 1)',
