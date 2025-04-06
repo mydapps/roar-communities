@@ -18,6 +18,7 @@ import * as apiBase from '@/utils/apiBase';
 import NotificationIcon from '@/components/notifications/NotificationIcon';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
+import { getUserProfile } from '@/utils/userApi';
 
 interface NavbarProps {
   onMenuClick: () => void;
@@ -32,17 +33,26 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
   const [userAvatar, setUserAvatar] = useState('default');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchFocused, setSearchFocused] = useState(false);
+  const [userHandle, setUserHandle] = useState('');
+  const [roarBalance, setRoarBalance] = useState('0');
   
   const isFeedPage = location.pathname === '/feed';
   const isHomePage = location.pathname === '/' || location.pathname === '/index';
   
   useEffect(() => {
     const userKey = localStorage.getItem('dapps_user_key');
+    const handle = localStorage.getItem('dapps_user_handle');
     setIsLoggedIn(!!userKey);
+    setUserHandle(handle || '');
     
     const avatar = localStorage.getItem('dapps_user_avatar');
     if (avatar) {
       setUserAvatar(avatar);
+    }
+    
+    // Fetch user roar balance if logged in
+    if (userKey && handle) {
+      fetchUserRoarBalance(handle);
     }
     
     // Listen for auth invalidation events
@@ -67,6 +77,18 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
       document.removeEventListener('dapps_auth_invalidated', handleAuthInvalidated);
     };
   }, [location.pathname, navigate]);
+  
+  // Function to fetch user roar balance
+  const fetchUserRoarBalance = async (handle: string) => {
+    try {
+      const response = await getUserProfile(handle);
+      if (response.success && response.user) {
+        setRoarBalance(response.user.formatted_roar_holdings || '0');
+      }
+    } catch (error) {
+      console.error('Error fetching roar balance:', error);
+    }
+  };
   
   const handleLogout = async () => {
     try {
@@ -223,7 +245,7 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
               >
                 <Button variant="ghost" size="sm" className="flex items-center gap-1 py-1.5 px-2 rounded-full bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 hover:text-amber-700">
                   <span className="text-base">🦁</span>
-                  <span className="font-medium text-sm">500</span>
+                  <span className="font-medium text-sm">{roarBalance}</span>
                 </Button>
               </motion.div>
               
