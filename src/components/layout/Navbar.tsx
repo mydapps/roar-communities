@@ -216,6 +216,17 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
                 <NotificationIcon />
               </motion.div>
               
+              <motion.div 
+                whileHover={{ scale: 1.05 }} 
+                whileTap={{ scale: 0.95 }}
+                className="relative"
+              >
+                <Button variant="ghost" size="sm" className="flex items-center gap-1 py-1.5 px-2 rounded-full bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 hover:text-amber-700">
+                  <span className="text-base">🦁</span>
+                  <span className="font-medium text-sm">500</span>
+                </Button>
+              </motion.div>
+              
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="rounded-full relative">
