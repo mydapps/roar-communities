@@ -1,6 +1,7 @@
-import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect, lazy, Suspense } from 'react';
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
+import { Loader2 } from 'lucide-react';
 import MainLayout from '@/components/layout/MainLayout';
 import Index from '@/pages/Index';
 import FeedPage from '@/pages/FeedPage';
@@ -8,12 +9,9 @@ import CommunitiesPage from '@/pages/CommunitiesPage';
 import CommunityPage from '@/pages/CommunityPage';
 import PostPage from '@/pages/PostPage';
 import DetailedPostPage from '@/pages/DetailedPostPage';
-import MySharesPage from '@/pages/MySharesPage';
 import AccountPage from '@/pages/AccountPage';
 import WalletPage from '@/pages/WalletPage';
 import SearchPage from '@/pages/SearchPage';
-import ReferralPage from '@/pages/ReferralPage';
-import RequestInvitePage from '@/pages/RequestInvitePage';
 import LoginPage from '@/pages/LoginPage';
 import NotFound from '@/pages/NotFound';
 import AvatarHandlePage from '@/pages/AvatarHandlePage';
@@ -25,8 +23,80 @@ import UserProfilePage from '@/pages/UserProfilePage';
 import EditProfilePage from '@/pages/EditProfilePage';
 import ZoomDisabledHelmet from '@/components/shared/ZoomDisabledHelmet';
 import NotificationsPage from '@/pages/NotificationsPage';
+import SuccessfulOnboarding from '@/pages/SuccessfulOnboarding';
+import RequestInvitePage from '@/pages/RequestInvitePage';
+
+// Lazy loaded components
+const LazyMySharesPage = lazy(() => import('@/pages/MySharesPage'));
+const LazyReferralPage = lazy(() => import('@/pages/ReferralPage'));
+
+// Invalid auth event handler
+const createInvalidAuthEvent = () => {
+  return new CustomEvent('dapps_auth_invalidated');
+};
 
 function App() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  
+  // Check if the authentication is still valid for protected routes
+  useEffect(() => {
+    const checkAuth = async () => {
+      const userKey = localStorage.getItem('dapps_user_key');
+      
+      if (!userKey) return;
+
+      const protectedPaths = [
+        '/feed', 
+        '/my-shares', 
+        '/account', 
+        '/communities',
+        '/edit-profile',
+        '/referral',
+        '/successful-onboarding',
+        '/notifications'
+      ];
+      
+      const isProtectedRoute = protectedPaths.some(path => 
+        location.pathname.startsWith(path)
+      );
+      
+      if (isProtectedRoute) {
+        try {
+          const response = await fetch('https://api.dapps.co/verify_auth', {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-user-key': userKey
+            }
+          });
+          
+          const data = await response.json();
+          
+          if (!data.success || data.status !== 'valid') {
+            console.log('Auth key invalid, dispatching event');
+            document.dispatchEvent(createInvalidAuthEvent());
+            
+            // Clear user data
+            localStorage.removeItem('dapps_user_key');
+            localStorage.removeItem('dapps_user_id');
+            localStorage.removeItem('dapps_user_registered');
+            localStorage.removeItem('dapps_user_handle');
+            localStorage.removeItem('dapps_user_avatar');
+            
+            // Redirect to home
+            navigate('/');
+          }
+        } catch (error) {
+          console.error('Error verifying auth:', error);
+          // Do not log out on network errors to prevent false logouts
+        }
+      }
+    };
+    
+    checkAuth();
+  }, [location.pathname, navigate]);
+
   return (
     <HelmetProvider>
       <ZoomDisabledHelmet />
@@ -80,7 +150,11 @@ function App() {
             } />
             <Route path="my-shares" element={
               <ProtectedRoute>
-                <MySharesPage />
+                <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>}>
+                  <LazyMySharesPage />
+                </Suspense>
               </ProtectedRoute>
             } />
             <Route path="wallet" element={
@@ -100,12 +174,25 @@ function App() {
             } />
             <Route path="referral" element={
               <ProtectedRoute>
-                <ReferralPage />
+                <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>}>
+                  <LazyReferralPage />
+                </Suspense>
               </ProtectedRoute>
             } />
             <Route path="notifications" element={
               <ProtectedRoute>
                 <NotificationsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="successful-onboarding" element={
+              <ProtectedRoute>
+                {localStorage.getItem('dapps_show_onboarding') === '1' ? (
+                  <SuccessfulOnboarding />
+                ) : (
+                  <Navigate to="/feed" replace />
+                )}
               </ProtectedRoute>
             } />
             
@@ -120,3 +207,4 @@ function App() {
 }
 
 export default App;
+

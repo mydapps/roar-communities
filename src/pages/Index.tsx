@@ -733,12 +733,12 @@ const Index = () => {
                 
                 <div className="bg-muted rounded-xl overflow-hidden shadow-inner border border-border/50">
                   <img 
-                    src="https://dapps.co/app-preview.png" 
-                    alt="Dapps.co Platform Preview" 
+                    src="/ss.png" 
+                    alt="Dapps.co Feed Page" 
                     className="w-full h-auto rounded-lg shadow-md"
                     onError={(e) => {
                       // Fallback if image doesn't exist
-                      e.currentTarget.src = "https://placehold.co/600x800/31bcc3/white?text=Dapps.co+Preview";
+                      e.currentTarget.src = "https://placehold.co/600x800/31bcc3/white?text=Feed+Preview";
                     }}
                   />
                 </div>

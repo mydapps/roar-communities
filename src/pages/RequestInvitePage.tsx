@@ -118,6 +118,7 @@ const RequestInvitePage = () => {
   useEffect(() => {
     const userKey = localStorage.getItem('dapps_user_key');
     const isRegistered = localStorage.getItem('dapps_user_registered');
+    const isOnboarded = localStorage.getItem('dapps_onboarded');
     
     console.log('RequestInvitePage - User registration status:', isRegistered);
     
@@ -129,8 +130,14 @@ const RequestInvitePage = () => {
     }
     
     if (isRegistered === '1') {
-      console.log('RequestInvitePage - User is registered, redirecting to feed');
-      navigate('/feed');
+      console.log('RequestInvitePage - User is registered');
+      if (isOnboarded === '1') {
+        console.log('RequestInvitePage - User is onboarded, redirecting to feed');
+        navigate('/feed');
+      } else {
+        console.log('RequestInvitePage - User not onboarded, redirecting to onboarding');
+        navigate('/successful-onboarding');
+      }
       return;
     }
     
@@ -149,8 +156,13 @@ const RequestInvitePage = () => {
         
         // Double-check registration status before showing page
         const currentIsRegistered = localStorage.getItem('dapps_user_registered');
+        const currentIsOnboarded = localStorage.getItem('dapps_onboarded');
         if (currentIsRegistered === '1') {
-          navigate('/feed');
+          if (currentIsOnboarded === '1') {
+            navigate('/feed');
+          } else {
+            navigate('/successful-onboarding');
+          }
         }
       }
     }, 15000);
@@ -209,9 +221,17 @@ const RequestInvitePage = () => {
     try {
       // Double-check registration status before fetching
       const currentIsRegistered = localStorage.getItem('dapps_user_registered');
+      const currentIsOnboarded = localStorage.getItem('dapps_onboarded');
+      
       if (currentIsRegistered === '1') {
-        console.log('RequestInvitePage - User is registered (pre-fetch check), redirecting to feed');
-        navigate('/feed');
+        console.log('RequestInvitePage - User is registered (pre-fetch check)');
+        if (currentIsOnboarded === '1') {
+          console.log('RequestInvitePage - User is onboarded, redirecting to feed');
+          navigate('/feed');
+        } else {
+          console.log('RequestInvitePage - User not onboarded, redirecting to onboarding');
+          navigate('/successful-onboarding');
+        }
         return;
       }
       
@@ -228,9 +248,17 @@ const RequestInvitePage = () => {
         if (data.success) {
           // Check if the API response indicates the user is now registered
           if (data.registered === 1) {
-            console.log('RequestInvitePage - User is registered (API response), redirecting to feed');
+            console.log('RequestInvitePage - User is registered (API response)');
             localStorage.setItem('dapps_user_registered', '1');
-            navigate('/feed');
+            
+            const isOnboarded = localStorage.getItem('dapps_onboarded');
+            if (isOnboarded === '1') {
+              console.log('RequestInvitePage - User is onboarded, redirecting to feed');
+              navigate('/feed');
+            } else {
+              console.log('RequestInvitePage - User not onboarded, redirecting to onboarding');
+              navigate('/successful-onboarding');
+            }
             return;
           }
           
@@ -691,6 +719,8 @@ const RequestInvitePage = () => {
       
       if (data.success) {
         localStorage.setItem('dapps_user_registered', '1');
+        // Set a flag to show the onboarding page on this session
+        localStorage.setItem('dapps_show_onboarding', '1');
         
         toast({
           title: "Success!",
@@ -700,7 +730,7 @@ const RequestInvitePage = () => {
         triggerConfetti();
         
         setTimeout(() => {
-          navigate('/feed');
+          navigate('/successful-onboarding');
         }, 2000);
       } else {
         setErrorMessage(data.error || "Invalid invite code. Please try again.");
