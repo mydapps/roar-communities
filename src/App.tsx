@@ -25,6 +25,8 @@ import ZoomDisabledHelmet from '@/components/shared/ZoomDisabledHelmet';
 import NotificationsPage from '@/pages/NotificationsPage';
 import SuccessfulOnboarding from '@/pages/SuccessfulOnboarding';
 import RequestInvitePage from '@/pages/RequestInvitePage';
+import LaunchCountdown from '@/components/shared/LaunchCountdown';
+import RoarFarmingPage from '@/pages/RoarFarmingPage';
 
 // Lazy loaded components
 const LazyMySharesPage = lazy(() => import('@/pages/MySharesPage'));
@@ -101,6 +103,7 @@ function App() {
     <HelmetProvider>
       <ZoomDisabledHelmet />
       <PrivyAuthProvider>
+        <LaunchCountdown />
         <Routes>
           {/* Public routes - accessible to everyone */}
           <Route path="/" element={<Index />} />
@@ -184,6 +187,11 @@ function App() {
             <Route path="notifications" element={
               <ProtectedRoute>
                 <NotificationsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="roar-farming" element={
+              <ProtectedRoute>
+                <RoarFarmingPage />
               </ProtectedRoute>
             } />
             <Route path="successful-onboarding" element={

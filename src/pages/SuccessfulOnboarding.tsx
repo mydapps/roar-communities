@@ -9,22 +9,16 @@ import { Sparkles, ArrowRight, Zap, Trophy, Check, MessageCircle } from 'lucide-
 import { useTitle } from '@/hooks/useTitle';
 import { toast } from 'sonner';
 
-interface CommunityReward {
+interface Reward {
   community: string;
   amount: number;
   created_at: string;
-  community_image: string;
-}
-
-interface ReferrerInfo {
-  handle: string;
-  avatar: string;
 }
 
 interface ReferralRewards {
   success: boolean;
-  referrer: ReferrerInfo;
-  rewards: CommunityReward[];
+  referrer: string;
+  rewards: Reward[];
   total_rewards: number;
 }
 

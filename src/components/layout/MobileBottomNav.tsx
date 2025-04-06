@@ -7,12 +7,15 @@ const MobileBottomNav = () => {
   const location = useLocation();
   const [visible, setVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const [isBannerVisible, setIsBannerVisible] = useState<boolean>(true);
   
-  // Check if we're on a post detail page
+  // Check if we're on a post detail page or roar farming page
   const isPostDetailPage = 
     /^\/c\/[\w-]+\/[\w-]+$/.test(location.pathname) || // community post: /c/communityId/postId
     /^\/[\w-]+\/[\w-]+$/.test(location.pathname) ||    // user post: /handle/postId
     /^\/post\/[\w-]+$/.test(location.pathname);        // generic post: /post/postId
+  
+  const isRoarFarmingPage = location.pathname === '/roar-farming';
   
   // Only on the feed page, we want to hide/show the bottom nav based on scroll
   const isScrollSensitive = location.pathname === '/feed';
@@ -50,15 +53,33 @@ const MobileBottomNav = () => {
     };
   }, [lastScrollY, isScrollSensitive]);
   
-  // Don't render the bottom nav on post detail pages
-  if (isPostDetailPage) {
+  useEffect(() => {
+    // Check if the launch banner is dismissed
+    const bannerDismissed = localStorage.getItem('dapps_launch_banner_dismissed');
+    setIsBannerVisible(!bannerDismissed);
+    
+    // Listen for banner dismissal events
+    const handleBannerDismiss = () => {
+      setIsBannerVisible(false);
+    };
+    
+    window.addEventListener('dapps_banner_dismissed', handleBannerDismiss);
+    
+    return () => {
+      window.removeEventListener('dapps_banner_dismissed', handleBannerDismiss);
+    };
+  }, []);
+  
+  // Don't render the bottom nav on post detail pages or roar farming page
+  if (isPostDetailPage || isRoarFarmingPage) {
     return null;
   }
 
   return (
     <div className={cn(
       "fixed bottom-0 left-0 right-0 z-50 bg-card border-t md:hidden transition-transform duration-300 ease-in-out",
-      !visible && isScrollSensitive ? "translate-y-full" : "translate-y-0"
+      !visible && isScrollSensitive ? "translate-y-full" : "translate-y-0",
+      isBannerVisible ? "z-[99]" : "z-50"
     )}>
       <div className="flex justify-around items-center py-3 px-2">
         <NavItem to="/feed" icon={<Home className="h-5 w-5" />} label="Feed" />
