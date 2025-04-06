@@ -389,61 +389,28 @@ const RoarFarmingPage = () => {
             <div className="flex flex-col items-center">
               {/* Farming animation */}
               <div className="relative w-48 h-48 mb-8">
-                {/* Outer ring background */}
+                {/* Circle background */}
                 <div className="absolute inset-0 rounded-full bg-amber-100/10"></div>
                 
-                {/* Outer ring - filling progress in clockwise direction */}
+                {/* Progress circle - filling in clockwise direction with thicker stroke */}
                 {isFarming && (
                   <div className="absolute inset-0">
                     <svg className="w-full h-full" viewBox="0 0 100 100">
                       <circle
                         cx="50"
                         cy="50"
-                        r="47"
+                        r="45"
                         fill="none"
-                        stroke="url(#outerGradient)"
-                        strokeWidth="6"
-                        strokeDasharray="295.3"
-                        strokeDashoffset={295.3 - (295.3 * farmingProgress) / 100}
+                        stroke="url(#progressGradient)"
+                        strokeWidth="12"
+                        strokeDasharray="282.7"
+                        strokeDashoffset={282.7 - (282.7 * farmingProgress) / 100}
                         strokeLinecap="round"
                         transform="rotate(-90 50 50)"
                         className="transition-all duration-300"
                       />
                       <defs>
-                        <linearGradient id="outerGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                          <stop offset="0%" stopColor="#fbbf24" />
-                          <stop offset="100%" stopColor="#f59e0b" />
-                        </linearGradient>
-                      </defs>
-                    </svg>
-                  </div>
-                )}
-                
-                {/* Gap between rings */}
-                <div className="absolute inset-[8px] rounded-full bg-background"></div>
-                
-                {/* Inner ring background */}
-                <div className="absolute inset-[16px] rounded-full bg-amber-100/10"></div>
-                
-                {/* Inner ring - filling progress in clockwise direction */}
-                {isFarming && (
-                  <div className="absolute inset-[16px]">
-                    <svg className="w-full h-full" viewBox="0 0 100 100">
-                      <circle
-                        cx="50"
-                        cy="50"
-                        r="42"
-                        fill="none"
-                        stroke="url(#innerGradient)"
-                        strokeWidth="5"
-                        strokeDasharray="263.9"
-                        strokeDashoffset={263.9 - (263.9 * farmingProgress) / 100}
-                        strokeLinecap="round"
-                        transform="rotate(-90 50 50)"
-                        className="transition-all duration-300"
-                      />
-                      <defs>
-                        <linearGradient id="innerGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
                           <stop offset="0%" stopColor="#f59e0b" />
                           <stop offset="100%" stopColor="#d97706" />
                         </linearGradient>
@@ -452,8 +419,8 @@ const RoarFarmingPage = () => {
                   </div>
                 )}
                 
-                {/* Center area for the lion */}
-                <div className="absolute inset-[32px] rounded-full bg-background"></div>
+                {/* Inner area for the lion */}
+                <div className="absolute inset-[18px] rounded-full bg-background"></div>
                 
                 {/* Lion icon */}
                 <motion.div
