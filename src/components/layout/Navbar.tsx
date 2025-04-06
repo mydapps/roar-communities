@@ -208,16 +208,6 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
                 </motion.div>
               )}
               
-              {isMobile && (
-                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Button variant="ghost" size="icon" asChild>
-                    <Link to="/search">
-                      <Search className="h-5 w-5" />
-                    </Link>
-                  </Button>
-                </motion.div>
-              )}
-              
               <motion.div 
                 whileHover={{ scale: 1.05 }} 
                 whileTap={{ scale: 0.95 }}

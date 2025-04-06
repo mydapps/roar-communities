@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -102,7 +101,7 @@ const AvatarHandlePage = () => {
       
       if (data.success) {
         // Store the selected avatar and handle in localStorage
-        localStorage.setItem('dapps_user_avatar', data.avatarUrl || `https://img.dapps.co/avatar/${avatarCode}.svg`);
+        localStorage.setItem('dapps_user_avatar', avatarCode);
         localStorage.setItem('dapps_user_handle', data.handle || handle);
         
         toast.success('Profile created successfully!');
