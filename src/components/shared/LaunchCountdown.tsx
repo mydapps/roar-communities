@@ -35,6 +35,7 @@ const LaunchCountdown: React.FC = () => {
   });
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [progress, setProgress] = useState<number>(0);
+  const [intervalId, setIntervalId] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     // Check if the user has dismissed the banner
@@ -49,17 +50,41 @@ const LaunchCountdown: React.FC = () => {
         setIsLoading(true);
         const response = await fetch('https://api.dapps.co/launch_time');
         const data = await response.json();
-        setLaunchData(data);
+        console.log('Launch data from API:', data); // Debug log
         
         if (data.success) {
-          updateCountdown(data.launch_time.timestamp);
+          // Store the timestamp for the countdown
+          const launchTimestamp = data.launch_time.timestamp;
+          
+          // Initial update of countdown
+          updateCountdown(launchTimestamp);
+          
+          // Set up interval for this specific timestamp
+          const intervalId = setInterval(() => {
+            updateCountdown(launchTimestamp);
+          }, 1000);
+          
+          // Store the interval ID for cleanup
+          setIntervalId(intervalId);
         }
+        
+        // Set the launch data state
+        setLaunchData(data);
       } catch (error) {
         console.error('Error fetching launch data:', error);
         // Fallback: Set a demo countdown for 30 days from now
         const fallbackDate = new Date();
         fallbackDate.setDate(fallbackDate.getDate() + 30);
-        updateCountdown(fallbackDate.getTime());
+        const fallbackTimestamp = fallbackDate.getTime();
+        
+        updateCountdown(fallbackTimestamp);
+        
+        // Set up interval for the fallback timestamp
+        const intervalId = setInterval(() => {
+          updateCountdown(fallbackTimestamp);
+        }, 1000);
+        
+        setIntervalId(intervalId);
       } finally {
         setIsLoading(false);
       }
@@ -67,15 +92,13 @@ const LaunchCountdown: React.FC = () => {
 
     fetchLaunchData();
 
-    // Update countdown every second
-    const intervalId = setInterval(() => {
-      if (launchData?.launch_time?.timestamp) {
-        updateCountdown(launchData.launch_time.timestamp);
+    // Cleanup function
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
       }
-    }, 1000);
-
-    return () => clearInterval(intervalId);
-  }, []);
+    };
+  }, []); // Empty dependency array to run only once
 
   // Update the countdown state based on the time remaining
   const updateCountdown = (launchTimestamp: number) => {
