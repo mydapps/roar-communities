@@ -446,21 +446,21 @@ const CommunityPage = () => {
         
         {isMobile && (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mb-6 mt-8">
-              <div className="relative overflow-x-auto pb-2 no-scrollbar">
-                <TabsList className="inline-flex w-auto min-w-full justify-center whitespace-nowrap bg-muted/50">
-                  <TabsTrigger value="posts" className="flex-shrink-0 data-[state=active]:bg-background flex items-center">
+              <div className="relative overflow-x-auto pb-4 no-scrollbar tab-container">
+                <TabsList className="inline-flex w-auto min-w-full justify-center whitespace-nowrap bg-muted/50 p-1.5 gap-2">
+                  <TabsTrigger value="posts" className="flex-shrink-0 data-[state=active]:bg-background flex items-center py-3 px-4 mobile-friendly-tap">
                 <MessageCircle className="h-4 w-4 mr-1" />
                 Posts
               </TabsTrigger>
-                  <TabsTrigger value="members" className="flex-shrink-0 data-[state=active]:bg-background flex items-center">
+                  <TabsTrigger value="members" className="flex-shrink-0 data-[state=active]:bg-background flex items-center py-3 px-4 mobile-friendly-tap">
                 <Users className="h-4 w-4 mr-1" />
                 Members
               </TabsTrigger>
-                  <TabsTrigger value="rewards" className="flex-shrink-0 data-[state=active]:bg-background flex items-center">
+                  <TabsTrigger value="rewards" className="flex-shrink-0 data-[state=active]:bg-background flex items-center py-3 px-4 mobile-friendly-tap">
                 <DollarSign className="h-4 w-4 mr-1" />
                 Rewards
               </TabsTrigger>
-                  <TabsTrigger value="about" className="flex-shrink-0 data-[state=active]:bg-background flex items-center">
+                  <TabsTrigger value="about" className="flex-shrink-0 data-[state=active]:bg-background flex items-center py-3 px-4 mobile-friendly-tap">
                 <Info className="h-4 w-4 mr-1" />
                 About
               </TabsTrigger>

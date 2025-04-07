@@ -376,7 +376,7 @@ const EditProfilePage = () => {
                   
                   {profile.is_founding_user && (
                     <Badge className="bg-gradient-to-r from-orange-500 to-amber-500 text-white mt-1">
-                      Founding Member
+                      OG Member
                     </Badge>
                   )}
                   

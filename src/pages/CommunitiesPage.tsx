@@ -294,11 +294,11 @@ const CommunitiesPage = () => {
       </div>
       
       <Tabs defaultValue="popular" value={activeTab} onValueChange={handleTabChange}>
-        <div className="scrollbar-hide overflow-x-auto pb-2 -mx-4 px-4">
-          <TabsList className="h-auto p-1 inline-flex whitespace-nowrap w-auto min-w-full sm:w-auto sm:min-w-0 no-scrollbar bg-background border border-border/40 overflow-x-auto overflow-y-hidden scroll-smooth">
+        <div className="scrollbar-hide overflow-x-auto pb-4 -mx-4 px-4 tab-container">
+          <TabsList className="h-auto p-1.5 inline-flex whitespace-nowrap w-auto min-w-full sm:w-auto sm:min-w-0 no-scrollbar bg-background border border-border/40 overflow-x-auto overflow-y-hidden scroll-smooth gap-2">
             <TabsTrigger 
               value="popular"
-              className="flex items-center gap-1.5 text-sm py-2.5 px-4 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none"
+              className="flex items-center gap-1.5 text-sm py-3 px-5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none mobile-friendly-tap"
             >
               <Users className="h-4 w-4" />
               <span>Popular</span>
@@ -306,7 +306,7 @@ const CommunitiesPage = () => {
             
             <TabsTrigger 
               value="my"
-              className="flex items-center gap-1.5 text-sm py-2.5 px-4 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none"
+              className="flex items-center gap-1.5 text-sm py-3 px-5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none mobile-friendly-tap"
             >
               <User className="h-4 w-4" />
               <span>My Communities</span>
@@ -314,7 +314,7 @@ const CommunitiesPage = () => {
             
             <TabsTrigger 
               value="trending"
-              className="flex items-center gap-1.5 text-sm py-2.5 px-4 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none"
+              className="flex items-center gap-1.5 text-sm py-3 px-5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none mobile-friendly-tap"
             >
               <TrendingUp className="h-4 w-4" />
               <span>Trending</span>
@@ -322,7 +322,7 @@ const CommunitiesPage = () => {
             
             <TabsTrigger 
               value="newest"
-              className="flex items-center gap-1.5 text-sm py-2.5 px-4 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none"
+              className="flex items-center gap-1.5 text-sm py-3 px-5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none mobile-friendly-tap"
             >
               <Clock className="h-4 w-4" />
               <span>Newest</span>
@@ -330,7 +330,7 @@ const CommunitiesPage = () => {
             
             <TabsTrigger 
               value="most-rewards"
-              className="flex items-center gap-1.5 text-sm py-2.5 px-4 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none"
+              className="flex items-center gap-1.5 text-sm py-3 px-5 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none mobile-friendly-tap"
             >
               <Gift className="h-4 w-4" />
               <span>Most Rewards</span>

@@ -81,7 +81,7 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
                     </h1>
                     {profile.is_founding_user && (
                       <Badge className="bg-amber-500/20 text-amber-600 border-amber-200 mt-1">
-                        <Sparkles className="h-3 w-3 mr-1" /> Founding Member
+                        <Sparkles className="h-3 w-3 mr-1" /> OG Member
                       </Badge>
                     )}
                   </div>

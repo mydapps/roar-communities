@@ -688,7 +688,7 @@ const CreateCommunityPage = () => {
             </Label>
             <div className="relative">
               <div className="relative flex items-center">
-                <div className="absolute left-0 inset-y-0 flex items-center pl-3 pointer-events-none bg-background/90 rounded-l-xl border-r border-border/40 pr-3 z-10">
+                <div className="absolute left-0 inset-y-0 flex items-center pl-3 pointer-events-none bg-background/90 rounded-l-xl border-r border-border/40 pr-3 z-10 min-w-[110px] flex-shrink-0">
                   <span className="text-primary font-medium whitespace-nowrap">dapps.co/c/</span>
                 </div>
                 <Input
@@ -696,8 +696,7 @@ const CreateCommunityPage = () => {
                   placeholder="your-handle"
                   value={state.handle}
                   onChange={handleHandleChange}
-                  style={{paddingLeft: "120px"}}
-                  className="transition-all duration-200 focus:border-[#31bcc3] focus:ring-[#31bcc3]/30 bg-background/80 backdrop-blur-sm border-border shadow-sm rounded-xl text-foreground font-normal py-6 px-4 text-base"
+                  className="transition-all duration-200 focus:border-[#31bcc3] focus:ring-[#31bcc3]/30 bg-background/80 backdrop-blur-sm border-border shadow-sm rounded-xl text-foreground font-normal py-6 px-4 text-base pl-[125px]"
                 />
               </div>
                 
@@ -705,17 +704,17 @@ const CreateCommunityPage = () => {
                 <motion.div 
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mt-2 flex items-center justify-between p-2 border border-[#31bcc3]/30 bg-[#31bcc3]/5 rounded-lg"
+                  className="mt-2 flex items-center justify-between p-3 border border-[#31bcc3]/40 bg-[#31bcc3]/10 rounded-lg shadow-sm"
                 >
-                  <p className="text-sm text-muted-foreground flex items-center gap-1">
-                    <span>Suggested:</span>
-                    <span className="font-medium text-foreground">{animatedHandle}</span>
+                  <p className="text-sm flex items-center gap-2">
+                    <span className="text-muted-foreground">Suggested:</span>
+                    <span className="font-medium text-foreground bg-background/50 px-2 py-1 rounded border border-border/40">{animatedHandle}</span>
                   </p>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => applyHandleSuggestion(animatedHandle)}
-                    className="h-7 text-xs text-[#31bcc3] hover:text-[#31bcc3] hover:bg-[#31bcc3]/10"
+                    className="h-8 text-xs text-[#31bcc3] hover:text-[#31bcc3] hover:bg-[#31bcc3]/10 shadow-sm"
                   >
                     Use This
                   </Button>
