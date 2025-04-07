@@ -41,6 +41,7 @@ import { Check, ChevronsUpDown, Send, Loader2, User, Wallet } from 'lucide-react
 import { CommunityPortfolioItem, transferShares, searchUsers } from '@/utils/communityApi';
 import confetti from 'canvas-confetti';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ControllerRenderProps } from 'react-hook-form';
 
 const isEthereumAddress = (value: string) => {
   return /^0x[a-fA-F0-9]{40}$/.test(value);
@@ -76,10 +77,14 @@ export const ShareTransferSheet = ({
   const [isLoading, setIsLoading] = useState(false);
   const [userSuggestions, setUserSuggestions] = useState<UserSuggestion[]>([]);
   const [selectedUser, setSelectedUser] = useState<UserSuggestion | null>(null);
-  const [openSuggestions, setOpenSuggestions] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [transferMethod, setTransferMethod] = useState<TransferMethod>('username');
+  const [isSearching, setIsSearching] = useState(false);
   const isMobile = useIsMobile();
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const mainContainerRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const formSchema = z.object({
     recipient: z.string().min(1, 'Recipient is required').refine(
@@ -129,25 +134,32 @@ export const ShareTransferSheet = ({
 
     // Only search if in username mode and not already a valid ETH address
     if (transferMethod === 'username' && watchedRecipient && watchedRecipient.length >= 2) {
+      // Set searching state to true immediately when search begins
+      setIsSearching(true);
+      setShowSuggestions(true);
+      
       searchTimeoutRef.current = setTimeout(async () => {
         try {
           const result = await searchUsers(watchedRecipient);
           if (result.success && result.users) {
             setUserSuggestions(result.users.items);
-            if (result.users.items.length > 0) {
-              setOpenSuggestions(true);
-            }
+            // Always show suggestions dropdown when searching
+            setShowSuggestions(true);
           } else {
             setUserSuggestions([]);
           }
         } catch (error) {
           console.error('Error searching users:', error);
           setUserSuggestions([]);
+        } finally {
+          // Make sure to set isSearching to false when done
+          setIsSearching(false);
         }
       }, 300);
     } else {
       setUserSuggestions([]);
-      setOpenSuggestions(false);
+      setShowSuggestions(false);
+      setIsSearching(false);
     }
 
     return () => {
@@ -162,13 +174,25 @@ export const ShareTransferSheet = ({
     form.setValue('recipient', '');
     form.clearErrors('recipient');
     setSelectedUser(null);
+    // Make sure to close any suggestions when changing transfer method
+    setShowSuggestions(false);
   }, [transferMethod, form]);
 
+  // Function to close keyboard by blurring active input
+  const closeKeyboard = () => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  };
+
+  // Modified user selection function with keyboard handling
   const selectUser = (user: UserSuggestion) => {
     setSelectedUser(user);
     form.setValue('recipient', user.handle);
     form.clearErrors('recipient');
-    setOpenSuggestions(false);
+    setShowSuggestions(false);
+    // Close keyboard after selecting a user
+    closeKeyboard();
   };
 
   const handleSubmit = (values: z.infer<typeof formSchema>) => {
@@ -261,174 +285,205 @@ export const ShareTransferSheet = ({
     }
   };
 
-  const renderTransferForm = () => (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-        <Tabs defaultValue="username" value={transferMethod} onValueChange={(v) => setTransferMethod(v as TransferMethod)} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-4">
-            <TabsTrigger value="username" className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              Username
-            </TabsTrigger>
-            <TabsTrigger value="wallet" className="flex items-center gap-2">
-              <Wallet className="h-4 w-4" />
-              Wallet Address
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="username" className="mt-0">
-            <FormField
-              control={form.control}
-              name="recipient"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Username</FormLabel>
-                  <div className="relative">
-                    <Popover open={openSuggestions && userSuggestions.length > 0} onOpenChange={setOpenSuggestions}>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <div className="flex items-center relative">
-                            <Input 
-                              placeholder="Enter username" 
-                              {...field}
-                              onChange={(e) => {
-                                field.onChange(e);
-                                if (selectedUser) {
-                                  setSelectedUser(null);
-                                }
-                              }}
-                              className="flex-1 pl-8 pr-10" 
-                            />
-                            <User className="h-4 w-4 absolute left-3 text-muted-foreground" />
-                            {userSuggestions.length > 0 && (
-                              <ChevronsUpDown className="h-4 w-4 absolute right-3 text-muted-foreground" />
-                            )}
-                          </div>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="p-0 w-full" align="start">
-                        <Command>
-                          <CommandList>
-                            <CommandEmpty>No matching users found</CommandEmpty>
-                            <CommandGroup heading="Matching Users">
-                              {userSuggestions.map((user) => (
-                                <CommandItem 
-                                  key={user.id} 
-                                  value={user.handle}
-                                  onSelect={() => selectUser(user)}
-                                  className="flex items-center gap-2 py-3 cursor-pointer"
-                                >
-                                  <Avatar className="h-8 w-8">
-                                    <AvatarImage src={user.avatar_url} alt={user.handle} />
-                                    <AvatarFallback>{user.handle.substring(0, 2).toUpperCase()}</AvatarFallback>
-                                  </Avatar>
-                                  <div className="flex flex-col">
-                                    <span className="font-medium">@{user.handle}</span>
-                                    <span className="text-xs text-muted-foreground">User #{user.id}</span>
-                                  </div>
-                                  {selectedUser?.id === user.id && (
-                                    <Check className="h-4 w-4 ml-auto text-green-500" />
-                                  )}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                  <FormMessage />
-                  {selectedUser && (
-                    <div className="mt-2 p-3 bg-primary/10 rounded-md flex items-center gap-2">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={selectedUser.avatar_url} alt={selectedUser.handle} />
-                        <AvatarFallback>{selectedUser.handle.substring(0, 2).toUpperCase()}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex flex-col">
-                        <span className="font-medium">@{selectedUser.handle}</span>
-                        <span className="text-xs text-muted-foreground">Selected recipient</span>
-                      </div>
+  // Update the username input rendering for better mobile handling
+  const renderUsernameInput = (field: ControllerRenderProps<z.infer<typeof formSchema>, "recipient">) => (
+    <div className="relative">
+      <div className="flex h-12 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+        <span className="text-muted-foreground">@</span>
+        <input
+          {...field}
+          ref={inputRef}
+          placeholder="username"
+          className="flex-1 border-0 bg-transparent outline-none focus:outline-none focus:ring-0 px-1 placeholder:text-muted-foreground"
+          onFocus={() => {
+            if (field.value.length >= 2) {
+              setShowSuggestions(true);
+            }
+            // When focused, scroll the form up a bit on mobile
+            if (isMobile && mainContainerRef.current) {
+              setTimeout(() => {
+                mainContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }, 100);
+            }
+          }}
+          onClick={(e) => {
+            // Prevent event propagation to avoid drawer closing
+            e.stopPropagation();
+            // For mobile, clicking the input should also trigger suggestions
+            if (isMobile && field.value.length >= 2) {
+              setShowSuggestions(true);
+            }
+          }}
+          onBlur={(e) => {
+            // Don't close suggestions if clicking within the dropdown
+            if (!dropdownRef.current?.contains(e.relatedTarget as Node | null)) {
+              // Add a delay to allow clicks on dropdown options to register
+              setTimeout(() => {
+                // Only close if we're not interacting with the dropdown
+                if (!document.activeElement || 
+                    !dropdownRef.current?.contains(document.activeElement)) {
+                  setShowSuggestions(false);
+                }
+              }, 250);
+            }
+          }}
+          onChange={field.onChange}
+        />
+        {selectedUser && (
+          <Avatar className="h-8 w-8 ml-1">
+            <AvatarImage src={selectedUser.avatar_url} alt={selectedUser.handle} />
+            <AvatarFallback>{selectedUser.handle.substring(0, 2).toUpperCase()}</AvatarFallback>
+          </Avatar>
+        )}
+      </div>
+      
+      {/* Updated user suggestions dropdown with better mobile positioning */}
+      {transferMethod === 'username' && showSuggestions && (
+        <div 
+          className={`absolute z-50 left-0 right-0 w-full ${isMobile ? 'top-full mt-1' : 'top-full mt-1'}`}
+          ref={dropdownRef}
+          onMouseDown={(e) => e.stopPropagation()} // Prevent drawer closing
+          onTouchStart={(e) => e.stopPropagation()} // Prevent drawer closing on touch
+        >
+          <div className="rounded-md border bg-popover shadow-md overflow-hidden">
+            <div className={`overflow-y-auto py-1 ${isMobile ? 'max-h-[200px]' : 'max-h-[200px]'}`}>
+              {isSearching ? (
+                <div className="flex items-center justify-center py-4 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  <span>Searching...</span>
+                </div>
+              ) : (
+                <>
+                  {userSuggestions.length === 0 ? (
+                    <div className="py-3 px-4 text-center text-muted-foreground">
+                      <p>No users found</p>
+                      <p className="text-xs mt-1">Try a different username</p>
+                    </div>
+                  ) : (
+                    <div className="py-1">
+                      {userSuggestions.map((user) => (
+                        <div
+                          key={user.id}
+                          className="flex items-center gap-2 px-3 py-4 cursor-pointer hover:bg-accent/50 active:bg-accent/70 transition-colors"
+                          onMouseDown={(e) => {
+                            // Prevent input blur before click
+                            e.preventDefault();
+                            e.stopPropagation();
+                            selectUser(user);
+                          }}
+                          onTouchStart={(e) => {
+                            // For touch devices, prevent propagation and default behavior
+                            e.stopPropagation();
+                            selectUser(user);
+                          }}
+                        >
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={user.avatar_url} alt={user.handle} />
+                            <AvatarFallback>{user.handle.substring(0, 2).toUpperCase()}</AvatarFallback>
+                          </Avatar>
+                          <span className="text-base">@{user.handle}</span>
+                        </div>
+                      ))}
                     </div>
                   )}
-                </FormItem>
+                </>
               )}
-            />
-          </TabsContent>
-          
-          <TabsContent value="wallet" className="mt-0">
-            <FormField
-              control={form.control}
-              name="recipient"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Ethereum Address</FormLabel>
-                  <FormControl>
-                    <div className="flex items-center relative">
-                      <Input 
-                        placeholder="0x..." 
-                        {...field}
-                        className="flex-1 pl-8" 
-                      />
-                      <Wallet className="h-4 w-4 absolute left-3 text-muted-foreground" />
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </TabsContent>
-        </Tabs>
-
-        <FormField
-          control={form.control}
-          name="amount"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Amount (Shares)</FormLabel>
-              <FormControl>
-                <div className="flex items-center">
-                  <Input 
-                    type="number" 
-                    step="0.01"
-                    min="0.01"
-                    max={community?.shares.toString()}
-                    {...field}
-                    className="flex-1" 
-                  />
-                </div>
-              </FormControl>
-              <div className="text-xs text-muted-foreground mt-1 flex justify-between">
-                <span>Available: {community?.shares.toFixed(2) || 0} shares</span>
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-5 text-xs text-primary"
-                  onClick={() => form.setValue('amount', community?.shares.toString() || '0')}
-                >
-                  Max
-                </Button>
-              </div>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        
-        <div className="flex justify-between items-center pt-4">
-          <div>
-            <div className="text-sm font-medium">Network Fee</div>
-            <div className="text-sm text-muted-foreground">~0.0003 ETH</div>
+            </div>
           </div>
-          <Button 
-            type="submit" 
-            className="px-6"
-            disabled={!form.formState.isValid}
-          >
-            Review Transfer
-          </Button>
         </div>
-      </form>
-    </Form>
+      )}
+    </div>
+  );
+
+  const renderTransferForm = () => (
+    <div className="space-y-6 py-4" ref={mainContainerRef}>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8">
+          <FormField
+            control={form.control}
+            name="recipient"
+            render={({ field }) => (
+              <FormItem className="space-y-2">
+                <div className="flex flex-col space-y-3">
+                  <div className="flex items-center justify-between">
+                    <FormLabel className="text-base">Send To</FormLabel>
+                    <Tabs 
+                      value={transferMethod}
+                      onValueChange={(value) => {
+                        setTransferMethod(value as 'username' | 'wallet');
+                      }}
+                      className="h-8"
+                    >
+                      <TabsList className="grid w-[180px] grid-cols-2">
+                        <TabsTrigger value="username">Username</TabsTrigger>
+                        <TabsTrigger value="wallet">Wallet</TabsTrigger>
+                      </TabsList>
+                    </Tabs>
+                  </div>
+                  
+                  <FormControl>
+                    {transferMethod === 'username' 
+                      ? renderUsernameInput(field)
+                      : <Input {...field} placeholder="0x..." className="font-mono" />
+                    }
+                  </FormControl>
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="amount"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Amount (Shares)</FormLabel>
+                <FormControl>
+                  <div className="flex items-center">
+                    <Input 
+                      type="number" 
+                      step="0.01"
+                      min="0.01"
+                      max={community?.shares.toString()}
+                      {...field}
+                      className="flex-1" 
+                    />
+                  </div>
+                </FormControl>
+                <div className="text-xs text-muted-foreground mt-1 flex justify-between">
+                  <span>Available: {community?.shares.toFixed(2) || 0} shares</span>
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-5 text-xs text-primary"
+                    onClick={() => form.setValue('amount', community?.shares.toString() || '0')}
+                  >
+                    Max
+                  </Button>
+                </div>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <div className="flex justify-between items-center pt-4">
+            <div>
+              <div className="text-sm font-medium">Network Fee</div>
+              <div className="text-sm text-muted-foreground">~0.0003 ETH</div>
+            </div>
+            <Button 
+              type="submit" 
+              className="px-6"
+              disabled={!form.formState.isValid}
+            >
+              Review Transfer
+            </Button>
+          </div>
+        </form>
+      </Form>
+    </div>
   );
 
   const renderPreviewContent = () => {
@@ -509,19 +564,27 @@ export const ShareTransferSheet = ({
     return (
       <>
         <Drawer open={open} onOpenChange={onOpenChange}>
-          <DrawerContent className="max-h-[90vh]">
-            <DrawerHeader className="pb-2">
+          <DrawerContent className="max-h-[85vh] flex flex-col">
+            <DrawerHeader className="pb-2 flex-shrink-0">
               <DrawerTitle>Send Shares</DrawerTitle>
               <DrawerDescription>
                 Send shares to another user or wallet
               </DrawerDescription>
             </DrawerHeader>
             
-            <div className="px-4 overflow-y-auto flex-1" style={{ maxHeight: 'calc(90vh - 180px)' }}>
+            <div 
+              className="px-4 overflow-y-auto flex-grow" 
+              style={{ 
+                maxHeight: 'calc(85vh - 140px)',
+                paddingBottom: '120px' // Extra padding at bottom to account for keyboard
+              }}
+              onTouchStart={(e) => e.stopPropagation()} // Prevent drawer from closing
+              onClick={(e) => e.stopPropagation()} // Prevent drawer from closing
+            >
               {previewOpen ? renderPreviewContent() : (showSuccess ? renderSuccessContent() : renderTransferForm())}
             </div>
             
-            <DrawerFooter className="pt-2 sticky bottom-0 bg-background border-t">
+            <DrawerFooter className="pt-2 flex-shrink-0 sticky bottom-0 bg-background border-t mt-auto z-50">
               {previewOpen ? (
                 <div className="flex flex-col gap-2 w-full">
                   <Button 
@@ -532,7 +595,7 @@ export const ShareTransferSheet = ({
                     {isLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Confirming...
+                        Processing...
                       </>
                     ) : (
                       'Confirm Transfer'
@@ -549,11 +612,39 @@ export const ShareTransferSheet = ({
                 </div>
               ) : (
                 !showSuccess && (
-                  <Button variant="outline" onClick={() => onOpenChange(false)}>
+                  <Button variant="outline" onClick={() => onOpenChange(false)} className="w-full">
                     Cancel
                   </Button>
                 )
               )}
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
+
+        {/* Success dialog as a separate drawer */}
+        <Drawer open={showSuccess} onOpenChange={(open) => {
+          if (!open) {
+            onOpenChange(false);
+            setShowSuccess(false);
+          }
+        }}>
+          <DrawerContent className="max-h-[85vh]">
+            <DrawerHeader>
+              <DrawerTitle>Transfer Successful</DrawerTitle>
+            </DrawerHeader>
+            <div className="px-4 pb-12">
+              {renderSuccessContent()}
+            </div>
+            <DrawerFooter>
+              <Button 
+                onClick={() => {
+                  onOpenChange(false);
+                  setShowSuccess(false);
+                }}
+                className="w-full"
+              >
+                Done
+              </Button>
             </DrawerFooter>
           </DrawerContent>
         </Drawer>

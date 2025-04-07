@@ -46,6 +46,7 @@ import {
 import confetti from 'canvas-confetti';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ControllerRenderProps } from 'react-hook-form';
 
 const isEthereumAddress = (value: string) => {
   return /^0x[a-fA-F0-9]{40}$/.test(value);
@@ -219,13 +220,29 @@ export const ETHTransferSheet = ({
     form.setValue('recipient', '');
     form.clearErrors('recipient');
     setSelectedUser(null);
+    // Make sure to close any suggestions when changing transfer method
+    setOpenSuggestions(false);
   }, [transferMethod, form]);
 
+  // Improve handling of input and virtual keyboard on mobile
+  const inputRef = useRef<HTMLInputElement>(null);
+  const mainContainerRef = useRef<HTMLDivElement>(null);
+
+  // Function to close keyboard by blurring active input
+  const closeKeyboard = () => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  };
+
+  // Modified user selection function with keyboard handling
   const selectUser = (user: UserSuggestion) => {
     setSelectedUser(user);
     form.setValue('recipient', user.handle);
     form.clearErrors('recipient');
     setOpenSuggestions(false);
+    // Close keyboard after selecting a user
+    closeKeyboard();
   };
 
   const onSubmit = async (data: TransferFormValues) => {
@@ -391,8 +408,119 @@ export const ETHTransferSheet = ({
     }
   };
 
+  // Update the username input in the form render function
+  const renderUsernameInput = (field: ControllerRenderProps<z.infer<typeof formSchema>, "recipient">) => (
+    <div className="relative">
+      <div className="flex h-12 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+        <span className="text-muted-foreground">@</span>
+        <input
+          {...field}
+          ref={inputRef}
+          placeholder="username"
+          className="flex-1 border-0 bg-transparent outline-none focus:outline-none focus:ring-0 px-1 placeholder:text-muted-foreground"
+          onFocus={() => {
+            if (field.value.length >= 2) {
+              setOpenSuggestions(true);
+            }
+            // When focused, scroll the form up a bit on mobile
+            if (isMobile && mainContainerRef.current) {
+              setTimeout(() => {
+                mainContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }, 100);
+            }
+          }}
+          onClick={(e) => {
+            // Prevent event propagation to avoid drawer closing
+            e.stopPropagation();
+            // For mobile, clicking the input should also trigger suggestions
+            if (isMobile && field.value.length >= 2) {
+              setOpenSuggestions(true);
+            }
+          }}
+          onBlur={(e) => {
+            // Don't close suggestions if clicking within the dropdown
+            if (!dropdownRef.current?.contains(e.relatedTarget as Node | null)) {
+              // Add a delay to allow clicks on dropdown options to register
+              setTimeout(() => {
+                // Only close if we're not interacting with the dropdown
+                if (!document.activeElement || 
+                    !dropdownRef.current?.contains(document.activeElement)) {
+                  setOpenSuggestions(false);
+                }
+              }, 250);
+            }
+          }}
+          onChange={field.onChange}
+        />
+        {selectedUser && (
+          <Avatar className="h-8 w-8 ml-1">
+            <AvatarImage src={selectedUser.avatar_url} alt={selectedUser.handle} />
+            <AvatarFallback>{selectedUser.handle.substring(0, 2).toUpperCase()}</AvatarFallback>
+          </Avatar>
+        )}
+      </div>
+      
+      {/* Updated user suggestions dropdown with better mobile positioning */}
+      {transferMethod === 'username' && openSuggestions && (
+        <div 
+          className={`absolute z-50 left-0 right-0 w-full ${isMobile ? 'top-full mt-1' : 'top-full mt-1'}`} 
+          ref={dropdownRef}
+          onMouseDown={(e) => e.stopPropagation()} // Prevent drawer closing
+          onTouchStart={(e) => e.stopPropagation()} // Prevent drawer closing on touch
+        >
+          <div className="rounded-md border bg-popover shadow-md overflow-hidden">
+            <div className={`overflow-y-auto py-1 ${isMobile ? 'max-h-[200px]' : 'max-h-[200px]'}`}>
+              {isSearching ? (
+                <div className="flex items-center justify-center py-4 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  <span>Searching...</span>
+                </div>
+              ) : (
+                <>
+                  {userSuggestions.length === 0 ? (
+                    <div className="py-3 px-4 text-center text-muted-foreground">
+                      <p>No users found</p>
+                      <p className="text-xs mt-1">Try a different username</p>
+                    </div>
+                  ) : (
+                    <div className="py-1">
+                      {userSuggestions.map((user) => (
+                        <div
+                          key={user.id}
+                          className="flex items-center gap-2 px-3 py-4 cursor-pointer hover:bg-accent/50 active:bg-accent/70 transition-colors"
+                          onMouseDown={(e) => {
+                            // Prevent input blur before click
+                            e.preventDefault();
+                            e.stopPropagation();
+                            selectUser(user);
+                          }}
+                          onTouchStart={(e) => {
+                            // For touch devices, prevent propagation and default behavior
+                            e.stopPropagation();
+                            selectUser(user);
+                          }}
+                        >
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={user.avatar_url} alt={user.handle} />
+                            <AvatarFallback>{user.handle.substring(0, 2).toUpperCase()}</AvatarFallback>
+                          </Avatar>
+                          <span className="text-base">@{user.handle}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  // Update the renderTransferForm function to use the new username input 
   const renderTransferForm = () => (
-    <div className="space-y-6 py-4">
+    <div className="space-y-6 py-4" ref={mainContainerRef}>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
           <FormField
@@ -418,94 +546,12 @@ export const ETHTransferSheet = ({
                     </Tabs>
                   </div>
                   
-                  <div className="relative">
-                    <FormControl>
-                      {transferMethod === 'username' ? (
-                        <div className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
-                          <span className="text-muted-foreground">@</span>
-                          <input
-                            {...field}
-                            placeholder="username"
-                            className="flex-1 border-0 bg-transparent outline-none focus:outline-none focus:ring-0 px-1 placeholder:text-muted-foreground"
-                            onFocus={() => {
-                              if (field.value.length >= 2) {
-                                setOpenSuggestions(true);
-                              }
-                            }}
-                            onBlur={(e) => {
-                              // Don't close if clicking on dropdown options
-                              if (!dropdownRef.current?.contains(e.relatedTarget)) {
-                                // Add a delay to allow clicks on dropdown options to register
-                                setTimeout(() => {
-                                  if (!document.activeElement || document.activeElement === document.body) {
-                                    setOpenSuggestions(false);
-                                  }
-                                }, 200);
-                              }
-                            }}
-                          />
-                          {selectedUser && (
-                            <Avatar className="h-6 w-6 ml-1">
-                              <AvatarImage src={selectedUser.avatar_url} alt={selectedUser.handle} />
-                              <AvatarFallback>{selectedUser.handle.substring(0, 2).toUpperCase()}</AvatarFallback>
-                            </Avatar>
-                          )}
-                        </div>
-                      ) : (
-                        <Input 
-                          {...field} 
-                          placeholder="0x..." 
-                          className="font-mono"
-                        />
-                      )}
-                    </FormControl>
-                    
-                    {/* User suggestion dropdown for username mode - using a simpler dropdown approach */}
-                    {transferMethod === 'username' && openSuggestions && (
-                      <div className="relative z-50" ref={dropdownRef}>
-                        <div className="absolute top-1 left-0 right-0 w-full rounded-md border bg-popover shadow-md overflow-hidden">
-                          <div className="max-h-[200px] overflow-y-auto py-1">
-                            {isSearching ? (
-                              <div className="flex items-center justify-center py-4 text-muted-foreground">
-                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                <span>Searching...</span>
-                              </div>
-                            ) : (
-                              <>
-                                {userSuggestions.length === 0 ? (
-                                  <div className="py-3 px-4 text-center text-muted-foreground">
-                                    <p>No users found</p>
-                                    <p className="text-xs mt-1">Try a different username</p>
-                                  </div>
-                                ) : (
-                                  <div className="py-1">
-                                    {userSuggestions.map((user) => (
-                                      <div
-                                        key={user.id}
-                                        className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-accent/50"
-                                        onClick={() => {
-                                          form.setValue('recipient', user.handle);
-                                          setSelectedUser(user);
-                                          setOpenSuggestions(false);
-                                          console.log('Selected user:', user);
-                                        }}
-                                      >
-                                        <Avatar className="h-6 w-6">
-                                          <AvatarImage src={user.avatar_url} alt={user.handle} />
-                                          <AvatarFallback>{user.handle.substring(0, 2).toUpperCase()}</AvatarFallback>
-                                        </Avatar>
-                                        <span>@{user.handle}</span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  <FormControl>
+                    {transferMethod === 'username' 
+                      ? renderUsernameInput(field)
+                      : <Input {...field} placeholder="0x..." className="font-mono" />
+                    }
+                  </FormControl>
                 </div>
                 <FormMessage />
               </FormItem>
@@ -761,15 +807,19 @@ export const ETHTransferSheet = ({
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className="max-h-[90vh]">
-          <DrawerHeader className="pb-2">
-            <DrawerTitle>Send ETH</DrawerTitle>
+        <DrawerContent className="max-h-[85vh] flex flex-col">
+          <DrawerHeader className="pb-2 flex-shrink-0">
+            <DrawerTitle>{title}</DrawerTitle>
             <DrawerDescription>
-              Send ETH to another user or wallet
+              {description}
             </DrawerDescription>
           </DrawerHeader>
           
-          <div className="px-4 overflow-y-auto flex-1" style={{ maxHeight: 'calc(90vh - 180px)' }}>
+          <div className="px-4 overflow-y-auto flex-grow pb-safe"
+               style={{ 
+                 maxHeight: 'calc(85vh - 140px)',
+                 paddingBottom: '120px' // Extra padding at bottom to account for keyboard
+               }}>
             {transferStep === 'input' && renderTransferForm()}
             {transferStep === 'estimation' && renderEstimationContent()}
             {transferStep === 'preview' && renderPreviewContent()}
@@ -777,7 +827,17 @@ export const ETHTransferSheet = ({
             {transferStep === 'success' && renderSuccessContent()}
           </div>
           
-          <DrawerFooter className="pt-2 sticky bottom-0 bg-background border-t">
+          <DrawerFooter className="pt-2 flex-shrink-0 sticky bottom-0 bg-background border-t mt-auto z-50">
+            {transferStep === 'input' && (
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => onOpenChange(false)}
+                className="w-full"
+              >
+                Cancel
+              </Button>
+            )}
             {transferStep === 'preview' && (
               <div className="flex flex-col gap-2 w-full">
                 <Button 
@@ -788,11 +848,9 @@ export const ETHTransferSheet = ({
                   {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Confirming...
+                      Processing...
                     </>
-                  ) : (
-                    'Confirm Transfer'
-                  )}
+                  ) : "Confirm Transfer"}
                 </Button>
                 <Button 
                   variant="outline" 
@@ -803,12 +861,6 @@ export const ETHTransferSheet = ({
                   Go Back
                 </Button>
               </div>
-            )}
-            
-            {transferStep === 'input' && (
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
             )}
           </DrawerFooter>
         </DrawerContent>
@@ -860,8 +912,9 @@ export const ETHTransferSheet = ({
           {transferStep === 'success' && renderSuccessContent()}
         </div>
         
-        <SheetFooter className="pt-2">
-          {transferStep === 'input' && (
+        {/* Remove the duplicate footer if we already have buttons in the content section */}
+        {transferStep === 'input' && (
+          <SheetFooter className="pt-2">
             <Button 
               variant="outline" 
               className="w-full" 
@@ -869,8 +922,8 @@ export const ETHTransferSheet = ({
             >
               Cancel
             </Button>
-          )}
-        </SheetFooter>
+          </SheetFooter>
+        )}
       </SheetContent>
     </Sheet>
   );
