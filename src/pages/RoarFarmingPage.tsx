@@ -743,13 +743,13 @@ const RoarFarmingPage = () => {
                 )}
                 
                 {/* Boost link */}
-                <Link 
-                  to="/referral" 
-                  className="text-sm text-amber-600 hover:text-amber-700 hover:underline flex items-center"
+                <div 
+                  onClick={() => toast.info("Boosters will be launching soon! Stay tuned for updates.")}
+                  className="text-sm text-amber-600 hover:text-amber-700 hover:underline flex items-center cursor-pointer"
                 >
                   Boost your roars
                   <ArrowRight className="h-3 w-3 ml-1" />
-                </Link>
+                </div>
               </div>
             </div>
           </CardContent>

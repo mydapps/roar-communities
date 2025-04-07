@@ -189,12 +189,6 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
                 className="h-8 w-auto relative"
               />
             </motion.div>
-            
-            {isLoggedIn && isFeedPage && (
-              <span className="font-semibold text-lg ml-1 hidden sm:block">
-                Feed
-              </span>
-            )}
           </Link>
         </div>
 
