@@ -686,47 +686,93 @@ const CreateCommunityPage = () => {
             <Label htmlFor="handle" className="mb-2 block font-medium text-base">
               Community Handle
             </Label>
-            <div className="relative">
-              <div className="relative flex items-center">
-                <div className="absolute left-0 inset-y-0 flex items-center pl-3 pointer-events-none bg-background/90 rounded-l-xl border-r border-border/40 pr-3 z-10 min-w-[110px] flex-shrink-0">
-                  <span className="text-primary font-medium whitespace-nowrap">dapps.co/c/</span>
-                </div>
-                <Input
-                  id="handle"
-                  placeholder="your-handle"
-                  value={state.handle}
-                  onChange={handleHandleChange}
-                  className="transition-all duration-200 focus:border-[#31bcc3] focus:ring-[#31bcc3]/30 bg-background/80 backdrop-blur-sm border-border shadow-sm rounded-xl text-foreground font-normal py-6 px-4 text-base pl-[125px]"
-                />
-              </div>
+            
+            <div className="space-y-3">
+              {/* Handle Input Container */}
+              <div className="relative rounded-xl overflow-hidden shadow-sm border border-border bg-background/80 backdrop-blur-sm focus-within:ring-2 focus-within:ring-[#31bcc3]/30 focus-within:border-[#31bcc3] transition-all duration-200">
+                {/* URL Prefix Container */}
+                <div className="flex items-center">
+                  <div className="bg-[#31bcc3]/10 border-r border-border/40 py-3 px-4 select-none">
+                    <span className="text-[#31bcc3] font-medium whitespace-nowrap">dapps.co/c/</span>
+                  </div>
                 
+                  {/* Actual Input */}
+                  <Input
+                    id="handle"
+                    placeholder="your-handle"
+                    value={state.handle}
+                    onChange={handleHandleChange}
+                    className="border-0 rounded-none focus-visible:ring-0 py-3 px-4 bg-transparent shadow-none font-medium"
+                  />
+                </div>
+              </div>
+              
+              {/* Preview Renderer - Shows how the handle will look */}
+              {state.handle && (
+                <div className="relative rounded-lg px-4 py-2 bg-[#31bcc3]/5 border border-[#31bcc3]/15">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span className="text-xs uppercase font-medium bg-[#31bcc3]/10 text-[#31bcc3] px-2 py-0.5 rounded">Preview</span>
+                    <p className="font-medium text-foreground truncate">
+                      <span className="text-[#31bcc3]">dapps.co/c/</span>
+                      <span>{state.handle}</span>
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              {/* Show handle suggestion only when we have a name but no handle */}
               {showHandleSuggestion && (
-                <motion.div 
-                  initial={{ opacity: 0, y: 10 }}
+                <motion.div
+                  initial={{ opacity: 0, y: 5 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mt-2 flex items-center justify-between p-3 border border-[#31bcc3]/40 bg-[#31bcc3]/10 rounded-lg shadow-sm"
+                  className="relative rounded-lg overflow-hidden"
                 >
-                  <p className="text-sm flex items-center gap-2">
-                    <span className="text-muted-foreground">Suggested:</span>
-                    <span className="font-medium text-foreground bg-background/50 px-2 py-1 rounded border border-border/40">{animatedHandle}</span>
-                  </p>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => applyHandleSuggestion(animatedHandle)}
-                    className="h-8 text-xs text-[#31bcc3] hover:text-[#31bcc3] hover:bg-[#31bcc3]/10 shadow-sm"
-                  >
-                    Use This
-                  </Button>
+                  <div className="px-4 py-3 bg-[#31bcc3]/10 border border-[#31bcc3]/30 rounded-lg flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 text-sm">
+                        <span className="text-muted-foreground">Suggested:</span>
+                        <div className="bg-background/80 rounded px-2 py-1 border border-[#31bcc3]/30 font-medium text-foreground">
+                          {animatedHandle}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowHandleSuggestion(false)}
+                        className="h-8 text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        Ignore
+                      </Button>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => applyHandleSuggestion(animatedHandle)}
+                        className="h-8 text-xs bg-[#31bcc3] hover:bg-[#31bcc3]/90 text-white"
+                      >
+                        Use This
+                      </Button>
+                    </div>
+                  </div>
                 </motion.div>
               )}
+              
+              {/* Error display */}
+              {errors.handle && (
+                <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                  <AlertCircle className="h-3 w-3" />
+                  <span>{errors.handle}</span>
+                </p>
+              )}
+              
+              {/* Helper text */}
+              {!errors.handle && (
+                <p className="text-xs text-muted-foreground">
+                  Choose a unique handle that's easy to remember. Only letters, numbers, and hyphens allowed.
+                </p>
+              )}
             </div>
-            {errors.handle && (
-              <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" />
-                <span>{errors.handle}</span>
-              </p>
-            )}
           </div>
             
           <div>
