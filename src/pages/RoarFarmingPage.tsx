@@ -24,6 +24,32 @@ interface FarmingStatus {
   time_remaining_formatted: string;
 }
 
+interface DigitProps {
+  value: string;
+  animate?: boolean;
+  className?: string;
+}
+
+// Animated digit component for the timer
+const AnimatedDigit: React.FC<DigitProps> = ({ value, animate = false, className = "" }) => {
+  return (
+    <div className={`bg-amber-100 dark:bg-amber-900/50 w-10 h-12 rounded-md flex items-center justify-center tabular-nums text-2xl font-bold text-amber-800 dark:text-amber-200 shadow-sm relative overflow-hidden ${className}`}>
+      {value}
+      {animate && (
+        <motion.div 
+          key={value}
+          initial={{ y: -40 }}
+          animate={{ y: 0 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+          className="absolute inset-0 flex items-center justify-center bg-amber-100 dark:bg-amber-900/50"
+        >
+          {value}
+        </motion.div>
+      )}
+    </div>
+  );
+};
+
 const RoarFarmingPage = () => {
   const [totalRoars, setTotalRoars] = useState<number>(0);
   const [totalRoarsLoading, setTotalRoarsLoading] = useState<boolean>(true);
@@ -31,10 +57,13 @@ const RoarFarmingPage = () => {
   const [canClaim, setCanClaim] = useState<boolean>(false);
   const [farmingStatus, setFarmingStatus] = useState<FarmingStatus | null>(null);
   const [earnedRoars, setEarnedRoars] = useState<number>(0);
+  const [displayedEarnedRoars, setDisplayedEarnedRoars] = useState<number>(0);
+  const [farmStartTime, setFarmStartTime] = useState<number | null>(null);
   const [booster, setBooster] = useState<number>(1);
   const [isStarting, setIsStarting] = useState<boolean>(false);
   const [isClaiming, setIsClaiming] = useState<boolean>(false);
   const [timeRemaining, setTimeRemaining] = useState<string>('');
+  const [secondsRemaining, setSecondsRemaining] = useState<number>(0);
   const [farmingProgress, setFarmingProgress] = useState<number>(0);
   
   // Animation states
@@ -45,16 +74,20 @@ const RoarFarmingPage = () => {
   // Animation intervals
   const farmingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const timeRemainingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const realtimeEarningsIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Load total roars and farming status on mount
+  // Add this to the component state declarations at the top
+  const [secondsKey, setSecondsKey] = useState<number>(0);
+  
+  // Load total roars and farming status on mount and when farming state changes
   useEffect(() => {
     fetchTotalRoars();
     checkFarmingStatus();
     
-    // Setup polling for farming status
+    // Setup polling for farming status (more frequent polling when actively farming)
     const statusInterval = setInterval(() => {
       checkFarmingStatus();
-    }, 30000); // Check every 30 seconds
+    }, isFarming ? 15000 : 30000); // Check more frequently when farming
     
     return () => {
       clearInterval(statusInterval);
@@ -64,8 +97,11 @@ const RoarFarmingPage = () => {
       if (timeRemainingIntervalRef.current) {
         clearInterval(timeRemainingIntervalRef.current);
       }
+      if (realtimeEarningsIntervalRef.current) {
+        clearInterval(realtimeEarningsIntervalRef.current);
+      }
     };
-  }, []);
+  }, [isFarming]); // Re-setup when farming state changes
   
   // Fetch total roars from API
   const fetchTotalRoars = async () => {
@@ -104,29 +140,71 @@ const RoarFarmingPage = () => {
         if (data.farming) {
           // User is farming
           setIsFarming(true);
-          setCanClaim(data.can_claim);
           setBooster(data.booster || 1);
-          setTimeRemaining(data.time_remaining_formatted || '');
           
-          // Calculate progress percentage (elapsed time / total farming time)
-          const totalFarmingTime = data.elapsed_time + data.time_remaining;
-          const progressPercentage = (data.elapsed_time / totalFarmingTime) * 100;
-          setFarmingProgress(progressPercentage);
+          // Store the farm start time for real-time calculations
+          if (data.start_time) {
+            const startTimeMs = new Date(data.start_time).getTime();
+            setFarmStartTime(startTimeMs);
+          }
           
-          // Calculate earned roars
-          const earnedAmount = (data.elapsed_time / 3600) * 3600 * DEFAULT_FARMING_RATE * data.booster;
-          setEarnedRoars(earnedAmount);
-          
-          // Start animation and time tracking
-          startFarmingAnimation();
-          startTimeTracker(data.time_remaining);
+          // Check if farming should be active or completed
+          if (data.can_claim) {
+            // Farming is complete (6 hours passed)
+            setCanClaim(true);
+            setTimeRemaining('Ready to claim');
+            setFarmingProgress(100);
+            setSecondsRemaining(0);
+            
+            // Calculate earned roars for the full 6-hour period
+            const earnedAmount = 6 * 3600 * DEFAULT_FARMING_RATE * data.booster;
+            setEarnedRoars(earnedAmount);
+            setDisplayedEarnedRoars(earnedAmount);
+            
+            // Stop time tracking but keep animation going
+            if (timeRemainingIntervalRef.current) {
+              clearInterval(timeRemainingIntervalRef.current);
+              timeRemainingIntervalRef.current = null;
+            }
+          } else {
+            // Still farming
+            setCanClaim(false);
+            setTimeRemaining(data.time_remaining_formatted || '');
+            setSecondsRemaining(data.time_remaining || 0);
+            
+            // Calculate progress percentage (elapsed time / total farming time)
+            const totalFarmingTime = 6 * 60 * 60; // 6 hours in seconds
+            const elapsedTime = data.elapsed_time;
+            const progressPercentage = Math.min(100, (elapsedTime / totalFarmingTime) * 100);
+            setFarmingProgress(progressPercentage);
+            
+            // Calculate earned roars
+            const earnedAmount = (elapsedTime / 3600) * 3600 * DEFAULT_FARMING_RATE * data.booster;
+            setEarnedRoars(earnedAmount);
+            setDisplayedEarnedRoars(earnedAmount);
+            
+            // Start animation and time tracking if not already running
+            if (!farmingIntervalRef.current) {
+              startFarmingAnimation();
+            }
+            
+            if (!timeRemainingIntervalRef.current) {
+              startTimeTracker(data.time_remaining);
+            }
+            
+            // Start real-time earnings updates
+            startRealTimeEarningsUpdate();
+          }
         } else {
           // Not farming
           setIsFarming(false);
           setCanClaim(false);
           setEarnedRoars(0);
+          setDisplayedEarnedRoars(0);
           setFarmingProgress(0);
+          setFarmStartTime(null);
           stopFarmingAnimation();
+          stopRealTimeEarningsUpdate();
         }
       }
     } catch (error) {
@@ -139,16 +217,59 @@ const RoarFarmingPage = () => {
     // Clear any existing interval
     if (timeRemainingIntervalRef.current) {
       clearInterval(timeRemainingIntervalRef.current);
+      timeRemainingIntervalRef.current = null;
     }
     
-    let secondsRemaining = remainingSeconds;
+    // Ensure we don't exceed the maximum 6 hours (21600 seconds)
+    let initialSeconds = Math.min(remainingSeconds, 21600);
+    setSecondsRemaining(initialSeconds);
     
-    const updateRemainingTime = () => {
-      if (secondsRemaining <= 0) {
+    // Record start time for more accurate calculations
+    const startTime = Date.now();
+    const endTime = startTime + (initialSeconds * 1000);
+    
+    // Use requestAnimationFrame for smoother animation
+    const updateCountdown = () => {
+      const now = Date.now();
+      const timeLeft = Math.max(0, endTime - now);
+      const secondsLeft = Math.ceil(timeLeft / 1000);
+      
+      // Update state only when the value changes to reduce renders
+      if (secondsLeft !== secondsRemaining) {
+        setSecondsRemaining(secondsLeft);
+        // Force animation update for seconds by changing key
+        setSecondsKey(prev => prev + 1);
+
+        // Format the time remaining
+        const hours = Math.floor(secondsLeft / 3600);
+        const minutes = Math.floor((secondsLeft % 3600) / 60);
+        const seconds = secondsLeft % 60;
+        
+        const formatted = `${hours}h ${minutes}m ${seconds}s`;
+        setTimeRemaining(formatted);
+        
+        // Update progress percentage
+        const totalFarmingTime = 6 * 60 * 60; // 6 hours in seconds
+        const elapsedTime = totalFarmingTime - secondsLeft;
+        const progressPercentage = Math.min(100, (elapsedTime / totalFarmingTime) * 100);
+        setFarmingProgress(progressPercentage);
+        
+        // Update earned roars based on elapsed time - capped at 6 hours worth
+        const earnedAmount = Math.min(
+          (elapsedTime / 3600) * 3600 * DEFAULT_FARMING_RATE * booster,
+          6 * 3600 * DEFAULT_FARMING_RATE * booster
+        );
+        setEarnedRoars(earnedAmount);
+      }
+
+      // When countdown completes
+      if (secondsLeft <= 0) {
         // Time's up - can claim now
         setCanClaim(true);
-        setTimeRemaining('0h 0m 0s');
+        setTimeRemaining('Ready to claim');
+        setFarmingProgress(100);
         
+        // Stop the animation frame updates
         if (timeRemainingIntervalRef.current) {
           clearInterval(timeRemainingIntervalRef.current);
           timeRemainingIntervalRef.current = null;
@@ -159,35 +280,37 @@ const RoarFarmingPage = () => {
         return;
       }
       
-      // Decrement time and format
-      secondsRemaining -= 1;
-      const hours = Math.floor(secondsRemaining / 3600);
-      const minutes = Math.floor((secondsRemaining % 3600) / 60);
-      const seconds = secondsRemaining % 60;
-      
-      const formatted = `${hours}h ${minutes}m ${seconds}s`;
-      setTimeRemaining(formatted);
-      
-      // Update progress percentage
-      const totalFarmingTime = 6 * 60 * 60; // 6 hours in seconds
-      const elapsedTime = totalFarmingTime - secondsRemaining;
-      const progressPercentage = (elapsedTime / totalFarmingTime) * 100;
-      setFarmingProgress(progressPercentage);
-      
-      // Update earned roars
-      const earnedAmount = (elapsedTime / 3600) * 3600 * DEFAULT_FARMING_RATE * booster;
-      setEarnedRoars(earnedAmount);
+      // Continue animation loop
+      requestAnimationFrame(updateCountdown);
     };
     
-    // Update immediately
-    updateRemainingTime();
+    // Start the animation frame loop for smoother updating
+    requestAnimationFrame(updateCountdown);
     
-    // Update every second
-    timeRemainingIntervalRef.current = setInterval(updateRemainingTime, 1000);
+    // As a backup, also update at regular intervals for reliability
+    // This ensures updates happen even if the tab is not visible
+    timeRemainingIntervalRef.current = setInterval(() => {
+      const now = Date.now();
+      const timeLeft = Math.max(0, endTime - now);
+      const secondsLeft = Math.ceil(timeLeft / 1000);
+      
+      // Update only if different to avoid unnecessary renders
+      if (secondsLeft !== secondsRemaining) {
+        setSecondsRemaining(secondsLeft);
+      }
+      
+      if (secondsLeft <= 0 && timeRemainingIntervalRef.current) {
+        clearInterval(timeRemainingIntervalRef.current);
+        timeRemainingIntervalRef.current = null;
+      }
+    }, 1000);
   };
   
   // Start farming animation
   const startFarmingAnimation = () => {
+    // Stop any existing animation first
+    stopFarmingAnimation();
+    
     // Lion pulse animation
     const lionInterval = setInterval(() => {
       setLionScale(prev => {
@@ -208,11 +331,14 @@ const RoarFarmingPage = () => {
       setTimeout(() => setProgressPulse(false), 1000);
     }, 10000);
     
-    farmingIntervalRef.current = lionInterval;
+    // Store both intervals for cleanup
+    farmingIntervalRef.current = setInterval(() => {}, 100); // Dummy interval to track state
     
+    // Clean up on unmount
     return () => {
       clearInterval(lionInterval);
       clearInterval(progressInterval);
+      farmingIntervalRef.current = null;
     };
   };
   
@@ -228,6 +354,36 @@ const RoarFarmingPage = () => {
     setProgressPulse(false);
   };
   
+  // Add a function to update earnings in real-time
+  const startRealTimeEarningsUpdate = () => {
+    // Clear any existing interval
+    if (realtimeEarningsIntervalRef.current) {
+      clearInterval(realtimeEarningsIntervalRef.current);
+    }
+    
+    // Update earnings multiple times per second for smooth animation
+    realtimeEarningsIntervalRef.current = setInterval(() => {
+      if (!isFarming || canClaim || !farmStartTime) return;
+      
+      const now = Date.now();
+      const elapsedSeconds = Math.min((now - farmStartTime) / 1000, 6 * 60 * 60); // Cap at 6 hours
+      const currentEarnings = elapsedSeconds * DEFAULT_FARMING_RATE * booster;
+      
+      // Update the displayed value (capped at 6 hours max)
+      const maxEarnings = 6 * 3600 * DEFAULT_FARMING_RATE * booster;
+      setDisplayedEarnedRoars(Math.min(currentEarnings, maxEarnings));
+      
+    }, 50); // Update roughly 20 times per second for smooth animation
+  };
+  
+  // Function to stop real-time earnings updates
+  const stopRealTimeEarningsUpdate = () => {
+    if (realtimeEarningsIntervalRef.current) {
+      clearInterval(realtimeEarningsIntervalRef.current);
+      realtimeEarningsIntervalRef.current = null;
+    }
+  };
+  
   // Start farming
   const startFarming = async () => {
     try {
@@ -241,17 +397,29 @@ const RoarFarmingPage = () => {
       
       const data = await response.json();
       
-      if (data.farming) {
+      if (data.success) {
+        // Store farm start time for real-time calculations
+        const startTimeMs = Date.now();
+        setFarmStartTime(startTimeMs);
+        
+        // Properly set farming status
         setIsFarming(true);
-        setCanClaim(data.can_claim);
         setBooster(data.booster || 1);
-        setTimeRemaining(data.time_remaining_formatted || '');
+        
+        // Set initial time remaining before the tracker starts
+        setTimeRemaining(data.time_remaining_formatted || '6h 0m 0s');
         
         toast.success('Roar farming started successfully!');
         
         // Start animation and time tracking
         startFarmingAnimation();
-        startTimeTracker(data.time_remaining);
+        startTimeTracker(21600); // 6 hours in seconds
+        startRealTimeEarningsUpdate();
+        
+        // Refresh farming status after a short delay
+        setTimeout(() => {
+          checkFarmingStatus();
+        }, 1000);
       } else {
         toast.error(data.message || 'Failed to start farming');
       }
@@ -278,11 +446,24 @@ const RoarFarmingPage = () => {
       
       if (data.success) {
         toast.success(`Successfully claimed ${data.amount.toFixed(2)} Roars! 🦁`);
+        
+        // Reset all farming states
         setIsFarming(false);
         setCanClaim(false);
         setEarnedRoars(0);
+        setDisplayedEarnedRoars(0);
         setFarmingProgress(0);
+        setFarmStartTime(null);
+        setSecondsRemaining(0);
+        
+        // Stop all animations and intervals
         stopFarmingAnimation();
+        stopRealTimeEarningsUpdate();
+        
+        if (timeRemainingIntervalRef.current) {
+          clearInterval(timeRemainingIntervalRef.current);
+          timeRemainingIntervalRef.current = null;
+        }
         
         // Refresh total roars
         fetchTotalRoars();
@@ -453,43 +634,102 @@ const RoarFarmingPage = () => {
                 </motion.div>
               </div>
               
-              {/* Earned amount */}
+              {/* Earned amount with dynamic animation */}
               {isFarming && (
                 <div className="text-center mb-6">
                   <div className="text-sm text-muted-foreground mb-1">Earned so far</div>
-                  <div className="text-3xl font-bold text-amber-600">{earnedRoars.toFixed(2)}</div>
+                  <div className="text-3xl font-bold text-amber-600 tabular-nums transition-all duration-300">
+                    {displayedEarnedRoars.toFixed(2)}
+                  </div>
                 </div>
               )}
               
-              {/* Action buttons - Ensure they're visible with proper z-index */}
+              {/* Action buttons with improved dynamic styling */}
               <div className="w-full flex flex-col items-center gap-3 mt-2 relative z-10">
                 {canClaim ? (
                   <Button
                     size="lg"
-                    className="w-full max-w-xs bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-lg"
+                    className="w-full max-w-xs bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-lg transition-all duration-300 hover:scale-105"
                     onClick={claimRoars}
                     disabled={isClaiming}
                   >
                     {isClaiming ? (
                       <Loader2 className="h-5 w-5 mr-2 animate-spin" />
                     ) : (
-                      <Award className="h-5 w-5 mr-2" />
+                      <Award className="h-5 w-5 mr-2 animate-pulse" />
                     )}
-                    Claim {earnedRoars.toFixed(2)} Roars
+                    <span className="tabular-nums">Claim {displayedEarnedRoars.toFixed(2)} Roars</span>
                   </Button>
                 ) : isFarming ? (
-                  <Button
-                    size="lg"
-                    className="w-full max-w-xs bg-amber-200/80 hover:bg-amber-200/80 text-amber-800 cursor-not-allowed"
-                    disabled
-                  >
-                    <Clock className="h-5 w-5 mr-2" />
-                    Claim in {timeRemaining}
-                  </Button>
+                  <div className="w-full max-w-xs">
+                    <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200/70 dark:border-amber-700/40 rounded-lg p-3 mb-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="h-4 w-4 text-amber-600 animate-pulse" />
+                          <span className="text-sm font-medium text-amber-800 dark:text-amber-300">Time Remaining</span>
+                        </div>
+                        <span className="text-xs font-medium text-amber-600/70 bg-amber-100/50 dark:bg-amber-900/30 px-1.5 py-0.5 rounded-full">
+                          {Math.floor((100 - farmingProgress))}% left
+                        </span>
+                      </div>
+                      
+                      <div className="flex justify-center mt-3 mb-1 font-mono">
+                        <div className="flex items-center gap-1">
+                          {/* Hours */}
+                          <div className="flex items-end">
+                            <AnimatedDigit value={Math.floor(secondsRemaining / 3600).toString().padStart(2, '0').charAt(0)} />
+                            <AnimatedDigit value={Math.floor(secondsRemaining / 3600).toString().padStart(2, '0').charAt(1)} className="ml-1" />
+                            <span className="mx-1 text-xl text-amber-500 animate-pulse">:</span>
+                          </div>
+                          
+                          {/* Minutes */}
+                          <div className="flex items-end">
+                            <AnimatedDigit value={Math.floor((secondsRemaining % 3600) / 60).toString().padStart(2, '0').charAt(0)} />
+                            <AnimatedDigit value={Math.floor((secondsRemaining % 3600) / 60).toString().padStart(2, '0').charAt(1)} className="ml-1" />
+                            <span className="mx-1 text-xl text-amber-500 animate-pulse">:</span>
+                          </div>
+                          
+                          {/* Seconds - always animated */}
+                          <div className="flex items-end">
+                            <AnimatedDigit 
+                              key={`sec1-${secondsKey}`}
+                              value={(secondsRemaining % 60).toString().padStart(2, '0').charAt(0)} 
+                              animate={true} 
+                            />
+                            <AnimatedDigit 
+                              key={`sec2-${secondsKey}`}
+                              value={(secondsRemaining % 60).toString().padStart(2, '0').charAt(1)} 
+                              animate={true}
+                              className="ml-1" 
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="mt-3 relative pt-1">
+                        <div className="overflow-hidden h-2 text-xs flex rounded bg-amber-100/50 dark:bg-amber-900/30">
+                          <motion.div
+                            style={{ width: `${farmingProgress}%` }}
+                            className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-gradient-to-r from-amber-400 to-amber-500"
+                            transition={{ duration: 0.5, ease: "easeInOut" }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <Button
+                      size="lg"
+                      className="w-full bg-amber-200/80 hover:bg-amber-200/80 text-amber-800 cursor-not-allowed"
+                      disabled
+                    >
+                      <Clock className="h-5 w-5 mr-2" />
+                      Claim after time expires
+                    </Button>
+                  </div>
                 ) : (
                   <Button
                     size="lg"
-                    className="w-full max-w-xs bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-lg"
+                    className="w-full max-w-xs bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-lg transition-all duration-300 hover:scale-105"
                     onClick={startFarming}
                     disabled={isStarting}
                   >

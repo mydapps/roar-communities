@@ -757,50 +757,60 @@ export const ETHTransferSheet = ({
 
   const { title, description } = getHeaderContent();
 
-  // For mobile, use Drawer components
+  // For mobile, use Drawer with fixed height and sticky footer
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className="max-h-[85vh]">
-          <DrawerHeader>
-            <DrawerTitle>{title}</DrawerTitle>
-            <DrawerDescription>{description}</DrawerDescription>
+        <DrawerContent className="max-h-[90vh]">
+          <DrawerHeader className="pb-2">
+            <DrawerTitle>Send ETH</DrawerTitle>
+            <DrawerDescription>
+              Send ETH to another user or wallet
+            </DrawerDescription>
           </DrawerHeader>
           
-          <div className="p-4 pb-8">
+          <div className="px-4 overflow-y-auto flex-1" style={{ maxHeight: 'calc(90vh - 180px)' }}>
             {transferStep === 'input' && renderTransferForm()}
             {transferStep === 'estimation' && renderEstimationContent()}
-            {transferStep === 'preview' && (
-              <>
-                {renderPreviewContent()}
-                <div className="mt-8 space-y-4">
-                  <Button 
-                    className="w-full py-3"
-                    variant="default"
-                    onClick={handleConfirmTransaction}
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Processing...
-                      </>
-                    ) : "Confirm Transfer"}
-                  </Button>
-                  <Button 
-                    className="w-full" 
-                    variant="outline" 
-                    onClick={() => setTransferStep('input')}
-                    disabled={isLoading}
-                  >
-                    Back
-                  </Button>
-                </div>
-              </>
-            )}
+            {transferStep === 'preview' && renderPreviewContent()}
             {transferStep === 'processing' && renderProcessingContent()}
             {transferStep === 'success' && renderSuccessContent()}
           </div>
+          
+          <DrawerFooter className="pt-2 sticky bottom-0 bg-background border-t">
+            {transferStep === 'preview' && (
+              <div className="flex flex-col gap-2 w-full">
+                <Button 
+                  onClick={handleConfirmTransaction} 
+                  disabled={isLoading}
+                  className="w-full"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Confirming...
+                    </>
+                  ) : (
+                    'Confirm Transfer'
+                  )}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setTransferStep('input')}
+                  disabled={isLoading}
+                  className="w-full"
+                >
+                  Go Back
+                </Button>
+              </div>
+            )}
+            
+            {transferStep === 'input' && (
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+            )}
+          </DrawerFooter>
         </DrawerContent>
       </Drawer>
     );

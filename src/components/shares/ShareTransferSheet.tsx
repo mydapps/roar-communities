@@ -504,64 +504,60 @@ export const ShareTransferSheet = ({
     );
   };
 
-  // For mobile, use Drawer components
+  // For mobile, use Drawer component with adjusted height and scrollable content
   if (isMobile) {
     return (
-      <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className="max-h-[85vh]">
-          <DrawerHeader>
-            <DrawerTitle>
-              {showSuccess 
-                ? "Transfer Successful" 
-                : (previewOpen 
-                  ? "Confirm Transfer" 
-                  : `Transfer ${community?.community} Shares`)}
-            </DrawerTitle>
-            <DrawerDescription>
-              {showSuccess 
-                ? "Your shares have been transferred successfully"
-                : (previewOpen 
-                  ? "Review the details before confirming" 
-                  : `Send your ${community?.community} shares to another user or wallet`)}
-            </DrawerDescription>
-          </DrawerHeader>
-          
-          <div className="p-4 pb-8">
-            {showSuccess 
-              ? renderSuccessContent()
-              : (previewOpen 
-                ? (
-                  <>
-                    {renderPreviewContent()}
-                    <div className="mt-8 space-y-4">
-                      <Button 
-                        className="w-full py-3"
-                        variant="default"
-                        onClick={handleConfirmTransaction}
-                        disabled={isLoading}
-                      >
-                        {isLoading ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Processing...
-                          </>
-                        ) : "Confirm Transfer"}
-                      </Button>
-                      <Button 
-                        className="w-full" 
-                        variant="outline" 
-                        onClick={() => setPreviewOpen(false)}
-                        disabled={isLoading}
-                      >
-                        Back
-                      </Button>
-                    </div>
-                  </>
-                ) 
-                : renderTransferForm())}
-          </div>
-        </DrawerContent>
-      </Drawer>
+      <>
+        <Drawer open={open} onOpenChange={onOpenChange}>
+          <DrawerContent className="max-h-[90vh]">
+            <DrawerHeader className="pb-2">
+              <DrawerTitle>Send Shares</DrawerTitle>
+              <DrawerDescription>
+                Send shares to another user or wallet
+              </DrawerDescription>
+            </DrawerHeader>
+            
+            <div className="px-4 overflow-y-auto flex-1" style={{ maxHeight: 'calc(90vh - 180px)' }}>
+              {previewOpen ? renderPreviewContent() : (showSuccess ? renderSuccessContent() : renderTransferForm())}
+            </div>
+            
+            <DrawerFooter className="pt-2 sticky bottom-0 bg-background border-t">
+              {previewOpen ? (
+                <div className="flex flex-col gap-2 w-full">
+                  <Button 
+                    onClick={handleConfirmTransaction} 
+                    disabled={isLoading}
+                    className="w-full"
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Confirming...
+                      </>
+                    ) : (
+                      'Confirm Transfer'
+                    )}
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setPreviewOpen(false)}
+                    disabled={isLoading}
+                    className="w-full"
+                  >
+                    Go Back
+                  </Button>
+                </div>
+              ) : (
+                !showSuccess && (
+                  <Button variant="outline" onClick={() => onOpenChange(false)}>
+                    Cancel
+                  </Button>
+                )
+              )}
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
+      </>
     );
   }
 

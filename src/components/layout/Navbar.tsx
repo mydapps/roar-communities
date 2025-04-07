@@ -311,16 +311,6 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/my-shares" className="cursor-pointer">
-                      My Shares
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/notifications" className="cursor-pointer">
-                      Notifications
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
                     <Link to="/referral" className="cursor-pointer flex items-center gap-2">
                       <Gift className="h-4 w-4 text-primary" />
                       <span className="text-primary font-medium">Share the Love</span>

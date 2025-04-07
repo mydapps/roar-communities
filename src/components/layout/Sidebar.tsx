@@ -44,11 +44,14 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const [loadingCommunities, setLoadingCommunities] = useState(false);
   const [hasCommunities, setHasCommunities] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const [userHandle, setUserHandle] = useState('');
   
   // Check authentication status on mount and listen for auth events
   useEffect(() => {
     const userKey = localStorage.getItem('dapps_user_key');
+    const handle = localStorage.getItem('dapps_user_handle');
     setIsLoggedIn(!!userKey);
+    setUserHandle(handle || '');
     
     if (userKey) {
       fetchCommunities();
@@ -218,7 +221,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                 label="Share the Love" 
                 className="font-medium"
               />
-              <NavItem to="/account" icon={<Settings className="h-5 w-5" />} label="Account" />
+              <NavItem to={userHandle ? `/u/${userHandle}` : "/account"} icon={<Settings className="h-5 w-5" />} label="Account" />
             </nav>
 
             {/* Communities section - only show if logged in and has communities */}
