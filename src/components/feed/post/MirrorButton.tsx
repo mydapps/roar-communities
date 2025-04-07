@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Repeat2 } from 'lucide-react';
@@ -22,6 +21,7 @@ interface MirrorButtonProps {
   images?: string[];
   video?: string;
   postCode?: string;
+  community?: string;
 }
 
 export const MirrorButton = ({ 
@@ -32,7 +32,8 @@ export const MirrorButton = ({
   content, 
   images, 
   video,
-  postCode
+  postCode,
+  community
 }: MirrorButtonProps) => {
   const mobile = useIsMobile();
   const [selectedCommunity, setSelectedCommunity] = useState<string | null>(null);
@@ -62,13 +63,24 @@ export const MirrorButton = ({
     console.log("Mirror request details:", {
       postCode,
       selectedCommunity,
-      quoteText: quoteText.trim()
+      quoteText: quoteText.trim(),
+      sourceCommunity: community
     });
     
     if (!selectedCommunity) {
       uiToast({
         title: "Error",
         description: "Please select a community to mirror to",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Validate that user is not trying to mirror to the same community
+    if (community && selectedCommunity === community) {
+      uiToast({
+        title: "Cannot Mirror",
+        description: "You cannot mirror a post to the same community it's already in",
         variant: "destructive"
       });
       return;
@@ -132,9 +144,22 @@ export const MirrorButton = ({
       }
     } catch (error) {
       console.error('Error mirroring post:', error);
+      
+      // Extract the error message
+      let errorMessage = "Failed to mirror post. Please try again.";
+      
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        
+        // Provide a more user-friendly message for the most common error
+        if (errorMessage.includes("Cannot mirror to the same community")) {
+          errorMessage = "You cannot mirror a post to the same community it's already in.";
+        }
+      }
+      
       uiToast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to mirror post. Please try again.",
+        title: "Mirror Failed",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -175,6 +200,7 @@ export const MirrorButton = ({
             onQuoteChange={handleQuoteChange}
             selectedCommunity={selectedCommunity}
             quoteText={quoteText}
+            sourceCommunity={community}
           />
           
           <DrawerFooter className="flex-row justify-between gap-2 p-4 border-t bg-background sticky bottom-0 left-0 right-0 z-10">
@@ -235,6 +261,7 @@ export const MirrorButton = ({
           onQuoteChange={handleQuoteChange}
           selectedCommunity={selectedCommunity}
           quoteText={quoteText}
+          sourceCommunity={community}
         />
         
         <SheetFooter className="flex flex-row justify-between gap-2 mt-6 sticky bottom-4 z-10">

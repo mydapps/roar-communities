@@ -7,6 +7,7 @@ import { Check, Loader2, Search } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from 'sonner';
 import { fetchCommunities, Community } from '@/utils/api';
+import { Badge } from '@/components/ui/badge';
 
 interface MirrorContentProps {
   username: string;
@@ -18,6 +19,7 @@ interface MirrorContentProps {
   quoteText: string;
   images?: string[];
   video?: string;
+  sourceCommunity?: string;
 }
 
 export const MirrorContent = ({
@@ -29,7 +31,8 @@ export const MirrorContent = ({
   selectedCommunity,
   quoteText,
   images,
-  video
+  video,
+  sourceCommunity
 }: MirrorContentProps) => {
   const [communities, setCommunities] = useState<Community[]>([]);
   const [filteredCommunities, setFilteredCommunities] = useState<Community[]>([]);
@@ -160,6 +163,16 @@ export const MirrorContent = ({
   const handleCommunitySelect = (communityName: string) => {
     console.log('Community selected:', communityName);
     console.log('Previously selected community:', selectedCommunity);
+    console.log('Source community:', sourceCommunity);
+    
+    // Prevent selecting the same community as the source
+    if (sourceCommunity && communityName === sourceCommunity) {
+      toast.error("Cannot mirror to the same community", {
+        description: "Please select a different community to mirror this post to",
+        duration: 3000,
+      });
+      return;
+    }
     
     if (selectedCommunity === communityName) {
       console.log('Deselecting community');
@@ -191,6 +204,13 @@ export const MirrorContent = ({
           </div>
         </div>
         <p className="text-sm line-clamp-3 text-muted-foreground">{content}</p>
+        {sourceCommunity && (
+          <div className="mt-1">
+            <Badge variant="outline" className="text-xs bg-muted/50 text-muted-foreground">
+              From: {sourceCommunity}
+            </Badge>
+          </div>
+        )}
         {(images && images.length > 0) ? (
           <div className="mt-2 rounded overflow-hidden h-20 w-20 bg-muted">
             <img 

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { CardFooter } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
@@ -95,6 +94,7 @@ export const PostFooter: React.FC<PostFooterProps> = ({
             images={allImages}
             video={video}
             postCode={postCode}
+            community={community}
           />
         </div>
         
