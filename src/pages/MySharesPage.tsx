@@ -13,7 +13,8 @@ import {
   ArrowUp,
   ArrowDown,
   Plus,
-  Minus
+  Minus,
+  Droplet
 } from 'lucide-react';
 import { toast } from "sonner";
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -27,7 +28,7 @@ import {
   SharePrecheckResponse
 } from '@/utils/communityApi';
 import { PortfolioSummary } from '@/components/shares/PortfolioSummary';
-import { DepositSheet } from '@/components/shares/DepositSheet';
+import { DepositSheet, ClaimFaucetButton } from '@/components/shares/DepositSheet';
 import { ETHTransferSheet } from '@/components/eth/ETHTransferSheet';
 import { TradeSheet } from '@/components/shares/TradeSheet';
 import { CommunityShareCard } from '@/components/shares/CommunityShareCard';
@@ -256,6 +257,17 @@ const MySharesPage = () => {
         }}
       />
       
+      <div className="bg-card border rounded-lg p-4 shadow-sm">
+        <div className="flex items-center gap-2 mb-3">
+          <Droplet className="h-5 w-5 text-blue-500" />
+          <h2 className="text-lg font-semibold">Claim Testnet ETH</h2>
+        </div>
+        <p className="text-muted-foreground mb-4">
+          This is a testnet application. Claim free testnet ETH to start trading and exploring features.
+        </p>
+        <ClaimFaucetButton onSuccess={fetchWalletBalance} />
+      </div>
+      
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-xl font-bold">
@@ -344,7 +356,8 @@ const MySharesPage = () => {
 
       <DepositSheet 
         open={depositOpen} 
-        onOpenChange={setDepositOpen} 
+        onOpenChange={setDepositOpen}
+        onFaucetSuccess={fetchWalletBalance}
       />
 
       <ETHTransferSheet
