@@ -85,7 +85,9 @@ const Index = () => {
     if (isInviteRoute && code) {
       const validateInviteCode = async () => {
         try {
-          const response = await fetch(`https://api.dapps.co/check_invite_code?code=${code}`);
+          // Convert code to lowercase
+          const lowercaseCode = code.toLowerCase();
+          const response = await fetch(`https://api.dapps.co/check_invite_code?code=${lowercaseCode}`);
           const data = await response.json();
           
           if (data.success && data.valid === 1) {
@@ -263,7 +265,7 @@ const Index = () => {
           variants={itemVariants}
         >
           <motion.img 
-            src="https://dapps.co/logo1.png" 
+            src="/images/logo1.png" 
             alt="Dapps.co Logo" 
             className="h-16 md:h-20 mx-auto mb-4"
             whileHover={{ scale: 1.05 }}
@@ -960,8 +962,8 @@ const Index = () => {
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center mb-6 md:mb-0">
               <img 
-                src="https://dapps.co/logo1.png" 
-              alt="Dapps.co Logo" 
+                src="/images/logo1.png" 
+                alt="Dapps.co Logo" 
                 className="h-10 mr-3" 
               />
               <div className="text-sm text-muted-foreground">

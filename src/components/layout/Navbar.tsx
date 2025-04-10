@@ -184,8 +184,8 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
             >
               <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-primary/5 rounded-full blur-sm opacity-0 group-hover:opacity-100 transition-opacity"></div>
               <img 
-                src="https://dapps.co/logo1.png" 
-                alt="dapps.co" 
+                src="/images/logo1.png" 
+                alt="Dapps.co Logo" 
                 className="h-8 w-auto relative"
               />
             </motion.div>

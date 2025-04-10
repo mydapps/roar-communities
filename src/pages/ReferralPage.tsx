@@ -86,7 +86,7 @@ const ReferralPage = () => {
   const [totalInvites, setTotalInvites] = useState(0);
   
   // Generate referral URL with user handle
-  const referralUrl = userHandle ? `dapps.co/invite/${userHandle}` : 'dapps.co/invite';
+  const referralUrl = userHandle ? `dapps.co/invite/${userHandle.toLowerCase()}` : 'dapps.co/invite';
   
   useEffect(() => {
     // Get user handle from local storage

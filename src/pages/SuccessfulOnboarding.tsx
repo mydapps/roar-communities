@@ -223,9 +223,9 @@ const SuccessfulOnboarding: React.FC = () => {
                             }}
                           >
                             <img 
-                              src="https://dapps.co/logo1.png" 
+                              src="/images/logo1.png" 
                               alt="Dapps.co Logo" 
-                              className="h-20 w-auto"
+                              className="h-10 mr-3"
                             />
                           </motion.div>
                           <h1 className="text-2xl md:text-3xl font-bold mb-6">Welcome to Dapps.co!</h1>
