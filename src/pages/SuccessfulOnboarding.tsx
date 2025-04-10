@@ -198,6 +198,35 @@ const SuccessfulOnboarding: React.FC = () => {
                 {/* Story Navigation Areas */}
                 <div className="absolute top-8 bottom-0 left-0 w-1/4 z-10" onClick={() => handleStoryClick('left')} />
                 <div className="absolute top-8 bottom-0 right-0 w-1/4 z-10" onClick={() => handleStoryClick('right')} />
+                
+                {/* Add visible navigation arrows */}
+                {storyIndex > 0 && (
+                  <motion.div 
+                    className="absolute left-4 top-1/2 -translate-y-1/2 z-20 bg-primary/10 hover:bg-primary/20 rounded-full p-2 cursor-pointer"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => handleStoryClick('left')}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <ArrowRight className="h-6 w-6 text-primary transform rotate-180" />
+                  </motion.div>
+                )}
+                
+                {storyIndex < stories.length - 1 && (
+                  <motion.div 
+                    className="absolute right-4 top-1/2 -translate-y-1/2 z-20 bg-primary/10 hover:bg-primary/20 rounded-full p-2 cursor-pointer"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => handleStoryClick('right')}
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <ArrowRight className="h-6 w-6 text-primary" />
+                  </motion.div>
+                )}
 
                 <CardContent className="p-6 pt-8 min-h-[65vh] flex flex-col items-center justify-center">
                   <AnimatePresence mode="wait">

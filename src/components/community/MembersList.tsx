@@ -1,8 +1,8 @@
-
 import React, { useRef, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Loader2 } from 'lucide-react';
 import { CommunityMember } from '@/hooks/useCommunityMembers';
+import { Link } from 'react-router-dom';
 
 interface MembersListProps {
   members: CommunityMember[];
@@ -40,7 +40,11 @@ export const MembersList = ({ members, loading, hasMore, loadMore, ethToUsd }: M
   return (
     <div className="space-y-4">
       {members.map((member) => (
-        <div key={member.id} className="flex items-center justify-between p-3 rounded-lg border border-border/40 hover:border-primary/30 transition-colors">
+        <Link 
+          to={`/u/${member.handle}`} 
+          key={member.id} 
+          className="flex items-center justify-between p-3 rounded-lg border border-border/40 hover:border-primary/30 transition-colors hover:bg-muted/30 cursor-pointer block"
+        >
           <div className="flex items-center gap-3">
             <Avatar>
               <AvatarImage src={member.avatar || ''} />
@@ -48,7 +52,6 @@ export const MembersList = ({ members, loading, hasMore, loadMore, ethToUsd }: M
             </Avatar>
             <div>
               <div className="font-medium">{member.handle}</div>
-              <div className="text-xs text-muted-foreground">Member #{member.id}</div>
             </div>
           </div>
           <div className="text-right">
@@ -57,7 +60,7 @@ export const MembersList = ({ members, loading, hasMore, loadMore, ethToUsd }: M
               ~${(member.shares * 0.00254 * ethToUsd).toFixed(2)}
             </div>
           </div>
-        </div>
+        </Link>
       ))}
       
       <div ref={observerTarget} className="h-4 w-full flex justify-center items-center py-4">
