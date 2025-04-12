@@ -59,8 +59,10 @@ const MySharesPage = () => {
     loadMoreRef
   } = usePortfolio();
 
+  // Lazy load wallet balance after component mounts
   useEffect(() => {
-    fetchWalletBalance();
+    // Don't wait for this to complete before rendering the page
+    setTimeout(fetchWalletBalance, 0);
   }, []);
 
   // Development-only logging helper
@@ -70,7 +72,6 @@ const MySharesPage = () => {
     }
   };
 
-  // Instead of logging every render, just use debugLog 
   // Main API call handling code
   const fetchWalletBalance = async () => {
     try {
@@ -98,35 +99,17 @@ const MySharesPage = () => {
     });
   };
 
-  const handleTradeClick = async (community: CommunityPortfolioItem, action: 'buy' | 'sell') => {
-    console.log(`handleTradeClick called for ${community.community} with action ${action}`);
+  const handleTradeClick = (community: CommunityPortfolioItem, action: 'buy' | 'sell') => {
+    // Reset state before opening the trade sheet
+    resetState();
+    
+    // Set new values
     setSelectedCommunity(community);
     setTradeAction(action);
     setTradeOpen(true);
     
-    try {
-      setLoadingAction(true);
-      
-      let precheckResult: SharePrecheckResponse | null = null;
-      
-      if (action === 'buy') {
-        console.log(`Calling buySharesPrecheck for ${community.community}...`);
-        precheckResult = await buySharesPrecheck(community.community, 1);
-        console.log(`Buy precheck result:`, precheckResult);
-      } else if (action === 'sell') {
-        console.log(`Calling sellSharesPrecheck for ${community.community}...`);
-        precheckResult = await sellSharesPrecheck(community.community, 1);
-        console.log(`Sell precheck result:`, precheckResult);
-      }
-      
-      console.log(`Precheck result for ${action}:`, precheckResult);
-      setPrecheckData(precheckResult);
-    } catch (error) {
-      console.error(`Failed to precheck ${action}:`, error);
-      toast.error(`Unable to prepare ${action} operation`);
-    } finally {
-      setLoadingAction(false);
-    }
+    // Fetch fresh balance data
+    fetchWalletBalance();
   };
 
   const handleTransferClick = (community: CommunityPortfolioItem) => {
@@ -136,44 +119,35 @@ const MySharesPage = () => {
 
   const handleBuySharesConfirm = async (communityName: string, quantity: number) => {
     try {
-      // Set loading state FIRST, before doing anything else
       setLoadingAction(true);
       
       // Small delay to ensure state is updated before proceeding
       await new Promise(resolve => setTimeout(resolve, 50));
       
-      if (!communityName) {
-        throw new Error("Invalid community name");
-      }
-      
-      if (quantity <= 0) {
-        throw new Error("Quantity must be greater than 0");
-      }
-      
       const result = await buySharesConfirm(communityName, quantity);
       
       if (result.status === 'SUCCESS') {
-        // Update portfolio data in the background
+        // Update portfolio data
         refreshPortfolio();
         fetchWalletBalance();
         
-        // Success toast notification
         toast.success(`Successfully purchased ${result.shareQuantity} shares of ${communityName}`);
         
-        // IMPORTANT: Keep the modal open to show success screen
-        // We'll only close it after a longer delay
-        
-        // Close the modal after a delay to give user time to see the success screen
+        // Add delay before closing to show success state
         setTimeout(() => {
           setTradeOpen(false);
-        }, 5000);
+          
+          // Important: Reset state after the modal is closed
+          setTimeout(() => {
+            resetState();
+          }, 300);
+        }, 2000);
       } else {
         toast.error(result.message || 'Transaction failed');
       }
     } catch (error) {
       toast.error('Failed to complete purchase');
     } finally {
-      // Now it's safe to set loadingAction to false
       setLoadingAction(false);
     }
   };
@@ -228,11 +202,16 @@ const MySharesPage = () => {
   };
 
   const resetState = () => {
+    // Close any open dialogs
     setDepositOpen(false);
     setSendOpen(false);
-    setTradeOpen(false);
     setTransferOpen(false);
+    
+    // Reset state relevant to trading
+    setSelectedCommunity(null);
+    setTradeAction(null);
     setPrecheckData(null);
+    setLoadingAction(false);
   };
 
   const totalEthValue = portfolioSummary?.totalValueEth || 0;

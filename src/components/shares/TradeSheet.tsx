@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
@@ -53,6 +53,12 @@ export const TradeSheet = ({
   const [totalUsdValue, setTotalUsdValue] = useState("0");
   const [errorMessage, setErrorMessage] = useState("");
   const [successVisible, setSuccessVisible] = useState(false);
+  const [currentETHBalance, setCurrentETHBalance] = useState(userEthBalance);
+  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
+  
+  // Track previous community to detect changes
+  const prevCommunityRef = useRef<string | null>(null);
+  const prevActionRef = useRef<'buy' | 'sell' | null>(null);
   
   // No need to debounce as we're not making API calls on quantity change
   
@@ -71,17 +77,115 @@ export const TradeSheet = ({
     sell: !!onSellConfirm
   };
 
+  // Reset all state when community or action changes
+  useEffect(() => {
+    // Check if community or action has changed
+    if (open && community && action) {
+      const currentCommunity = community.community;
+      if (
+        (prevCommunityRef.current && prevCommunityRef.current !== currentCommunity) ||
+        (prevActionRef.current && prevActionRef.current !== action)
+      ) {
+        // Force reset all state when community or action changes
+        setStep('quantity');
+        setShareQuantity(1);
+        setQuantityInputValue("1");
+        setPrecheck(null);
+        setTotalCost("0");
+        setSharePrice("0");
+        setTotalSharePrice("0");
+        setUsdValue("0");
+        setTotalUsdValue("0");
+        setErrorMessage("");
+        setSuccessVisible(false);
+        setOperationInProgress(false);
+        setSubmitLoading(false);
+      }
+      
+      // Update refs for next comparison
+      prevCommunityRef.current = currentCommunity;
+      prevActionRef.current = action;
+    }
+  }, [open, community, action]);
+
+  // Add an effect to refresh balance when loadingAction changes from true to false (transaction completed)
+  useEffect(() => {
+    // When loadingAction goes from true to false, it means a transaction has completed
+    if (!loadingAction && operationInProgress && action === 'buy') {
+      // Small delay to ensure the transaction has been processed
+      setTimeout(() => {
+        fetchCurrentBalance(); // Refresh the balance
+      }, 200);
+    }
+  }, [loadingAction, operationInProgress, action]);
+
+  // Lazy fetch ETH balance when the modal opens
+  useEffect(() => {
+    if (open && action === 'buy') {
+      // Always fetch fresh balance when the modal opens
+      fetchCurrentBalance();
+    }
+    
+    // Reset success state when modal opens
+    if (open) {
+      setSuccessVisible(false);
+    }
+  }, [open, action]);
+  
+  // Reset state when modal closes
+  useEffect(() => {
+    if (!open) {
+      resetState();
+    }
+  }, [open]);
+
+  // Fetch current ETH balance
+  const fetchCurrentBalance = async () => {
+    try {
+      setIsLoadingBalance(true);
+      const { getWalletBalance } = await import('@/utils/communityApi');
+      const balanceData = await getWalletBalance();
+      setCurrentETHBalance(balanceData.balance.eth);
+    } catch (error) {
+      console.error('Failed to fetch wallet balance:', error);
+    } finally {
+      setIsLoadingBalance(false);
+    }
+  };
+  
+  // Reset component state
+  const resetState = () => {
+    // Always force reset success state
+    setSuccessVisible(false);
+    
+    if (!operationInProgress) {
+      setStep('quantity');
+      setShareQuantity(1);
+      setQuantityInputValue("1");
+      setPrecheck(null);
+      setTotalCost("0");
+      setSharePrice("0");
+      setTotalSharePrice("0");
+      setUsdValue("0");
+      setTotalUsdValue("0");
+      setErrorMessage("");
+      setOperationInProgress(false);
+      setSubmitLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (community && action && open) {
-      // Never reset if success is visible or operation is in progress
-      if (!operationInProgress && !successVisible) {
+      // Never reset if operation is in progress
+      if (!operationInProgress) {
         setStep('quantity');
+        setSuccessVisible(false);
       }
       
       setErrorMessage("");
       
       // Only initialize these values if we're not in the middle of an operation
-      if (!operationInProgress && !successVisible) {
+      if (!operationInProgress) {
         // Initialize with 1 share by default
         setShareQuantity(1);
         setQuantityInputValue("1");
@@ -102,7 +206,7 @@ export const TradeSheet = ({
         // We no longer fetch initial precheck data on first load
       }
     }
-  }, [community, action, open, onBuyConfirm, onSellConfirm, operationInProgress, successVisible, precheckData]);
+  }, [community, action, open, operationInProgress, precheckData]);
 
   const updatePrices = (data: SharePrecheckResponse) => {
     if (!data) {
@@ -429,11 +533,13 @@ export const TradeSheet = ({
   };
   
   const handleDialogClose = () => {
-    // Reset the state when dialog is closed
-    setStep('quantity');
+    // Always reset success state to be safe
     setSuccessVisible(false);
-    setOperationInProgress(false);
-    setSubmitLoading(false);
+    
+    // Reset other state if the operation is not in progress
+    if (!operationInProgress) {
+      resetState();
+    }
     onOpenChange(false);
   };
   
@@ -561,7 +667,14 @@ export const TradeSheet = ({
             <div className="flex justify-between">
               <span className="text-sm">Your Balance</span>
               <div className="text-right">
-                <div className="font-medium">{parseFloat(userEthBalance).toFixed(6)} ETH</div>
+                {isLoadingBalance ? (
+                  <div className="font-medium flex items-center">
+                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    Loading...
+                  </div>
+                ) : (
+                  <div className="font-medium">{parseFloat(currentETHBalance).toFixed(6)} ETH</div>
+                )}
               </div>
             </div>
           )}

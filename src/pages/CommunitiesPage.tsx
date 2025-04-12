@@ -40,7 +40,7 @@ const CommunitiesPage = () => {
   
   // State for trading dialog
   const [selectedCommunity, setSelectedCommunity] = useState<Community | null>(null);
-  const [tradeAction, setTradeAction] = useState<'buy' | 'sell'>('buy');
+  const [tradeAction, setTradeAction] = useState<'buy' | 'sell' | null>(null);
   const [tradeDialogOpen, setTradeDialogOpen] = useState(false);
   const [userEthBalance, setUserEthBalance] = useState("0.000");
   const [tradeLoading, setTradeLoading] = useState(false);
@@ -152,13 +152,40 @@ const CommunitiesPage = () => {
   
   // Handle buy/sell action
   const handleTradeAction = (community: Community, action: 'buy' | 'sell') => {
-    setSelectedCommunity(community);
-    setTradeAction(action);
-    setTradeDialogOpen(true);
-    fetchWalletBalance();
+    // Reset all trade states
+    setTradeDialogOpen(false);
+    setSelectedCommunity(null);
+    setTradeAction(null);
+    setTradeLoading(false);
+    
+    // Small delay before opening new sheet to ensure clean state
+    setTimeout(() => {
+      setSelectedCommunity(community);
+      setTradeAction(action);
+      setTradeDialogOpen(true);
+      
+      // Fetch fresh balance when buying
+      if (action === 'buy') {
+        fetchWalletBalance();
+      }
+    }, 50);
   };
   
-  // Trading confirmation handlers
+  // Handle trade success
+  const handleTradeSuccess = () => {
+    // Refresh wallet balance regardless of transaction type
+    fetchWalletBalance();
+    
+    // Only close the sheet after a delay to show success animation
+    setTimeout(() => {
+      setTradeDialogOpen(false);
+      
+      // Reload communities list
+      handleRefresh();
+    }, 3000);
+  };
+  
+  // Update trading confirmation handlers to fetch balance after transaction
   const handleBuySharesConfirm = async (communityName: string, quantity: number) => {
     try {
       setTradeLoading(true);
@@ -167,6 +194,10 @@ const CommunitiesPage = () => {
       
       if (result.status === 'SUCCESS') {
         toast.success(`Successfully purchased ${result.shareQuantity} shares of ${communityName}`);
+        
+        // Get updated balance after transaction
+        fetchWalletBalance();
+        
         handleTradeSuccess();
       } else {
         toast.error(result.message || 'Transaction failed');
@@ -187,6 +218,10 @@ const CommunitiesPage = () => {
       
       if (result.status === 'SUCCESS') {
         toast.success(`Successfully sold ${result.soldShares} shares of ${communityName}`);
+        
+        // Get updated balance after transaction
+        fetchWalletBalance();
+        
         handleTradeSuccess();
       } else {
         toast.error(result.message || 'Transaction failed');
@@ -197,12 +232,6 @@ const CommunitiesPage = () => {
     } finally {
       setTradeLoading(false);
     }
-  };
-  
-  // Handle trade success
-  const handleTradeSuccess = () => {
-    setTradeDialogOpen(false);
-    handleRefresh();
   };
   
   // Based on the active tab, select the relevant data

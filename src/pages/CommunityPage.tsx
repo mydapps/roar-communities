@@ -197,6 +197,11 @@ const CommunityPage = () => {
         // Close the sheet after a delay to allow success animation to show
         setTimeout(() => {
           setTradeSheetOpen(false);
+          
+          // Reset state after modal is closed
+          setTimeout(() => {
+            resetTradeState();
+          }, 300);
         }, 2000);
       } else {
         toast.error(result.message || 'Transaction failed');
@@ -206,6 +211,39 @@ const CommunityPage = () => {
     } finally {
       setTradeLoading(false);
     }
+  };
+  
+  // Add a reset function for trade state
+  const resetTradeState = () => {
+    setTradeAction(null);
+    setTradeLoading(false);
+  };
+  
+  // Update the buy and sell actions to reset state first
+  const handleBuyAction = () => {
+    // Close sheet first to reset its state
+    setTradeSheetOpen(false);
+    
+    // Then after a small delay, set new values and open it
+    setTimeout(() => {
+      resetTradeState();
+      setTradeAction('buy');
+      setTradeSheetOpen(true);
+      // Fetch fresh balance when opening the modal
+      fetchWalletBalance();
+    }, 50);
+  };
+  
+  const handleSellAction = () => {
+    // Close sheet first to reset its state
+    setTradeSheetOpen(false);
+    
+    // Then after a small delay, set new values and open it
+    setTimeout(() => {
+      resetTradeState();
+      setTradeAction('sell');
+      setTradeSheetOpen(true);
+    }, 50);
   };
   
   const handleSellSharesConfirm = async (communityName: string, quantity: number) => {
@@ -232,6 +270,11 @@ const CommunityPage = () => {
         // Close the sheet after a delay to allow success animation to show
         setTimeout(() => {
           setTradeSheetOpen(false);
+          
+          // Reset state after modal is closed
+          setTimeout(() => {
+            resetTradeState();
+          }, 300);
         }, 2000);
       } else {
         toast.error(result.message || 'Transaction failed');
@@ -248,16 +291,6 @@ const CommunityPage = () => {
   const chartPoints = priceChange > 0 
     ? "M0,50 Q25,30 50,20 T100,10" 
     : "M0,50 Q25,70 50,80 T100,90";
-  
-  const handleBuyAction = () => {
-    setTradeAction("buy");
-    setTradeSheetOpen(true);
-  };
-  
-  const handleSellAction = () => {
-    setTradeAction("sell");
-    setTradeSheetOpen(true);
-  };
   
   const handleRoar = async (postCode: string) => {
     if (!postCode) {
