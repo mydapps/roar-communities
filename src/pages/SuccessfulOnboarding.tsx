@@ -25,7 +25,7 @@ interface ReferralRewards {
 // This component creates a fullscreen layout without navbar or sidebar
 const FullScreenLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
-    <div className="fixed inset-0 bg-background z-[9999]" style={{ position: 'fixed', bottom: 0, left: 0, right: 0, top: 0 }}>
+    <div className="fixed inset-0 bg-background z-[9999] flex flex-col" style={{ position: 'fixed', bottom: 0, left: 0, right: 0, top: 0 }}>
       {children}
     </div>
   );
@@ -133,16 +133,16 @@ const SuccessfulOnboarding: React.FC = () => {
 
   return (
     <FullScreenLayout>
-      <div className="min-h-screen flex flex-col bg-background">
+      <div className="flex-1 flex flex-col bg-background">
         {/* Dynamic background gradient */}
         <div className="absolute inset-0 bg-gradient-to-b from-background via-background to-background overflow-hidden z-0">
           <div className="absolute -top-[40%] -right-[10%] w-[70%] h-[70%] rounded-full bg-gradient-to-br from-[#31bcc3]/10 via-primary/5 to-transparent blur-3xl"></div>
           <div className="absolute -bottom-[40%] -left-[10%] w-[70%] h-[70%] rounded-full bg-gradient-to-br from-[#31bcc3]/10 via-primary/5 to-transparent blur-3xl"></div>
         </div>
 
-        <div className="container max-w-lg mx-auto px-4 py-12 pt-16 relative z-10">
+        <div className="container max-w-lg mx-auto px-4 py-6 pt-8 relative z-10 flex-1 flex flex-col">
           {loading ? (
-            <div className="flex flex-col items-center justify-center min-h-[60vh]">
+            <div className="flex flex-col items-center justify-center min-h-[40vh]">
               <motion.div
                 animate={{ 
                   rotate: 360,
@@ -171,10 +171,10 @@ const SuccessfulOnboarding: React.FC = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
-              className="flex flex-col items-center"
+              className="flex flex-col flex-1"
             >
               {/* Onboarding Card */}
-              <Card className="w-full mb-6 overflow-hidden border-primary/20 shadow-xl relative bg-background/80 backdrop-blur-md">
+              <Card className="w-full mb-4 overflow-hidden border-primary/20 shadow-xl relative bg-background/80 backdrop-blur-md flex-1 flex flex-col">
                 {/* Story Progress Bar */}
                 <div className="w-full px-2 pt-2 flex gap-1">
                   {stories.map((_, i) => (
@@ -228,7 +228,7 @@ const SuccessfulOnboarding: React.FC = () => {
                   </motion.div>
                 )}
 
-                <CardContent className="p-6 pt-8 min-h-[65vh] flex flex-col items-center justify-center">
+                <CardContent className="p-4 pt-6 flex-1 flex flex-col items-center justify-center">
                   <AnimatePresence mode="wait">
                     <motion.div 
                       key={storyIndex}
@@ -450,7 +450,7 @@ const SuccessfulOnboarding: React.FC = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.3 }}
-                className="w-full"
+                className="w-full mt-auto"
               >
                 <Button 
                   onClick={continueToFeed}
