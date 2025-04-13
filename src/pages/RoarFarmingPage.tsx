@@ -809,8 +809,8 @@ const RoarFarmingPage = () => {
                 {/* Boost your roars button - now more prominent and separate */}
                 <div 
                   onClick={() => {
-                    // Navigate to boosters page instead of showing a toast
-                    navigate('/boosters');
+                    // Show toast message instead of navigating
+                    toast.info("Boosters are coming soon! Please check back later.");
                   }}
                   className="mt-2 w-full max-w-xs flex justify-center items-center gap-2 py-2 px-4 rounded-md
                     bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300
@@ -818,8 +818,8 @@ const RoarFarmingPage = () => {
                     border border-amber-200 dark:border-amber-700/40 cursor-pointer"
                 >
                   <Sparkles className="h-4 w-4" />
-                  <span className="font-medium">Boost your roars</span>
-                  <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                  <span className="font-medium">Boosters coming soon</span>
+                  <Clock className="h-3.5 w-3.5 ml-1" />
                 </div>
               </div>
             </div>

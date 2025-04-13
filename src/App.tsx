@@ -25,7 +25,6 @@ import ZoomDisabledHelmet from '@/components/shared/ZoomDisabledHelmet';
 import NotificationsPage from '@/pages/NotificationsPage';
 import SuccessfulOnboarding from '@/pages/SuccessfulOnboarding';
 import RequestInvitePage from '@/pages/RequestInvitePage';
-import LaunchCountdown from '@/components/shared/LaunchCountdown';
 import RoarFarmingPage from '@/pages/RoarFarmingPage';
 import BoosterPage from '@/pages/BoosterPage';
 
@@ -104,7 +103,6 @@ function App() {
     <HelmetProvider>
       <ZoomDisabledHelmet />
       <PrivyAuthProvider>
-        <LaunchCountdown />
         <Routes>
           {/* Public routes - accessible to everyone */}
           <Route path="/" element={<Index />} />
