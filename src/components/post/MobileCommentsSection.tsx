@@ -1,10 +1,10 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { CommentReply, toggleMeow, createReply } from '@/utils/commentApi';
 import { EnhancedCommentItem } from './EnhancedCommentItem';
 import { MobileCommentInput } from './MobileCommentInput';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { NotInCommunitySheet } from '@/components/community/NotInCommunitySheet';
 
 interface MobileCommentsSectionProps {
   postCode: string;
@@ -29,6 +29,8 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
   const [meowedComments, setMeowedComments] = useState<Record<number, boolean>>({});
   const [localReplies, setLocalReplies] = useState<CommentReply[]>(replies);
   const isMobile = useIsMobile();
+  const [notInCommunitySheetOpen, setNotInCommunitySheetOpen] = useState(false);
+  const [communityName, setCommunityName] = useState("");
 
   // Update local replies when prop changes
   useEffect(() => {
@@ -143,6 +145,14 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
       
       // API call to create the reply/comment
       const response = await createReply(postCode, content, parentId || 0);
+      
+      // Check if user is not part of the community
+      if (!response.success && response.errCode === "004" && response.communityName) {
+        // Show the not in community modal
+        setCommunityName(response.communityName);
+        setNotInCommunitySheetOpen(true);
+        return;
+      }
       
       if (!response.success || !response.reply_id) {
         console.error('API returned success=false or missing reply_id:', response);
@@ -260,6 +270,12 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
         replyToComment={replyingTo || undefined}
         onSubmit={handleSubmit}
         onCancel={handleCancelReply}
+      />
+
+      <NotInCommunitySheet 
+        open={notInCommunitySheetOpen}
+        onOpenChange={setNotInCommunitySheetOpen}
+        communityName={communityName}
       />
     </>
   );

@@ -6,6 +6,7 @@ import { Send, Loader2 } from 'lucide-react';
 import { CommentReply, createReply } from '@/utils/commentApi';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
+import { NotInCommunitySheet } from '@/components/community/NotInCommunitySheet';
 
 interface CommentItemProps {
   user: string;
@@ -49,6 +50,8 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
 }) => {
   const [newComment, setNewComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [notInCommunitySheetOpen, setNotInCommunitySheetOpen] = useState(false);
+  const [communityName, setCommunityName] = useState('');
   const navigate = useNavigate();
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -60,6 +63,15 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
     
     try {
       const response = await createReply(postCode, newComment);
+      
+      // Check if user is not part of the community
+      if (!response.success && response.errCode === "004" && response.communityName) {
+        // Show the not in community modal
+        setCommunityName(response.communityName);
+        setNotInCommunitySheetOpen(true);
+        setSubmitting(false);
+        return;
+      }
       
       if (response.success) {
         const newCommentData: CommentReply = {
@@ -153,6 +165,13 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
           </Button>
         </div>
       )}
+      
+      {/* Modal that shows when user is not part of the community */}
+      <NotInCommunitySheet 
+        open={notInCommunitySheetOpen}
+        onOpenChange={setNotInCommunitySheetOpen}
+        communityName={communityName}
+      />
     </div>
   );
 };

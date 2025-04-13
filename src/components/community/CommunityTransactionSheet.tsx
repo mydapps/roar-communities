@@ -338,11 +338,14 @@ export const CommunityTransactionSheet = ({
 
   return isMobile ? (
     <Drawer open={open} onOpenChange={handleDialogClose}>
-      <DrawerContent className="max-h-[90vh] overflow-hidden">
-        <DrawerHeader className="border-b pb-4 relative">
+      <DrawerContent className="max-h-[85vh] flex flex-col">
+        <DrawerHeader className="border-b pb-4 relative flex-shrink-0">
           <button 
-            onClick={() => handleDialogClose()} 
-            className="absolute right-4 top-4 rounded-full p-2 inline-flex items-center justify-center text-muted-foreground hover:bg-muted"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDialogClose();
+            }} 
+            className="absolute right-4 top-4 rounded-full p-2 inline-flex items-center justify-center text-muted-foreground hover:bg-muted z-50"
           >
             <X className="h-4 w-4" />
             <span className="sr-only">Close</span>
@@ -355,8 +358,42 @@ export const CommunityTransactionSheet = ({
                 : (isAdvanced ? 'Economic Model Created' : 'Community Created')}
           </DrawerTitle>
         </DrawerHeader>
-        <div className="flex flex-col h-full overflow-y-auto pb-20">
-          <Content />
+        <div className="flex-1 overflow-y-auto pb-20" style={{ maxHeight: 'calc(85vh - 140px)' }}>
+          <div className="px-4">
+            <Content />
+          </div>
+        </div>
+        <div className="sticky bottom-0 left-0 right-0 bg-background border-t p-4 flex-shrink-0">
+          {step === 'initialize' && (
+            <Button
+              onClick={onConfirm}
+              disabled={isLoading}
+              className="w-full bg-gradient-to-r from-[#31bcc3] to-primary text-white py-6"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  Confirm Transaction
+                  <ChevronRight className="ml-2 h-5 w-5" />
+                </>
+              )}
+            </Button>
+          )}
+          {step === 'complete' && (
+            <Button
+              onClick={onComplete}
+              className="w-full bg-gradient-to-r from-[#31bcc3] to-primary text-white py-6"
+            >
+              {isAdvanced 
+                ? "Continue to Community Creation" 
+                : "Go to Your Community"}
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          )}
         </div>
       </DrawerContent>
     </Drawer>

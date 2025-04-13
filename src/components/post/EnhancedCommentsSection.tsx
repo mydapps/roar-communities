@@ -8,6 +8,7 @@ import { RefreshCw, Send, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MobileReplyDrawer } from './MobileReplyDrawer';
+import { NotInCommunitySheet } from '@/components/community/NotInCommunitySheet';
 
 interface EnhancedCommentsSectionProps {
   postCode: string;
@@ -36,6 +37,8 @@ export const EnhancedCommentsSection = ({
     isPost: boolean;
   } | null>(null);
   const isMobile = useIsMobile();
+  const [notInCommunitySheetOpen, setNotInCommunitySheetOpen] = useState(false);
+  const [communityName, setCommunityName] = useState("");
 
   const fetchComments = useCallback(async () => {
     if (!postCode) return;
@@ -81,12 +84,18 @@ export const EnhancedCommentsSection = ({
       console.log('Submitting comment to post:', postCode);
       const response = await createReply(postCode, newComment);
       
+      if (!response.success && response.errCode === "004" && response.communityName) {
+        setCommunityName(response.communityName);
+        setNotInCommunitySheetOpen(true);
+        setSubmitting(false);
+        return;
+      }
+      
       if (response.success && response.reply_id) {
         console.log("Server returned reply_id:", response.reply_id);
         
-        // FIXED: Create the new reply object with the server-assigned ID
         const newReply: CommentReply = {
-          id: response.reply_id, // Use the server-assigned ID, not a temporary one
+          id: response.reply_id,
           uid: 0,
           handle: response.handle || localStorage.getItem('dapps_user_handle') || 'you',
           avatar_url: response.avatar_url || localStorage.getItem('dapps_user_avatar') || 'default',
@@ -99,10 +108,8 @@ export const EnhancedCommentsSection = ({
           sub_replies: []
         };
         
-        // Log the created reply with its ID to verify it's correct
         console.log("Created new comment with server-assigned ID:", newReply.id);
         
-        // Add new comments at the end of the array instead of the beginning
         setReplies(prev => [...prev, newReply]);
         setReplyCount(prev => prev + 1);
         setNewComment('');
@@ -152,15 +159,19 @@ export const EnhancedCommentsSection = ({
     
     try {
       console.log(`Creating reply to comment ${parentId} with content: ${content}`);
-      // First submit to API to get the server-assigned ID
       const response = await createReply(postCode, content, parentId);
+      
+      if (!response.success && response.errCode === "004" && response.communityName) {
+        setCommunityName(response.communityName);
+        setNotInCommunitySheetOpen(true);
+        return Promise.resolve();
+      }
       
       if (response.success && response.reply_id) {
         console.log('Reply created successfully with ID:', response.reply_id);
         
-        // FIXED: Create new reply with the actual server-assigned ID
         const newReply: CommentReply = {
-          id: response.reply_id, // Make sure to use the server-assigned ID
+          id: response.reply_id,
           uid: 0,
           handle: response.handle || localStorage.getItem('dapps_user_handle') || 'you',
           avatar_url: response.avatar_url || localStorage.getItem('dapps_user_avatar') || 'default',
@@ -172,10 +183,8 @@ export const EnhancedCommentsSection = ({
           has_meowed: false
         };
         
-        // Log the created reply with its ID to verify it's correct
         console.log("Created new reply with server-assigned ID:", newReply.id);
         
-        // Add the new reply to the correct parent comment
         setReplies(prevReplies => {
           const addReplyToComment = (comments: CommentReply[]): CommentReply[] => {
             return comments.map(comment => {
@@ -219,14 +228,12 @@ export const EnhancedCommentsSection = ({
   const handleMeowChange = async (commentId: number, newState: boolean) => {
     console.log(`Toggling meow for comment ID: ${commentId} to ${newState}`);
     
-    // Verify we have a valid numeric ID before proceeding
     if (!commentId || isNaN(commentId) || commentId <= 0) {
       console.error(`Invalid comment ID for meow toggle: ${commentId}`);
       toast.error('Cannot update reaction: Invalid comment ID');
       return;
     }
     
-    // Update UI optimistically
     const updatedReplies = updateMeowState(replies, commentId, newState);
     setReplies(updatedReplies);
     
@@ -240,7 +247,6 @@ export const EnhancedCommentsSection = ({
       }
     } catch (error) {
       console.error(`Error toggling meow for comment ID ${commentId}:`, error);
-      // Revert the optimistic update
       const revertedReplies = updateMeowState(replies, commentId, !newState);
       setReplies(revertedReplies);
       toast.error('Could not update meow. Please try again.');
@@ -411,6 +417,12 @@ export const EnhancedCommentsSection = ({
           isReplyingTo={replyTarget.isPost ? 'post' : 'comment'}
         />
       )}
+      
+      <NotInCommunitySheet 
+        open={notInCommunitySheetOpen}
+        onOpenChange={setNotInCommunitySheetOpen}
+        communityName={communityName}
+      />
     </div>
   );
 };

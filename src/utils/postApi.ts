@@ -231,7 +231,7 @@ export const fetchPost = async (postCode: string): Promise<{
 /**
  * Toggle roar (upvote) status for a post
  */
-export const toggleRoar = async (postCode: string): Promise<boolean> => {
+export const toggleRoar = async (postCode: string): Promise<boolean | { status: string; errCode: string; message: string; community: string }> => {
   try {
     const userKey = getUserApiKey();
     
@@ -252,6 +252,21 @@ export const toggleRoar = async (postCode: string): Promise<boolean> => {
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`Failed roar toggle response: ${errorText}`);
+      
+      // Check if this is a 403 error for not being part of the community
+      if (response.status === 403) {
+        try {
+          const errorData = JSON.parse(errorText);
+          if (errorData.errCode === "004" && errorData.community) {
+            // Return the parsed error object with community information
+            return errorData;
+          }
+        } catch (parseError) {
+          // If we can't parse the JSON, just continue with the normal error handling
+          console.error("Error parsing 403 response:", parseError);
+        }
+      }
+      
       throw new Error(`Failed to toggle roar: ${errorText}`);
     }
     

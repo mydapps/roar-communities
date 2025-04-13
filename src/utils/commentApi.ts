@@ -75,6 +75,9 @@ export const createReply = async (postCode: string, content: string, parentId = 
   handle?: string;
   avatar_url?: string;
   created_on?: string;
+  errCode?: string;
+  communityName?: string;
+  message?: string;
 }> => {
   try {
     const userKey = getUserApiKey();
@@ -105,6 +108,26 @@ export const createReply = async (postCode: string, content: string, parentId = 
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`Failed response body: ${errorText}`);
+      
+      // Check if this is a 403 error for not being part of the community
+      if (response.status === 403) {
+        try {
+          const errorData = JSON.parse(errorText);
+          if (errorData.errCode === "004" && errorData.communityName) {
+            // Return the parsed error object with community information
+            return {
+              success: false,
+              errCode: errorData.errCode,
+              communityName: errorData.communityName,
+              message: errorData.message || "You must be a member of the community to reply"
+            };
+          }
+        } catch (parseError) {
+          // If we can't parse the JSON, just continue with the normal error handling
+          console.error("Error parsing 403 response:", parseError);
+        }
+      }
+      
       throw new Error(`Failed to create reply: ${errorText}`);
     }
     
