@@ -27,6 +27,7 @@ import SuccessfulOnboarding from '@/pages/SuccessfulOnboarding';
 import RequestInvitePage from '@/pages/RequestInvitePage';
 import LaunchCountdown from '@/components/shared/LaunchCountdown';
 import RoarFarmingPage from '@/pages/RoarFarmingPage';
+import BoosterPage from '@/pages/BoosterPage';
 
 // Lazy loaded components
 const LazyMySharesPage = lazy(() => import('@/pages/MySharesPage'));
@@ -192,6 +193,11 @@ function App() {
             <Route path="roar-farming" element={
               <ProtectedRoute>
                 <RoarFarmingPage />
+              </ProtectedRoute>
+            } />
+            <Route path="boosters" element={
+              <ProtectedRoute>
+                <BoosterPage />
               </ProtectedRoute>
             } />
             <Route path="successful-onboarding" element={

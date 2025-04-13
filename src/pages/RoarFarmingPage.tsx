@@ -4,10 +4,10 @@ import { Helmet } from 'react-helmet-async';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, ArrowRight, Sparkles, Award, Clock, AlertTriangle, TrendingUp } from 'lucide-react';
+import { Loader2, ArrowRight, Sparkles, Award, Clock, AlertTriangle, TrendingUp, ChevronRight } from 'lucide-react';
 import { createAuthHeaders, fetchAvailableBoosters, AvailableBoostersResponse } from '@/utils/apiBase';
 import { toast } from 'sonner';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { BoosterDisplay, SimpleBoosterDisplay } from '@/components/shared/BoosterDisplay';
 import { BoosterDetailModal } from '@/components/shared/BoosterDetailModal';
 
@@ -85,6 +85,8 @@ const RoarFarmingPage = () => {
   const [boosterData, setBoosterData] = useState<AvailableBoostersResponse | null>(null);
   const [isLoadingBoosters, setIsLoadingBoosters] = useState<boolean>(false);
   const [boosterModalOpen, setBoosterModalOpen] = useState<boolean>(false);
+  
+  const navigate = useNavigate();
   
   // Load total roars and farming status on mount and when farming state changes
   useEffect(() => {
@@ -580,6 +582,18 @@ const RoarFarmingPage = () => {
                   </motion.div>
                 </div>
               )}
+              
+              {/* Add link to boosters page */}
+              <div className="flex justify-end mt-3">
+                <Link 
+                  to="/boosters" 
+                  className="text-xs flex items-center gap-1 text-amber-600 hover:text-amber-700 hover:underline"
+                >
+                  <Sparkles className="h-3 w-3" />
+                  View all boosters
+                  <ChevronRight className="h-3 w-3" />
+                </Link>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -795,21 +809,8 @@ const RoarFarmingPage = () => {
                 {/* Boost your roars button - now more prominent and separate */}
                 <div 
                   onClick={() => {
-                    // If boosters are available, open the modal, otherwise show improved toast message
-                    if (!isFarming && boosterData && boosterData.total > 0) {
-                      setBoosterModalOpen(true);
-                    } else {
-                      toast.info(
-                        <div className="flex flex-col">
-                          <span className="font-medium">Boosters are being added!</span>
-                          <span className="text-sm">Check back soon for exciting farming boosts.</span>
-                        </div>, 
-                        {
-                          duration: 5000,
-                          icon: <Sparkles className="h-5 w-5 text-amber-500" />
-                        }
-                      );
-                    }
+                    // Navigate to boosters page instead of showing a toast
+                    navigate('/boosters');
                   }}
                   className="mt-2 w-full max-w-xs flex justify-center items-center gap-2 py-2 px-4 rounded-md
                     bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300
