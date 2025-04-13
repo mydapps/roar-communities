@@ -1045,7 +1045,13 @@ const CreateCommunityPage = () => {
                 <AlertCircle className="h-5 w-5 mt-0.5 flex-shrink-0" />
                 <div>
                   <p className="font-medium">Please fix the form errors</p>
-                  <p className="text-sm mt-1">{errors.name || errors.handle || errors.description || errors.advancedConfigError}</p>
+                  {/* Use dangerouslySetInnerHTML to render the HTML link for deposit page */}
+                  <p 
+                    className="text-sm mt-1"
+                    dangerouslySetInnerHTML={{ 
+                      __html: errors.name || errors.handle || errors.description || errors.advancedConfigError || '' 
+                    }}
+                  />
                 </div>
               </motion.div>
             )}

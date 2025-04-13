@@ -67,6 +67,7 @@ interface CommunityValidateResponse {
   name: string;
   type: number;
   message?: string;
+  errCode?: string;
   gas?: {
     estimatedGasFee: string;
     createCost: number;
@@ -506,8 +507,16 @@ export const useCommunityCreation = () => {
         // Set specific error from the API or fallback to a general error
         const errorMessage = data.message || data.error || 'Failed to validate community creation';
         
+        // Check for specific error codes and handle them appropriately
+        if (data.status === 'DEPOSIT' && data.errCode === '006') {
+          // This is the low balance error - add special error with deposit link
+          setErrors({ 
+            name: `${errorMessage} <div class="mt-3"><a href="/my-shares" class="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-wallet"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>Deposit ETH</a></div>` 
+          });
+          setStep('form');
+        }
         // If it's a name conflict, set the error specifically on the name field
-        if (errorMessage.toLowerCase().includes('name already exists')) {
+        else if (errorMessage.toLowerCase().includes('name already exists')) {
           setErrors({ name: errorMessage });
           setStep('form'); // Make sure we're back on the form
         } else if (errorMessage.toLowerCase().includes('name must be between')) {
