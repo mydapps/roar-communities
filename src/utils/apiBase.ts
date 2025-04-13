@@ -290,3 +290,55 @@ export const handleAuthRecovery = (): void => {
     window.location.reload();
   }, 1000);
 };
+
+/**
+ * Available boosters response interface
+ */
+export interface AvailableBoostersResponse {
+  success: boolean;
+  boosters: number;
+  golden_boosters: number;
+  total: number;
+  base_value: number;
+  effective_total: number;
+  booster_details: Array<{
+    id: number;
+    activity: string;
+    boost: number;
+    received_on: string;
+  }>;
+  golden_booster_details: Array<{
+    id: number;
+    activity: string;
+    boost: number;
+    received_on: string;
+  }>;
+}
+
+/**
+ * Fetch available boosters for the user
+ * @returns Promise that resolves to available boosters data
+ */
+export const fetchAvailableBoosters = async (): Promise<AvailableBoostersResponse | null> => {
+  try {
+    const userKey = getUserApiKey();
+    if (!userKey) return null;
+    
+    const response = await fetch(`${API_BASE_URL}/roar_available_boosters`, {
+      method: 'GET',
+      headers: createAuthHeaders()
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Error fetching available boosters:', errorData);
+      return null;
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching available boosters:', error);
+    return null;
+  }
+};

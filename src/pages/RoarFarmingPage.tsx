@@ -4,10 +4,12 @@ import { Helmet } from 'react-helmet-async';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, ArrowRight, Sparkles, Award, Clock, AlertTriangle } from 'lucide-react';
-import { createAuthHeaders } from '@/utils/apiBase';
+import { Loader2, ArrowRight, Sparkles, Award, Clock, AlertTriangle, TrendingUp } from 'lucide-react';
+import { createAuthHeaders, fetchAvailableBoosters, AvailableBoostersResponse } from '@/utils/apiBase';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
+import { BoosterDisplay, SimpleBoosterDisplay } from '@/components/shared/BoosterDisplay';
+import { BoosterDetailModal } from '@/components/shared/BoosterDetailModal';
 
 // Constants
 const TOTAL_ROARS_GOAL = 10_000_000; // 10 million roars goal (updated from 1 billion)
@@ -79,6 +81,11 @@ const RoarFarmingPage = () => {
   // Add this to the component state declarations at the top
   const [secondsKey, setSecondsKey] = useState<number>(0);
   
+  // Add new state variables for boosters
+  const [boosterData, setBoosterData] = useState<AvailableBoostersResponse | null>(null);
+  const [isLoadingBoosters, setIsLoadingBoosters] = useState<boolean>(false);
+  const [boosterModalOpen, setBoosterModalOpen] = useState<boolean>(false);
+  
   // Load total roars and farming status on mount and when farming state changes
   useEffect(() => {
     fetchTotalRoars();
@@ -102,6 +109,13 @@ const RoarFarmingPage = () => {
       }
     };
   }, [isFarming]); // Re-setup when farming state changes
+  
+  // Add new useEffect to fetch boosters when not farming
+  useEffect(() => {
+    if (!isFarming) {
+      fetchBoosterData();
+    }
+  }, [isFarming]);
   
   // Fetch total roars from API
   const fetchTotalRoars = async () => {
@@ -497,108 +511,134 @@ const RoarFarmingPage = () => {
     }
   };
   
+  // Add new function to fetch booster data
+  const fetchBoosterData = async () => {
+    try {
+      setIsLoadingBoosters(true);
+      const data = await fetchAvailableBoosters();
+      if (data && data.success) {
+        setBoosterData(data);
+      }
+    } catch (error) {
+      console.error('Error fetching booster data:', error);
+    } finally {
+      setIsLoadingBoosters(false);
+    }
+  };
+  
   return (
     <>
       <Helmet>
-        <title>Roar Farming | dapps.co</title>
+        <title>Roar Farming | Dapps Community</title>
       </Helmet>
       
-      <div className="flex flex-col gap-6 max-w-3xl mx-auto pt-14 pb-20">
-        {/* Global progress card */}
-        <Card className="border-amber-200/20 overflow-hidden">
-          <CardContent className="p-5">
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h2 className="text-lg font-medium">Global Roar Progress</h2>
-                </div>
-                
-                <div className="text-right">
-                  <div className="text-xl font-bold">
-                    {totalRoarsLoading ? (
-                      <Loader2 className="h-5 w-5 inline animate-spin" />
-                    ) : (
-                      `${formatLargeNumber(totalRoars)}`
-                    )}
-                    <span className="text-muted-foreground text-sm font-normal"> / {formatLargeNumber(TOTAL_ROARS_GOAL)}</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {totalRoarsLoading ? "" : `${((totalRoars / TOTAL_ROARS_GOAL) * 100).toFixed(2)}% claimed`}
-                  </p>
-                </div>
+      {/* Add booster modal */}
+      <BoosterDetailModal 
+        open={boosterModalOpen} 
+        onOpenChange={setBoosterModalOpen} 
+        boosterData={boosterData}
+      />
+      
+      {/* Added extra top margin to prevent content from being cut off by navigation */}
+      <div className="container max-w-md mx-auto px-4 py-6 mt-14">
+        {/* Global progress card - now a separate section */}
+        <Card className="border-amber-200 dark:border-amber-800/40 shadow-md mb-5">
+          <CardContent className="p-4">
+            <div className="flex flex-col">
+              <div className="flex justify-between items-center mb-1">
+                <h3 className="text-sm font-medium text-amber-800 dark:text-amber-200">Global Roar Progress</h3>
+                <span className="text-xs text-muted-foreground">
+                  {((totalRoars / TOTAL_ROARS_GOAL) * 100).toFixed(1)}% Complete
+                </span>
               </div>
               
-              <div className="relative">
-                <Progress 
-                  value={(totalRoars / TOTAL_ROARS_GOAL) * 100}
-                  className="h-3 rounded-full bg-muted/50"
-                  indicatorClassName={getProgressGradient()}
-                />
-                
-                {/* Animated warning labels */}
-                {totalRoars / TOTAL_ROARS_GOAL > 0.7 && (
-                  <div className="absolute top-5 left-1/2 transform -translate-x-1/2 mt-1">
-                    <motion.div
-                      animate={{ opacity: [0.7, 1, 0.7] }}
-                      transition={{ repeat: Infinity, duration: 2 }}
-                      className="flex items-center gap-1 bg-amber-50 text-amber-900 px-2 py-0.5 rounded text-xs font-medium border border-amber-200"
-                    >
-                      <AlertTriangle className="h-3 w-3" />
-                      <span>Running out fast!</span>
-                    </motion.div>
-                  </div>
-                )}
+              <div className="flex justify-between text-xs text-muted-foreground mb-2">
+                <span>Community Goal</span>
+                <span className="font-medium tabular-nums">
+                  {formatLargeNumber(totalRoars)} / {formatLargeNumber(TOTAL_ROARS_GOAL)} ROAR
+                </span>
               </div>
+              
+              <Progress 
+                value={(totalRoars / TOTAL_ROARS_GOAL) * 100} 
+                className="h-2.5 bg-amber-100 dark:bg-amber-950/40"
+                style={{
+                  backgroundImage: getProgressGradient()
+                }}
+              />
+              
+              {/* Add warning label when running out */}
+              {totalRoars / TOTAL_ROARS_GOAL > 0.7 && (
+                <div className="mt-2 flex items-center justify-center">
+                  <motion.div
+                    animate={{ opacity: [0.7, 1, 0.7] }}
+                    transition={{ repeat: Infinity, duration: 2 }}
+                    className="flex items-center gap-1 bg-amber-50 text-amber-800 px-2 py-1 rounded text-xs font-medium border border-amber-200"
+                  >
+                    <AlertTriangle className="h-3 w-3" />
+                    <span>Running out fast! Don't miss out</span>
+                  </motion.div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
         
         {/* Main farming card */}
-        <Card className="border-amber-200/20 overflow-hidden">
-          <CardHeader className="pb-0">
-            <CardTitle className="flex justify-between items-center">
-              <span>Roar Farming</span>
-              {isFarming && (
-                <span className="text-sm font-normal bg-amber-100 text-amber-800 px-2 py-1 rounded-full">
-                  {(DEFAULT_FARMING_RATE * booster).toFixed(2)} 🦁/s
-                </span>
-              )}
+        <Card className="border-amber-200 dark:border-amber-800/40 shadow-md">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-center text-amber-800 dark:text-amber-200 flex items-center justify-center gap-2">
+              <Sparkles className="h-5 w-5 text-amber-500" /> Roar Farming
             </CardTitle>
+            
+            <div className="text-center text-sm text-muted-foreground">
+              Earn ROAR tokens by actively participating in the community
+            </div>
+            
+            {/* Show current farming rate when farming */}
+            {isFarming && (
+              <div className="flex justify-center mt-1.5">
+                <div className="bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1.5">
+                  <TrendingUp className="h-3.5 w-3.5" />
+                  <span className="tabular-nums">{(DEFAULT_FARMING_RATE * booster).toFixed(2)} 🦁/s</span>
+                </div>
+              </div>
+            )}
           </CardHeader>
           
-          <CardContent className="pt-6 pb-8">
+          <CardContent>
             <div className="flex flex-col items-center">
-              {/* Farming animation */}
-              <div className="relative w-48 h-48 mb-8">
-                {/* Circle background */}
-                <div className="absolute inset-0 rounded-full bg-amber-100/10"></div>
-                
-                {/* Progress circle - filling in clockwise direction with thicker stroke */}
-                {isFarming && (
-                  <div className="absolute inset-0">
-                    <svg className="w-full h-full" viewBox="0 0 100 100">
-                      <circle
-                        cx="50"
-                        cy="50"
-                        r="45"
-                        fill="none"
-                        stroke="url(#progressGradient)"
-                        strokeWidth="12"
-                        strokeDasharray="282.7"
-                        strokeDashoffset={282.7 - (282.7 * farmingProgress) / 100}
-                        strokeLinecap="round"
-                        transform="rotate(-90 50 50)"
-                        className="transition-all duration-300"
+              {/* Lion farming indicator */}
+              <div className="relative w-44 h-44 mb-4">
+                {/* Circular progress indicator */}
+                <div className="absolute inset-0">
+                  <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
+                    <circle 
+                      cx="50" cy="50" r="40" 
+                      stroke="#FEF3C7" 
+                      strokeWidth="8" 
+                      fill="none" 
+                      className="dark:opacity-30"
+                    />
+                    {isFarming && (
+                      <circle 
+                        cx="50" cy="50" r="40" 
+                        stroke="url(#gradient)" 
+                        strokeWidth="8" 
+                        fill="none" 
+                        strokeDasharray={`${2 * Math.PI * 40}`}
+                        strokeDashoffset={`${2 * Math.PI * 40 * (1 - farmingProgress / 100)}`}
+                        className={`transition-all duration-500 ${progressPulse ? 'opacity-80' : 'opacity-100'}`}
                       />
-                      <defs>
-                        <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                          <stop offset="0%" stopColor="#f59e0b" />
-                          <stop offset="100%" stopColor="#d97706" />
-                        </linearGradient>
-                      </defs>
-                    </svg>
-                  </div>
-                )}
+                    )}
+                    <defs>
+                      <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#F59E0B" />
+                        <stop offset="100%" stopColor="#D97706" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
                 
                 {/* Inner area for the lion */}
                 <div className="absolute inset-[18px] rounded-full bg-background"></div>
@@ -727,28 +767,58 @@ const RoarFarmingPage = () => {
                     </Button>
                   </div>
                 ) : (
-                  <Button
-                    size="lg"
-                    className="w-full max-w-xs bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-lg transition-all duration-300 hover:scale-105"
-                    onClick={startFarming}
-                    disabled={isStarting}
-                  >
-                    {isStarting ? (
-                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                    ) : (
-                      <Sparkles className="h-5 w-5 mr-2" />
+                  <>
+                    {/* Display available boosters above the button when not farming */}
+                    {!isLoadingBoosters && boosterData && boosterData.total > 0 && (
+                      <SimpleBoosterDisplay 
+                        boosters={boosterData} 
+                        onClick={() => setBoosterModalOpen(true)} 
+                      />
                     )}
-                    Start Farming
-                  </Button>
+                    
+                    <Button
+                      size="lg"
+                      className="w-full max-w-xs bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 shadow-lg transition-all duration-300 hover:scale-105"
+                      onClick={startFarming}
+                      disabled={isStarting}
+                    >
+                      {isStarting ? (
+                        <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                      ) : (
+                        <Sparkles className="h-5 w-5 mr-2" />
+                      )}
+                      Start Farming
+                    </Button>
+                  </>
                 )}
                 
-                {/* Boost link */}
+                {/* Boost your roars button - now more prominent and separate */}
                 <div 
-                  onClick={() => toast.info("Boosters will be launching soon! Stay tuned for updates.")}
-                  className="text-sm text-amber-600 hover:text-amber-700 hover:underline flex items-center cursor-pointer"
+                  onClick={() => {
+                    // If boosters are available, open the modal, otherwise show improved toast message
+                    if (!isFarming && boosterData && boosterData.total > 0) {
+                      setBoosterModalOpen(true);
+                    } else {
+                      toast.info(
+                        <div className="flex flex-col">
+                          <span className="font-medium">Boosters are being added!</span>
+                          <span className="text-sm">Check back soon for exciting farming boosts.</span>
+                        </div>, 
+                        {
+                          duration: 5000,
+                          icon: <Sparkles className="h-5 w-5 text-amber-500" />
+                        }
+                      );
+                    }
+                  }}
+                  className="mt-2 w-full max-w-xs flex justify-center items-center gap-2 py-2 px-4 rounded-md
+                    bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300
+                    hover:bg-amber-200 dark:hover:bg-amber-800/30 transition-colors
+                    border border-amber-200 dark:border-amber-700/40 cursor-pointer"
                 >
-                  Boost your roars
-                  <ArrowRight className="h-3 w-3 ml-1" />
+                  <Sparkles className="h-4 w-4" />
+                  <span className="font-medium">Boost your roars</span>
+                  <ArrowRight className="h-3.5 w-3.5 ml-1" />
                 </div>
               </div>
             </div>
