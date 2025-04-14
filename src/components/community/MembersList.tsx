@@ -55,7 +55,7 @@ export const MembersList = ({ members, loading, hasMore, loadMore, ethToUsd }: M
             </div>
           </div>
           <div className="text-right">
-            <div className="font-medium">{member.shares.toFixed(2)} shares</div>
+            <div className="font-medium">{member.shares.toFixed(3)} shares</div>
             <div className="text-xs text-muted-foreground">
               ~${(member.shares * 0.00254 * ethToUsd).toFixed(2)}
             </div>

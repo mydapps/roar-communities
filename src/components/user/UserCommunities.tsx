@@ -71,7 +71,7 @@ const UserCommunities: React.FC<UserCommunitiesProps> = ({ communities }) => {
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {community.shares.toFixed(2)} {community.shares === 1 ? 'share' : 'shares'}
+                    {community.shares.toFixed(3)} {community.shares === 1 ? 'share' : 'shares'}
                   </p>
                 </div>
               </Link>
