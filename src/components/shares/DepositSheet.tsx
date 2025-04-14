@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Copy, Check, QrCode, Loader2, Droplet, Clock, Wallet } from 'lucide-react';
+import { Copy, Check, QrCode, Loader2, Wallet } from 'lucide-react';
 import { toast } from "sonner";
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -25,215 +25,17 @@ import {
 } from '@/components/ui/drawer';
 import { createAuthHeaders } from '@/utils/apiBase';
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-
-// New component for claiming testnet ETH
-export const ClaimFaucetButton = ({ onSuccess }: { onSuccess?: () => void }) => {
-  const [isClaiming, setIsClaiming] = useState(false);
-  const [lastClaimed, setLastClaimed] = useState<null | number>(null);
-  const [timeLeft, setTimeLeft] = useState<null | number>(null);
-  
-  // Function to check if user has claimed recently
-  useEffect(() => {
-    const lastClaimedTime = localStorage.getItem('dapps_last_faucet_claim');
-    if (lastClaimedTime) {
-      const lastTime = parseInt(lastClaimedTime);
-      setLastClaimed(lastTime);
-      
-      // Calculate time left for next claim
-      const calculateTimeLeft = () => {
-        const now = Date.now();
-        const nextClaimTime = lastTime + 24 * 60 * 60 * 1000; // 24 hours in ms
-        const diff = nextClaimTime - now;
-        
-        if (diff <= 0) {
-          setTimeLeft(0);
-          setLastClaimed(null);
-          localStorage.removeItem('dapps_last_faucet_claim');
-        } else {
-          setTimeLeft(diff);
-        }
-      };
-      
-      calculateTimeLeft();
-      const timer = setInterval(calculateTimeLeft, 1000);
-      
-      return () => clearInterval(timer);
-    }
-  }, []);
-  
-  const handleClaimETH = async () => {
-    setIsClaiming(true);
-    
-    try {
-      const headers = createAuthHeaders(false);
-      // Get user key directly from localStorage to ensure it's included
-      const userKey = localStorage.getItem('dapps_user_key');
-      
-      if (!userKey) {
-        throw new Error("Authentication required. Please log in.");
-      }
-      
-      const response = await fetch("https://api.dapps.co/claim_deposit_faucet", {
-        method: 'POST',
-        headers: {
-          ...headers,
-          'Content-Type': 'application/json',
-          'x-user-key': userKey
-        }
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error('Faucet claim error:', errorData);
-        
-        if (response.status === 401) {
-          throw new Error("Authentication required. Please refresh and try again.");
-        }
-        
-        if (response.status === 429) {
-          // Handle rate limiting - likely due to claiming too frequently
-          const now = Date.now();
-          localStorage.setItem('dapps_last_faucet_claim', now.toString());
-          setLastClaimed(now);
-          throw new Error("You can only claim once every 24 hours.");
-        }
-        
-        throw new Error("Failed to claim testnet ETH.");
-      }
-      
-      try {
-        const data = await response.json();
-        if (data.success) {
-          toast.success(data.message || "Successfully claimed testnet ETH!");
-        } else {
-          // If the API returns success: false but still returns
-          if (data.message && data.message.includes("Last claimed")) {
-            const hoursAgoMatch = data.message.match(/Last claimed (\d+) hours ago/);
-            if (hoursAgoMatch && hoursAgoMatch[1]) {
-              const hoursAgo = parseInt(hoursAgoMatch[1]);
-              const lastClaimTime = Date.now() - (hoursAgo * 60 * 60 * 1000);
-              localStorage.setItem('dapps_last_faucet_claim', lastClaimTime.toString());
-              setLastClaimed(lastClaimTime);
-            }
-            throw new Error(data.message);
-          } else {
-            throw new Error(data.message || "Failed to claim testnet ETH");
-          }
-        }
-        
-        // Save claim time to localStorage
-        const now = Date.now();
-        localStorage.setItem('dapps_last_faucet_claim', now.toString());
-        setLastClaimed(now);
-        
-        // Call success callback if provided
-        if (onSuccess) {
-          onSuccess();
-        }
-      } catch (parseError) {
-        console.error('Error parsing response:', parseError);
-        // If we can't parse the response but the HTTP status was success, show a generic success message
-        if (response.ok) {
-          toast.success("Request successful! Your ETH should arrive shortly.");
-          const now = Date.now();
-          localStorage.setItem('dapps_last_faucet_claim', now.toString());
-          setLastClaimed(now);
-          if (onSuccess) onSuccess();
-        } else {
-          throw new Error("Failed to process server response");
-        }
-      }
-    } catch (error) {
-      console.error('Error claiming testnet ETH:', error);
-      toast.error(error instanceof Error ? error.message : "Failed to claim testnet ETH. Please try again later.");
-    } finally {
-      setIsClaiming(false);
-    }
-  };
-  
-  // Format time left for display
-  const formatTimeLeft = (ms: number) => {
-    const hours = Math.floor(ms / (1000 * 60 * 60));
-    const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((ms % (1000 * 60)) / 1000);
-    
-    return `${hours}h ${minutes}m ${seconds}s`;
-  };
-  
-  // Calculate progress percentage for cooldown
-  const getProgress = () => {
-    if (!lastClaimed || !timeLeft) return 100;
-    const totalTime = 24 * 60 * 60 * 1000; // 24 hours
-    const elapsed = totalTime - timeLeft;
-    return Math.min(100, Math.floor((elapsed / totalTime) * 100));
-  };
-  
-  return (
-    <div className="relative w-full mt-3 bg-gradient-to-r from-indigo-50 to-blue-50 p-4 rounded-lg border border-indigo-100">
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div className="flex flex-col">
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="bg-indigo-100 text-indigo-700 hover:bg-indigo-200">
-              <Droplet className="h-3 w-3 mr-1 text-blue-500" />
-              Testnet
-            </Badge>
-            <h3 className="font-medium">Free Testnet ETH</h3>
-          </div>
-          <p className="text-sm text-muted-foreground mt-1">
-            {timeLeft && timeLeft > 0 ? "Next claim available in:" : "Claim free testnet ETH for testing"}
-          </p>
-          
-          {timeLeft && timeLeft > 0 && (
-            <div className="w-full mt-2">
-              <div className="flex items-center justify-between text-xs mb-1">
-                <span className="text-muted-foreground">
-                  <Clock className="h-3 w-3 inline mr-1" />
-                  {formatTimeLeft(timeLeft)}
-                </span>
-                <span className="text-muted-foreground">{getProgress()}%</span>
-              </div>
-              <Progress value={getProgress()} className="h-2" />
-            </div>
-          )}
-        </div>
-        
-        <Button
-          onClick={handleClaimETH}
-          disabled={isClaiming || (timeLeft !== null && timeLeft > 0)}
-          className={cn(
-            "whitespace-nowrap min-w-[120px]",
-            timeLeft === null || timeLeft === 0 ? "bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white" : ""
-          )}
-        >
-          {isClaiming ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 
-              Claiming...
-            </>
-          ) : timeLeft && timeLeft > 0 ? (
-            "Cooldown Active"
-          ) : (
-            "Claim Free ETH"
-          )}
-        </Button>
-      </div>
-    </div>
-  );
-};
 
 interface DepositSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   isEmbedded?: boolean;
-  onFaucetSuccess?: () => void;
 }
 
 export const DepositSheet = ({
   open,
   onOpenChange,
   isEmbedded = false,
-  onFaucetSuccess
 }: DepositSheetProps) => {
   const [depositMethod, setDepositMethod] = useState<'base' | 'ethereum'>('base');
   const [copied, setCopied] = useState(false);
@@ -308,8 +110,6 @@ export const DepositSheet = ({
         
         <TabsContent value="base" className="mt-2">
           <div className="space-y-5">
-            <ClaimFaucetButton onSuccess={onFaucetSuccess} />
-          
             <div className="flex justify-center my-6">
               <div className="border rounded-xl p-4 bg-white dark:bg-muted/30 shadow-sm">
                 {isLoading ? (
