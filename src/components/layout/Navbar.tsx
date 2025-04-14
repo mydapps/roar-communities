@@ -35,7 +35,6 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
   const [searchFocused, setSearchFocused] = useState(false);
   const [userHandle, setUserHandle] = useState('');
   const [roarBalance, setRoarBalance] = useState('0');
-  const [isBannerVisible, setIsBannerVisible] = useState(true);
   
   const isFeedPage = location.pathname === '/feed';
   const isHomePage = location.pathname === '/' || location.pathname === '/index';
@@ -58,10 +57,6 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
     
     // Listen for auth invalidation events
     const handleAuthInvalidated = () => {
-      console.log('Auth invalidated event received in Navbar');
-      setIsLoggedIn(false);
-      
-      // If on a protected route, redirect to home
       const currentPath = location.pathname;
       if (currentPath.startsWith('/feed') || 
           currentPath.startsWith('/my-shares') || 
@@ -74,20 +69,8 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
     
     document.addEventListener('dapps_auth_invalidated', handleAuthInvalidated);
     
-    // Check if the launch banner is dismissed
-    const bannerDismissed = localStorage.getItem('dapps_launch_banner_dismissed');
-    setIsBannerVisible(!bannerDismissed);
-    
-    // Listen for banner dismissal events
-    const handleBannerDismiss = () => {
-      setIsBannerVisible(false);
-    };
-    
-    window.addEventListener('dapps_banner_dismissed', handleBannerDismiss);
-    
     return () => {
       document.removeEventListener('dapps_auth_invalidated', handleAuthInvalidated);
-      window.removeEventListener('dapps_banner_dismissed', handleBannerDismiss);
     };
   }, [location.pathname, navigate]);
   
@@ -144,10 +127,7 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
   };
   
   return (
-    <header className={cn(
-      "fixed left-0 right-0 z-50 w-full border-b bg-background/95 backdrop-blur-xl shadow-sm",
-      isBannerVisible ? "top-[76px]" : "top-0"
-    )}>
+    <header className="fixed left-0 right-0 z-50 w-full border-b bg-background/95 backdrop-blur-xl shadow-sm top-0">
       <div className="container flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-2">
           {!isMobile && (
