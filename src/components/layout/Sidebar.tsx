@@ -59,7 +59,6 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     
     // Set up listener for auth invalidation events
     const handleAuthInvalidated = () => {
-      console.log('Auth invalidated event received');
       setIsLoggedIn(false);
       setCommunities([]);
       setHasCommunities(false);
@@ -79,7 +78,6 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
       // Check if we have a user key in localStorage
       const userKey = localStorage.getItem('dapps_user_key');
       if (!userKey) {
-        console.log('No user key found in localStorage');
         setLoadingCommunities(false);
         return;
       }
@@ -87,12 +85,8 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
       // Use auth headers utility from apiBase to ensure proper authentication
       const headers = createAuthHeaders(false);
       
-      // Debug the headers to see what's being sent
-      console.log('Auth headers:', JSON.stringify(headers));
-      
       // Double check if we have headers (if not, user not authenticated)
       if (!headers['x-user-key']) {
-        console.log('No auth headers available, retrying in 1 second...');
         // If no headers but retry count is low, try again after a delay
         if (retryCount < 3) {
           setTimeout(() => {
@@ -105,8 +99,6 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         }
       }
       
-      console.log('Fetching communities with auth headers');
-      
       const response = await fetch("https://api.dapps.co/get_communities?personal=1&category=popular&page=1&limit=5", {
         method: 'GET',
         headers: headers
@@ -114,7 +106,6 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
       
       if (!response.ok) {
         const errText = await response.text();
-        console.error(`API error response: ${response.status}`, errText);
         
         if (response.status === 401) {
           // Use the centralized cleanup function for auth failures
@@ -135,11 +126,8 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         setHasCommunities(false);
       }
     } catch (error) {
-      console.error('Error fetching communities:', error);
-      
       // If 401 error and retries < 3, try again after delay (auth might still be initializing)
       if (error instanceof Error && error.message.includes('401') && retryCount < 3) {
-        console.log(`Auth error, retrying (${retryCount + 1}/3)...`);
         setTimeout(() => {
           setRetryCount(prev => prev + 1);
           fetchCommunities();
@@ -249,41 +237,44 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                       {communities.length > 4 && (
                         <NavLink 
                           to="/communities"
-                          className="block mt-2 text-sm text-primary hover:underline font-medium"
+                          className="flex items-center gap-1 text-xs text-primary mt-3 font-medium hover:underline"
                         >
-                          View more
+                          View all communities
+                          <ArrowUpRight className="h-3 w-3 mt-0.5" />
                         </NavLink>
                       )}
                     </>
                   ) : (
-                    <div className="p-3 text-sm text-muted-foreground">
-                      <p>Join communities to see them here</p>
-                      <Button 
-                        variant="link" 
-                        className="h-auto p-0 text-primary text-sm"
-                        onClick={() => {
-                          // Reset retry count and try again
-                          setRetryCount(0);
-                          fetchCommunities();
-                        }}
+                    <div className="rounded-lg bg-muted/50 border-border/40 border p-3">
+                      <p className="text-xs text-muted-foreground">Join or create communities to see them here</p>
+                      <NavLink 
+                        to="/communities"
+                        className="mt-2 flex items-center justify-center gap-1 w-full bg-primary/10 hover:bg-primary/20 text-primary text-xs rounded-md py-1.5 font-medium"
                       >
-                        Retry
-                      </Button>
+                        <Plus className="h-3 w-3" />
+                        Browse Communities
+                      </NavLink>
                     </div>
                   )}
                 </div>
               </div>
             )}
             
-            {/* Create community button - only show if logged in */}
+            {/* Create Community Button */}
             {isLoggedIn && (
-              <div className="py-4">
-                <Button asChild className="w-full" size="sm">
-                  <NavLink to="/create-community" className="flex items-center gap-1.5">
-                    <Plus className="h-4 w-4" />
-                    Create Community
-                  </NavLink>
-                </Button>
+              <div className="pt-4 border-t">
+                <NavLink 
+                  to="/create-community"
+                  className={({ isActive }) => cn(
+                    "flex items-center justify-center gap-2 w-full py-2 px-3 rounded-md text-sm font-medium",
+                    isActive 
+                      ? "bg-primary text-primary-foreground" 
+                      : "bg-primary/10 text-primary hover:bg-primary/20"
+                  )}
+                >
+                  <Plus className="h-4 w-4" />
+                  Create Community
+                </NavLink>
               </div>
             )}
           </div>
@@ -304,15 +295,13 @@ const NavItem = ({ to, icon, label, className }: NavItemProps) => {
   return (
     <NavLink
       to={to}
-      className={({ isActive }) =>
-        cn(
-          "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-          isActive 
-            ? "bg-primary text-primary-foreground" 
-            : "text-muted-foreground hover:bg-muted hover:text-foreground",
-          className
-        )
-      }
+      className={({ isActive }) => cn(
+        "flex items-center gap-3 px-3 py-2 rounded-md text-sm",
+        isActive 
+          ? "bg-primary/10 text-primary font-medium" 
+          : "text-muted-foreground hover:bg-muted hover:text-foreground",
+        className
+      )}
     >
       {icon}
       {label}
@@ -326,30 +315,22 @@ interface CommunityItemProps {
 }
 
 const CommunityItem = ({ name, img }: CommunityItemProps) => {
-  const communityPath = `/c/${name.toLowerCase().replace(/\s+/g, '-')}`;
-  
   return (
     <NavLink
-      to={communityPath}
-      className={({ isActive }) =>
-        cn(
-          "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-          isActive 
-            ? "bg-muted text-foreground" 
-            : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-        )
-      }
+      to={`/c/${name}`}
+      className={({ isActive }) => cn(
+        "flex items-center gap-2 px-2 py-1.5 rounded-md text-sm",
+        isActive 
+          ? "bg-primary/10 text-primary font-medium" 
+          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+      )}
     >
       <img 
-        src={img || "https://dapps.co/dapps.png"} 
+        src={img || '/images/placeholder.png'} 
         alt={name} 
-        className="h-6 w-6 rounded-full object-cover"
-        onError={(e) => {
-          // Fallback if image fails to load
-          (e.target as HTMLImageElement).src = "https://dapps.co/dapps.png";
-        }}
+        className="h-6 w-6 rounded-full object-cover" 
       />
-      <span>{name}</span>
+      <span className="truncate">{name}</span>
     </NavLink>
   );
 };

@@ -224,7 +224,6 @@ export const fetchCommunities = async (options: FetchCommunitiesOptions): Promis
     const userKey = getUserApiKey();
     
     if (!userKey && personal) {
-      console.warn('User key is required for personal communities');
       return [];
     }
     
@@ -232,7 +231,6 @@ export const fetchCommunities = async (options: FetchCommunitiesOptions): Promis
     if (personal && userKey) {
       const isValidKey = await validateUserApiKey();
       if (!isValidKey) {
-        console.warn('Invalid user key detected, aborting fetchCommunities request');
         return [];
       }
     }
@@ -264,8 +262,6 @@ export const fetchCommunities = async (options: FetchCommunitiesOptions): Promis
       url += `&search=${encodeURIComponent(search.trim())}`;
     }
     
-    console.log(`Fetching communities from: ${url}`);
-    
     // Make the API request with headers
     const headers: HeadersInit = {};
     if (userKey) {
@@ -277,31 +273,23 @@ export const fetchCommunities = async (options: FetchCommunitiesOptions): Promis
       headers,
     });
     
-    console.log(`Communities API response status: ${response.status}`);
-    
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Failed response body: ${errorText}`);
       throw new Error(`Failed to fetch communities: ${errorText}`);
     }
     
     const data = await response.json();
-    console.log(`Communities API response structure:`, Object.keys(data));
     
     if (!data.success) {
-      console.error('API returned success: false', data);
       return [];
     }
     
     if (!Array.isArray(data.communities)) {
-      console.error('Expected communities array in response', data);
       return [];
     }
     
     return data.communities;
   } catch (error) {
-    console.error('Error fetching communities:', error);
-    toast.error('Failed to load communities. Please try again.');
     return [];
   }
 };
@@ -319,14 +307,11 @@ export const getSharePrice = async (communityName: string, shareQuantity: number
     // Ensure shareQuantity is passed correctly as a number
     const quantity = Number(shareQuantity);
     if (isNaN(quantity) || quantity <= 0) {
-      console.error(`Invalid share quantity: ${shareQuantity}, defaulting to 1`);
       shareQuantity = 1;
     }
 
     // Use the correct parameter name 'shares' instead of 'shareQuantity'
     const url = `${API_BASE_URL}/get_share_price?communityName=${encodeURIComponent(communityName)}&shares=${quantity}`;
-    
-    console.log(`Fetching share price for ${communityName}, quantity: ${quantity}`);
     
     const response = await fetch(url, {
       method: 'GET',
@@ -337,16 +322,13 @@ export const getSharePrice = async (communityName: string, shareQuantity: number
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Share price fetch failed: ${errorText}`);
       throw new Error(`Failed to fetch share price: ${errorText}`);
     }
     
     const data = await response.json();
-    console.log('Share price response:', data);
     
     return data;
   } catch (error) {
-    console.error('Error fetching share price:', error);
     throw error;
   }
 };
@@ -359,7 +341,6 @@ export const buySharesPrecheck = async (communityName: string, shareQuantity: nu
     // First, validate the user's API key
     const isValidApiKey = await validateUserApiKey();
     if (!isValidApiKey) {
-      console.error('Invalid API key detected in buySharesPrecheck, aborting request');
       return {
         status: 'ERROR',
         error: 'Authentication error. Please refresh the page and try again.',
@@ -375,10 +356,7 @@ export const buySharesPrecheck = async (communityName: string, shareQuantity: nu
     const url = `${API_BASE_URL}/buy_shares_precheck`;
     const headers = createAuthHeaders();
     
-    console.log(`Buy shares precheck for ${communityName}, quantity: ${shareQuantity}`);
-    
     if (!communityName) {
-      console.error('No community name provided to buySharesPrecheck');
       return {
         status: 'ERROR',
         error: 'Community name is required',
@@ -392,7 +370,6 @@ export const buySharesPrecheck = async (communityName: string, shareQuantity: nu
     }
     
     if (isNaN(shareQuantity) || shareQuantity <= 0) {
-      console.error(`Invalid share quantity: ${shareQuantity}`);
       return {
         status: 'ERROR',
         error: 'Invalid share quantity',
@@ -405,12 +382,6 @@ export const buySharesPrecheck = async (communityName: string, shareQuantity: nu
       };
     }
     
-    console.log('Request headers:', headers);
-    console.log('Request body:', JSON.stringify({
-      communityName,
-      shareQuantity
-    }));
-    
     const response = await fetch(url, {
       method: 'POST',
       headers,
@@ -421,39 +392,13 @@ export const buySharesPrecheck = async (communityName: string, shareQuantity: nu
     });
     
     const responseStatus = response.status;
-    console.log(`Buy shares precheck response status: ${responseStatus}`);
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Buy shares precheck failed with status ${responseStatus}: ${errorText}`);
-      return {
-        status: 'ERROR',
-        error: `API error (${responseStatus}): ${errorText}`,
-        fee: '',
-        sharePrice: 0,
-        sharePriceUsd: 0,
-        shareQuantity: 0,
-        totalValue: '',
-        communityName
-      };
+      throw new Error(`API error (${responseStatus}): ${errorText}`);
     }
     
     const data = await response.json();
-    console.log('Buy shares precheck response:', data);
-    
-    if (!data || typeof data !== 'object') {
-      console.error('Invalid API response format', data);
-      return {
-        status: 'ERROR',
-        error: 'Invalid API response format',
-        fee: '',
-        sharePrice: 0,
-        sharePriceUsd: 0,
-        shareQuantity: 0,
-        totalValue: '',
-        communityName
-      };
-    }
     
     if (data.status === 'DEPOSIT') {
       return {
@@ -471,17 +416,7 @@ export const buySharesPrecheck = async (communityName: string, shareQuantity: nu
     }
     
     if (data.status !== 'SUCCESS') {
-      console.error('Transaction precheck failed:', data.message || data.error);
-      return {
-        status: 'ERROR',
-        error: data.message || data.error || 'Transaction precheck failed',
-        fee: '',
-        sharePrice: 0,
-        sharePriceUsd: 0,
-        shareQuantity: 0,
-        totalValue: '',
-        communityName
-      };
+      throw new Error(data.message || data.error || 'Transaction precheck failed');
     }
     
     // Ensure numeric fields are properly parsed from strings if needed
@@ -508,17 +443,7 @@ export const buySharesPrecheck = async (communityName: string, shareQuantity: nu
     
     return result;
   } catch (error) {
-    console.error('Error in buy shares precheck:', error);
-    return {
-      status: 'ERROR',
-      error: error instanceof Error ? error.message : 'Unknown error occurred',
-      fee: '',
-      sharePrice: 0,
-      sharePriceUsd: 0,
-      shareQuantity: 0,
-      totalValue: '',
-      communityName
-    };
+    throw error;
   }
 };
 
@@ -530,27 +455,13 @@ export const buySharesConfirm = async (communityName: string, shareQuantity: num
     const url = `${API_BASE_URL}/buy_shares_confirm`;
     const headers = createAuthHeaders();
     
-    console.log(`Confirming buy shares for ${communityName}, quantity: ${shareQuantity}`);
-    
-    // Add validation
     if (!communityName) {
-      console.error('No community name provided to buySharesConfirm');
       throw new Error('Community name is required');
     }
     
     if (isNaN(shareQuantity) || shareQuantity <= 0) {
-      console.error(`Invalid share quantity: ${shareQuantity}`);
       throw new Error('Invalid share quantity');
     }
-    
-    // Log the API request details
-    console.log('Buy shares confirm request:');
-    console.log('URL:', url);
-    console.log('Headers:', headers);
-    console.log('Request body:', JSON.stringify({
-      communityName,
-      shareQuantity
-    }));
     
     const response = await fetch(url, {
       method: 'POST',
@@ -561,25 +472,15 @@ export const buySharesConfirm = async (communityName: string, shareQuantity: num
       })
     });
     
-    console.log(`Buy shares confirm response status: ${response.status}`);
-    
-    // Check if the response is non-OK
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Buy shares confirmation failed with status ${response.status}: ${errorText}`);
       throw new Error(`Failed to confirm share purchase: ${errorText}`);
     }
     
     const data = await response.json();
-    console.log('Buy shares confirmation response:', data);
     
     if (data.status !== 'SUCCESS') {
-      console.error(`Buy shares confirmation returned non-success status: ${data.status}`);
-      console.error('Error message:', data.message || data.error || 'Unknown error');
-      return {
-        status: data.status || 'ERROR',
-        message: data.message || data.error || 'Transaction failed',
-      };
+      throw new Error(data.message || data.error || 'Transaction failed');
     }
     
     return {
@@ -588,7 +489,6 @@ export const buySharesConfirm = async (communityName: string, shareQuantity: num
       newShareBalance: data.newShareBalance || (data.communityData?.shares || 0)
     };
   } catch (error) {
-    console.error('Error in buy shares confirmation:', error);
     throw error;
   }
 };
@@ -601,7 +501,6 @@ export const sellSharesPrecheck = async (communityName: string, shareQuantity: n
     // First, validate the user's API key
     const isValidApiKey = await validateUserApiKey();
     if (!isValidApiKey) {
-      console.error('Invalid API key detected in sellSharesPrecheck, aborting request');
       return {
         status: 'ERROR',
         error: 'Authentication error. Please refresh the page and try again.',
@@ -617,8 +516,6 @@ export const sellSharesPrecheck = async (communityName: string, shareQuantity: n
     const url = `${API_BASE_URL}/sell_shares_precheck`;
     const headers = createAuthHeaders();
     
-    console.log(`Sell shares precheck for ${communityName}, quantity: ${shareQuantity}`);
-    
     const response = await fetch(url, {
       method: 'POST',
       headers,
@@ -630,12 +527,10 @@ export const sellSharesPrecheck = async (communityName: string, shareQuantity: n
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Sell shares precheck failed: ${errorText}`);
       throw new Error(`Failed to precheck share sale: ${errorText}`);
     }
     
     const data = await response.json();
-    console.log('Sell shares precheck response:', data);
     
     if (data.status === 'DEPOSIT') {
       return {
@@ -669,7 +564,6 @@ export const sellSharesPrecheck = async (communityName: string, shareQuantity: n
     
     return result;
   } catch (error) {
-    console.error('Error in sell shares precheck:', error);
     throw error;
   }
 };
@@ -682,8 +576,6 @@ export const sellSharesConfirm = async (communityName: string, shareQuantity: nu
     const url = `${API_BASE_URL}/sell_shares_confirm`;
     const headers = createAuthHeaders();
     
-    console.log(`Confirming sell shares for ${communityName}, quantity: ${shareQuantity}`);
-    
     const response = await fetch(url, {
       method: 'POST',
       headers,
@@ -695,12 +587,10 @@ export const sellSharesConfirm = async (communityName: string, shareQuantity: nu
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Sell shares confirmation failed: ${errorText}`);
       throw new Error(`Failed to confirm share sale: ${errorText}`);
     }
     
     const data = await response.json();
-    console.log('Sell shares confirmation response:', data);
     
     if (data.status !== 'SUCCESS') {
       throw new Error(data.message || data.error || 'Transaction failed');
@@ -712,16 +602,13 @@ export const sellSharesConfirm = async (communityName: string, shareQuantity: nu
       newShareBalance: data.newShareBalance || (data.communityData?.shares || 0)
     };
   } catch (error) {
-    console.error('Error in sell shares confirmation:', error);
     throw error;
   }
 };
 
 // Development-only logging helper
 const debugLog = (message: string, ...args: any[]) => {
-  if (process.env.NODE_ENV === 'development' && false) { // Set to true to enable dev logs when needed
-    console.log(`[API] ${message}`, ...args);
-  }
+  // Removed console.log
 };
 
 // Add a wallet balance cache to prevent excessive API calls
@@ -837,8 +724,6 @@ export const getShareValue = async (communityName: string): Promise<ShareValueRe
     
     const url = `${API_BASE_URL}/share_value?community=${encodeURIComponent(communityName)}`;
     
-    console.log(`Fetching share value for ${communityName}`);
-    
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -848,12 +733,10 @@ export const getShareValue = async (communityName: string): Promise<ShareValueRe
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Share value fetch failed: ${errorText}`);
       throw new Error(`Failed to fetch share value: ${errorText}`);
     }
     
     const data = await response.json();
-    console.log('Share value response:', data);
     
     if (!data.success) {
       throw new Error(data.message || 'Failed to fetch share value');
@@ -861,7 +744,6 @@ export const getShareValue = async (communityName: string): Promise<ShareValueRe
     
     return data;
   } catch (error) {
-    console.error('Error fetching share value:', error);
     throw error;
   }
 };
@@ -878,8 +760,6 @@ export const getUserPortfolio = async (page = 1, limit = 10): Promise<UserPortfo
     
     const url = `${API_BASE_URL}/user_portfolio?page=${page}&limit=${limit}`;
     
-    console.log(`Fetching user portfolio from: ${url}`);
-    
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -889,15 +769,13 @@ export const getUserPortfolio = async (page = 1, limit = 10): Promise<UserPortfo
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Portfolio fetch failed: ${errorText}`);
       throw new Error(`Failed to fetch portfolio: ${errorText}`);
     }
     
     const rawData = await response.json();
-    console.log('User portfolio response:', rawData);
     
     if (!rawData.success) {
-      throw new Error(rawData.message || 'Failed to fetch portfolio data');
+      throw new Error(rawData.message || 'Failed to fetch portfolio');
     }
     
     // Normalize the API response to handle both response formats
@@ -918,14 +796,6 @@ export const getUserPortfolio = async (page = 1, limit = 10): Promise<UserPortfo
           const formattedPercentage = priceChangePercentage !== 0 
             ? priceChangePercentage.toFixed(2) 
             : "0.00";
-          
-          // Log the price change data for debugging
-          console.log(`Community ${item.community} price change:`, {
-            original: item.price_change_percentage,
-            percentageChange: item.percentageChange,
-            normalized: priceChangePercentage,
-            formatted: formattedPercentage
-          });
           
           return {
             community: item.community,
@@ -956,8 +826,6 @@ export const getUserPortfolio = async (page = 1, limit = 10): Promise<UserPortfo
     
     return result;
   } catch (error) {
-    console.error('Error fetching user portfolio:', error);
-    toast.error('Failed to load portfolio. Please try again.');
     throw error;
   }
 };
@@ -990,8 +858,6 @@ export const transferShares = async (
     const url = `${API_BASE_URL}/transfer_shares`;
     const headers = createAuthHeaders();
     
-    console.log(`Transferring ${amount} shares of ${communityName} to ${toAddress}`);
-    
     if (!communityName) {
       throw new Error('Community name is required');
     }
@@ -1011,21 +877,16 @@ export const transferShares = async (
       toAddress
     };
     
-    console.log('Transfer shares request payload:', JSON.stringify(requestBody));
-    
     const response = await fetch(url, {
       method: 'POST',
       headers,
       body: JSON.stringify(requestBody)
     });
     
-    console.log(`Transfer shares response status: ${response.status}`);
-    
     if (!response.ok) {
       let errorData;
       try {
         const errorText = await response.text();
-        console.error(`Transfer shares failed with status ${response.status}: ${errorText}`);
         
         try {
           // Try to parse error as JSON
@@ -1046,16 +907,10 @@ export const transferShares = async (
     }
     
     const data = await response.json();
-    console.log('Transfer shares response:', data);
     
     return data as ShareTransferResponse;
   } catch (error) {
-    console.error('Error in transferring shares:', error);
-    return {
-      success: false,
-      message: error instanceof Error ? error.message : 'Unknown error occurred',
-      error: error instanceof Error ? error.message : 'Unknown error occurred'
-    };
+    throw error;
   }
 };
 
@@ -1097,7 +952,6 @@ export const searchUsers = async (query: string, page: number = 1, limit: number
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`User search failed: ${errorText}`);
       return {
         success: false,
         error: errorText
@@ -1107,7 +961,6 @@ export const searchUsers = async (query: string, page: number = 1, limit: number
     const data = await response.json();
     return data as UserSearchResponse;
   } catch (error) {
-    console.error('Error searching users:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred'
@@ -1162,21 +1015,16 @@ export const getETHWithdrawalGasEstimate = async (
       ...(isAddress ? { address: recipient } : { handle: recipient.toLowerCase() })
     };
     
-    console.log('ETH gas estimate request payload:', JSON.stringify(requestBody));
-    
     const response = await fetch(url, {
       method: 'POST',
       headers,
       body: JSON.stringify(requestBody)
     });
     
-    console.log(`ETH gas estimate response status: ${response.status}`);
-    
     if (!response.ok) {
       let errorData;
       try {
         const errorText = await response.text();
-        console.error(`ETH gas estimate failed with status ${response.status}: ${errorText}`);
         
         try {
           // Try to parse error as JSON
@@ -1197,11 +1045,9 @@ export const getETHWithdrawalGasEstimate = async (
     }
     
     const data = await response.json();
-    console.log('ETH gas estimate response:', data);
     
     return data as ETHGasEstimateResponse;
   } catch (error) {
-    console.error('Error estimating ETH withdrawal gas:', error);
     return {
       success: false,
       message: error instanceof Error ? error.message : 'Unknown error occurred',
@@ -1228,21 +1074,16 @@ export const withdrawETH = async (
       ...(isAddress ? { address: recipient } : { handle: recipient.toLowerCase() })
     };
     
-    console.log('ETH withdrawal request payload:', JSON.stringify(requestBody));
-    
     const response = await fetch(url, {
       method: 'POST',
       headers,
       body: JSON.stringify(requestBody)
     });
     
-    console.log(`ETH withdrawal response status: ${response.status}`);
-    
     if (!response.ok) {
       let errorData;
       try {
         const errorText = await response.text();
-        console.error(`ETH withdrawal failed with status ${response.status}: ${errorText}`);
         
         try {
           // Try to parse error as JSON
@@ -1263,11 +1104,9 @@ export const withdrawETH = async (
     }
     
     const data = await response.json();
-    console.log('ETH withdrawal response:', data);
     
     return data as ETHWithdrawalResponse;
   } catch (error) {
-    console.error('Error withdrawing ETH:', error);
     return {
       success: false,
       message: error instanceof Error ? error.message : 'Unknown error occurred',
@@ -1436,7 +1275,6 @@ export const createCommunityConfig = async (config: CreateCommunityConfig): Prom
       message: "Community configuration created successfully"
     };
   } catch (error) {
-    console.error("Error creating community config:", error);
     return {
       success: false,
       message: "An unexpected error occurred. Please try again."
@@ -1530,7 +1368,6 @@ export const createCommunity = async (config: CreateCommunityConfig): Promise<an
       };
     }
   } catch (error) {
-    console.error("Error creating community:", error);
     return {
       success: false,
       message: "An unexpected error occurred. Please try again."
