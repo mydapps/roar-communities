@@ -11,11 +11,14 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { getUserProfile, updateUserProfile, UpdateProfileParams, UserProfile } from '@/utils/userApi';
-import { Calendar, Check, Image, Link2, Loader2, MapPin, Pencil, RotateCw, Save, Upload, User, X } from 'lucide-react';
+import { getUserProfile, updateUserProfile, updateUserAvatar, UpdateProfileParams, UserProfile } from '@/utils/userApi';
+import { Calendar, Check, Image, Link2, Loader2, MapPin, Pencil, RefreshCcw, RotateCw, Save, Upload, User, X, ArrowLeft } from 'lucide-react';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { MediaUploadResponse } from '@/components/ui/media-upload';
 import { API_BASE_URL } from '@/utils/apiBase';
+import { motion, AnimatePresence } from 'framer-motion';
+import { clsx } from 'clsx';
+import { Link } from 'react-router-dom';
 
 const EditProfilePage = () => {
   const navigate = useNavigate();
@@ -37,6 +40,21 @@ const EditProfilePage = () => {
   // Current user handle from localStorage
   const userHandle = localStorage.getItem('dapps_user_handle');
   
+  // Add new state variables for avatar changing
+  const [avatarCode, setAvatarCode] = useState('');
+  const [isChangingAvatar, setIsChangingAvatar] = useState(false);
+  const [isSavingAvatar, setIsSavingAvatar] = useState(false);
+  
+  // Add state for avatar gallery
+  const [showAvatarGallery, setShowAvatarGallery] = useState(false);
+  const [galleryAvatars, setGalleryAvatars] = useState<string[]>([]);
+  
+  // Add new state for avatar change
+  const [showAvatarChange, setShowAvatarChange] = useState(false);
+  
+  // Add new state for avatar edit
+  const [showAvatarEdit, setShowAvatarEdit] = useState(false);
+  
   useEffect(() => {
     // Redirect if not logged in
     if (!userHandle) {
@@ -47,6 +65,29 @@ const EditProfilePage = () => {
     
     fetchUserProfile();
   }, [userHandle, navigate]);
+  
+  useEffect(() => {
+    if (profile) {
+      // Extract the avatar code from the URL or use default
+      const avatarUrl = profile.avatar_url;
+      // Extract just the code part without .svg
+      const match = avatarUrl.match(/\/avatar\/(.+?)(\.svg)?$/);
+      if (match && match[1]) {
+        setAvatarCode(match[1]);
+      }
+    }
+  }, [profile]);
+  
+  // Add new useEffect to generate gallery avatars
+  useEffect(() => {
+    if (showAvatarGallery) {
+      // Generate a set of random avatars for the gallery
+      const avatars = Array.from({ length: 9 }, () => 
+        Math.random().toString(36).substring(2, 11)
+      );
+      setGalleryAvatars(avatars);
+    }
+  }, [showAvatarGallery]);
   
   const fetchUserProfile = async () => {
     try {
@@ -284,6 +325,73 @@ const EditProfilePage = () => {
     }
   };
   
+  // Add a function to generate a random avatar
+  const generateNewAvatar = () => {
+    // Generate a random string for the avatar
+    const randomStr = Math.random().toString(36).substring(2, 11);
+    setAvatarCode(randomStr);
+  };
+
+  // Add a function to save the avatar
+  const saveAvatar = async () => {
+    try {
+      setIsSavingAvatar(true);
+      const response = await updateUserAvatar(avatarCode);
+      
+      if (response.success) {
+        toast.success("Avatar updated successfully");
+        
+        // Update profile with new avatar URL if provided
+        if (response.avatar_url && profile) {
+          setProfile({
+            ...profile,
+            avatar_url: response.avatar_url
+          });
+          
+          // Update the avatar in localStorage
+          localStorage.setItem('dapps_user_avatar', avatarCode);
+          
+          // Dispatch a custom event to notify other components (like Navbar) of the avatar change
+          const avatarChangeEvent = new CustomEvent('avatar_updated', {
+            detail: { 
+              avatarCode: avatarCode,
+              avatarUrl: response.avatar_url
+            }
+          });
+          window.dispatchEvent(avatarChangeEvent);
+        }
+        
+        // Close the avatar change mode
+        setIsChangingAvatar(false);
+        setShowAvatarEdit(false);
+      } else {
+        toast.error(response.message || "Failed to update avatar");
+      }
+    } catch (error) {
+      let message = "Failed to update avatar";
+      if (error instanceof Error) {
+        message = error.message;
+      }
+      toast.error(message);
+    } finally {
+      setIsSavingAvatar(false);
+    }
+  };
+  
+  // Add function to generate more gallery avatars
+  const generateMoreGalleryAvatars = () => {
+    const avatars = Array.from({ length: 9 }, () => 
+      Math.random().toString(36).substring(2, 11)
+    );
+    setGalleryAvatars(avatars);
+  };
+  
+  // Add function to select an avatar from the gallery
+  const selectAvatarFromGallery = (code: string) => {
+    setAvatarCode(code);
+    setShowAvatarGallery(false);
+  };
+  
   if (loading) {
     return (
       <div className="container max-w-4xl mx-auto py-20 px-4">
@@ -325,32 +433,6 @@ const EditProfilePage = () => {
             <h1 className="text-3xl font-bold">Edit Profile</h1>
             <p className="text-muted-foreground">Customize your profile and settings</p>
           </div>
-          
-          <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              onClick={() => navigate(`/u/${userHandle}`)}
-            >
-              Cancel
-            </Button>
-            <Button 
-              onClick={saveProfile} 
-              disabled={saving}
-              className="gap-1.5"
-            >
-              {saving ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4" />
-                  Save Changes
-                </>
-              )}
-            </Button>
-          </div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -364,12 +446,124 @@ const EditProfilePage = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4 flex flex-col items-center text-center">
-                <Avatar className="h-24 w-24 border-4 border-background shadow-lg">
-                  <AvatarImage src={profile.avatar_url} alt={profile.handle} />
-                  <AvatarFallback className="text-2xl font-semibold bg-gradient-to-br from-primary/90 to-primary/50 text-white">
-                    {profile.handle.substring(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
+                <div className="w-24 h-24 relative group">
+                  <Avatar className="w-24 h-24">
+                    <AvatarImage 
+                      src={`https://img.dapps.co/avatar/${avatarCode}.svg`} 
+                      alt={profile.handle} 
+                    />
+                    <AvatarFallback className="text-2xl font-semibold bg-gradient-to-br from-primary/90 to-primary/50 text-white">
+                      {profile.handle.substring(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
+                
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => {
+                    setShowAvatarEdit(!showAvatarEdit);
+                    if (!showAvatarEdit && galleryAvatars.length === 0) {
+                      const avatars = Array.from({ length: 9 }, () => 
+                        Math.random().toString(36).substring(2, 11)
+                      );
+                      setGalleryAvatars(avatars);
+                    }
+                  }}
+                  className="text-primary hover:text-primary/80 px-2 h-8 text-sm"
+                >
+                  <Image className="h-4 w-4 mr-1.5" />
+                  {showAvatarEdit ? "Hide avatar options" : "Change avatar"}
+                </Button>
+                
+                {showAvatarEdit && (
+                  <Card className="mt-2 w-full">
+                    <CardContent className="pt-4">
+                      <div className="grid grid-cols-3 gap-2">
+                        {galleryAvatars.map((code) => (
+                          <div
+                            key={code}
+                            className={clsx(
+                              'relative',
+                              'group',
+                              'aspect-square',
+                              'rounded-lg',
+                              'overflow-hidden',
+                              {
+                                'ring-2': code === avatarCode,
+                                'ring-primary': code === avatarCode,
+                                'ring-offset-2': code === avatarCode
+                              }
+                            )}
+                            onClick={() => {
+                              setAvatarCode(code);
+                              setShowAvatarGallery(false);
+                            }}
+                          >
+                            <Avatar className="h-full w-full">
+                              <AvatarImage src={`https://img.dapps.co/avatar/${code}.svg`} alt={profile.handle} />
+                              <AvatarFallback className="text-2xl font-semibold bg-gradient-to-br from-primary/90 to-primary/50 text-white">
+                                {profile.handle.substring(0, 2).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className={clsx(
+                              'absolute',
+                              'inset-0',
+                              'flex',
+                              'items-center',
+                              'justify-center',
+                              'opacity-0',
+                              'group-hover:opacity-100',
+                              'transition-opacity',
+                              {
+                                'bg-primary/60': code === avatarCode,
+                                'bg-black/40': code !== avatarCode
+                              }
+                            )}>
+                              <Check className={clsx(
+                                'w-4',
+                                'h-4',
+                                {
+                                  'text-white': code === avatarCode,
+                                  'text-white/80': code !== avatarCode
+                                }
+                              )} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-4 flex flex-wrap justify-between gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={generateMoreGalleryAvatars}
+                          className="text-xs flex-grow-0"
+                        >
+                          <RefreshCcw className="h-3 w-3 mr-1" />
+                          More Options
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={saveAvatar}
+                          disabled={isSavingAvatar}
+                          className="text-xs flex-grow-0"
+                        >
+                          {isSavingAvatar ? (
+                            <>
+                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            <>
+                              <Check className="h-3 w-3 mr-1" />
+                              Save Avatar
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
                 
                 <div>
                   <h3 className="text-xl font-bold">@{profile.handle}</h3>

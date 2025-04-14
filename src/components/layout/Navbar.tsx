@@ -67,10 +67,20 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
       }
     };
     
+    // Listen for avatar updates from other components
+    const handleAvatarUpdated = (event: CustomEvent) => {
+      const { avatarCode } = event.detail;
+      if (avatarCode) {
+        setUserAvatar(avatarCode);
+      }
+    };
+    
     document.addEventListener('dapps_auth_invalidated', handleAuthInvalidated);
+    window.addEventListener('avatar_updated', handleAvatarUpdated as EventListener);
     
     return () => {
       document.removeEventListener('dapps_auth_invalidated', handleAuthInvalidated);
+      window.removeEventListener('avatar_updated', handleAvatarUpdated as EventListener);
     };
   }, [location.pathname, navigate]);
   

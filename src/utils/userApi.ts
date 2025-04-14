@@ -111,6 +111,7 @@ export interface UpdateProfileParams {
   location?: string;
   link?: string;
   answer?: string;
+  avatar_code?: string;
 }
 
 export const updateUserProfile = async (
@@ -137,6 +138,44 @@ export const updateUserProfile = async (
     return await response.json();
   } catch (error) {
     console.error('Error updating profile:', error);
+    throw error;
+  }
+};
+
+/**
+ * Update user avatar
+ */
+export const updateUserAvatar = async (
+  avatarCode: string
+): Promise<{ success: boolean, message?: string, avatar_url?: string }> => {
+  try {
+    const headers = createAuthHeaders();
+    
+    if (!headers['x-user-key']) {
+      throw new Error('Authentication required to update avatar');
+    }
+    
+    const response = await fetch(`${API_BASE_URL}/update_avatar`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ avatarCode })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || `Failed to update avatar: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    // Update localStorage with new avatar code
+    if (data.success) {
+      localStorage.setItem('dapps_user_avatar', avatarCode);
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error updating avatar:', error);
     throw error;
   }
 };
