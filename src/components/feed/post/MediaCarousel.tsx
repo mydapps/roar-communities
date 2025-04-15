@@ -162,6 +162,11 @@ const VideoViewer = ({
     }
   }, [open, videoUrl]);
 
+  // Add a specific close handler
+  const handleClose = () => {
+    onOpenChange(false);
+  };
+
   if (!videoUrl) return null;
   
   return (
@@ -174,11 +179,15 @@ const VideoViewer = ({
         <div className="sr-only" id="video-viewer-description">Full-screen video player</div>
         
         <div className="relative w-full">
-          <DialogClose asChild>
-            <Button variant="ghost" size="icon" className="absolute right-4 top-4 z-10 h-8 w-8 bg-black/50 text-white rounded-full hover:bg-black/70">
-              <X className="h-4 w-4" />
-            </Button>
-          </DialogClose>
+          {/* Change the DialogClose to explicit button with onClick handler */}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="absolute right-4 top-4 z-50 h-8 w-8 bg-black/50 text-white rounded-full hover:bg-black/70"
+            onClick={handleClose}
+          >
+            <X className="h-4 w-4" />
+          </Button>
           
           {/* Loading indicator */}
           {isLoading && (
