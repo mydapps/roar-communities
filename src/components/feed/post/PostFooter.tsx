@@ -75,6 +75,7 @@ export const PostFooter: React.FC<PostFooterProps> = ({
             onClick={handleRoar}
             postCode={postCode}
             isLoggedIn={isLoggedIn}
+            handleApiCall={false} 
           />
           
           {/* Show comment button except when explicitly hidden or on detailed post page */}

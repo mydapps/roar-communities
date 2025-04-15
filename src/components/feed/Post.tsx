@@ -126,10 +126,12 @@ export const Post = ({
     }
     
     if (postCode) {
+      // Update local UI state
       const newRoaredState = !hasRoared;
       setHasRoared(newRoaredState);
       setLocalRoarCount(prev => newRoaredState ? prev + 1 : prev - 1);
       
+      // Call parent callback which will handle the API call
       if (onRoar) {
         onRoar();
       }

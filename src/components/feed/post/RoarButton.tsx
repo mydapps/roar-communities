@@ -10,9 +10,17 @@ interface RoarButtonProps {
   onClick: () => void;
   postCode?: string;
   isLoggedIn?: boolean;
+  handleApiCall?: boolean;
 }
 
-export const RoarButton = ({ count, active, onClick, postCode, isLoggedIn }: RoarButtonProps) => {
+export const RoarButton = ({ 
+  count, 
+  active, 
+  onClick, 
+  postCode, 
+  isLoggedIn,
+  handleApiCall = false
+}: RoarButtonProps) => {
   const [localActive, setLocalActive] = useState(active);
   const [localCount, setLocalCount] = useState(count);
   const [roarAnimation, setRoarAnimation] = useState(false);
@@ -61,8 +69,9 @@ export const RoarButton = ({ count, active, onClick, postCode, isLoggedIn }: Roa
       setTimeout(() => setRoarTextAnimation(false), 2000);
     }
 
-    // Send API request if postCode is available
-    if (postCode) {
+    // Only send API request if handleApiCall is true and postCode is available
+    // This prevents double API calls when used in Post component
+    if (handleApiCall && postCode) {
       try {
         const result = await toggleRoar(postCode);
         
@@ -103,12 +112,12 @@ export const RoarButton = ({ count, active, onClick, postCode, isLoggedIn }: Roa
         variant="ghost" 
         size="sm" 
         onClick={handleClick}
-        className={`gap-2 hover:text-primary hover:bg-primary/10 ${localActive ? 'text-primary' : ''}`}
+        className={`gap-2 hover:text-primary hover:bg-primary/10 px-3 rounded-full transition-colors ${localActive ? 'text-primary bg-primary/5' : ''}`}
         disabled={processing}
       >
         <div className="relative">
           <span 
-            className={`text-xl transition-transform ${roarAnimation ? 'scale-150' : ''} ${
+            className={`text-lg transition-transform ${roarAnimation ? 'scale-150' : ''} ${
               !localActive ? 'opacity-70' : ''
             }`} 
             role="img" 
@@ -118,8 +127,8 @@ export const RoarButton = ({ count, active, onClick, postCode, isLoggedIn }: Roa
           </span>
           {roarWavesAnimation && (
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="animate-ping absolute h-6 w-6 rounded-full bg-primary/30"></div>
-              <div className="animate-ping delay-75 absolute h-8 w-8 rounded-full bg-primary/20"></div>
+              <div className="animate-ping absolute h-5 w-5 rounded-full bg-primary/30"></div>
+              <div className="animate-ping delay-75 absolute h-6 w-6 rounded-full bg-primary/20"></div>
             </div>
           )}
         </div>
