@@ -345,10 +345,17 @@ const Index = () => {
             >
                 <span className="block h-[3.5em] md:h-[2em] overflow-hidden mb-4">
                   <span className="bg-gradient-to-r from-[#31bcc3] to-primary bg-clip-text text-transparent">
-                  {displayText}
-                  <span className="animate-pulse">|</span>
+                    {displayText}
+                    {/* Only show cursor when actively typing and not on mobile devices */}
+                    {isTyping && !isMobile && (
+                      <span className="animate-pulse">|</span>
+                    )}
+                    {/* For mobile devices, show cursor only when actively typing and not at line breaks */}
+                    {isTyping && isMobile && displayText.length > 0 && !displayText.endsWith(" ") && (
+                      <span className="animate-pulse">|</span>
+                    )}
+                  </span>
                 </span>
-              </span>
               <span className="text-foreground">
                   with <span className="bg-gradient-to-r from-[#31bcc3] to-primary bg-clip-text text-transparent relative">
                     Dapps.co
