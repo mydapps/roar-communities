@@ -126,7 +126,7 @@ export const MirrorPostContent = ({ mirrorData, onImageClick }: MirrorPostConten
           )}
           
           {cleanedBody && (
-            <p className="text-sm mt-1 break-words">{cleanedBody}</p>
+            <p className="text-sm mt-1 break-words whitespace-pre-line">{cleanedBody}</p>
           )}
           
           {allMedia && allMedia.length > 0 && (

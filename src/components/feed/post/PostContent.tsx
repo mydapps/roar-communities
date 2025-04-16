@@ -31,7 +31,11 @@ export const PostContent: React.FC<PostContentProps> = ({
 }) => {
   return (
     <CardContent className="pb-3">
-      {content && <p className="text-sm mt-2 break-words">{content}</p>}
+      {content && (
+        <p className="text-sm mt-2 break-words whitespace-pre-line">
+          {content}
+        </p>
+      )}
       
       {isMirror && mirrorData && (
         <MirrorPostContent 
