@@ -1,8 +1,7 @@
-
-import React, { useState } from 'react';
+import React from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogClose, DialogTitle } from '@/components/ui/dialog';
 import { ImageCarousel } from './ImageCarousel';
 
 interface ImageViewerProps {
@@ -25,10 +24,14 @@ export const ImageViewer = ({ images, selectedImageIndex, open, onOpenChange }: 
       <DialogContent 
         className="max-w-4xl p-0 overflow-hidden bg-black/90 border-none"
         onClick={handleDialogClick}
+        aria-describedby="image-viewer-description"
       >
+        <DialogTitle className="sr-only">Image Gallery</DialogTitle>
+        <div className="sr-only" id="image-viewer-description">Fullscreen image gallery viewer</div>
+        
         <div className="relative w-full">
-          <DialogClose className="absolute right-4 top-4 z-10">
-            <Button variant="ghost" size="icon" className="h-8 w-8 bg-black/50 text-white rounded-full hover:bg-black/70">
+          <DialogClose asChild>
+            <Button variant="ghost" size="icon" className="absolute right-4 top-4 z-10 h-8 w-8 bg-black/50 text-white rounded-full hover:bg-black/70">
               <X className="h-4 w-4" />
             </Button>
           </DialogClose>

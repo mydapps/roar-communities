@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { toast } from 'sonner';
 import { ImageIcon, VideoIcon, XIcon, Loader2 } from 'lucide-react';
@@ -258,6 +257,10 @@ interface MediaPreviewProps {
 }
 
 export function MediaPreview({ media, onRemove }: MediaPreviewProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [aspectRatio, setAspectRatio] = useState(16/9);
+  const [isLoaded, setIsLoaded] = useState(false);
+  
   // Log received media data
   console.log("MediaPreview received:", media);
   
@@ -279,6 +282,19 @@ export function MediaPreview({ media, onRemove }: MediaPreviewProps) {
     return null;
   }
   
+  // Function to calculate aspect ratio from video dimensions
+  const calculateAspectRatio = () => {
+    if (videoRef.current) {
+      const video = videoRef.current;
+      // Only update once metadata is loaded
+      if (video.videoWidth && video.videoHeight) {
+        const ratio = video.videoWidth / video.videoHeight;
+        setAspectRatio(ratio);
+        setIsLoaded(true);
+      }
+    }
+  };
+  
   // Render media preview based on type
   return (
     <div className="relative group rounded-md overflow-hidden border">
@@ -296,16 +312,28 @@ export function MediaPreview({ media, onRemove }: MediaPreviewProps) {
           />
         </AspectRatio>
       ) : (
-        <AspectRatio ratio={16/9}>
-          <video 
-            src={media.url} 
-            className="w-full h-full object-cover" 
-            controls
-            onError={(e) => {
-              console.error("Error loading video:", media.url);
-            }}
-          />
-        </AspectRatio>
+        <>
+          <AspectRatio ratio={aspectRatio}>
+            <div className={`w-full h-full flex items-center justify-center bg-black/5 ${!isLoaded ? 'min-h-[200px]' : ''}`}>
+              {!isLoaded && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/10">
+                  <VideoIcon className="h-10 w-10 text-muted-foreground/50 animate-pulse" />
+                </div>
+              )}
+              <video 
+                ref={videoRef}
+                src={media.url} 
+                className="w-full h-full object-cover" 
+                controls
+                preload="metadata"
+                onLoadedMetadata={calculateAspectRatio}
+                onError={(e) => {
+                  console.error("Error loading video:", media.url);
+                }}
+              />
+            </div>
+          </AspectRatio>
+        </>
       )}
       
       <Button
