@@ -45,7 +45,7 @@ const MySharesPage = () => {
   const [tradeAction, setTradeAction] = useState<'buy' | 'sell' | null>(null);
   const [tradeOpen, setTradeOpen] = useState(false);
   const [userEthBalance, setUserEthBalance] = useState("0.000");
-  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
+  const [isLoadingBalance, setIsLoadingBalance] = useState(true);
   const [loadingAction, setLoadingAction] = useState(false);
   const [precheckData, setPrecheckData] = useState<SharePrecheckResponse | null>(null);
   const isMobile = useIsMobile();
@@ -61,8 +61,16 @@ const MySharesPage = () => {
 
   // Lazy load wallet balance after component mounts
   useEffect(() => {
-    // Don't wait for this to complete before rendering the page
-    setTimeout(fetchWalletBalance, 0);
+    // Mark as loading immediately
+    setIsLoadingBalance(true);
+    
+    // Use a more immediate approach to fetch balance
+    fetchWalletBalance()
+      .catch((err) => console.error("Initial balance load error:", err))
+      .finally(() => {
+        // Always mark as not loading when finished
+        setIsLoadingBalance(false);
+      });
   }, []);
 
   // Development-only logging helper
@@ -73,12 +81,13 @@ const MySharesPage = () => {
   };
 
   // Main API call handling code
-  const fetchWalletBalance = async () => {
+  const fetchWalletBalance = async (forceRefresh = false) => {
     try {
       setIsLoadingBalance(true);
       // getWalletBalance now returns a default value even on auth error
-      const balanceData = await getWalletBalance();
+      const balanceData = await getWalletBalance(forceRefresh);
       setUserEthBalance(balanceData.balance.eth);
+      return balanceData;
     } catch (error) {
       // This will only happen for serious errors now, not 401s
       console.error('Failed to fetch wallet balance:', error);
@@ -86,6 +95,7 @@ const MySharesPage = () => {
       if (!(error instanceof Error && error.message.includes('Authentication required'))) {
         toast.error("Failed to load wallet balance");
       }
+      throw error; // Re-throw so we can handle in callers if needed
     } finally {
       setIsLoadingBalance(false);
     }
@@ -108,8 +118,8 @@ const MySharesPage = () => {
     setTradeAction(action);
     setTradeOpen(true);
     
-    // Fetch fresh balance data
-    fetchWalletBalance();
+    // Fetch fresh balance data with force refresh
+    fetchWalletBalance(true);
   };
 
   const handleTransferClick = (community: CommunityPortfolioItem) => {
@@ -129,7 +139,7 @@ const MySharesPage = () => {
       if (result.status === 'SUCCESS') {
         // Update portfolio data
         refreshPortfolio();
-        fetchWalletBalance();
+        fetchWalletBalance(true); // Force refresh balance
         
         toast.success(`Successfully purchased ${result.shareQuantity} shares of ${communityName}`);
         
@@ -166,7 +176,7 @@ const MySharesPage = () => {
       if (result.status === 'SUCCESS') {
         // Update portfolio data in the background
         refreshPortfolio();
-        fetchWalletBalance();
+        fetchWalletBalance(true); // Force refresh balance
         
         // Success toast notification
         toast.success(`Successfully sold ${result.soldShares} shares of ${communityName}`);
@@ -196,9 +206,10 @@ const MySharesPage = () => {
   };
 
   const handleRefresh = () => {
-    fetchWalletBalance();
+    // Force refresh the wallet balance
+    fetchWalletBalance(true);
     refreshPortfolio();
-    toast.success("Refreshing portfolio data...");
+    toast.success("Refreshing portfolio and balance data...");
   };
 
   const resetState = () => {
@@ -225,6 +236,7 @@ const MySharesPage = () => {
         ethValue={totalEthValue.toFixed(4)} 
         usdValue={totalUsdValue.toFixed(2)}
         ethBalance={userEthBalance}
+        isLoadingBalance={isLoadingBalance}
         onDepositClick={() => {
           resetState();
           setDepositOpen(true);

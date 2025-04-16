@@ -611,8 +611,8 @@ const debugLog = (message: string, ...args: any[]) => {
   // Removed console.log
 };
 
-// Add a wallet balance cache to prevent excessive API calls
-let walletBalanceCache: {
+// Add a wallet balance cache variable at the top of the file
+const walletBalanceCache: {
   data: WalletBalanceResponse | null;
   timestamp: number;
 } = {
@@ -620,10 +620,10 @@ let walletBalanceCache: {
   timestamp: 0
 };
 
-export const getWalletBalance = async (): Promise<WalletBalanceResponse> => {
-  // Use cached data if available and not expired (5 minutes)
+export const getWalletBalance = async (forceRefresh = false): Promise<WalletBalanceResponse> => {
+  // Use cached data if available and not expired (5 minutes) unless forceRefresh is true
   const now = Date.now();
-  if (walletBalanceCache.data && (now - walletBalanceCache.timestamp < 5 * 60 * 1000)) {
+  if (!forceRefresh && walletBalanceCache.data && (now - walletBalanceCache.timestamp < 5 * 60 * 1000)) {
     debugLog("Using cached wallet balance");
     return walletBalanceCache.data;
   }
@@ -688,10 +688,8 @@ export const getWalletBalance = async (): Promise<WalletBalanceResponse> => {
     debugLog("Wallet balance response:", data);
     
     // Update the cache
-    walletBalanceCache = {
-      data,
-      timestamp: now
-    };
+    walletBalanceCache.data = data;
+    walletBalanceCache.timestamp = now;
     
     return data;
   } catch (error) {
