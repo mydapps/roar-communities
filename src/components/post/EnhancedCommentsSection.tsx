@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -289,8 +289,12 @@ export const EnhancedCommentsSection = ({
     setDrawerOpen(true);
   };
 
+  const drawerSubmissionInProgress = useRef(false);
+
   const handleDrawerSubmit = async (content: string) => {
-    if (!replyTarget) return Promise.reject(new Error('No reply target'));
+    if (!replyTarget || drawerSubmissionInProgress.current) return Promise.reject(new Error('No reply target or submission in progress'));
+    
+    drawerSubmissionInProgress.current = true;
     
     try {
       if (replyTarget.isPost) {
@@ -299,9 +303,15 @@ export const EnhancedCommentsSection = ({
       } else {
         await handleReplyToComment(replyTarget.id, content);
       }
+      
+      setTimeout(() => {
+        drawerSubmissionInProgress.current = false;
+      }, 500);
+      
       return Promise.resolve();
     } catch (error) {
       console.error('Error in drawer submit:', error);
+      drawerSubmissionInProgress.current = false;
       return Promise.reject(error);
     }
   };

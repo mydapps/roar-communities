@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Send, X } from 'lucide-react';
@@ -31,6 +30,7 @@ export const MobileCommentInput: React.FC<MobileCommentInputProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const navigate = useNavigate();
+  const isSubmittingRef = useRef(false);
 
   // Get user info from localStorage
   const userAvatar = localStorage.getItem('dapps_user_avatar') || 'default';
@@ -65,14 +65,18 @@ export const MobileCommentInput: React.FC<MobileCommentInputProps> = ({
 
   // Handle submission
   const handleSubmit = async () => {
-    if (!content.trim() || isSubmitting) return;
+    if (!content.trim() || isSubmitting || isSubmittingRef.current) return;
 
     setIsSubmitting(true);
+    isSubmittingRef.current = true;
+    
     try {
       await onSubmit(content, replyToComment?.id);
+      
+      // Clear content first
       setContent('');
       
-      // Always collapse after submission - this fixes issue #1
+      // Always collapse after submission
       setIsExpanded(false);
       
       if (onCancel && isReplyMode) {
@@ -84,7 +88,13 @@ export const MobileCommentInput: React.FC<MobileCommentInputProps> = ({
       console.error('Error posting comment:', error);
       toast.error('Failed to post your comment');
     } finally {
+      // Make sure UI state is reset regardless of success/failure
       setIsSubmitting(false);
+      
+      // Add a small delay before allowing new submissions
+      setTimeout(() => {
+        isSubmittingRef.current = false;
+      }, 500);
     }
   };
 

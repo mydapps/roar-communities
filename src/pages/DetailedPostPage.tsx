@@ -122,9 +122,27 @@ const DetailedPostPage = () => {
     
     setRefreshingComments(true);
     setRefreshCount(prev => prev + 1);
+    
+    // Set a flag in localStorage to track the last refresh time
+    const lastRefreshTime = localStorage.getItem('last_comment_refresh');
+    const now = Date.now();
+    
+    if (lastRefreshTime && now - parseInt(lastRefreshTime) < 2000) {
+      // If we refreshed less than 2 seconds ago, just reset the state without reloading
+      console.log('Skipping comment refresh - too soon after last refresh');
+      setTimeout(() => {
+        setRefreshingComments(false);
+      }, 500);
+      return;
+    }
+    
+    // Store the current refresh time
+    localStorage.setItem('last_comment_refresh', now.toString());
+    
+    // Reset the refreshing state after a delay
     setTimeout(() => {
       setRefreshingComments(false);
-    }, 500);
+    }, 1000);
   }, [refreshingComments]);
   
   const handleRoar = async (e?: React.MouseEvent) => {
@@ -171,8 +189,15 @@ const DetailedPostPage = () => {
     
     try {
       console.log(`Creating reply to post ${post.code} with parentId ${parentId || 0} and content: ${content}`);
-      await createReply(post.code, content, parentId || 0);
-      handleRefreshComments();
+      
+      // Don't actually create the reply here, since MobileCommentsSection already does that
+      // We only want to refresh comments to keep server and client state consistent
+      
+      // Use a slight delay before refreshing to prevent race conditions
+      setTimeout(() => {
+        handleRefreshComments();
+      }, 1000);
+      
       return Promise.resolve();
     } catch (error) {
       console.error('Error adding reply:', error);

@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   Drawer, 
   DrawerContent, 
@@ -35,11 +34,14 @@ export const MobileReplyDrawer: React.FC<MobileReplyDrawerProps> = ({
 }) => {
   const [replyContent, setReplyContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
 
   const handleSubmit = async () => {
-    if (!replyContent.trim()) return;
+    if (!replyContent.trim() || isSubmitting || isSubmittingRef.current) return;
     
     setIsSubmitting(true);
+    isSubmittingRef.current = true;
+    
     try {
       await onSubmit(replyContent);
       setReplyContent('');
@@ -50,6 +52,9 @@ export const MobileReplyDrawer: React.FC<MobileReplyDrawerProps> = ({
       toast.error('Failed to post reply. Please try again.');
     } finally {
       setIsSubmitting(false);
+      setTimeout(() => {
+        isSubmittingRef.current = false;
+      }, 500);
     }
   };
 

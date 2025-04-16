@@ -139,8 +139,6 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
     if (!content.trim()) return;
     
     try {
-      // Instead of creating a temporary comment with Date.now() ID,
-      // First submit to API to get the real server-assigned ID
       console.log(`Mobile - Submitting ${parentId ? 'reply' : 'comment'} with content: ${content}`);
       
       // API call to create the reply/comment
@@ -161,55 +159,73 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
       
       console.log(`Mobile - Created ${parentId ? 'reply' : 'comment'} with server ID: ${response.reply_id}`);
       
-      // Create the comment object with the server-assigned ID
-      const userHandle = localStorage.getItem('dapps_user_handle') || 'You';
+      // Create the new comment/reply object
+      const userHandle = localStorage.getItem('dapps_user_handle') || 'you';
       const userAvatar = localStorage.getItem('dapps_user_avatar') || 'default';
       
-      const newComment: CommentReply = {
-        id: response.reply_id, // Use server-assigned ID
-        uid: 0,
-        handle: userHandle,
-        avatar_url: userAvatar,
-        content: content,
-        created_on: response.created_on || new Date().toISOString(),
-        time_ago: 'just now',
-        upvotes: 0,
-        meow_count: 0,
-        has_meowed: false
-      };
-      
-      // Update UI with the new comment/reply
-      if (parentId && parentId > 0) {
-        // Add as a sub-reply
+      // Immediately update UI with the new comment before notifying parent
+      if (parentId) {
+        // This is a reply to a comment
         setLocalReplies(prevReplies => {
-          const addSubReply = (comments: CommentReply[]): CommentReply[] => {
+          const addReplyToComment = (comments: CommentReply[]): CommentReply[] => {
             return comments.map(comment => {
               if (comment.id === parentId) {
+                // Add reply to this comment
+                const newReply: CommentReply = {
+                  id: response.reply_id,
+                  uid: 0,
+                  handle: userHandle,
+                  avatar_url: userAvatar,
+                  content: content,
+                  created_on: new Date().toISOString(),
+                  time_ago: 'just now',
+                  upvotes: 0,
+                  meow_count: 0,
+                  has_meowed: false
+                };
+                
                 return {
                   ...comment,
                   sub_replies: comment.sub_replies 
-                    ? [...comment.sub_replies, newComment] 
-                    : [newComment]
+                    ? [...comment.sub_replies, newReply] 
+                    : [newReply]
                 };
-              }
-              if (comment.sub_replies) {
+              } else if (comment.sub_replies) {
                 return {
                   ...comment,
-                  sub_replies: addSubReply(comment.sub_replies)
+                  sub_replies: addReplyToComment(comment.sub_replies)
                 };
               }
               return comment;
             });
           };
-          return addSubReply(prevReplies);
+          
+          return addReplyToComment(prevReplies);
         });
       } else {
-        // Add as a top-level reply
+        // This is a top-level comment
+        const newComment: CommentReply = {
+          id: response.reply_id,
+          uid: 0,
+          handle: userHandle,
+          avatar_url: userAvatar,
+          content: content,
+          created_on: new Date().toISOString(),
+          time_ago: 'just now',
+          upvotes: 0,
+          meow_count: 0,
+          has_meowed: false,
+          sub_replies: []
+        };
+        
         setLocalReplies(prevReplies => [...prevReplies, newComment]);
       }
       
-      // Notify parent component about the new comment
-      await onAddComment(content, parentId);
+      // Notify parent component about the new comment (for state consistency)
+      // but we don't need to wait for this to update our UI
+      onAddComment(content, parentId).catch(error => {
+        console.error('Error notifying parent about new comment:', error);
+      });
       
       // Clear reply mode after successful submission
       setReplyingTo(null);
