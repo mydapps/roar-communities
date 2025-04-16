@@ -24,16 +24,20 @@ const VideoPlayer = ({
   src, 
   poster,
   fullscreen = false,
-  onClick
+  onClick,
+  onFullscreenRequest
 }: { 
   src: string;
   poster?: string;
   fullscreen?: boolean;
-  onClick?: () => void;
+  onClick?: (e?: React.MouseEvent) => void;
+  onFullscreenRequest?: (e: React.MouseEvent) => void;
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [aspectRatio, setAspectRatio] = useState(9/16);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
   
   useEffect(() => {
     const videoElement = videoRef.current;
@@ -43,6 +47,14 @@ const VideoPlayer = ({
       // Set natural aspect ratio from video dimensions
       if (videoElement.videoWidth && videoElement.videoHeight) {
         setAspectRatio(videoElement.videoWidth / videoElement.videoHeight);
+      }
+      
+      setHasLoaded(true);
+      
+      // Only call onClick for fullscreen mode to hide loading indicator
+      // Don't call onClick in feed view as that would open the modal automatically
+      if (fullscreen && onClick) {
+        onClick();
       }
       
       // Autoplay when in fullscreen mode
@@ -62,10 +74,43 @@ const VideoPlayer = ({
         videoElement.removeEventListener('loadedmetadata', handleLoadedMetadata);
       }
     };
-  }, [fullscreen, src]);
+  }, [fullscreen, src, onClick]);
+
+  // Add event listener to catch and stop events from video controls
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || !fullscreen) return;
+
+    // This helps prevent click events on controls from bubbling up
+    const handleClick = (e: MouseEvent) => {
+      // Check if the click is on a control element
+      const target = e.target as HTMLElement;
+      if (target.closest('video')) {
+        // Don't stop propagation for all video clicks, only control clicks
+        const rect = (videoRef.current as HTMLVideoElement).getBoundingClientRect();
+        const isBottomArea = e.clientY > rect.bottom - 40; // Controls are typically at the bottom
+        
+        if (isBottomArea) {
+          e.stopPropagation();
+        }
+      }
+    };
+
+    container.addEventListener('click', handleClick, true); // Use capture phase
+    
+    return () => {
+      container.removeEventListener('click', handleClick, true);
+    };
+  }, [fullscreen]);
 
   const togglePlay = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent triggering other click handlers
+    
+    // If in feed view and we want to open fullscreen modal
+    if (!fullscreen && onFullscreenRequest) {
+      onFullscreenRequest(e);
+      return;
+    }
     
     const video = videoRef.current;
     if (!video) return;
@@ -78,9 +123,6 @@ const VideoPlayer = ({
       video.pause();
       setIsPlaying(false);
     }
-    
-    // Call the onClick callback if provided
-    if (onClick) onClick();
   };
   
   // For preview, maintain a reasonable aspect ratio but with max height for feed
@@ -96,12 +138,14 @@ const VideoPlayer = ({
     
   return (
     <div 
+      ref={containerRef}
       style={containerStyle}
       className={cn(
         "overflow-hidden bg-black",
-        fullscreen ? "flex items-center justify-center" : "relative"
+        fullscreen ? "flex items-center justify-center" : "relative cursor-pointer"
       )}
       data-media-element="true"
+      onClick={!fullscreen && onFullscreenRequest ? onFullscreenRequest : undefined}
     >
       <video
         ref={videoRef}
@@ -115,27 +159,46 @@ const VideoPlayer = ({
         muted={!fullscreen}
         playsInline
         loop={!fullscreen}
-        onClick={togglePlay}
+        // In fullscreen mode, prevent video element click from propagating
+        onClick={(e) => {
+          if (fullscreen) {
+            // Let clicks through but prevent default if it's a play/pause click
+            const video = videoRef.current;
+            if (video) {
+              const rect = video.getBoundingClientRect();
+              const isControlArea = (e.clientY > rect.bottom - 40);
+              
+              if (!isControlArea) {
+                e.stopPropagation();
+                togglePlay(e);
+              }
+            }
+          } else if (onFullscreenRequest) {
+            e.stopPropagation();
+            onFullscreenRequest(e);
+          } else {
+            togglePlay(e);
+          }
+        }}
         onError={(e) => console.error("Video error:", e)}
       />
       
-      {/* Add play button overlay for preview mode */}
-      {!fullscreen && (
+      {/* Add play button overlay for preview mode only if video has not started playing */}
+      {!fullscreen && !isPlaying && (
         <div 
           className="absolute inset-0 flex items-center justify-center cursor-pointer"
           onClick={(e) => {
             e.stopPropagation();
-            if (videoRef.current) {
-              // Toggle play for preview
+            if (onFullscreenRequest) {
+              onFullscreenRequest(e);
+            } else {
               togglePlay(e);
             }
           }}
         >
-          {!isPlaying ? (
-            <div className="bg-black/30 rounded-full p-2">
-              <Play className="h-8 w-8 text-white" />
-            </div>
-          ) : null}
+          <div className="bg-black/30 rounded-full p-2">
+            <Play className="h-8 w-8 text-white" />
+          </div>
         </div>
       )}
     </div>
@@ -167,6 +230,11 @@ const VideoViewer = ({
     onOpenChange(false);
   };
 
+  // Handle when video is ready
+  const handleVideoReady = () => {
+    setIsLoading(false);
+  };
+
   if (!videoUrl) return null;
   
   return (
@@ -174,25 +242,26 @@ const VideoViewer = ({
       <DialogContent 
         className="max-w-6xl w-full p-0 overflow-hidden bg-black/90 border-none"
         aria-describedby="video-viewer-description"
+        onClick={(e) => e.stopPropagation()} // Prevent event bubbling
       >
         <DialogTitle className="sr-only">Video Player</DialogTitle>
         <div className="sr-only" id="video-viewer-description">Full-screen video player</div>
         
         <div className="relative w-full">
-          {/* Change the DialogClose to explicit button with onClick handler */}
+          {/* Close button - positioned with higher z-index to ensure it's always clickable */}
           <Button 
             variant="ghost" 
             size="icon" 
-            className="absolute right-4 top-4 z-50 h-8 w-8 bg-black/50 text-white rounded-full hover:bg-black/70"
+            className="absolute right-4 top-4 z-[100] h-8 w-8 bg-black/50 text-white rounded-full hover:bg-black/70"
             onClick={handleClose}
           >
             <X className="h-4 w-4" />
           </Button>
           
-          {/* Loading indicator */}
+          {/* Loading indicator - only show while actually loading */}
           {isLoading && (
             <div className="absolute inset-0 flex items-center justify-center z-10">
-              <Film className="h-12 w-12 text-primary/70 animate-pulse" />
+              <Film className="h-12 w-12 text-white/70 animate-pulse" />
             </div>
           )}
           
@@ -200,8 +269,7 @@ const VideoViewer = ({
             <VideoPlayer 
               src={videoUrl}
               fullscreen={true}
-              // When video is loaded, hide the loading indicator
-              onClick={() => setIsLoading(false)}
+              onClick={handleVideoReady}
             />
           </div>
         </div>
@@ -226,6 +294,12 @@ export const MediaCarousel = ({
   const [activeDotIndex, setActiveDotIndex] = useState(initialIndex);
   const [videoViewerOpen, setVideoViewerOpen] = useState(false);
   const [selectedVideoUrl, setSelectedVideoUrl] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Handle when video is ready in fullscreen mode
+  const handleVideoReady = () => {
+    setIsLoading(false);
+  };
 
   // Pause all videos in carousel when sliding
   useEffect(() => {
@@ -255,8 +329,11 @@ export const MediaCarousel = ({
     }
   }, [emblaApi, initialIndex, media.length]);
 
-  const handleVideoClick = (videoUrl: string) => {
+  const handleVideoClick = (videoUrl: string, e?: React.MouseEvent) => {
     if (!fullscreen) {
+      // Prevent event propagation
+      e?.stopPropagation();
+      
       // Pause all videos before opening fullscreen
       const videos = document.querySelectorAll('video');
       videos.forEach(video => {
@@ -293,7 +370,8 @@ export const MediaCarousel = ({
             src={item.url} 
             poster={`${item.url}?poster=true`}
             fullscreen={fullscreen}
-            onClick={() => handleVideoClick(item.url)}
+            onClick={fullscreen ? handleVideoReady : undefined}
+            onFullscreenRequest={(e) => handleVideoClick(item.url, e)}
           />
           
           {/* Only render VideoViewer when videoViewerOpen is true */}
@@ -342,7 +420,7 @@ export const MediaCarousel = ({
                       <img 
                         src={item.url} 
                         alt={`Post attachment ${index + 1}`} 
-                        onClick={() => onImageClick && onImageClick(item.url)}
+                        onClick={(e) => onImageClick && onImageClick(item.url)}
                         className={`w-full h-full ${fullscreen ? 'object-contain' : 'object-cover'} ${onImageClick ? 'cursor-pointer' : ''}`} 
                       />
                     </div>
@@ -352,7 +430,8 @@ export const MediaCarousel = ({
                     src={item.url} 
                     poster={`${item.url}?poster=true`}
                     fullscreen={fullscreen}
-                    onClick={() => handleVideoClick(item.url)}
+                    onClick={fullscreen ? handleVideoReady : undefined}
+                    onFullscreenRequest={(e) => handleVideoClick(item.url, e)}
                   />
                 )}
               </div>
