@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Build archives
+*.tar.gz
+build.tar.gz
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
