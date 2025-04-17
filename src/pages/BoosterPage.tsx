@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Gift, Twitter, Users, Medal, Calendar, Clock, Link as LinkIcon, CheckCircle2, LucideIcon, Trophy, Rocket, Zap, Share2, MessageCircle, Award, ArrowRight, RefreshCw, ChevronRight, UserPlus, User, Gem, Target, Globe, Loader2, Lock, X, Info } from 'lucide-react';
+import { Sparkles, Gift, Twitter, Users, Medal, Calendar, Clock, Link as LinkIcon, CheckCircle2, LucideIcon, Trophy, Rocket, Zap, Share2, MessageCircle, Award, ArrowRight, RefreshCw, ChevronRight, UserPlus, User, Gem, Target, Globe, Loader2, Lock, X, Info, Bell } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { createAuthHeaders, fetchAvailableBoosters, AvailableBoostersResponse } from '@/utils/apiBase';
+import { createAuthHeaders, fetchAvailableBoosters, fetchGoldenBoosterStatus, claimGoldenBooster, claimAllGoldenBoosters, AvailableBoostersResponse, GoldenBoosterStatusResponse, API_BASE_URL, getUserApiKey, fetchRegularBoosterStatus, claimRegularBooster, useBooster, RegularBoosterStatusResponse } from '@/utils/apiBase';
 import { Link, useNavigate } from 'react-router-dom';
 import { BoosterDetailModal } from '@/components/shared/BoosterDetailModal';
 import { useEffect as useReactEffect, useLayoutEffect } from 'react';
@@ -48,22 +48,59 @@ const mockFetchBoosterData = async (): Promise<BoosterData> => {
         type: "golden" as const,
         title: "Create a Community",
         description: "Create your own thriving community",
-        boost: 1.0,
+        boost: 2.0,
         completed: false,
         icon: "Users",
         prerequisites: [],
         action_url: "/create-community"
       },
       {
-        id: "verified_profile",
+        id: "complete_profile",
         type: "golden" as const,
-        title: "Complete Your Profile",
+        title: "Complete Profile",
         description: "Set your avatar, bio, and customize your profile",
         boost: 1.0,
         completed: false,
         icon: "User",
         prerequisites: [],
         action_url: "/edit-profile"
+      },
+      {
+        id: "join_5_communities",
+        type: "golden" as const,
+        title: "Join 5 Communities",
+        description: "Join at least 5 communities",
+        boost: 5.0,
+        completed: false,
+        icon: "Users",
+        progress: {
+          current: 3,
+          target: 5
+        },
+        prerequisites: [],
+        action_url: "/communities"
+      },
+      {
+        id: "invite_10_friends",
+        type: "golden" as const,
+        title: "Invite 10 Friends",
+        description: "Invite at least 10 friends to join Roar",
+        boost: 5.0,
+        completed: false,
+        icon: "UserPlus",
+        progress: {
+          current: 4,
+          target: 10
+        },
+        next_level: {
+          id: "invite_20_friends",
+          title: "Invite 20 Friends",
+          boost: 5.0,
+          current: 4,
+          target: 20
+        },
+        prerequisites: [],
+        action_url: "/referral"
       },
       {
         id: "join_discord",
@@ -224,30 +261,6 @@ const mockFetchBoosterData = async (): Promise<BoosterData> => {
         reward: "Special Profile Badge",
         completed: true,
         icon: "Rocket"
-      },
-      {
-        id: "community_builder",
-        title: "Community Builder",
-        description: "Create a community with 50+ members",
-        reward: "1.0x Golden Booster",
-        completed: false,
-        progress: {
-          current: 12,
-          target: 50
-        },
-        icon: "Users"
-      },
-      {
-        id: "social_butterfly",
-        title: "Social Butterfly",
-        description: "Connect all available social accounts",
-        reward: "0.5x Booster",
-        completed: false,
-        progress: {
-          current: 1,
-          target: 3
-        },
-        icon: "Globe"
       }
     ]
   };
@@ -310,6 +323,7 @@ interface BoosterActivity {
   boost: number;
   completed: boolean;
   completed_on?: string;
+  eligible?: boolean;
   icon: string;
   progress?: BoosterProgress;
   next_level?: NextLevel;
@@ -317,6 +331,7 @@ interface BoosterActivity {
   refresh?: RefreshInfo;
   streak?: StreakInfo;
   action_url: string;
+  requires_action?: boolean;
 }
 
 interface BoosterData {
@@ -346,8 +361,9 @@ const getIconComponent = (iconName: string): React.ReactNode => {
     Gem: Gem,
     UserPlus: UserPlus,
     User: User,
-    Bell: Medal,
-    Target: Target
+    Bell: Bell,
+    Target: Target,
+    Award: Award
   };
 
   const IconComponent = icons[iconName] || Sparkles;
@@ -366,26 +382,66 @@ const BoosterCard: React.FC<BoosterCardProps> = ({ activity, onClaim, isProcessi
   const navigate = useNavigate();
   
   // Check if all prerequisites are met (would need to be implemented with actual data)
-  const prerequisitesMet = true;
+  const prerequisitesMet = activity.eligible !== false;
   
   const handleAction = async () => {
-    if (activity.completed) return;
-    
-    if (activity.action_url.startsWith('http')) {
-      window.open(activity.action_url, '_blank');
+    // If it's Twitter connect but not eligible, we need special handling
+    if (activity.id === "twitter_connect" && activity.eligible === false) {
+      try {
+        const response = await fetch(`${API_BASE_URL}/twitter_auth`, {
+          method: 'GET',
+          headers: {
+            'x-user-key': getUserApiKey() || '',
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.url) {
+            // Open Twitter auth in a new window
+            window.open(data.url, '_blank');
+            return;
+          }
+        }
+        
+        // Fallback if API fails
+        toast.error("Failed to connect to Twitter/X. Please try again.");
+      } catch (error) {
+        console.error("Error initiating Twitter auth:", error);
+        toast.error("Failed to connect to Twitter/X. Please try again.");
+      }
       return;
     }
     
-    // If it's an internal link with a claim action
-    if (activity.action_url === '/check-in') {
+    // If the booster is completed, just return
+    if (activity.completed) return;
+    
+    // For tasks that need to be completed first
+    if (activity.eligible === false) {
+      if (activity.action_url.startsWith('http')) {
+        window.open(activity.action_url, '_blank');
+        return;
+      }
+      
+      // Otherwise navigate to the action page
+      navigate(activity.action_url);
+      return;
+    }
+    
+    // If the booster is eligible but not claimed, we can claim it
+    if (activity.eligible === true && !activity.completed) {
       setClaiming(true);
       await onClaim(activity.id);
       setClaiming(false);
       return;
     }
     
-    // Otherwise navigate to the action page
-    navigate(activity.action_url);
+    // Default case - navigate to the action URL
+    if (activity.action_url.startsWith('http')) {
+      window.open(activity.action_url, '_blank');
+    } else {
+      navigate(activity.action_url);
+    }
   };
   
   const isRefreshable = activity.refresh && activity.completed;
@@ -411,12 +467,82 @@ const BoosterCard: React.FC<BoosterCardProps> = ({ activity, onClaim, isProcessi
     }
   };
   
+  // Determine button state and text based on eligibility and completion
+  const getButtonContent = () => {
+    if (claiming) {
+      return (
+        <>
+          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          Claiming...
+        </>
+      );
+    }
+    
+    if (activity.eligible === false) {
+      if (activity.progress) {
+        return (
+          <>
+            <ArrowRight className="h-4 w-4 mr-2" />
+            {activity.id === 'twitter_connect' ? (
+              <>
+                Connect Twitter
+                <span className="ml-1">/ <span className="inline-block font-bold">𝕏</span></span>
+              </>
+            ) : 'Complete Task'}
+          </>
+        );
+      } else {
+        return (
+          <>
+            <ArrowRight className="h-4 w-4 mr-2" />
+            {activity.id === 'twitter_connect' ? (
+              <>
+                Connect Twitter
+                <span className="ml-1">/ <span className="inline-block font-bold">𝕏</span></span>
+              </>
+            ) : 'Start Task'}
+          </>
+        );
+      }
+    }
+    
+    return (
+      <>
+        <Sparkles className="h-4 w-4 mr-2" />
+        Claim Booster
+      </>
+    );
+  };
+  
+  // Render streak in a more sober way
+  const renderStreakIndicator = () => {
+    if (!activity.streak) return null;
+    
+    const { current, multiplier } = activity.streak;
+    const percentage = Math.min((current / multiplier.threshold) * 100, 100);
+    
+    return (
+      <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-1.5 mb-1">
+        <div 
+          className="bg-amber-500 h-1.5 rounded-full transition-all duration-300"
+          style={{ width: `${percentage}%` }}
+        ></div>
+      </div>
+    );
+  };
+  
+  // Check if this is a regular booster with a streak
+  const isStreakBooster = activity.type === 'regular' && activity.streak;
+  
   return (
     <Card className={`
       overflow-hidden transition-all duration-200 hover:shadow-md
       ${activity.type === 'golden' ? 'border-yellow-200 dark:border-yellow-800/50' : 'border-blue-100 dark:border-blue-900/30'}
       ${activity.completed ? 'bg-gray-50/50 dark:bg-gray-900/20' : 'bg-white dark:bg-gray-900/10'}
-    `}>
+      ${activity.eligible === true && !activity.completed ? 'border-l-4 border-l-green-400 dark:border-l-green-500' : ''}
+    `}
+    data-booster-id={activity.id}
+    >
       <CardHeader className={`pb-2 ${activity.type === 'golden' ? 'bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/10 dark:to-yellow-950/10' : ''}`}>
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-2">
@@ -425,14 +551,21 @@ const BoosterCard: React.FC<BoosterCardProps> = ({ activity, onClaim, isProcessi
               ${activity.type === 'golden' 
                 ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' 
                 : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300'}
+              ${activity.eligible === true && !activity.completed ? 'ring-2 ring-green-400 dark:ring-green-500' : ''}
             `}>
               {getIconComponent(activity.icon)}
+              {activity.eligible === true && !activity.completed && (
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+              )}
             </div>
             <div>
-              <CardTitle className="text-base">
+              <CardTitle className="text-base flex items-center">
                 {activity.title}
                 {activity.type === 'golden' && (
                   <span className="ml-2 text-yellow-500 dark:text-yellow-400 text-xs">✨ Golden</span>
+                )}
+                {activity.eligible === true && !activity.completed && (
+                  <span className="ml-2 text-green-500 dark:text-green-400 text-xs animate-pulse">Ready to Claim</span>
                 )}
               </CardTitle>
               <CardDescription className="text-xs mt-0.5">
@@ -463,17 +596,38 @@ const BoosterCard: React.FC<BoosterCardProps> = ({ activity, onClaim, isProcessi
               value={(activity.progress.current / activity.progress.target) * 100}
               className={`h-1.5 ${activity.type === 'golden' ? 'bg-yellow-100 dark:bg-yellow-900/20' : 'bg-blue-50 dark:bg-blue-900/20'}`}
             />
+            {activity.eligible === false && activity.progress && (
+              <p className="text-xs mt-1 text-amber-600 dark:text-amber-400">
+                {activity.progress.target - activity.progress.current} more to go!
+              </p>
+            )}
           </div>
         )}
         
-        {/* Streak info if applicable */}
+        {/* Enhanced Streak info with a more sober design */}
         {activity.streak && (
-          <div className="flex items-center gap-1 mb-2 bg-blue-50 dark:bg-blue-900/10 p-1.5 rounded-md text-xs">
-            <span className="font-medium">Streak: {activity.streak.current} days</span>
-            {activity.streak.current >= activity.streak.multiplier.threshold && (
-              <Badge variant="outline" className="text-[10px] py-0 h-4 bg-blue-100 dark:bg-blue-800/30 border-blue-200 dark:border-blue-700">
-                +{activity.streak.multiplier.boost.toFixed(1)}x Bonus
-              </Badge>
+          <div className="mb-2 bg-gray-50 dark:bg-gray-800/50 p-2 rounded-md">
+            <div className="flex justify-between items-center mb-1">
+              <div className="flex items-center gap-1">
+                <span className="text-sm text-gray-700 dark:text-gray-300">
+                  Streak: <span className="font-medium">{activity.streak.current}</span> day{activity.streak.current !== 1 ? 's' : ''}
+                </span>
+              </div>
+              {activity.streak.current >= activity.streak.multiplier.threshold && (
+                <Badge className="bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 border-gray-200">
+                  +{activity.streak.multiplier.boost.toFixed(1)}x
+                </Badge>
+              )}
+            </div>
+            
+            {/* Streak progress bar */}
+            {renderStreakIndicator()}
+            
+            {/* Next milestone info */}
+            {activity.streak.current < activity.streak.multiplier.threshold && (
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                {activity.streak.multiplier.threshold - activity.streak.current} more day{activity.streak.multiplier.threshold - activity.streak.current !== 1 ? 's' : ''} for bonus
+              </div>
             )}
           </div>
         )}
@@ -483,6 +637,14 @@ const BoosterCard: React.FC<BoosterCardProps> = ({ activity, onClaim, isProcessi
           <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 mb-2">
             <Clock className="h-3 w-3" />
             <span>{formatTimeUntilAvailable()}</span>
+          </div>
+        )}
+        
+        {/* Eligibility status for non-eligible tasks */}
+        {activity.eligible === false && !activity.completed && !activity.progress && (
+          <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 mb-2">
+            <Info className="h-3 w-3" />
+            <span>Complete this task to unlock the booster</span>
           </div>
         )}
         
@@ -506,7 +668,14 @@ const BoosterCard: React.FC<BoosterCardProps> = ({ activity, onClaim, isProcessi
           <div className="w-full flex justify-between items-center">
             <div className="flex items-center text-sm text-green-600 dark:text-green-400">
               <CheckCircle2 className="h-4 w-4 mr-1" />
-              <span>Completed</span>
+              {isStreakBooster ? (
+                <div className="flex flex-col">
+                  <span>Completed for today</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">Come back tomorrow to continue your streak</span>
+                </div>
+              ) : (
+                <span>Completed</span>
+              )}
             </div>
             
             {isRefreshable && (
@@ -548,30 +717,13 @@ const BoosterCard: React.FC<BoosterCardProps> = ({ activity, onClaim, isProcessi
             className={`w-full ${activity.type === 'golden' 
               ? 'bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-white' 
               : ''
-            }`}
-            disabled={claiming || isProcessing || !prerequisitesMet}
+            }
+            ${activity.eligible === true && !activity.completed ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white border-none' : ''}
+            `}
+            disabled={activity.eligible === true && (claiming || isProcessing)}
             onClick={handleAction}
           >
-            {claiming ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Processing...
-              </>
-            ) : (
-              <>
-                {prerequisitesMet ? (
-                  <>
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    {activity.progress ? 'Continue' : 'Claim Booster'}
-                  </>
-                ) : (
-                  <>
-                    <Lock className="h-4 w-4 mr-2" />
-                    Prerequisites Required
-                  </>
-                )}
-              </>
-            )}
+            {getButtonContent()}
           </Button>
         )}
       </CardFooter>
@@ -708,6 +860,8 @@ const BoosterPage: React.FC = () => {
   
   // State for API-based booster data (for modal)
   const [apiBoosterData, setApiBoosterData] = useState<AvailableBoostersResponse | null>(null);
+  const [goldenBoosterStatus, setGoldenBoosterStatus] = useState<GoldenBoosterStatusResponse | null>(null);
+  const [regularBoosterStatus, setRegularBoosterStatus] = useState<RegularBoosterStatusResponse | null>(null);
   const [isLoadingApiData, setIsLoadingApiData] = useState(false);
   
   // New state for default tab value
@@ -715,6 +869,192 @@ const BoosterPage: React.FC = () => {
   
   // Add a ref to track if we're on mobile
   const isMobileRef = useRef<boolean>(false);
+  
+  // Function to fetch all booster data
+  const fetchData = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Fetch the golden booster status API data
+      const goldenStatus = await fetchGoldenBoosterStatus();
+      setGoldenBoosterStatus(goldenStatus);
+      
+      // Fetch the regular booster status API data
+      const regularStatus = await fetchRegularBoosterStatus();
+      setRegularBoosterStatus(regularStatus);
+      
+      // Map the API data to our UI model
+      if (goldenStatus && goldenStatus.success) {
+        // Map golden boosters data
+        const mappedGoldenActivities = goldenStatus.boosters.booster_details.map(booster => {
+          const activity: BoosterActivity = {
+            id: booster.type,
+            type: "golden",
+            title: booster.name,
+            description: booster.description,
+            boost: booster.boost,
+            completed: booster.claimed,
+            eligible: booster.eligible,
+            icon: mapBoosterTypeToIcon(booster.type),
+            prerequisites: [],
+            action_url: getActionUrl(booster.type),
+          };
+          
+          // Add progress if available
+          if (booster.progress) {
+            activity.progress = {
+              current: booster.progress.current,
+              target: booster.progress.required
+            };
+          }
+          
+          // Add next level for invite_10_friends -> invite_20_friends
+          if (booster.type === 'invite_10_friends') {
+            // Find the invite_20_friends booster
+            const invite20 = goldenStatus.boosters.booster_details.find(b => b.type === 'invite_20_friends');
+            if (invite20 && invite20.progress) {
+              activity.next_level = {
+                id: 'invite_20_friends',
+                title: invite20.name,
+                boost: invite20.boost,
+                current: invite20.progress.current,
+                target: invite20.progress.required
+              };
+            }
+          }
+          
+          return activity;
+        });
+        
+        // Map regular boosters data
+        let mappedRegularActivities: BoosterActivity[] = [];
+        
+        if (regularStatus && regularStatus.success) {
+          // Map available regular boosters
+          const availableRegularActivities = regularStatus.available_boosters.map(booster => {
+            const activity: BoosterActivity = {
+              id: booster.type,
+              type: "regular",
+              title: booster.name,
+              description: getBoosterDescription(booster.type),
+              boost: booster.boost,
+              completed: false,
+              eligible: booster.available,
+              icon: mapBoosterTypeToIcon(booster.type),
+              prerequisites: [],
+              action_url: getActionUrl(booster.type),
+            };
+            
+            // Add streak if available
+            if (booster.streak) {
+              activity.streak = {
+                current: booster.streak,
+                max_achieved: booster.streak, // Assume current is also max achieved
+                multiplier: {
+                  threshold: 5, // Default threshold
+                  boost: 0.1 // Default boost per streak level
+                }
+              };
+            }
+            
+            return activity;
+          });
+          
+          // Map used or unavailable regular boosters
+          const usedRegularActivities = regularStatus.used_or_unavailable_boosters.map(booster => {
+            const activity: BoosterActivity = {
+              id: booster.type,
+              type: "regular",
+              title: booster.name,
+              description: getBoosterDescription(booster.type),
+              boost: booster.boost,
+              completed: booster.used,
+              eligible: booster.available,
+              icon: mapBoosterTypeToIcon(booster.type),
+              prerequisites: [],
+              action_url: getActionUrl(booster.type),
+              requires_action: booster.requires_action
+            };
+            
+            // Add streak if available
+            if (booster.streak) {
+              activity.streak = {
+                current: booster.streak,
+                max_achieved: booster.streak, // Assume current is also max achieved
+                multiplier: {
+                  threshold: 5, // Default threshold
+                  boost: getNextStreamBoostIncrement(booster.type)
+                }
+              };
+            }
+            
+            // If it requires action, add relevant info
+            if (booster.requires_action) {
+              activity.refresh = {
+                type: "daily",
+                next_available: null
+              };
+            }
+            
+            return activity;
+          });
+          
+          // Merge and deduplicate
+          const allRegularActivities = [...availableRegularActivities, ...usedRegularActivities];
+          const uniqueIds = new Set();
+          mappedRegularActivities = allRegularActivities.filter(activity => {
+            if (uniqueIds.has(activity.id)) return false;
+            uniqueIds.add(activity.id);
+            return true;
+          });
+        }
+        
+        const mappedData: BoosterData = {
+          success: true,
+          boosters: {
+            collected_boosters: 0, // Can be calculated if needed
+            available_boosters: 0, // Can be calculated if needed
+            total_boosters: goldenStatus.boosters.total_boost,
+            collected_golden_boosters: goldenStatus.boosters.claimed_boosters.length,
+            available_golden_boosters: goldenStatus.boosters.available_to_claim,
+            total_golden_boosters: goldenStatus.boosters.booster_details.length,
+            current_farming_rate: 1 + goldenStatus.boosters.total_boost, // Base rate (1) + boosters
+            max_farming_rate: 1 + goldenStatus.boosters.booster_details.reduce((sum, b) => sum + b.boost, 0) // Base + all possible boosters
+          },
+          activities: [...mappedGoldenActivities, ...mappedRegularActivities],
+          // For now, these are static since we're focusing on golden boosters
+          achievements: [
+            {
+              id: "early_adopter",
+              title: "Early Adopter",
+              description: "Joined during the beta phase",
+              reward: "Special Profile Badge",
+              completed: true,
+              icon: "Rocket"
+            }
+          ]
+        };
+        
+        setBoosterData(mappedData);
+      } else {
+        // Fallback to mock data if API fails
+        const pageMockData = await mockFetchBoosterData();
+        setBoosterData(pageMockData);
+      }
+      
+      // Also fetch the API data for the modal
+      await fetchApiBoosterData();
+    } catch (error) {
+      console.error('Error fetching booster data:', error);
+      toast.error('Failed to load booster data');
+      
+      // Fallback to mock data if API fails
+      const pageMockData = await mockFetchBoosterData();
+      setBoosterData(pageMockData);
+    } finally {
+      setIsLoading(false);
+    }
+  };
   
   useEffect(() => {
     // Update mobile detection
@@ -744,24 +1084,6 @@ const BoosterPage: React.FC = () => {
     document.head.appendChild(style);
     
     // Fetch booster data on mount
-    const fetchData = async () => {
-      try {
-        setIsLoading(true);
-        
-        // Fetch the mock data for the page
-        const pageMockData = await mockFetchBoosterData();
-        setBoosterData(pageMockData);
-        
-        // Also fetch the API data for the modal
-        await fetchApiBoosterData();
-      } catch (error) {
-        console.error('Error fetching booster data:', error);
-        toast.error('Failed to load booster data');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
     fetchData();
     
     return () => {
@@ -775,6 +1097,74 @@ const BoosterPage: React.FC = () => {
       }
     };
   }, []);
+  
+  // Map booster types to icons
+  const mapBoosterTypeToIcon = (type: string): string => {
+    const iconMap: Record<string, string> = {
+      'twitter_connect': 'Twitter',
+      'create_community': 'Users',
+      'complete_profile': 'User',
+      'join_5_communities': 'Users',
+      'invite_10_friends': 'UserPlus',
+      'invite_20_friends': 'UserPlus',
+      'community_builder': 'Users',
+      'content_king': 'Award',
+      // Regular boosters
+      'daily_tweet': 'Twitter',
+      'daily_quote_tweet': 'MessageCircle',
+      'daily_checkin': 'Calendar',
+      'post_streak': 'PenTool',
+      'roar_streak': 'Zap'
+    };
+    
+    return iconMap[type] || 'Sparkles';
+  };
+  
+  // Get booster descriptions
+  const getBoosterDescription = (type: string): string => {
+    const descriptionMap: Record<string, string> = {
+      'daily_tweet': 'Tweet about Roar once a day to earn this booster',
+      'daily_quote_tweet': 'Quote tweet a Roar post to earn this booster',
+      'daily_checkin': 'Log in every day to build a streak and increase your boost',
+      'post_streak': 'Post content daily to build a streak and earn bigger boosts',
+      'roar_streak': 'Roar at posts daily to build a streak and earn bigger boosts'
+    };
+    
+    return descriptionMap[type] || 'Complete this action to earn a booster';
+  };
+  
+  // Get next streak boost increment
+  const getNextStreamBoostIncrement = (type: string): number => {
+    const boostMap: Record<string, number> = {
+      'daily_checkin': 0.1,  // +0.1x per day
+      'post_streak': 0.25,   // +0.25x per day
+      'roar_streak': 0.25    // +0.25x per day
+    };
+    
+    return boostMap[type] || 0.1;
+  };
+  
+  // Get action URL for each booster type
+  const getActionUrl = (type: string): string => {
+    const urlMap: Record<string, string> = {
+      'twitter_connect': '/connect/twitter',
+      'create_community': '/create-community',
+      'complete_profile': '/edit-profile',
+      'join_5_communities': '/communities',
+      'invite_10_friends': '/referral',
+      'invite_20_friends': '/referral',
+      'community_builder': '/create-community',
+      'content_king': '/communities',
+      // Regular boosters
+      'daily_tweet': '/share/twitter',
+      'daily_quote_tweet': '/feed',
+      'daily_checkin': '/check-in', 
+      'post_streak': '/feed',
+      'roar_streak': '/feed'
+    };
+    
+    return urlMap[type] || '/feed';
+  };
   
   // Function to fetch API booster data for modal
   const fetchApiBoosterData = async () => {
@@ -794,23 +1184,332 @@ const BoosterPage: React.FC = () => {
   const handleClaimBooster = async (boosterId: string) => {
     setIsProcessing(true);
     try {
-      // Mock API call - replace with actual implementation
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      let result;
+      let isRegularBooster = false;
       
-      toast.success('Booster claimed successfully!');
+      // Check if this is a regular or golden booster
+      const boosterType = boosterId;
+      const regularBoosterTypes = ['daily_tweet', 'daily_quote_tweet', 'daily_checkin', 'post_streak', 'roar_streak'];
       
-      // Refresh data to reflect changes
-      const updatedData = await mockFetchBoosterData();
-      setBoosterData(updatedData);
+      if (regularBoosterTypes.includes(boosterType)) {
+        // It's a regular booster
+        isRegularBooster = true;
+        result = await claimRegularBooster(boosterType);
+      } else {
+        // It's a golden booster
+        result = await claimGoldenBooster(boosterType);
+      }
       
-      // Also refresh the API data
-      await fetchApiBoosterData();
+      if (result && result.success) {
+        // Get booster amount for better feedback
+        const boostAmount = isRegularBooster 
+          ? (result.booster?.boost || 0) 
+          : (result.boost_added || 0);
+        
+        // Create level up animation element
+        const createLevelUpAnimation = () => {
+          // Find the booster card element
+          const boosterCard = document.querySelector(`[data-booster-id="${boosterId}"]`);
+          if (!boosterCard) return;
+          
+          // Get the position of the card
+          const rect = boosterCard.getBoundingClientRect();
+          
+          // Create a floating text element
+          const floatingText = document.createElement('div');
+          floatingText.textContent = `+${boostAmount.toFixed(1)}x BOOST!`;
+          floatingText.style.position = 'fixed';
+          floatingText.style.left = `${rect.left + rect.width / 2}px`;
+          floatingText.style.top = `${rect.top + rect.height / 2}px`;
+          floatingText.style.transform = 'translate(-50%, -50%)';
+          floatingText.style.fontSize = '22px';
+          floatingText.style.fontWeight = 'bold';
+          floatingText.style.color = '#FFD700';
+          floatingText.style.textShadow = '0 0 10px rgba(255, 215, 0, 0.7)';
+          floatingText.style.zIndex = '9999';
+          floatingText.style.pointerEvents = 'none';
+          floatingText.style.transition = 'all 1.5s ease-out';
+          
+          document.body.appendChild(floatingText);
+          
+          // Animate the text
+          setTimeout(() => {
+            floatingText.style.top = `${rect.top - 100}px`;
+            floatingText.style.opacity = '0';
+            floatingText.style.fontSize = '32px';
+          }, 50);
+          
+          // Remove the element after animation
+          setTimeout(() => {
+            if (document.body.contains(floatingText)) {
+              document.body.removeChild(floatingText);
+            }
+          }, 1500);
+        };
+        
+        // Custom success messages for streaks
+        let successMessage = 'Booster claimed successfully!';
+        
+        if (isRegularBooster && result.booster?.streak) {
+          const streak = result.booster.streak;
+          if (streak > 1) {
+            successMessage = `${streak} Day Streak! 🔥`;
+            
+            // Add streak animation
+            const createStreakAnimation = () => {
+              const streakElem = document.createElement('div');
+              streakElem.innerHTML = `<div class="text-center">
+                <div class="text-4xl font-bold text-amber-500">${streak} DAY STREAK! 🔥</div>
+                <div class="text-lg text-amber-400 mt-2">Keep it going!</div>
+              </div>`;
+              streakElem.style.position = 'fixed';
+              streakElem.style.top = '50%';
+              streakElem.style.left = '50%';
+              streakElem.style.transform = 'translate(-50%, -50%) scale(0.5)';
+              streakElem.style.zIndex = '9999';
+              streakElem.style.opacity = '0';
+              streakElem.style.transition = 'all 1s ease-out';
+              streakElem.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+              streakElem.style.borderRadius = '16px';
+              streakElem.style.padding = '32px';
+              streakElem.style.minWidth = '300px';
+              streakElem.style.pointerEvents = 'none';
+              
+              document.body.appendChild(streakElem);
+              
+              // Animate
+              setTimeout(() => {
+                streakElem.style.opacity = '1';
+                streakElem.style.transform = 'translate(-50%, -50%) scale(1)';
+              }, 100);
+              
+              // Remove
+              setTimeout(() => {
+                streakElem.style.opacity = '0';
+                streakElem.style.transform = 'translate(-50%, -50%) scale(1.2)';
+              }, 2000);
+              
+              setTimeout(() => {
+                if (document.body.contains(streakElem)) {
+                  document.body.removeChild(streakElem);
+                }
+              }, 3000);
+            };
+            
+            // Show streak animation for streaks
+            createStreakAnimation();
+          }
+        }
+        
+        // Show success toast with the boost amount
+        toast.success(successMessage, {
+          description: `+${boostAmount}x boost added to your farming rate`,
+          icon: <Sparkles className="h-5 w-5 text-yellow-500" />
+        });
+        
+        // Create confetti effect
+        createConfettiEffect();
+        
+        // Create level up animation
+        createLevelUpAnimation();
+        
+        // Refresh data
+        if (isRegularBooster) {
+          const regularStatus = await fetchRegularBoosterStatus();
+          setRegularBoosterStatus(regularStatus);
+        } else {
+          const goldenStatus = await fetchGoldenBoosterStatus();
+          setGoldenBoosterStatus(goldenStatus);
+        }
+        
+        // Refresh all data
+        fetchData();
+        
+        // Also refresh the API data for the modal
+        await fetchApiBoosterData();
+      } else {
+        // Show error toast
+        toast.error(result?.message || 'Failed to claim booster');
+      }
     } catch (error) {
       console.error('Error claiming booster:', error);
       toast.error('Failed to claim booster');
     } finally {
       setIsProcessing(false);
     }
+  };
+  
+  // Create a confetti effect when claiming boosters
+  const createConfettiEffect = (isLarge = false) => {
+    // We'll use the canvas element to create the confetti effect
+    const canvas = document.createElement('canvas');
+    const container = document.createElement('div');
+    
+    container.style.position = 'fixed';
+    container.style.top = '0';
+    container.style.left = '0';
+    container.style.width = '100%';
+    container.style.height = '100%';
+    container.style.pointerEvents = 'none';
+    container.style.zIndex = '9999';
+    
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    canvas.style.position = 'absolute';
+    canvas.style.top = '0';
+    canvas.style.left = '0';
+    canvas.style.pointerEvents = 'none';
+    
+    container.appendChild(canvas);
+    document.body.appendChild(container);
+    
+    const ctx = canvas.getContext('2d');
+    
+    // Confetti colors - gold, amber, yellow theme
+    const colors = [
+      '#FFD700', // Gold
+      '#FFC107', // Amber
+      '#FFEB3B', // Yellow
+      '#FFD54F', // Amber Light
+      '#FFF9C4', // Yellow Light
+      '#FFB74D'  // Orange Light
+    ];
+
+    // Add some emoji confetti too
+    const emojis = isLarge ? ['🦁', '✨', '🎉', '🚀', '💎', '🔥'] : ['✨', '🎉', '🚀'];
+    
+    // Confetti particles
+    const particles: any[] = [];
+    
+    // Generate more particles for larger effect
+    const particleCount = isLarge ? 200 : 100;
+    const emojiCount = isLarge ? 30 : 15;
+    
+    // Create particles
+    for (let i = 0; i < particleCount; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height - canvas.height,
+        radius: Math.random() * 4 + 1,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        speed: Math.random() * 3 + 2,
+        rotation: Math.random() * 360,
+        rotationSpeed: Math.random() * 2 - 1,
+        shape: Math.random() > 0.5 ? 'circle' : 'rect'
+      });
+    }
+    
+    // Add emoji particles
+    for (let i = 0; i < emojiCount; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height - canvas.height,
+        emoji: emojis[Math.floor(Math.random() * emojis.length)],
+        size: Math.random() * 20 + 10,
+        speed: Math.random() * 2 + 1,
+        rotation: Math.random() * 360,
+        rotationSpeed: Math.random() * 2 - 1,
+        shape: 'emoji'
+      });
+    }
+    
+    // Add sound effect
+    const playSound = () => {
+      try {
+        const audio = new Audio('/success.mp3');
+        audio.volume = 0.3; // Set a reasonable volume
+        audio.play().catch(e => console.log('Audio play failed:', e));
+      } catch (e) {
+        console.log('Audio creation failed:', e);
+      }
+    };
+    
+    // Try to play sound (will fail silently if no sound file)
+    playSound();
+    
+    // Animation function
+    let animationFrame: number;
+    const animate = () => {
+      if (!ctx) return;
+      
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Update and draw particles
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        p.y += p.speed;
+        p.rotation += p.rotationSpeed;
+        
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate((p.rotation * Math.PI) / 180);
+        
+        if (p.shape === 'emoji') {
+          ctx.font = `${p.size}px Arial`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(p.emoji, 0, 0);
+        } else if (p.shape === 'circle') {
+          ctx.fillStyle = p.color;
+          ctx.beginPath();
+          ctx.arc(0, 0, p.radius, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.fillStyle = p.color;
+          ctx.fillRect(-p.radius, -p.radius, p.radius * 2, p.radius * 2);
+        }
+        
+        ctx.restore();
+      }
+      
+      // Check if all particles are off-screen
+      const allOffScreen = particles.every(p => p.y > canvas.height);
+      
+      if (allOffScreen) {
+        cancelAnimationFrame(animationFrame);
+        document.body.removeChild(container);
+      } else {
+        animationFrame = requestAnimationFrame(animate);
+      }
+    };
+    
+    animate();
+    
+    // Create a pulse effect in the background
+    const createPulseEffect = () => {
+      const pulse = document.createElement('div');
+      pulse.style.position = 'fixed';
+      pulse.style.top = '0';
+      pulse.style.left = '0';
+      pulse.style.right = '0';
+      pulse.style.bottom = '0';
+      pulse.style.backgroundColor = 'rgba(255, 215, 0, 0.1)';
+      pulse.style.opacity = '0';
+      pulse.style.pointerEvents = 'none';
+      pulse.style.zIndex = '9998';
+      pulse.style.transition = 'opacity 0.3s ease-in-out';
+      
+      document.body.appendChild(pulse);
+      
+      // Animate the pulse
+      setTimeout(() => { pulse.style.opacity = '0.2'; }, 0);
+      setTimeout(() => { pulse.style.opacity = '0'; }, 300);
+      setTimeout(() => { 
+        if (document.body.contains(pulse)) {
+          document.body.removeChild(pulse);
+        }
+      }, 600);
+    };
+    
+    createPulseEffect();
+    
+    // Remove after timeout as a fallback
+    setTimeout(() => {
+      cancelAnimationFrame(animationFrame);
+      if (document.body.contains(container)) {
+        document.body.removeChild(container);
+      }
+    }, 5000);
   };
   
   // Handle booster modal click with special handling for mobile
@@ -971,34 +1670,6 @@ const BoosterPage: React.FC = () => {
             </TabsList>
           </div>
           
-          {/* Instructions for mobile users - improve with game design principles */}
-          <div className="md:hidden bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg mb-4 border border-amber-200 dark:border-amber-800/30">
-            <h3 className="font-medium flex items-center gap-2 text-amber-800 dark:text-amber-300 mb-1">
-              <Sparkles className="h-4 w-4" />
-              Quest Hub
-            </h3>
-            <p className="text-sm text-amber-700 dark:text-amber-400">
-              Complete these quests to level up your farming rate! Each completed task unlocks new powers.
-            </p>
-            
-            {/* Progress indicator */}
-            <div className="mt-3 flex gap-1">
-              {[1, 2, 3, 4, 5].map((level) => (
-                <div 
-                  key={level} 
-                  className={`h-1.5 flex-1 rounded-full ${
-                    level <= Math.ceil(completionPercentage / 20) 
-                      ? 'bg-amber-500' 
-                      : 'bg-gray-200 dark:bg-gray-700'
-                  }`}
-                />
-              ))}
-            </div>
-            <div className="mt-1 text-xs text-center text-amber-600 dark:text-amber-400">
-              Level {Math.ceil(completionPercentage / 20)}/5 Booster Master
-            </div>
-          </div>
-          
           <TabsContent value="golden" className="mt-0">
             <div className="grid grid-cols-1 gap-4">
               {goldenBoosters.map(booster => (
@@ -1095,6 +1766,15 @@ const BoosterPage: React.FC = () => {
                   <AchievementCard key={achievement.id} achievement={achievement} />
                 </motion.div>
               ))}
+              
+              {/* Placeholder for future achievements */}
+              <div className="text-center p-8 border border-dashed border-gray-300 dark:border-gray-700 rounded-lg mt-4">
+                <Trophy className="h-10 w-10 text-gray-400 dark:text-gray-600 mx-auto mb-3" />
+                <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-1">More Achievements Coming Soon</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Keep participating in communities to unlock future achievements!
+                </p>
+              </div>
             </div>
           </TabsContent>
         </Tabs>

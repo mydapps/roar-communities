@@ -806,21 +806,19 @@ const RoarFarmingPage = () => {
                   </>
                 )}
                 
-                {/* Boost your roars button - now more prominent and separate */}
-                <div 
-                  onClick={() => {
-                    // Show toast message instead of navigating
-                    toast.info("Boosters are coming soon! Please check back later.");
-                  }}
-                  className="mt-2 w-full max-w-xs flex justify-center items-center gap-2 py-2 px-4 rounded-md
-                    bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300
-                    hover:bg-amber-200 dark:hover:bg-amber-800/30 transition-colors
-                    border border-amber-200 dark:border-amber-700/40 cursor-pointer"
+                {/* Booster link - now positioned directly after the information section */}
+                <Link 
+                  to="/boosters"
+                  className="flex justify-between items-center px-4 py-3 mt-4 mb-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800/30 hover:bg-amber-100 dark:hover:bg-amber-800/30 transition-colors"
                 >
-                  <Sparkles className="h-4 w-4" />
-                  <span className="font-medium">Boosters coming soon</span>
-                  <Clock className="h-3.5 w-3.5 ml-1" />
-                </div>
+                  <div className="flex items-center">
+                    <Sparkles className="h-4 w-4 text-amber-500 mr-2" />
+                    <span className="font-medium">Boost your Farming</span>
+                  </div>
+                  <div className="flex items-center text-amber-600 dark:text-amber-400">
+                    <ArrowRight className="h-4 w-4" />
+                  </div>
+                </Link>
               </div>
             </div>
           </CardContent>

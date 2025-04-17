@@ -342,3 +342,295 @@ export const fetchAvailableBoosters = async (): Promise<AvailableBoostersRespons
     return null;
   }
 };
+
+/**
+ * Golden Booster Status Response interface
+ */
+export interface GoldenBoosterStatusResponse {
+  success: boolean;
+  user_id: number;
+  boosters: {
+    total_boost: number;
+    available_to_claim: number;
+    booster_details: Array<{
+      type: string;
+      name: string;
+      description: string;
+      boost: number;
+      eligible: boolean;
+      claimed: boolean;
+      progress?: {
+        current: number;
+        required: number;
+      };
+    }>;
+    claimed_boosters: Array<{
+      id: number;
+      activity: string;
+      boost: number;
+      received_on: string;
+      status: number;
+    }>;
+  };
+}
+
+/**
+ * Golden Booster Claim Response interface
+ */
+export interface GoldenBoosterClaimResponse {
+  success: boolean;
+  message: string;
+  boost_added?: number;
+  total_boost?: number;
+  boosters_claimed?: Array<{
+    type: string;
+    boost: number;
+  }>;
+  total_boost_added?: number;
+}
+
+/**
+ * Fetch status of all golden boosters
+ * @returns Promise that resolves to golden booster status data
+ */
+export const fetchGoldenBoosterStatus = async (): Promise<GoldenBoosterStatusResponse | null> => {
+  try {
+    const userKey = getUserApiKey();
+    if (!userKey) return null;
+    
+    const response = await fetch(`${API_BASE_URL}/golden_boosters/status`, {
+      method: 'GET',
+      headers: {
+        'x-user-key': userKey
+      }
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Error fetching golden booster status:', errorData);
+      return null;
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching golden booster status:', error);
+    return null;
+  }
+};
+
+/**
+ * Claim a specific golden booster
+ * @param type The type of booster to claim
+ * @returns Promise that resolves to the claim response
+ */
+export const claimGoldenBooster = async (type: string): Promise<GoldenBoosterClaimResponse | null> => {
+  try {
+    const userKey = getUserApiKey();
+    if (!userKey) return null;
+    
+    const response = await fetch(`${API_BASE_URL}/golden_boosters/claim`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-key': userKey
+      },
+      body: JSON.stringify({ type })
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Error claiming golden booster:', errorData);
+      return null;
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error claiming golden booster:', error);
+    return null;
+  }
+};
+
+/**
+ * Claim all eligible golden boosters
+ * @returns Promise that resolves to the claim response
+ */
+export const claimAllGoldenBoosters = async (): Promise<GoldenBoosterClaimResponse | null> => {
+  try {
+    const userKey = getUserApiKey();
+    if (!userKey) return null;
+    
+    const response = await fetch(`${API_BASE_URL}/golden_boosters/claim_all`, {
+      method: 'POST',
+      headers: {
+        'x-user-key': userKey
+      }
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Error claiming all golden boosters:', errorData);
+      return null;
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error claiming all golden boosters:', error);
+    return null;
+  }
+};
+
+/**
+ * Regular Booster Status Response interface
+ */
+export interface RegularBoosterStatusResponse {
+  success: boolean;
+  user_id: number;
+  today: string;
+  available_boosters: Array<{
+    type: string;
+    name: string;
+    boost: number;
+    available: boolean;
+    streak?: number;
+  }>;
+  used_or_unavailable_boosters: Array<{
+    type: string;
+    name: string;
+    boost: number;
+    streak?: number;
+    used: boolean;
+    available: boolean;
+    requires_action?: boolean;
+  }>;
+  claimed_boosters: {
+    available: Array<{
+      id: number;
+      activity: string;
+      boost: number;
+      received_on: string;
+      claimed_on: string | null;
+      status: number;
+    }>;
+    used_today: Array<{
+      id: number;
+      activity: string;
+      boost: number;
+      received_on: string;
+      claimed_on: string;
+      status: number;
+    }>;
+  };
+}
+
+/**
+ * Regular Booster Claim Response interface
+ */
+export interface RegularBoosterClaimResponse {
+  success: boolean;
+  message: string;
+  booster?: {
+    type: string;
+    boost: number;
+    streak?: number;
+    next_streak_boost?: number;
+    tweet_id?: string;
+    tweet_text?: string;
+  };
+}
+
+/**
+ * Fetch status of all regular boosters
+ * @returns Promise that resolves to regular booster status data
+ */
+export const fetchRegularBoosterStatus = async (): Promise<RegularBoosterStatusResponse | null> => {
+  try {
+    const userKey = getUserApiKey();
+    if (!userKey) return null;
+    
+    const response = await fetch(`${API_BASE_URL}/boosters/status`, {
+      method: 'GET',
+      headers: {
+        'x-user-key': userKey
+      }
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Error fetching regular booster status:', errorData);
+      return null;
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching regular booster status:', error);
+    return null;
+  }
+};
+
+/**
+ * Claim a specific regular booster
+ * @param type The type of booster to claim (daily_tweet, daily_quote_tweet, daily_checkin, post_streak, roar_streak)
+ * @returns Promise that resolves to the claim response
+ */
+export const claimRegularBooster = async (type: string): Promise<RegularBoosterClaimResponse | null> => {
+  try {
+    const userKey = getUserApiKey();
+    if (!userKey) return null;
+    
+    const response = await fetch(`${API_BASE_URL}/boosters/${type}`, {
+      method: 'POST',
+      headers: {
+        'x-user-key': userKey
+      }
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error(`Error claiming ${type} booster:`, errorData);
+      return null;
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error(`Error claiming ${type} booster:`, error);
+    return null;
+  }
+};
+
+/**
+ * Use a claimed booster for farming
+ * @param boosterId The ID of the booster to use
+ * @returns Promise that resolves to the use response
+ */
+export const useBooster = async (boosterId: number): Promise<RegularBoosterClaimResponse | null> => {
+  try {
+    const userKey = getUserApiKey();
+    if (!userKey) return null;
+    
+    const response = await fetch(`${API_BASE_URL}/boosters/use`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-key': userKey
+      },
+      body: JSON.stringify({ booster_id: boosterId })
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Error using booster:', errorData);
+      return null;
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error using booster:', error);
+    return null;
+  }
+};
