@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { createAuthHeaders, fetchAvailableBoosters, fetchGoldenBoosterStatus, claimGoldenBooster, claimAllGoldenBoosters, AvailableBoostersResponse, GoldenBoosterStatusResponse, API_BASE_URL, getUserApiKey, fetchRegularBoosterStatus, claimRegularBooster, useBooster, RegularBoosterStatusResponse } from '@/utils/apiBase';
+import { createAuthHeaders, fetchAvailableBoosters, fetchGoldenBoosterStatus, claimGoldenBooster, claimAllGoldenBoosters, AvailableBoostersResponse, GoldenBoosterStatusResponse, API_BASE_URL, getUserApiKey, fetchRegularBoosterStatus, claimRegularBooster, useBooster, RegularBoosterStatusResponse, fetchAchievements, Achievement as ApiAchievement, AchievementsResponse } from '@/utils/apiBase';
 import { Link, useNavigate } from 'react-router-dom';
 import { BoosterDetailModal } from '@/components/shared/BoosterDetailModal';
 import { useEffect as useReactEffect, useLayoutEffect } from 'react';
@@ -252,17 +252,8 @@ const mockFetchBoosterData = async (): Promise<BoosterData> => {
         action_url: "/feed"
       }
     ],
-    // Achievements and milestones
-    achievements: [
-      {
-        id: "early_adopter",
-        title: "Early Adopter",
-        description: "Joined during the beta phase",
-        reward: "Special Profile Badge",
-        completed: true,
-        icon: "Rocket"
-      }
-    ]
+    // Empty array for achievements since we're using API data
+    achievements: []
   };
 };
 
@@ -308,9 +299,15 @@ interface StreakInfo {
 interface Achievement {
   id: string;
   title: string;
+  name: string;
+  type: string;
   description: string;
   reward: string;
   completed: boolean;
+  unlocked: boolean;
+  unlocked_at: string | null;
+  rarity: string;
+  display_color: string;
   progress?: BoosterProgress;
   icon: string;
 }
@@ -731,48 +728,51 @@ const BoosterCard: React.FC<BoosterCardProps> = ({ activity, onClaim, isProcessi
   );
 };
 
-// Achievement card component
+// Update AchievementCard props interface to match API data
 interface AchievementCardProps {
-  achievement: Achievement;
+  achievement: ApiAchievement;
 }
 
+// Update AchievementCard component to use API data structure
 const AchievementCard: React.FC<AchievementCardProps> = ({ achievement }) => {
   return (
-    <Card className={`overflow-hidden transition-all duration-200 hover:shadow-md ${achievement.completed ? 'border-green-200 dark:border-green-800/60' : 'border-purple-200 dark:border-purple-800/30'}`}>
+    <Card className={`overflow-hidden transition-all duration-200 hover:shadow-md ${achievement.unlocked ? 'border-green-200 dark:border-green-800/60' : 'border-purple-200 dark:border-purple-800/30'}`} 
+          style={{ borderColor: achievement.unlocked ? `${achievement.display_color}40` : '' }}>
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-2">
-            <div className="p-2 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">
-              {getIconComponent(achievement.icon)}
+            <div className="p-2 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300"
+                 style={{ backgroundColor: `${achievement.display_color}20`, color: achievement.display_color }}>
+              {getIconComponent(achievement.id.includes('invite') ? 'UserPlus' : achievement.id.includes('profile') ? 'User' : 'Award')}
             </div>
-            <CardTitle className="text-base">{achievement.title}</CardTitle>
+            <CardTitle className="text-base">{achievement.name}</CardTitle>
           </div>
           
-          <Badge variant="outline" className="bg-purple-50 hover:bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border border-purple-200">
-            {achievement.reward}
+          <Badge variant="outline" className="bg-purple-50 hover:bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border border-purple-200"
+                 style={{ backgroundColor: `${achievement.display_color}10`, color: achievement.display_color, borderColor: `${achievement.display_color}30` }}>
+            {achievement.type}
           </Badge>
         </div>
         <CardDescription className="text-xs mt-1 ml-10">{achievement.description}</CardDescription>
       </CardHeader>
       
       <CardContent className="pt-3 pb-4">
-        {achievement.progress && !achievement.completed && (
-          <div>
-            <div className="flex justify-between text-xs mb-1">
-              <span className="text-gray-500 dark:text-gray-400">Progress</span>
-              <span className="font-medium">{achievement.progress.current} / {achievement.progress.target}</span>
-            </div>
-            <Progress
-              value={(achievement.progress.current / achievement.progress.target) * 100}
-              className="h-1.5 bg-purple-50 dark:bg-purple-900/20"
-            />
+        {achievement.unlocked && (
+          <div className="flex items-center text-sm text-green-600 dark:text-green-400" style={{ color: achievement.display_color }}>
+            <CheckCircle2 className="h-4 w-4 mr-1" />
+            <span>Achievement Unlocked</span>
+            {achievement.unlocked_at && (
+              <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">
+                {new Date(achievement.unlocked_at).toLocaleDateString()}
+              </span>
+            )}
           </div>
         )}
         
-        {achievement.completed && (
-          <div className="flex items-center text-sm text-green-600 dark:text-green-400">
-            <CheckCircle2 className="h-4 w-4 mr-1" />
-            <span>Achievement Unlocked</span>
+        {!achievement.unlocked && (
+          <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+            <Lock className="h-4 w-4 mr-1" />
+            <span>Locked Achievement</span>
           </div>
         )}
       </CardContent>
@@ -863,6 +863,9 @@ const BoosterPage: React.FC = () => {
   const [goldenBoosterStatus, setGoldenBoosterStatus] = useState<GoldenBoosterStatusResponse | null>(null);
   const [regularBoosterStatus, setRegularBoosterStatus] = useState<RegularBoosterStatusResponse | null>(null);
   const [isLoadingApiData, setIsLoadingApiData] = useState(false);
+  // Add state for API achievements
+  const [apiAchievements, setApiAchievements] = useState<ApiAchievement[]>([]);
+  const [isLoadingAchievements, setIsLoadingAchievements] = useState(false);
   
   // New state for default tab value
   const [activeTab, setActiveTab] = useState<string>("golden");
@@ -874,6 +877,9 @@ const BoosterPage: React.FC = () => {
   const fetchData = async () => {
     try {
       setIsLoading(true);
+      
+      // Fetch achievements along with other data
+      await fetchAchievementData();
       
       // Fetch the golden booster status API data
       const goldenStatus = await fetchGoldenBoosterStatus();
@@ -1022,17 +1028,8 @@ const BoosterPage: React.FC = () => {
             max_farming_rate: 1 + goldenStatus.boosters.booster_details.reduce((sum, b) => sum + b.boost, 0) // Base + all possible boosters
           },
           activities: [...mappedGoldenActivities, ...mappedRegularActivities],
-          // For now, these are static since we're focusing on golden boosters
-          achievements: [
-            {
-              id: "early_adopter",
-              title: "Early Adopter",
-              description: "Joined during the beta phase",
-              reward: "Special Profile Badge",
-              completed: true,
-              icon: "Rocket"
-            }
-          ]
+          // Use an empty array for the achievements since we're using the API data directly
+          achievements: []
         };
         
         setBoosterData(mappedData);
@@ -1178,6 +1175,27 @@ const BoosterPage: React.FC = () => {
       console.error('Error fetching API booster data:', error);
     } finally {
       setIsLoadingApiData(false);
+    }
+  };
+  
+  // Function to fetch achievement data from API
+  const fetchAchievementData = async () => {
+    try {
+      setIsLoadingAchievements(true);
+      const achievementsData = await fetchAchievements();
+      
+      if (achievementsData && achievementsData.success) {
+        setApiAchievements(achievementsData.achievements);
+      } else {
+        // If API fails, use empty array
+        setApiAchievements([]);
+      }
+    } catch (error) {
+      console.error('Error fetching achievements:', error);
+      toast.error('Failed to load achievements');
+      setApiAchievements([]);
+    } finally {
+      setIsLoadingAchievements(false);
     }
   };
   
@@ -1561,7 +1579,7 @@ const BoosterPage: React.FC = () => {
     );
   }
   
-  const { boosters, activities, achievements } = boosterData;
+  const { boosters, activities } = boosterData;
   
   // Filter activities by type
   const goldenBoosters = activities.filter(activity => activity.type === 'golden');
@@ -1571,6 +1589,10 @@ const BoosterPage: React.FC = () => {
   const totalCompleted = activities.filter(a => a.completed).length;
   const totalActivities = activities.length;
   const completionPercentage = (totalCompleted / totalActivities) * 100;
+  
+  // Extract data needed for rendering
+  const isLoadingAny = isLoading || isLoadingApiData || isLoadingAchievements;
+  const hasAchievements = apiAchievements && apiAchievements.length > 0;
   
   return (
     <>
@@ -1746,7 +1768,7 @@ const BoosterPage: React.FC = () => {
                     </div>
                     <span className="text-center">View Your Achievements</span>
                     <div className="px-2 py-0.5 mt-1 rounded-full bg-purple-100/80 dark:bg-purple-800/30 text-xs text-purple-700 dark:text-purple-300">
-                      {achievements.filter(a => a.completed).length}/{achievements.length} unlocked
+                      {apiAchievements.filter(a => a.unlocked).length}/{apiAchievements.length} unlocked
                     </div>
                   </div>
                 </Button>
@@ -1756,25 +1778,58 @@ const BoosterPage: React.FC = () => {
           
           <TabsContent value="achievements" className="mt-0">
             <div className="grid grid-cols-1 gap-4">
-              {achievements.map((achievement, index) => (
-                <motion.div
-                  key={achievement.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: index * 0.05 }}
-                >
-                  <AchievementCard key={achievement.id} achievement={achievement} />
-                </motion.div>
-              ))}
+              {isLoadingAchievements ? (
+                // Loading state
+                Array(3).fill(0).map((_, i) => (
+                  <Card key={i} className="animate-pulse">
+                    <CardHeader className="pb-2">
+                      <div className="flex justify-between items-start">
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 h-9 w-9"></div>
+                          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-36"></div>
+                        </div>
+                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>
+                      </div>
+                      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mt-2 ml-10"></div>
+                    </CardHeader>
+                    <CardContent className="pt-3 pb-4">
+                      <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-32"></div>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : apiAchievements.length > 0 ? (
+                // Render achievements from API
+                apiAchievements.map((achievement, index) => (
+                  <motion.div
+                    key={achievement.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: index * 0.05 }}
+                  >
+                    <AchievementCard key={achievement.id} achievement={achievement} />
+                  </motion.div>
+                ))
+              ) : (
+                // No achievements found
+                <div className="text-center p-8 border border-dashed border-gray-300 dark:border-gray-700 rounded-lg">
+                  <Trophy className="h-10 w-10 text-gray-400 dark:text-gray-600 mx-auto mb-3" />
+                  <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-1">No Achievements Yet</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Keep participating in communities to unlock achievements!
+                  </p>
+                </div>
+              )}
               
               {/* Placeholder for future achievements */}
-              <div className="text-center p-8 border border-dashed border-gray-300 dark:border-gray-700 rounded-lg mt-4">
-                <Trophy className="h-10 w-10 text-gray-400 dark:text-gray-600 mx-auto mb-3" />
-                <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-1">More Achievements Coming Soon</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Keep participating in communities to unlock future achievements!
-                </p>
-              </div>
+              {apiAchievements.length > 0 && (
+                <div className="text-center p-8 border border-dashed border-gray-300 dark:border-gray-700 rounded-lg mt-4">
+                  <Trophy className="h-10 w-10 text-gray-400 dark:text-gray-600 mx-auto mb-3" />
+                  <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-1">More Achievements Coming Soon</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Keep participating in communities to unlock future achievements!
+                  </p>
+                </div>
+              )}
             </div>
           </TabsContent>
         </Tabs>

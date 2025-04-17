@@ -634,3 +634,53 @@ export const useBooster = async (boosterId: number): Promise<RegularBoosterClaim
     return null;
   }
 };
+
+/**
+ * Achievement API response interface
+ */
+export interface Achievement {
+  id: string;
+  name: string;
+  type: string;
+  description: string;
+  unlocked: boolean;
+  unlocked_at: string | null;
+  rarity: string;
+  display_color: string;
+}
+
+export interface AchievementsResponse {
+  success: boolean;
+  achievements: Achievement[];
+}
+
+/**
+ * Fetch user achievements from the API
+ * @returns Promise that resolves to achievements data
+ */
+export const fetchAchievements = async (): Promise<AchievementsResponse | null> => {
+  try {
+    const userKey = getUserApiKey();
+    if (!userKey) return null;
+    
+    const response = await fetch(`${API_BASE_URL}/achievements`, {
+      method: 'GET',
+      headers: {
+        'x-user-key': userKey,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Error fetching achievements:', errorData);
+      return null;
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching achievements:', error);
+    return null;
+  }
+};
