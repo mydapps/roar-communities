@@ -54,6 +54,20 @@ export const fetchReplies = async (postCode: string, limit = 10): Promise<{
     const data = await response.json();
     console.log(`Fetched ${data.replies?.length || 0} replies`);
     
+    // Debug log to check for sub_replies structure
+    if (data.replies && data.replies.length > 0) {
+      const firstReply = data.replies[0];
+      console.log(`First reply ID: ${firstReply.id}, Has sub_replies: ${!!firstReply.sub_replies}, Count: ${firstReply.sub_replies?.length || 0}`);
+      
+      if (firstReply.sub_replies && firstReply.sub_replies.length > 0) {
+        console.log(`First sub-reply ID: ${firstReply.sub_replies[0].id}`);
+        // Check for nested sub_replies
+        if (firstReply.sub_replies[0].sub_replies) {
+          console.log(`Nested sub_replies exist! Count: ${firstReply.sub_replies[0].sub_replies.length}`);
+        }
+      }
+    }
+    
     return {
       success: true,
       replies: data.replies || [],

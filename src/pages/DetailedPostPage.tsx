@@ -57,36 +57,36 @@ const DetailedPostPage = () => {
       setError(null);
       
       const data = await fetchPost(postId);
+      console.log('API Response from fetchPost:', data);
       
       setPost(data.post);
       if (data.original_post) {
         setOriginalPost(data.original_post);
       }
       
-      const formattedReplies = data.replies?.map(reply => ({
-        id: reply.id,
-        uid: reply.user_id,
-        handle: reply.handle,
-        avatar_url: reply.avatar,
-        content: reply.content,
-        created_on: reply.created_at,
-        time_ago: reply.time_ago,
-        upvotes: reply.upvotes,
-        meow_count: reply.has_meowed ? 1 : 0,
-        has_meowed: reply.has_meowed,
-        sub_replies: reply.replies?.map(subReply => ({
-          id: subReply.id,
-          uid: subReply.user_id,
-          handle: subReply.handle,
-          avatar_url: subReply.avatar,
-          content: subReply.content,
-          created_on: subReply.created_at,
-          time_ago: subReply.time_ago,
-          upvotes: subReply.upvotes,
-          meow_count: subReply.has_meowed ? 1 : 0,
-          has_meowed: subReply.has_meowed
-        }))
-      })) || [];
+      // Function to recursively map API reply structures to CommentReply
+      const mapApiReplyToCommentReply = (apiReply: any): CommentReply => {
+        return {
+          id: apiReply.id,
+          uid: apiReply.user_id,
+          handle: apiReply.handle,
+          avatar_url: apiReply.avatar,
+          content: apiReply.content,
+          created_on: apiReply.created_at,
+          time_ago: apiReply.time_ago,
+          upvotes: apiReply.upvotes,
+          meow_count: apiReply.has_meowed ? 1 : 0,
+          has_meowed: apiReply.has_meowed,
+          // Check both possible field names for nested replies
+          sub_replies: apiReply.sub_replies 
+            ? apiReply.sub_replies.map(mapApiReplyToCommentReply)
+            : apiReply.replies 
+              ? apiReply.replies.map(mapApiReplyToCommentReply)
+              : undefined
+        };
+      };
+      
+      const formattedReplies = data.replies?.map(mapApiReplyToCommentReply) || [];
       
       setReplies(formattedReplies as CommentReply[]);
       setReplyCount(data.reply_count || 0);
