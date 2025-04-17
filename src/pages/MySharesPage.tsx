@@ -130,18 +130,18 @@ const MySharesPage = () => {
   const handleBuySharesConfirm = async (communityName: string, quantity: number) => {
     try {
       setLoadingAction(true);
-      
-      // Small delay to ensure state is updated before proceeding
-      await new Promise(resolve => setTimeout(resolve, 50));
-      
       const result = await buySharesConfirm(communityName, quantity);
       
-      if (result.status === 'SUCCESS') {
-        // Update portfolio data
+      if (result && result.status === 'SUCCESS') {
+        toast.success('Successfully purchased shares!');
         refreshPortfolio();
         fetchWalletBalance(true); // Force refresh balance
         
-        toast.success(`Successfully purchased ${result.shareQuantity} shares of ${communityName}`);
+        // IMPORTANT FIX: Set loading to false AFTER a slight delay
+        // This allows the success screen to display properly
+        setTimeout(() => {
+          setLoadingAction(false);
+        }, 300);
         
         // Add delay before closing to show success state
         setTimeout(() => {
@@ -151,51 +151,51 @@ const MySharesPage = () => {
           setTimeout(() => {
             resetState();
           }, 300);
-        }, 2000);
+        }, 7000); // Extended to 7 seconds for better visibility
       } else {
-        toast.error(result.message || 'Transaction failed');
+        // Set loading to false immediately for error cases
+        setLoadingAction(false);
+        toast.error(result?.message || 'Failed to purchase shares');
       }
     } catch (error) {
-      toast.error('Failed to complete purchase');
-    } finally {
       setLoadingAction(false);
+      toast.error('An error occurred while purchasing shares');
     }
   };
 
   const handleSellSharesConfirm = async (communityName: string, quantity: number) => {
     try {
-      // Set loading state FIRST, before doing anything else
       setLoadingAction(true);
-      
-      // Small delay to ensure state is updated before proceeding
-      await new Promise(resolve => setTimeout(resolve, 50));
-      
-      // This API call may take some time - during this time, the TradeSheet will show loading
       const result = await sellSharesConfirm(communityName, quantity);
       
-      if (result.status === 'SUCCESS') {
-        // Update portfolio data in the background
+      if (result && result.status === 'SUCCESS') {
+        toast.success('Successfully sold shares!');
         refreshPortfolio();
         fetchWalletBalance(true); // Force refresh balance
         
-        // Success toast notification
-        toast.success(`Successfully sold ${result.soldShares} shares of ${communityName}`);
+        // IMPORTANT FIX: Set loading to false AFTER a slight delay
+        // This allows the success screen to display properly
+        setTimeout(() => {
+          setLoadingAction(false);
+        }, 300);
         
-        // IMPORTANT: Keep the modal open to show success screen
-        // We'll only close it after a longer delay
-        
-        // Close the modal after a delay to give user time to see the success screen
+        // Add delay before closing to show success state
         setTimeout(() => {
           setTradeOpen(false);
-        }, 5000);
+          
+          // Important: Reset state after the modal is closed
+          setTimeout(() => {
+            resetState();
+          }, 300);
+        }, 7000); // Extended to 7 seconds for better visibility
       } else {
-        toast.error(result.message || 'Transaction failed');
+        // Set loading to false immediately for error cases
+        setLoadingAction(false);
+        toast.error(result?.message || 'Failed to sell shares');
       }
     } catch (error) {
-      toast.error('Failed to complete sale');
-    } finally {
-      // Now it's safe to set loadingAction to false
       setLoadingAction(false);
+      toast.error('An error occurred while selling shares');
     }
   };
 

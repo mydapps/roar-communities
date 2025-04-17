@@ -24,6 +24,7 @@ interface TradeSheetProps {
   onSellConfirm?: (communityName: string, quantity: number) => Promise<void>;
   loadingAction?: boolean;
   precheckData?: SharePrecheckResponse | null;
+  forceSuccessVisible?: boolean;
 }
 
 export const TradeSheet = ({ 
@@ -36,7 +37,8 @@ export const TradeSheet = ({
   onBuyConfirm,
   onSellConfirm,
   loadingAction = false,
-  precheckData = null
+  precheckData = null,
+  forceSuccessVisible = false
 }: TradeSheetProps) => {
   // Multi-step flow
   const [step, setStep] = useState<'quantity' | 'confirm'>('quantity');
@@ -55,6 +57,10 @@ export const TradeSheet = ({
   const [successVisible, setSuccessVisible] = useState(false);
   const [currentETHBalance, setCurrentETHBalance] = useState(userEthBalance);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
+  
+  // IMPORTANT FIX: Create a local variable that prioritizes the successVisible state
+  // This ensures consistent success state throughout the component
+  const showSuccessScreen = successVisible || forceSuccessVisible;
   
   // Track previous community to detect changes
   const prevCommunityRef = useRef<string | null>(null);
@@ -125,19 +131,17 @@ export const TradeSheet = ({
       // Always fetch fresh balance when the modal opens
       fetchCurrentBalance();
     }
-    
-    // Reset success state when modal opens
-    if (open) {
-      setSuccessVisible(false);
-    }
   }, [open, action]);
   
   // Reset state when modal closes
   useEffect(() => {
     if (!open) {
-      resetState();
+      // Only reset if not showing success
+      if (!successVisible) {
+        resetState();
+      }
     }
-  }, [open]);
+  }, [open, successVisible]);
 
   // Fetch current ETH balance
   const fetchCurrentBalance = async () => {
@@ -155,10 +159,12 @@ export const TradeSheet = ({
   
   // Reset component state
   const resetState = () => {
-    // Always force reset success state
-    setSuccessVisible(false);
-    
+    // IMPORTANT FIX: Only reset success state if explicitly instructed to
+    // This prevents premature resetting of the success state
     if (!operationInProgress) {
+      // Don't reset success immediately, keep it displayed
+      // setSuccessVisible(false); - REMOVED this line
+      
       setStep('quantity');
       setShareQuantity(1);
       setQuantityInputValue("1");
@@ -177,15 +183,16 @@ export const TradeSheet = ({
   useEffect(() => {
     if (community && action && open) {
       // Never reset if operation is in progress
-      if (!operationInProgress) {
+      if (!operationInProgress && !successVisible) {
         setStep('quantity');
-        setSuccessVisible(false);
+        // Don't reset success state here either
+        // setSuccessVisible(false); - REMOVED this line
       }
       
       setErrorMessage("");
       
       // Only initialize these values if we're not in the middle of an operation
-      if (!operationInProgress) {
+      if (!operationInProgress && !successVisible) {
         // Initialize with 1 share by default
         setShareQuantity(1);
         setQuantityInputValue("1");
@@ -206,7 +213,7 @@ export const TradeSheet = ({
         // We no longer fetch initial precheck data on first load
       }
     }
-  }, [community, action, open, operationInProgress, precheckData]);
+  }, [community, action, open, operationInProgress, precheckData, successVisible]);
 
   const updatePrices = (data: SharePrecheckResponse) => {
     if (!data) {
@@ -331,26 +338,25 @@ export const TradeSheet = ({
     }
   };
 
-  // Replace the loadingAction effect with a more accurate implementation
+  // Replace the loadingAction effect with a more robust implementation
   useEffect(() => {
     // Only show success when loadingAction transitions from true to false
     // while an operation is in progress
     if (operationInProgress && !loadingAction && step === 'confirm') {
-      // Set success state with a small delay to ensure UI stability
-      setTimeout(() => {
-        // Keep these operations in order for proper state transitions
-        setStep('confirm');
-        setSuccessVisible(true);
-        setOperationInProgress(false);
-        
-        // Extra feedback - do confetti animation
-        triggerSuccessAnimation();
-        
-        // Vibrate on mobile devices for physical feedback if available
-        if (typeof navigator !== 'undefined' && navigator.vibrate) {
-          navigator.vibrate([100, 50, 100]);
-        }
-      }, 150); // slightly longer delay for stability
+      console.log('TradeSheet: Setting success visible due to loadingAction change');
+      
+      // Force the visibility of success screen - no delays to ensure it appears immediately
+      setStep('confirm');
+      setSuccessVisible(true);
+      setOperationInProgress(false);
+      
+      // Extra feedback - do confetti animation
+      triggerSuccessAnimation();
+      
+      // Vibrate on mobile devices for physical feedback if available
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate([100, 50, 100]);
+      }
     }
   }, [loadingAction, step, operationInProgress]);
   
@@ -402,27 +408,25 @@ export const TradeSheet = ({
       if (action === 'buy') {
         // If there's a callback provided by parent, use it
         if (onBuyConfirm) {
+          console.log('TradeSheet: Starting buy operation with parent callback');
+          
           // The parent component will handle the API call and set loadingAction
-          // We'll show success via the useEffect when loadingAction becomes false
           await onBuyConfirm(community.community, shareQuantity);
           
-          // If parent component doesn't properly toggle loadingAction:
-          // Only show success if not already showing and operation still in progress
-          if (operationInProgress && !successVisible) {
-            setTimeout(() => {
-              if (operationInProgress && !successVisible) {
-                setStep('confirm');
-                setSuccessVisible(true);
-                setOperationInProgress(false);
-                triggerSuccessAnimation();
-              }
-            }, 200);
-          }
+          console.log('TradeSheet: Parent buy callback completed, loadingAction:', loadingAction);
+          
+          // IMPORTANT FIX: Always set success visible after callback completes, 
+          // regardless of loadingAction state which might be updated asynchronously
+          setStep('confirm');
+          setSuccessVisible(true);
+          setOperationInProgress(false);
+          triggerSuccessAnimation();
+          console.log('TradeSheet: Forced success visible after parent buy callback');
         } else {
           // Otherwise use our internal function for direct API call
           try {
             const result = await buySharesConfirm(community.community, shareQuantity);
-            
+         
             if (result && result.status === 'SUCCESS') {
               // Only show success after API confirms success
               setStep('confirm');
@@ -449,24 +453,20 @@ export const TradeSheet = ({
           }
         }
       } else if (action === 'sell') {
-        // If there's a callback provided by parent, use it
+        // Similar improvement to sell logic
         if (onSellConfirm) {
-          // The parent component will handle the API call and set loadingAction
-          // We'll show success via the useEffect when loadingAction becomes false
+          console.log('TradeSheet: Starting sell operation with parent callback');
+          
           await onSellConfirm(community.community, shareQuantity);
           
-          // If parent component doesn't properly toggle loadingAction:
-          // Only show success if not already showing and operation still in progress
-          if (operationInProgress && !successVisible) {
-            setTimeout(() => {
-              if (operationInProgress && !successVisible) {
-                setStep('confirm');
-                setSuccessVisible(true);
-                setOperationInProgress(false);
-                triggerSuccessAnimation();
-              }
-            }, 200);
-          }
+          console.log('TradeSheet: Parent sell callback completed, loadingAction:', loadingAction);
+          
+          // IMPORTANT FIX: Always set success visible after callback completes
+          setStep('confirm');
+          setSuccessVisible(true); 
+          setOperationInProgress(false);
+          triggerSuccessAnimation();
+          console.log('TradeSheet: Forced success visible after parent sell callback');
         } else {
           // Otherwise use our internal function for direct API call
           try {
@@ -503,8 +503,6 @@ export const TradeSheet = ({
       setOperationInProgress(false); // Reset operation flag on error
     } finally {
       setSubmitLoading(false);
-      // Note: We don't reset operationInProgress here for parent callbacks because 
-      // we need it to remain true until loadingAction becomes false
     }
   };
   
@@ -533,259 +531,296 @@ export const TradeSheet = ({
   };
   
   const handleDialogClose = () => {
-    // Always reset success state to be safe
-    setSuccessVisible(false);
+    // IMPORTANT FIX: Don't reset success state when closing the dialog
+    // This allows the success screen to be visible when reopening
     
-    // Reset other state if the operation is not in progress
-    if (!operationInProgress) {
+    // Delay the actual closing to avoid flashing
+    if (successVisible) {
+      // If showing success, we want to remember that state
+      // We'll do a complete reset only when reopening
+      onOpenChange(false);
+      
+      // Complete reset AFTER dialog is fully closed
+      setTimeout(() => {
+        setSuccessVisible(false);
+        resetState();
+      }, 300);
+    } else {
+      // Normal closing behavior for non-success states
       resetState();
+      onOpenChange(false);
     }
-    onOpenChange(false);
   };
   
+  // Add effect to handle the forceSuccessVisible prop
+  useEffect(() => {
+    // If parent component wants to force success visible, do it
+    if (forceSuccessVisible) {
+      console.log('TradeSheet: Force success visible from parent prop');
+      setStep('confirm');
+      setSuccessVisible(true);
+      setOperationInProgress(false);
+      
+      // Add confetti animation when success is forced by parent
+      triggerSuccessAnimation();
+    }
+  }, [forceSuccessVisible]);
+  
   // Component for both quantity and confirm steps
-  const ContentView = () => (
-    <div className="space-y-6">
-      {successVisible ? (
-        /* Success state */
-        <div className="bg-green-50 border border-green-100 p-6 rounded-lg text-center">
-          <div className="flex justify-center mb-3 relative">
-            <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center">
-              <PartyPopper className="h-8 w-8 text-green-600" />
+  const ContentView = () => {
+    // Add debug logging to help troubleshoot
+    console.log('TradeSheet ContentView rendering with states:', { 
+      successVisible, 
+      step, 
+      operationInProgress,
+      loadingAction,
+      submitLoading,
+      showSuccessScreen
+    });
+    
+    return (
+      <div className="space-y-6">
+        {showSuccessScreen ? (
+          /* Success state */
+          <div className="bg-green-50 border border-green-100 p-6 rounded-lg text-center">
+            <div className="flex justify-center mb-3 relative">
+              <div className="h-16 w-16 rounded-full bg-green-100 flex items-center justify-center">
+                <PartyPopper className="h-8 w-8 text-green-600" />
+              </div>
+            </div>
+            <h3 className="font-bold text-xl text-green-700 mb-2">Transaction Successful!</h3>
+            <p className="text-green-600 text-lg">
+              {action === 'buy' 
+                ? `You've successfully purchased ${shareQuantity} shares of ${community?.community}!` 
+                : `You've successfully sold ${shareQuantity} shares of ${community?.community}!`}
+            </p>
+            <div className="mt-4">
+              <Button onClick={() => onOpenChange(false)}>Done</Button>
             </div>
           </div>
-          <h3 className="font-bold text-xl text-green-700 mb-2">Transaction Successful!</h3>
-          <p className="text-green-600 text-lg">
-            {action === 'buy' 
-              ? `You've successfully purchased ${shareQuantity} shares of ${community?.community}!` 
-              : `You've successfully sold ${shareQuantity} shares of ${community?.community}!`}
-          </p>
-          <div className="mt-4">
-            <Button onClick={() => onOpenChange(false)}>Done</Button>
-          </div>
-        </div>
-      ) : step === 'quantity' ? (
-        /* Step 1: Select Quantity */
-        <>
-          {/* Community Info */}
-          {community && (
-            <div className="flex items-center gap-3">
-              <Avatar className="h-12 w-12">
-                <AvatarImage src={community.image} alt={community.community} />
-                <AvatarFallback>{community.community.charAt(0).toUpperCase()}</AvatarFallback>
-              </Avatar>
+        ) : step === 'quantity' ? (
+          /* Step 1: Select Quantity */
+          <>
+            {/* Community Info */}
+            {community && (
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12">
+                  <AvatarImage src={community.image} alt={community.community} />
+                  <AvatarFallback>{community.community.charAt(0).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <h3 className="font-semibold text-lg">{community.community}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {action === 'buy' ? 'Buy Shares' : 'Sell Shares'}
+                  </p>
+                </div>
+              </div>
+            )}
+            
+            {/* Error Message */}
+            {errorMessage && (
+              <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm">
+                {errorMessage}
+              </div>
+            )}
+            
+            {/* Quick select amounts */}
+            <div className="space-y-2">
+              <Label htmlFor="shareQuantity">Select quantity</Label>
+              <div className="grid grid-cols-4 gap-2 mb-3">
+                {presetAmounts.map(amount => (
+                  <Button
+                    key={amount}
+                    type="button"
+                    variant={shareQuantity === amount ? "default" : "outline"}
+                    onClick={() => handleShareQuantityChange(amount)}
+                    disabled={amount > maxShares || loading || loadingAction}
+                  >
+                    {amount < 1 ? amount.toFixed(2) : amount}
+                  </Button>
+                ))}
+              </div>
+              
+              {/* Custom quantity input */}
+              <div className="flex items-center">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={decrementQuantity}
+                  disabled={shareQuantity <= 0.001 || loading || loadingAction}
+                  className="rounded-r-none"
+                >
+                  <Minus className="h-4 w-4" />
+                </Button>
+                <Input
+                  id="shareQuantity"
+                  type="text"
+                  value={quantityInputValue}
+                  onChange={handleInputChange}
+                  onBlur={() => {
+                    const parsedValue = parseFloat(quantityInputValue);
+                    if (isNaN(parsedValue) || parsedValue < 0.001) {
+                      setQuantityInputValue("0.001");
+                      handleShareQuantityChange(0.001);
+                    } else if (parsedValue > maxShares) {
+                      setQuantityInputValue(maxShares.toString());
+                      handleShareQuantityChange(maxShares);
+                    }
+                  }}
+                  className="rounded-none text-center"
+                  disabled={loading || loadingAction}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={incrementQuantity}
+                  disabled={shareQuantity >= maxShares || loading || loadingAction}
+                  className="rounded-l-none"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              {action === 'sell' && (
+                <div className="text-xs text-right text-muted-foreground">
+                  Maximum: {maxShares.toFixed(3)} shares available
+                </div>
+              )}
+            </div>
+            
+            <Separator />
+            
+            {/* Price Info Message instead of actual price info */}
+            <div className="py-4 text-center text-sm text-muted-foreground">
+              Share price will be calculated when you continue
+            </div>
+            
+            {action === 'buy' && (
+              <div className="flex justify-between">
+                <span className="text-sm">Your Balance</span>
+                <div className="text-right">
+                  {isLoadingBalance ? (
+                    <div className="font-medium flex items-center">
+                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                      Loading...
+                    </div>
+                  ) : (
+                    <div className="font-medium">{parseFloat(currentETHBalance).toFixed(6)} ETH</div>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            {/* Action Buttons */}
+            <Button
+              className="w-full"
+              onClick={goToConfirmStep}
+              disabled={loading || loadingAction || shareQuantity <= 0}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Loading price...
+                </>
+              ) : (
+                <>
+                  Continue <ArrowRight className="ml-2 h-4 w-4" />
+                </>
+              )}
+            </Button>
+          </>
+        ) : (
+          /* Step 2: Confirm Order */
+          <>
+            <div className="bg-muted p-4 rounded-lg space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-sm font-medium">Order Summary</span>
+                <Button variant="ghost" size="sm" onClick={goBackToQuantityStep}>
+                  Edit
+                </Button>
+              </div>
+              
+              <div className="flex justify-between">
+                <span className="text-sm">{action === 'buy' ? 'Buying' : 'Selling'}</span>
+                <span className="font-medium">{shareQuantity} shares</span>
+              </div>
+              
+              <div className="flex justify-between">
+                <span className="text-sm">Price per share</span>
+                <span className="font-medium">{parseFloat(sharePrice).toFixed(6)} ETH</span>
+              </div>
+              
+              <div className="flex justify-between">
+                <span className="text-sm">Total Share Price</span>
+                <div className="text-right">
+                  <div className="font-medium">
+                    {totalSharePrice ? parseFloat(totalSharePrice).toFixed(6) : (parseFloat(sharePrice) * shareQuantity).toFixed(6)} ETH
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    ${totalUsdValue ? parseFloat(totalUsdValue).toFixed(2) : (parseFloat(usdValue) * shareQuantity).toFixed(2)}
+                  </div>
+                </div>
+              </div>
+              
+              <Separator className="my-2" />
+              
+              <div className="flex justify-between">
+                <span className="text-sm font-medium">{action === 'buy' ? 'Total Cost (incl. fees)' : 'You Receive'}</span>
+                <div className="text-right">
+                  <div className="font-medium">{parseFloat(totalCost).toFixed(6)} ETH</div>
+                </div>
+              </div>
+              
+              {precheck?.fee && (
+                <div className="flex justify-between text-sm text-muted-foreground">
+                  <span>Fee</span>
+                  <span>{precheck.fee}</span>
+                </div>
+              )}
+            </div>
+            
+            <div className="bg-blue-50 border border-blue-100 p-3 rounded-md text-sm text-blue-700 flex items-start gap-2">
+              <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
               <div>
-                <h3 className="font-semibold text-lg">{community.community}</h3>
-                <p className="text-sm text-muted-foreground">
-                  {action === 'buy' ? 'Buy Shares' : 'Sell Shares'}
+                <p className="font-medium">Transaction Information</p>
+                <p className="text-xs mt-1">
+                  {action === 'buy' 
+                    ? "By buying shares, you're investing in this community and becoming a member."
+                    : "Selling shares will decrease your position in this community."}
                 </p>
               </div>
             </div>
-          )}
-          
-          {/* Error Message */}
-          {errorMessage && (
-            <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm">
-              {errorMessage}
-            </div>
-          )}
-          
-          {/* Quick select amounts */}
-          <div className="space-y-2">
-            <Label htmlFor="shareQuantity">Select quantity</Label>
-            <div className="grid grid-cols-4 gap-2 mb-3">
-              {presetAmounts.map(amount => (
-                <Button
-                  key={amount}
-                  type="button"
-                  variant={shareQuantity === amount ? "default" : "outline"}
-                  onClick={() => handleShareQuantityChange(amount)}
-                  disabled={amount > maxShares || loading || loadingAction}
-                >
-                  {amount < 1 ? amount.toFixed(2) : amount}
-                </Button>
-              ))}
-            </div>
             
-            {/* Custom quantity input */}
-            <div className="flex items-center">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Button
-                type="button"
                 variant="outline"
-                size="icon"
-                onClick={decrementQuantity}
-                disabled={shareQuantity <= 0.001 || loading || loadingAction}
-                className="rounded-r-none"
+                className="sm:flex-1"
+                onClick={goBackToQuantityStep}
+                disabled={loading || loadingAction || submitLoading}
               >
-                <Minus className="h-4 w-4" />
+                Back
               </Button>
-              <Input
-                id="shareQuantity"
-                type="text"
-                value={quantityInputValue}
-                onChange={handleInputChange}
-                onBlur={() => {
-                  const parsedValue = parseFloat(quantityInputValue);
-                  if (isNaN(parsedValue) || parsedValue < 0.001) {
-                    setQuantityInputValue("0.001");
-                    handleShareQuantityChange(0.001);
-                  } else if (parsedValue > maxShares) {
-                    setQuantityInputValue(maxShares.toString());
-                    handleShareQuantityChange(maxShares);
-                  }
-                }}
-                className="rounded-none text-center"
-                disabled={loading || loadingAction}
-              />
               <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={incrementQuantity}
-                disabled={shareQuantity >= maxShares || loading || loadingAction}
-                className="rounded-l-none"
+                className="sm:flex-1"
+                onClick={handleConfirm}
+                disabled={loading || loadingAction || !!errorMessage || submitLoading}
               >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-            
-            {action === 'sell' && (
-              <div className="text-xs text-right text-muted-foreground">
-                Maximum: {maxShares.toFixed(3)} shares available
-              </div>
-            )}
-          </div>
-          
-          <Separator />
-          
-          {/* Price Info Message instead of actual price info */}
-          <div className="py-4 text-center text-sm text-muted-foreground">
-            Share price will be calculated when you continue
-          </div>
-          
-          {action === 'buy' && (
-            <div className="flex justify-between">
-              <span className="text-sm">Your Balance</span>
-              <div className="text-right">
-                {isLoadingBalance ? (
-                  <div className="font-medium flex items-center">
-                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                    Loading...
-                  </div>
-                ) : (
-                  <div className="font-medium">{parseFloat(currentETHBalance).toFixed(6)} ETH</div>
+                {(loading || loadingAction || submitLoading) && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
-              </div>
-            </div>
-          )}
-          
-          {/* Action Buttons */}
-          <Button
-            className="w-full"
-            onClick={goToConfirmStep}
-            disabled={loading || loadingAction || shareQuantity <= 0}
-          >
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Loading price...
-              </>
-            ) : (
-              <>
-                Continue <ArrowRight className="ml-2 h-4 w-4" />
-              </>
-            )}
-          </Button>
-        </>
-      ) : (
-        /* Step 2: Confirm Order */
-        <>
-          <div className="bg-muted p-4 rounded-lg space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-sm font-medium">Order Summary</span>
-              <Button variant="ghost" size="sm" onClick={goBackToQuantityStep}>
-                Edit
+                {(loading || loadingAction || submitLoading) 
+                  ? `${action === 'buy' ? 'Buying' : 'Selling'}...` 
+                  : `${action === 'buy' ? 'Buy' : 'Sell'} Shares`
+                }
               </Button>
             </div>
-            
-            <div className="flex justify-between">
-              <span className="text-sm">{action === 'buy' ? 'Buying' : 'Selling'}</span>
-              <span className="font-medium">{shareQuantity} shares</span>
-            </div>
-            
-            <div className="flex justify-between">
-              <span className="text-sm">Price per share</span>
-              <span className="font-medium">{parseFloat(sharePrice).toFixed(6)} ETH</span>
-            </div>
-            
-            <div className="flex justify-between">
-              <span className="text-sm">Total Share Price</span>
-              <div className="text-right">
-                <div className="font-medium">
-                  {totalSharePrice ? parseFloat(totalSharePrice).toFixed(6) : (parseFloat(sharePrice) * shareQuantity).toFixed(6)} ETH
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  ${totalUsdValue ? parseFloat(totalUsdValue).toFixed(2) : (parseFloat(usdValue) * shareQuantity).toFixed(2)}
-                </div>
-              </div>
-            </div>
-            
-            <Separator className="my-2" />
-            
-            <div className="flex justify-between">
-              <span className="text-sm font-medium">{action === 'buy' ? 'Total Cost (incl. fees)' : 'You Receive'}</span>
-              <div className="text-right">
-                <div className="font-medium">{parseFloat(totalCost).toFixed(6)} ETH</div>
-              </div>
-            </div>
-            
-            {precheck?.fee && (
-              <div className="flex justify-between text-sm text-muted-foreground">
-                <span>Fee</span>
-                <span>{precheck.fee}</span>
-              </div>
-            )}
-          </div>
-          
-          <div className="bg-blue-50 border border-blue-100 p-3 rounded-md text-sm text-blue-700 flex items-start gap-2">
-            <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
-            <div>
-              <p className="font-medium">Transaction Information</p>
-              <p className="text-xs mt-1">
-                {action === 'buy' 
-                  ? "By buying shares, you're investing in this community and becoming a member."
-                  : "Selling shares will decrease your position in this community."}
-              </p>
-            </div>
-          </div>
-          
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Button
-              variant="outline"
-              className="sm:flex-1"
-              onClick={goBackToQuantityStep}
-              disabled={loading || loadingAction || submitLoading}
-            >
-              Back
-            </Button>
-            <Button
-              className="sm:flex-1"
-              onClick={handleConfirm}
-              disabled={loading || loadingAction || !!errorMessage || submitLoading}
-            >
-              {(loading || loadingAction || submitLoading) && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
-              {(loading || loadingAction || submitLoading) 
-                ? `${action === 'buy' ? 'Buying' : 'Selling'}...` 
-                : `${action === 'buy' ? 'Buy' : 'Sell'} Shares`
-              }
-            </Button>
-          </div>
-        </>
-      )}
-    </div>
-  );
+          </>
+        )}
+      </div>
+    );
+  };
   
   // If the component is being embedded directly (for mobile drawer in parent)
   if (isEmbedded) {
@@ -805,12 +840,12 @@ export const TradeSheet = ({
       <DrawerContent className="px-4 pt-3 pb-6 max-h-[85vh]">
         <DrawerHeader className="px-0 pb-2">
           <DrawerTitle>
-            {successVisible 
+            {showSuccessScreen 
               ? 'Transaction Complete!' 
               : `${action === 'buy' ? 'Buy' : 'Sell'} Shares${step === 'confirm' ? ' - Confirm Order' : ''}`}
           </DrawerTitle>
           <DrawerDescription>
-            {successVisible 
+            {showSuccessScreen 
               ? 'Congratulations on your successful transaction!' 
               : (action === 'buy' 
                 ? 'Purchase shares of this community' 
@@ -832,12 +867,12 @@ export const TradeSheet = ({
       <SheetContent className="sm:max-w-md overflow-y-auto">
         <SheetHeader>
           <SheetTitle>
-            {successVisible 
+            {showSuccessScreen 
               ? 'Transaction Complete!' 
               : `${action === 'buy' ? 'Buy' : 'Sell'} Shares${step === 'confirm' ? ' - Confirm Order' : ''}`}
           </SheetTitle>
           <SheetDescription>
-            {successVisible 
+            {showSuccessScreen 
               ? 'Congratulations on your successful transaction!' 
               : (action === 'buy' 
                 ? 'Purchase shares of this community' 

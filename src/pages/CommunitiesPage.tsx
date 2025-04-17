@@ -44,6 +44,7 @@ const CommunitiesPage = () => {
   const [tradeDialogOpen, setTradeDialogOpen] = useState(false);
   const [userEthBalance, setUserEthBalance] = useState("0.000");
   const [tradeLoading, setTradeLoading] = useState(false);
+  const [tradeSuccess, setTradeSuccess] = useState(false);
   const isMobile = useIsMobile();
   
   // State for active tab
@@ -157,6 +158,7 @@ const CommunitiesPage = () => {
     setSelectedCommunity(null);
     setTradeAction(null);
     setTradeLoading(false);
+    setTradeSuccess(false);
     
     // Small delay before opening new sheet to ensure clean state
     setTimeout(() => {
@@ -176,61 +178,86 @@ const CommunitiesPage = () => {
     // Refresh wallet balance regardless of transaction type
     fetchWalletBalance();
     
-    // Only close the sheet after a delay to show success animation
-    setTimeout(() => {
-      setTradeDialogOpen(false);
-      
-      // Reload communities list
-      handleRefresh();
-    }, 3000);
+    // Only reload communities list
+    handleRefresh();
   };
   
   // Update trading confirmation handlers to fetch balance after transaction
   const handleBuySharesConfirm = async (communityName: string, quantity: number) => {
     try {
       setTradeLoading(true);
-      
+      setTradeSuccess(false);
       const result = await buySharesConfirm(communityName, quantity);
       
-      if (result.status === 'SUCCESS') {
-        toast.success(`Successfully purchased ${result.shareQuantity} shares of ${communityName}`);
+      if (result && result.status === 'SUCCESS') {
+        toast.success('Successfully purchased shares!');
         
-        // Get updated balance after transaction
-        fetchWalletBalance();
+        // IMPORTANT FIX: First set success true, then set loading false after a delay
+        // This ensures the success screen is visible
+        setTradeSuccess(true);
         
-        handleTradeSuccess();
+        setTimeout(() => {
+          setTradeLoading(false);
+        }, 300);
+        
+        // Don't hide the trade dialog immediately - let the success screen show
+        // for a sufficient amount of time (reduced from 7000ms to 3500ms)
+        setTimeout(() => {
+          // Close the dialog after the success screen has been shown
+          setTradeDialogOpen(false);
+          setTradeSuccess(false);
+          
+          // After closing, refresh data
+          fetchWalletBalance();
+          handleRefresh();
+        }, 5000); // Extended to 5 seconds for better visibility
       } else {
-        toast.error(result.message || 'Transaction failed');
+        // Set loading to false immediately for error cases
+        setTradeLoading(false);
+        toast.error(result?.message || 'Failed to purchase shares');
       }
     } catch (error) {
-      toast.error('Failed to complete purchase');
-      console.error('Error during buy:', error);
-    } finally {
       setTradeLoading(false);
+      toast.error('An error occurred while purchasing shares');
     }
   };
   
   const handleSellSharesConfirm = async (communityName: string, quantity: number) => {
     try {
       setTradeLoading(true);
-      
+      setTradeSuccess(false);
       const result = await sellSharesConfirm(communityName, quantity);
       
-      if (result.status === 'SUCCESS') {
-        toast.success(`Successfully sold ${result.soldShares} shares of ${communityName}`);
+      if (result && result.status === 'SUCCESS') {
+        toast.success('Successfully sold shares!');
         
-        // Get updated balance after transaction
-        fetchWalletBalance();
+        // IMPORTANT FIX: First set success true, then set loading false after a delay
+        // This ensures the success screen is visible
+        setTradeSuccess(true);
         
-        handleTradeSuccess();
+        setTimeout(() => {
+          setTradeLoading(false);
+        }, 300);
+        
+        // Don't hide the trade dialog immediately - let the success screen show
+        // for a sufficient amount of time (reduced from 7000ms to 3500ms)
+        setTimeout(() => {
+          // Close the dialog after the success screen has been shown
+          setTradeDialogOpen(false);
+          setTradeSuccess(false);
+          
+          // After closing, refresh data
+          fetchWalletBalance();
+          handleRefresh();
+        }, 5000); // Extended to 5 seconds for better visibility
       } else {
-        toast.error(result.message || 'Transaction failed');
+        // Set loading to false immediately for error cases
+        setTradeLoading(false);
+        toast.error(result?.message || 'Failed to sell shares');
       }
     } catch (error) {
-      toast.error('Failed to complete sale');
-      console.error('Error during sell:', error);
-    } finally {
       setTradeLoading(false);
+      toast.error('An error occurred while selling shares');
     }
   };
   
@@ -445,6 +472,7 @@ const CommunitiesPage = () => {
           loadingAction={tradeLoading}
           onBuyConfirm={handleBuySharesConfirm}
           onSellConfirm={handleSellSharesConfirm}
+          forceSuccessVisible={tradeSuccess}
         />
       )}
       

@@ -80,6 +80,7 @@ const CommunityPage = () => {
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
   const [tradeLoading, setTradeLoading] = useState(false);
   const [previousHasShares, setPreviousHasShares] = useState(false);
+  const [tradeSuccess, setTradeSuccess] = useState(false);
   
   debugLog("CommunityPage rendering, id:", id, "activeTab:", activeTab);
   
@@ -176,40 +177,82 @@ const CommunityPage = () => {
   const handleBuySharesConfirm = async (communityName: string, quantity: number) => {
     try {
       setTradeLoading(true);
-      
-      // Small delay to ensure state is updated before proceeding
-      await new Promise(resolve => setTimeout(resolve, 50));
-      
-      // Call the API to buy shares
+      setTradeSuccess(false); // Start with success set to false
       const result = await buySharesConfirm(communityName, quantity);
       
-      if (result.status === 'SUCCESS') {
-        toast.success(`Successfully purchased ${result.shareQuantity} shares of ${communityName}`);
-        
-        // Refresh data by re-fetching things
+      if (result && result.status === 'SUCCESS') {
+        toast.success('Successfully purchased shares!');
         fetchWalletBalance();
         
-        // Update community data by triggering a refetch
-        if (refetch) {
-          await refetch();
-        }
+        // IMPORTANT FIX: First set success to true, then set loading to false after delay
+        // This ensures proper state sequence for the success screen
+        setTradeSuccess(true);
         
-        // Close the sheet after a delay to allow success animation to show
+        setTimeout(() => {
+          setTradeLoading(false);
+        }, 300);
+        
+        // Close the sheet after a longer delay to allow success animation to show
         setTimeout(() => {
           setTradeSheetOpen(false);
           
           // Reset state after modal is closed
           setTimeout(() => {
+            setTradeSuccess(false);
             resetTradeState();
           }, 300);
-        }, 2000);
+        }, 7000); // Extended to 7 seconds for better visibility
       } else {
-        toast.error(result.message || 'Transaction failed');
+        // Set loading to false immediately for error cases
+        setTradeLoading(false);
+        setTradeSuccess(false);
+        toast.error(result?.message || 'Failed to purchase shares');
       }
     } catch (error) {
-      toast.error('Failed to complete purchase');
-    } finally {
       setTradeLoading(false);
+      setTradeSuccess(false);
+      toast.error('An error occurred while purchasing shares');
+    }
+  };
+  
+  const handleSellSharesConfirm = async (communityName: string, quantity: number) => {
+    try {
+      setTradeLoading(true);
+      setTradeSuccess(false); // Start with success set to false
+      const result = await sellSharesConfirm(communityName, quantity);
+      
+      if (result && result.status === 'SUCCESS') {
+        toast.success('Successfully sold shares!');
+        fetchWalletBalance();
+        
+        // IMPORTANT FIX: First set success to true, then set loading to false after delay
+        // This ensures proper state sequence for the success screen
+        setTradeSuccess(true);
+        
+        setTimeout(() => {
+          setTradeLoading(false);
+        }, 300);
+        
+        // Close the sheet after a longer delay to allow success animation to show
+        setTimeout(() => {
+          setTradeSheetOpen(false);
+          
+          // Reset state after modal is closed
+          setTimeout(() => {
+            setTradeSuccess(false);
+            resetTradeState();
+          }, 300);
+        }, 7000); // Extended to 7 seconds for better visibility
+      } else {
+        // Set loading to false immediately for error cases
+        setTradeLoading(false);
+        setTradeSuccess(false);
+        toast.error(result?.message || 'Failed to sell shares');
+      }
+    } catch (error) {
+      setTradeLoading(false);
+      setTradeSuccess(false);
+      toast.error('An error occurred while selling shares');
     }
   };
   
@@ -244,46 +287,6 @@ const CommunityPage = () => {
       setTradeAction('sell');
       setTradeSheetOpen(true);
     }, 50);
-  };
-  
-  const handleSellSharesConfirm = async (communityName: string, quantity: number) => {
-    try {
-      setTradeLoading(true);
-      
-      // Small delay to ensure state is updated before proceeding
-      await new Promise(resolve => setTimeout(resolve, 50));
-      
-      // Call the API to sell shares
-      const result = await sellSharesConfirm(communityName, quantity);
-      
-      if (result.status === 'SUCCESS') {
-        toast.success(`Successfully sold ${result.soldShares} shares of ${communityName}`);
-        
-        // Refresh data by re-fetching things
-        fetchWalletBalance();
-        
-        // Update community data by triggering a refetch
-        if (refetch) {
-          await refetch();
-        }
-        
-        // Close the sheet after a delay to allow success animation to show
-        setTimeout(() => {
-          setTradeSheetOpen(false);
-          
-          // Reset state after modal is closed
-          setTimeout(() => {
-            resetTradeState();
-          }, 300);
-        }, 2000);
-      } else {
-        toast.error(result.message || 'Transaction failed');
-      }
-    } catch (error) {
-      toast.error('Failed to complete sale');
-    } finally {
-      setTradeLoading(false);
-    }
   };
   
   const priceChange = communityData?.community?.prices?.price_change_percent || 0;
@@ -1213,6 +1216,7 @@ const CommunityPage = () => {
         loadingAction={tradeLoading}
         onBuyConfirm={handleBuySharesConfirm}
         onSellConfirm={handleSellSharesConfirm}
+        forceSuccessVisible={tradeSuccess}
       />
     </div>
   );
