@@ -2,10 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCommunityCreation, CommunityTypeOption } from '../hooks/useCommunityCreation';
 import { useTitle } from '../hooks/useTitle';
-import { Shield, Zap, Trophy, CheckCircle2, Lock, Globe, AlertCircle, HelpCircle, ChevronRight, Check, ArrowRight, Users } from 'lucide-react';
+import { Shield, Zap, Trophy, CheckCircle2, Lock, Globe, AlertCircle, HelpCircle, ChevronRight, Check, ArrowRight, Users, DollarSign } from 'lucide-react';
 import { Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { fetchEthPrice } from '../utils/apiBase';
 
 // UI components
 import { Button } from '../components/ui/button';
@@ -49,6 +50,10 @@ const CreateCommunityPage = () => {
   const [animatedHandle, setAnimatedHandle] = useState('');
   const [showHandleSuggestion, setShowHandleSuggestion] = useState(false);
   
+  // Add state for ETH price
+  const [ethPrice, setEthPrice] = useState<number | null>(null);
+  const [isEthPriceLoading, setIsEthPriceLoading] = useState(false);
+  
   // Add this state for advanced type transaction modal
   const [showAdvancedTypeModal, setShowAdvancedTypeModal] = useState(false);
   const [advancedTypeData, setAdvancedTypeData] = useState<{
@@ -57,6 +62,31 @@ const CreateCommunityPage = () => {
   } | null>(null);
   
   const [formErrors, setErrors] = useState<Record<string, string | undefined>>({});
+  
+  // Fetch ETH price when component mounts
+  useEffect(() => {
+    const getEthPrice = async () => {
+      setIsEthPriceLoading(true);
+      try {
+        const response = await fetchEthPrice();
+        if (response.success && response.price) {
+          setEthPrice(response.price);
+        } else {
+          console.error('Failed to fetch ETH price:', response.error);
+          // Fallback price if API fails
+          setEthPrice(3000);
+        }
+      } catch (error) {
+        console.error('Error fetching ETH price:', error);
+        // Fallback price if API fails
+        setEthPrice(3000);
+      } finally {
+        setIsEthPriceLoading(false);
+      }
+    };
+    
+    getEthPrice();
+  }, []);
   
   // Set default values for alpha and base price
   useEffect(() => {
@@ -87,9 +117,10 @@ const CreateCommunityPage = () => {
     navigate(`/c/${state.handle}`);
   };
   
-  // Estimate USD value (1 ETH = $2500 placeholder value)
+  // Estimate USD value using actual ETH price from API
   const estimateUsdValue = (ethValue: number) => {
-    const ethToUsd = 2500; // Placeholder exchange rate
+    // Use the fetched price, or default to 3000 if not available
+    const ethToUsd = ethPrice || 3000;
     return (ethValue * ethToUsd).toFixed(2);
   };
   
@@ -177,7 +208,8 @@ const CreateCommunityPage = () => {
         description: 'Ideal for larger communities with gradual price rises',
         icon: <Globe className="h-6 w-6 text-[#31bcc3]" />,
         bgClass: 'bg-gradient-to-br from-blue-500/10 to-teal-500/10',
-        earnings: 'Admin: 1.5% • Community: 2%'
+        earnings: 'Admin: 1.5% • Community: 2%',
+        cost: '0.00106 ETH'
       },
       {
         id: 'niche',
@@ -185,7 +217,8 @@ const CreateCommunityPage = () => {
         description: 'Best for smaller communities with faster price growth',
         icon: <Zap className="h-6 w-6 text-[#31bcc3]" />,
         bgClass: 'bg-gradient-to-br from-amber-500/10 to-rose-500/10',
-        earnings: 'Admin: 1.5% • Community: 2%'
+        earnings: 'Admin: 1.5% • Community: 2%',
+        cost: '0.00106 ETH'
       },
       {
         id: 'advanced',
@@ -193,9 +226,14 @@ const CreateCommunityPage = () => {
         description: 'Custom configuration for precise economic settings',
         icon: <Trophy className="h-6 w-6 text-[#31bcc3]" />,
         bgClass: 'bg-gradient-to-br from-violet-500/10 to-purple-500/10',
-        earnings: 'Custom settings'
+        earnings: 'Custom settings',
+        cost: 'Custom'
       }
     ];
+
+    // For displaying the USD value of the community creation cost
+    const communityCostETH = 0.00106;
+    const communityCostUSD = estimateUsdValue(communityCostETH);
 
     return (
       <div className="mb-6">
@@ -268,6 +306,18 @@ const CreateCommunityPage = () => {
                 <div>
                   <span className="font-medium text-foreground">Admin Earnings: 1.5%</span>
                   <p className="text-muted-foreground text-xs mt-0.5">Earned by you as the community admin from each trade.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <div className="rounded-full bg-[#31bcc3]/20 p-1.5 mt-0.5">
+                  <DollarSign className="h-3.5 w-3.5 text-[#31bcc3]" />
+                </div>
+                <div>
+                  <span className="font-medium text-foreground">Creation Cost: {communityTypes.find(t => t.id === state.communityType)?.cost}</span>
+                  <p className="text-muted-foreground text-xs mt-0.5">
+                    One-time cost to create community and mint first share (≈${communityCostUSD} USD)
+                    {isEthPriceLoading && <span className="ml-1 inline-block animate-pulse">updating...</span>}
+                  </p>
                 </div>
               </div>
             </div>

@@ -684,3 +684,39 @@ export const fetchAchievements = async (): Promise<AchievementsResponse | null> 
     return null;
   }
 };
+
+/**
+ * ETH price API response interface
+ */
+export interface EthPriceResponse {
+  success: boolean;
+  price?: number;
+  error?: string;
+}
+
+/**
+ * Fetch current ETH price in USD
+ * @returns Promise that resolves to ETH price data
+ */
+export const fetchEthPrice = async (): Promise<EthPriceResponse> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/eth_price`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Error fetching ETH price:', errorData);
+      return { success: false, error: 'Failed to fetch ETH price' };
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching ETH price:', error);
+    return { success: false, error: 'Failed to fetch ETH price' };
+  }
+};
