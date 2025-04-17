@@ -23,6 +23,7 @@ import { Link } from 'react-router-dom';
 import { createReply, type CommentReply } from '@/utils/commentApi';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePreventZoom } from '@/hooks/usePreventZoom';
+import { NotInCommunitySheet } from '@/components/community/NotInCommunitySheet';
 
 const DetailedPostPage = () => {
   usePreventZoom();
@@ -39,6 +40,8 @@ const DetailedPostPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [refreshCount, setRefreshCount] = useState(0);
   const [refreshingComments, setRefreshingComments] = useState(false);
+  const [notInCommunitySheetOpen, setNotInCommunitySheetOpen] = useState(false);
+  const [communityName, setCommunityName] = useState("");
   
   const isLoggedIn = !!localStorage.getItem('dapps_user_key');
   
@@ -165,11 +168,26 @@ const DetailedPostPage = () => {
     }
     
     try {
-      await toggleRoar(post.code);
+      const response = await toggleRoar(post.code);
+      
+      // Check if the error is due to not being part of the community
+      if (typeof response === 'object' && 'errCode' in response && response.errCode === "004") {
+        console.log('User is not part of the community:', response.community);
+        setCommunityName(response.community);
+        setNotInCommunitySheetOpen(true);
+        
+        // Force refresh to ensure UI shows correct roar count (not increased)
+        loadPost();
+        return;
+      }
+      
       setRefreshCount(prev => prev + 1);
     } catch (error) {
       console.error('Error roaring post:', error);
       toast.error('Failed to update post. Please try again.');
+      
+      // Force refresh to ensure UI shows correct roar count (not increased)
+      loadPost();
     }
   };
   
@@ -475,6 +493,12 @@ const DetailedPostPage = () => {
           </div>
         </div>
       )}
+      
+      <NotInCommunitySheet 
+        open={notInCommunitySheetOpen}
+        onOpenChange={setNotInCommunitySheetOpen}
+        communityName={communityName}
+      />
     </div>
   );
 };

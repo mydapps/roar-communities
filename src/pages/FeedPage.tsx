@@ -1,12 +1,13 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Post } from '@/components/feed/Post';
 import CreatePostCard from '@/components/feed/CreatePostCard';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { ArrowUp, Loader2, TrendingUp, Globe, User } from 'lucide-react';
-import { fetchPosts, setupMirrorListener, toggleRoar } from '@/utils/api';
+import { Loader2, User, Globe, TrendingUp, ArrowUp } from 'lucide-react';
 import { toast } from 'sonner';
+import { toggleRoar, fetchPosts, setupMirrorListener } from '@/utils/api';
+import { NotInCommunitySheet } from '@/components/community/NotInCommunitySheet';
 import { usePreventZoom } from '@/hooks/usePreventZoom';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 const FeedPage = () => {
   usePreventZoom();
@@ -21,6 +22,8 @@ const FeedPage = () => {
   const [activeTab, setActiveTab] = useState<string>("personal");
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadingRef = useRef<HTMLDivElement>(null);
+  const [notInCommunitySheetOpen, setNotInCommunitySheetOpen] = useState(false);
+  const [communityName, setCommunityName] = useState("");
   
   const loadPosts = useCallback(async (pageNum: number, replace = false) => {
     try {
@@ -117,10 +120,27 @@ const FeedPage = () => {
     }
     
     try {
-      await toggleRoar(postCode);
+      const response = await toggleRoar(postCode);
+      
+      // Check if the error is due to not being part of the community
+      if (typeof response === 'object' && 'errCode' in response && response.errCode === "004") {
+        console.log('User is not part of the community:', response.community);
+        setCommunityName(response.community);
+        setNotInCommunitySheetOpen(true);
+        
+        // Force refresh to ensure UI shows correct roar count
+        setRefreshKey(prev => prev + 1);
+        return;
+      }
+      
+      // If successful, no need to do anything as the Post component handles the UI update
+      
     } catch (error) {
       console.error("Error toggling roar:", error);
       toast.error("Error updating post. Please try again.");
+      
+      // Force refresh to ensure UI shows correct roar count
+      setRefreshKey(prev => prev + 1);
     }
   };
   
@@ -235,6 +255,12 @@ const FeedPage = () => {
           <ArrowUp className="h-5 w-5" />
         </Button>
       )}
+      
+      <NotInCommunitySheet 
+        open={notInCommunitySheetOpen}
+        onOpenChange={setNotInCommunitySheetOpen}
+        communityName={communityName}
+      />
     </div>
   );
 };
