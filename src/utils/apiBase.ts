@@ -636,7 +636,7 @@ export const useBooster = async (boosterId: number): Promise<RegularBoosterClaim
 };
 
 /**
- * Achievement API response interface
+ * Interface for user achievements
  */
 export interface Achievement {
   id: string;

@@ -750,31 +750,39 @@ const AchievementCard: React.FC<AchievementCardProps> = ({ achievement }) => {
           
           <Badge variant="outline" className="bg-purple-50 hover:bg-purple-50 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 border border-purple-200"
                  style={{ backgroundColor: `${achievement.display_color}10`, color: achievement.display_color, borderColor: `${achievement.display_color}30` }}>
-            {achievement.type}
+            {achievement.rarity}
           </Badge>
         </div>
         <CardDescription className="text-xs mt-1 ml-10">{achievement.description}</CardDescription>
       </CardHeader>
       
       <CardContent className="pt-3 pb-4">
-        {achievement.unlocked && (
-          <div className="flex items-center text-sm text-green-600 dark:text-green-400" style={{ color: achievement.display_color }}>
-            <CheckCircle2 className="h-4 w-4 mr-1" />
-            <span>Achievement Unlocked</span>
-            {achievement.unlocked_at && (
-              <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">
-                {new Date(achievement.unlocked_at).toLocaleDateString()}
-              </span>
-            )}
+        <div className="flex justify-between items-center">
+          <div>
+            <Badge variant="secondary" className="mr-2">
+              {achievement.type}
+            </Badge>
           </div>
-        )}
-        
-        {!achievement.unlocked && (
-          <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-            <Lock className="h-4 w-4 mr-1" />
-            <span>Locked Achievement</span>
-          </div>
-        )}
+          
+          {achievement.unlocked && (
+            <div className="flex items-center text-sm text-green-600 dark:text-green-400" style={{ color: achievement.display_color }}>
+              <CheckCircle2 className="h-4 w-4 mr-1" />
+              <span>Achievement Unlocked</span>
+              {achievement.unlocked_at && (
+                <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">
+                  {new Date(achievement.unlocked_at).toLocaleDateString()}
+                </span>
+              )}
+            </div>
+          )}
+          
+          {!achievement.unlocked && (
+            <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+              <Lock className="h-4 w-4 mr-1" />
+              <span>Locked Achievement</span>
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
@@ -1182,17 +1190,31 @@ const BoosterPage: React.FC = () => {
   const fetchAchievementData = async () => {
     try {
       setIsLoadingAchievements(true);
+      console.log('Fetching achievements from API...');
+      
       const achievementsData = await fetchAchievements();
       
       if (achievementsData && achievementsData.success) {
+        console.log('Achievements fetched successfully:', achievementsData.achievements);
         setApiAchievements(achievementsData.achievements);
+        
+        // Log achievement data details for debugging
+        achievementsData.achievements.forEach(achievement => {
+          console.log(`Achievement: ${achievement.name}, Type: ${achievement.type}, Unlocked: ${achievement.unlocked}, Rarity: ${achievement.rarity}`);
+        });
       } else {
+        console.warn('Achievement API returned unsuccessful response:', achievementsData);
         // If API fails, use empty array
         setApiAchievements([]);
+        toast.error('Could not load achievements', {
+          description: 'Please try again later'
+        });
       }
     } catch (error) {
       console.error('Error fetching achievements:', error);
-      toast.error('Failed to load achievements');
+      toast.error('Failed to load achievements', {
+        description: error instanceof Error ? error.message : 'Unknown error'
+      });
       setApiAchievements([]);
     } finally {
       setIsLoadingAchievements(false);
