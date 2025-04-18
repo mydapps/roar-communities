@@ -2,6 +2,7 @@ import React from 'react';
 import { CardContent } from '@/components/ui/card';
 import { MediaCarousel } from './MediaCarousel';
 import { MirrorPostContent } from './MirrorPostContent';
+import { processTextContent } from '@/utils/textFormatting';
 
 interface PostContentProps {
   content: string;
@@ -33,7 +34,7 @@ export const PostContent: React.FC<PostContentProps> = ({
     <CardContent className="pb-3">
       {content && (
         <p className="text-sm mt-2 break-words whitespace-pre-line">
-          {content}
+          {processTextContent(content)}
         </p>
       )}
       

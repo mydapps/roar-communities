@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -6,6 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Cat, Send, Loader2 } from 'lucide-react';
 import { CommentReply } from '@/utils/commentApi';
 import { Link } from 'react-router-dom';
+import { processTextContent } from '@/utils/textFormatting';
 
 interface EnhancedCommentItemProps {
   comment: CommentReply;
@@ -114,7 +114,9 @@ export const EnhancedCommentItem = ({
             <span className="text-muted-foreground text-xs">{comment.time_ago}</span>
           </div>
           
-          <p className="text-sm mt-1 break-words whitespace-pre-wrap">{comment.content}</p>
+          <div className="text-sm whitespace-pre-wrap break-words">
+            {processTextContent(comment.content)}
+          </div>
           
           <div className="flex items-center gap-3 mt-2">
             <Button 

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -7,6 +6,7 @@ import { Reply } from '@/utils/postApi';
 import { Cat, Send, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { toggleMeow } from '@/utils/commentApi';
+import { processTextContent } from '@/utils/textFormatting';
 
 interface CommentItemProps {
   comment: Reply;
@@ -99,9 +99,9 @@ export const CommentItem = ({
             <span className="text-muted-foreground text-xs">{comment.time_ago}</span>
           </div>
           
-          <div className="text-sm whitespace-pre-wrap break-words">
-            {comment.content}
-          </div>
+          <p className="text-sm text-foreground break-words whitespace-pre-line">
+            {processTextContent(comment.content)}
+          </p>
           
           <div className="mt-2.5 flex items-center gap-3">
             <Button 

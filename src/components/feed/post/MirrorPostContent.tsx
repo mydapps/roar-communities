@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { MediaCarousel } from './MediaCarousel';
+import { processTextContent } from '@/utils/textFormatting';
 
 interface MirrorPostContentProps {
   mirrorData: {
@@ -126,7 +127,9 @@ export const MirrorPostContent = ({ mirrorData, onImageClick }: MirrorPostConten
           )}
           
           {cleanedBody && (
-            <p className="text-sm mt-1 break-words whitespace-pre-line">{cleanedBody}</p>
+            <p className="text-sm mt-1 break-words whitespace-pre-line">
+              {processTextContent(cleanedBody)}
+            </p>
           )}
           
           {allMedia && allMedia.length > 0 && (
