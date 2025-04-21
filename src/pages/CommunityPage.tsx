@@ -456,7 +456,7 @@ const CommunityPage = () => {
                 </div>
               </div>
               <div className="bg-muted/50 rounded-lg p-2">
-                <div className="text-xs text-muted-foreground">Market Cap</div>
+                <div className="text-xs text-muted-foreground">Liquidity</div>
                 <div className="font-semibold text-sm flex items-center">
                   ${community?.market_cap?.usd >= 1000000 
                     ? (community.market_cap.usd / 1000000).toFixed(1) + 'M' 
@@ -1080,7 +1080,7 @@ const CommunityPage = () => {
                   </div>
                   
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Market Cap</span>
+                    <span className="text-muted-foreground">Liquidity</span>
                     <div className="text-right">
                       <div className="font-semibold text-[15px]">${community?.market_cap?.usd?.toLocaleString(undefined, { maximumFractionDigits: 0 }) || '0'}</div>
                       <div className="text-xs text-muted-foreground">{community?.market_cap?.eth?.toFixed(2) || '0.00'} ETH</div>

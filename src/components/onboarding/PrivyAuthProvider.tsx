@@ -313,7 +313,7 @@ const PrivyAuthProvider = ({ children }: PrivyAuthProviderProps) => {
     <PrivyProvider
       appId="clxemmxy905w5101wwy4ahs1m"
       config={{
-        loginMethods: ['email', 'sms', 'wallet', 'farcaster', 'twitter', 'discord'],
+        loginMethods: ['passkey', 'email', 'sms', 'wallet', 'farcaster', 'twitter', 'discord'] as any,
         appearance: {
           theme: 'light',
           accentColor: '#31bcc3',
