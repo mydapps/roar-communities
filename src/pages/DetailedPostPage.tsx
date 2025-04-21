@@ -42,8 +42,10 @@ const DetailedPostPage = () => {
   const [refreshingComments, setRefreshingComments] = useState(false);
   const [notInCommunitySheetOpen, setNotInCommunitySheetOpen] = useState(false);
   const [communityName, setCommunityName] = useState("");
+  const [comments, setComments] = useState<any[]>([]);
   
-  const isLoggedIn = !!localStorage.getItem('dapps_user_key');
+  // Use dapps_user_id to check login status
+  const isLoggedIn = !!localStorage.getItem('dapps_user_id');
   
   const loadPost = useCallback(async () => {
     if (!postId) {

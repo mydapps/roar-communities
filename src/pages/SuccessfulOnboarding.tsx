@@ -11,13 +11,17 @@ import { toast } from 'sonner';
 
 interface Reward {
   community: string;
+  community_image?: string;
   amount: number;
   created_at: string;
 }
 
 interface ReferralRewards {
   success: boolean;
-  referrer: string;
+  referrer: {
+    handle: string;
+    avatar?: string;
+  };
   rewards: Reward[];
   total_rewards: number;
 }
@@ -38,7 +42,7 @@ const SuccessfulOnboarding: React.FC = () => {
   const [rewardsData, setRewardsData] = useState<ReferralRewards | null>(null);
   const [storyIndex, setStoryIndex] = useState(0);
   const [storyProgress, setStoryProgress] = useState(0);
-  const userKey = localStorage.getItem('dapps_user_key');
+  const userId = localStorage.getItem('dapps_user_id');
   
   // Story content
   const stories = [
@@ -67,16 +71,13 @@ const SuccessfulOnboarding: React.FC = () => {
   // Fetch referral rewards data
   useEffect(() => {
     const fetchRewards = async () => {
-      if (!userKey) {
+      if (!userId) {
         navigate('/');
         return;
       }
 
       try {
         const response = await fetch('/api/referral_rewards', {
-          headers: {
-            'x-user-key': userKey
-          },
           credentials: 'include'
         });
 
@@ -95,7 +96,7 @@ const SuccessfulOnboarding: React.FC = () => {
     };
 
     fetchRewards();
-  }, [userKey, navigate]);
+  }, [userId, navigate]);
 
   // Handle story progression
   useEffect(() => {

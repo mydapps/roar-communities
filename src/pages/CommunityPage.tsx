@@ -539,7 +539,7 @@ const CommunityPage = () => {
                             originalTitle: post.original_title || ''
                           } : undefined}
                         ipfs={post.code || ''}
-                        isLoggedIn={!!localStorage.getItem('dapps_user_key')}
+                        isLoggedIn={!!localStorage.getItem('dapps_user_id')}
                         hideComments={false}
                       />
                     ))}
@@ -808,7 +808,7 @@ const CommunityPage = () => {
                             originalTitle: post.original_title || ''
                           } : undefined}
                         ipfs={post.code || ''}
-                        isLoggedIn={!!localStorage.getItem('dapps_user_key')}
+                        isLoggedIn={!!localStorage.getItem('dapps_user_id')}
                         hideComments={false}
                       />
                     ))}

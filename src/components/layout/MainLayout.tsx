@@ -21,8 +21,8 @@ const MainLayout = () => {
   
   useEffect(() => {
     // Check if user is logged in
-    const userKey = localStorage.getItem('dapps_user_key');
-    setIsLoggedIn(!!userKey);
+    const userId = localStorage.getItem('dapps_user_id');
+    setIsLoggedIn(!!userId);
   }, [location]);
   
   // Add global search keyboard shortcut
@@ -56,11 +56,10 @@ const MainLayout = () => {
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     // Check for localStorage values to determine if we're logged in
-    const hasCredentials = localStorage.getItem('dapps_user_key') && 
-                          localStorage.getItem('dapps_user_id');
+    const hasUserId = localStorage.getItem('dapps_user_id');
     
     // Only perform a full refresh if necessary
-    if (hasCredentials) {
+    if (hasUserId) {
       console.log('User has credentials, performing local data refresh only');
       // Here you could add specific refresh logic for different routes
       // without reloading the entire page

@@ -143,8 +143,8 @@ const RoarFarmingPage = () => {
   // Check if user is currently farming
   const checkFarmingStatus = async () => {
     try {
-      const userKey = localStorage.getItem('dapps_user_key');
-      if (!userKey) return;
+      const userId = localStorage.getItem('dapps_user_id');
+      if (!userId) return;
       
       const response = await fetch('/api/roar_farming_status', {
         method: 'GET',

@@ -42,7 +42,7 @@ const createInvalidAuthEvent = () => {
 function App() {
   const location = useLocation();
   const navigate = useNavigate();
-  
+
   return (
     <HelmetProvider>
       <ZoomDisabledHelmet />

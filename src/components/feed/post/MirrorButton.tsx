@@ -99,9 +99,9 @@ export const MirrorButton = ({
     setMirroring(true);
     
     try {
-      const userKey = localStorage.getItem('dapps_user_key');
+      const userId = localStorage.getItem('dapps_user_id');
       
-      if (!userKey) {
+      if (!userId) {
         uiToast({
           title: "Authentication Error",
           description: "You need to be logged in to mirror posts",

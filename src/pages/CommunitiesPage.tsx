@@ -550,7 +550,7 @@ const MyCommunitiesDebug = ({ communities, isLoading }: { communities: Community
   if (isLoading) return null;
   
   // Check for authentication
-  const isAuthenticated = localStorage.getItem('dapps_user_key') !== null;
+  const isAuthenticated = localStorage.getItem('dapps_user_id') !== null;
   
   return (
     <div className="col-span-full">

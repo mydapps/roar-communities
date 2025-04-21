@@ -157,8 +157,8 @@ export const useNotifications = (): UseNotificationsReturn => {
     refreshNotifications();
     
     // Set up an interval to refresh unread count every minute if user is logged in
-    const userKey = localStorage.getItem('dapps_user_key');
-    if (userKey) {
+    const userId = localStorage.getItem('dapps_user_id');
+    if (userId) {
       const interval = setInterval(fetchUnreadCount, 60000); // Every minute
       return () => clearInterval(interval);
     }

@@ -135,7 +135,7 @@ export const cleanupAuthState = (): void => {
   console.log('Cleaning up auth state due to invalid authentication');
   
   // Clear all authentication-related items
-  localStorage.removeItem('dapps_user_key');
+  localStorage.removeItem('dapps_user_id');
   localStorage.removeItem('dapps_last_auth_time');
   
   // We keep the user ID, handle, and avatar to make re-login smoother

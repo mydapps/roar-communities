@@ -149,7 +149,7 @@ export const useCommunityPosts = (communityName: string | undefined) => {
     if (communityName) {
       fetchPosts(1);
     }
-  }, [communityName, fetchPosts]);
+  }, [communityName]);
 
   const loadMore = useCallback(() => {
     if (loading || !hasMore || isFetchingRef.current) {

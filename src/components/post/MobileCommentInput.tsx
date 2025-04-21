@@ -34,7 +34,7 @@ export const MobileCommentInput: React.FC<MobileCommentInputProps> = ({
 
   // Get user info from localStorage
   const userAvatar = localStorage.getItem('dapps_user_avatar') || 'default';
-  const isLoggedIn = !!localStorage.getItem('dapps_user_key');
+  const isLoggedIn = !!localStorage.getItem('dapps_user_id');
 
   // Update expanded state when isReplyMode changes
   useEffect(() => {
@@ -51,12 +51,12 @@ export const MobileCommentInput: React.FC<MobileCommentInputProps> = ({
   // Handle when users click on the input area
   const handleInputClick = () => {
     if (!isLoggedIn) {
-      toast.error('Please log in to comment', {
+      toast.info('Login Required', {
         description: 'You need to be logged in to join the conversation',
         action: {
           label: 'Login',
-          onClick: () => navigate('/index')
-        }
+          onClick: () => navigate('/index'),
+        },
       });
       return;
     }
@@ -83,7 +83,7 @@ export const MobileCommentInput: React.FC<MobileCommentInputProps> = ({
         onCancel();
       }
       
-      toast.success(isReplyMode ? 'Reply posted' : 'Comment posted');
+      toast(isReplyMode ? 'Reply posted' : 'Comment posted');
     } catch (error) {
       console.error('Error posting comment:', error);
       toast.error('Failed to post your comment');
