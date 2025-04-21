@@ -96,7 +96,7 @@ export const useCommunityData = (communityName: string | undefined) => {
         setData(data);
       } else {
         throw new Error(data.message || 'Failed to load community data');
-      }
+        }
     } catch (err) {
       console.error("Failed to fetch community data:", err);
       setError(err instanceof Error ? err.message : 'An unknown error occurred');

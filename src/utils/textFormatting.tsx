@@ -91,7 +91,7 @@ export const processTextContent = (content: string): React.ReactNode => {
       }
     } else if (index % 3 === 0) { 
       // This is a regular text part (before or between media)
-      return processTextPart(part, index);
+    return processTextPart(part, index);
     } else {
       // This is the full markdown tag part, ignore it as we process the URL separately
       return null;

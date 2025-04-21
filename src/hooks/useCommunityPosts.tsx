@@ -55,13 +55,13 @@ export const useCommunityPosts = (communityName: string | undefined) => {
   
   const fetchPosts = useCallback(async (pageToFetch: number) => {
     if (loading || !communityName) return;
-    setLoading(true);
-    setError(null);
+      setLoading(true);
+      setError(null);
     try {
       // Use relative proxy path
       const url = `/api/fetch_posts?c=${encodeURIComponent(communityName)}&page=${pageToFetch}`;
       const response = await fetch(url, {
-        method: 'GET',
+          method: 'GET',
         credentials: 'include' // Add credentials
       });
 

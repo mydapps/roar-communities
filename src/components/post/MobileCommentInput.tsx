@@ -13,7 +13,9 @@ interface MobileCommentInputProps {
   replyToComment?: {
     id: number;
     author: string;
+    avatar: string;
     content: string;
+    level2ParentId?: number;
   };
   onSubmit: (content: string, parentId?: number) => Promise<void>;
   onCancel?: () => void;
@@ -115,7 +117,16 @@ export const MobileCommentInput: React.FC<MobileCommentInputProps> = ({
     console.log('Submitting comment with final content:', finalContent);
     
     try {
-      await onSubmit(finalContent, replyToComment?.id);
+      // For level 3 comments, use the level 2 parent ID if available
+      const parentId = replyToComment?.level2ParentId || replyToComment?.id;
+      
+      // Prevent replying to optimistic comments (with negative IDs)
+      if (parentId && parentId < 0) {
+        toast.error("Cannot reply to this comment yet. Please wait for it to be saved.");
+        throw new Error("Cannot reply to an optimistic comment with ID: " + parentId);
+      }
+      
+      await onSubmit(finalContent, parentId);
       
       // Clear content first
       setContent('');
@@ -259,14 +270,14 @@ export const MobileCommentInput: React.FC<MobileCommentInputProps> = ({
           {/* Send Button */}
           {isExpanded && (
             <div className="absolute bottom-3 right-3">
-              <Button
-                size="sm"
+            <Button
+              size="sm"
                 className="h-8 w-8 rounded-full p-0"
-                onClick={handleSubmit}
+              onClick={handleSubmit}
                 disabled={(!content.trim() && !uploadedMedia) || isSubmitting}
-              >
-                <Send className="h-4 w-4" />
-              </Button>
+            >
+              <Send className="h-4 w-4" />
+            </Button>
             </div>
           )}
         </div>

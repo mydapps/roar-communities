@@ -89,7 +89,7 @@ export const EnhancedCommentsSection = ({
   const removeMedia = () => {
     setUploadedMedia(null);
   };
-
+  
   const handleSubmitComment = async (e?: React.FormEvent) => {
     if (e) {
       e.preventDefault();
@@ -378,7 +378,7 @@ export const EnhancedCommentsSection = ({
                 />
                 
                 {/* Media Upload Options */}
-                <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between">
                   <div className="flex gap-2 items-center">
                     {uploadedMedia ? (
                       <div className="w-24 h-24 relative">
@@ -395,54 +395,54 @@ export const EnhancedCommentsSection = ({
                           acceptedTypes="image"
                           maxFiles={1}
                         >
-                          <Button 
+        <Button 
                             type="button" 
-                            variant="ghost" 
-                            size="sm" 
+          variant="ghost" 
+          size="sm" 
                             className="h-8 w-8 p-0"
                             disabled={submitting}
-                          >
+        >
                             <ImageIcon className="h-4 w-4" />
-                          </Button>
+        </Button>
                         </MediaUpload>
-                        
+      
                         <MediaUpload
                           onMediaUploaded={handleMediaUploaded}
                           disabled={submitting}
                           acceptedTypes="video"
                           maxFiles={1}
                         >
-                          <Button 
-                            type="button" 
+            <Button 
+              type="button"
                             variant="ghost" 
                             size="sm" 
                             className="h-8 w-8 p-0"
                             disabled={submitting}
-                          >
+            >
                             <VideoIcon className="h-4 w-4" />
-                          </Button>
+            </Button>
                         </MediaUpload>
                       </div>
-                    )}
+          )}
                   </div>
                   
-                  <Button 
-                    type="submit" 
+              <Button 
+                type="submit" 
                     disabled={(!newComment.trim() && !uploadedMedia) || submitting}
-                    className="gap-1.5"
-                  >
-                    {submitting ? (
+                className="gap-1.5"
+              >
+                {submitting ? (
                       <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                         Posting...
                       </>
-                    ) : (
+                ) : (
                       <>
-                        <Send className="h-4 w-4" />
+                  <Send className="h-4 w-4" />
                         Comment
                       </>
-                    )}
-                  </Button>
+                )}
+              </Button>
                 </div>
               </div>
             </div>
@@ -474,28 +474,28 @@ export const EnhancedCommentsSection = ({
                   <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
                   Refresh
                 </Button>
-              </div>
-              
+        </div>
+      
               <div className="space-y-6 divide-y divide-border/20">
-                {replies.map(reply => (
-                  <div key={reply.id} className="pt-6 first:pt-0">
-                    <EnhancedCommentItem 
-                      comment={reply}
-                      postAuthorHandle={postAuthorHandle}
-                      onMeowChange={handleMeowChange}
-                      onReply={handleReplyToComment}
+          {replies.map(reply => (
+            <div key={reply.id} className="pt-6 first:pt-0">
+              <EnhancedCommentItem 
+                comment={reply}
+                postAuthorHandle={postAuthorHandle}
+                onMeowChange={handleMeowChange}
+                onReply={handleReplyToComment}
                       isMobile={false}
-                    />
-                  </div>
-                ))}
-              </div>
+              />
+            </div>
+          ))}
+        </div>
             </>
           )}
         </div>
       </div>
       
       {isMobile && (
-        <MobileReplyDrawer
+        <MobileReplyDrawer 
           open={drawerOpen}
           onOpenChange={setDrawerOpen}
           targetUser={replyTarget?.handle || ''}

@@ -18,7 +18,9 @@ interface EnhancedCommentItemProps {
   onReply: (parentId: number, content: string) => Promise<void>;
   isAuthorReplying?: boolean;
   isMobile?: boolean;
-  onOpenMobileReply?: (commentId: number, handle: string, avatar: string, content: string) => void;
+  onOpenMobileReply?: (commentId: number, handle: string, avatar: string, content: string, level2ParentId?: number) => void;
+  level2ParentId?: number; // Track level 2 parent ID specifically
+  optimisticToRealIdMap?: Record<number, number>; // Map from optimistic IDs to real IDs
 }
 
 export const EnhancedCommentItem = ({
@@ -30,7 +32,9 @@ export const EnhancedCommentItem = ({
   onReply,
   isAuthorReplying = false,
   isMobile = false,
-  onOpenMobileReply
+  onOpenMobileReply,
+  level2ParentId,
+  optimisticToRealIdMap = {}
 }: EnhancedCommentItemProps) => {
   const [isReplying, setIsReplying] = useState(false);
   const [replyContent, setReplyContent] = useState('');
@@ -39,6 +43,15 @@ export const EnhancedCommentItem = ({
   const [uploadedMedia, setUploadedMedia] = useState<MediaUploadResponse | null>(null);
   
   const isPostAuthor = comment.handle === postAuthorHandle;
+  
+  // Helper function to get real ID if available
+  const getRealIdIfAvailable = (id: number): number => {
+    return optimisticToRealIdMap[id] || id;
+  };
+  
+  // Use real comment ID if this is an optimistic comment that's been mapped
+  const commentRealId = getRealIdIfAvailable(comment.id);
+  const currentLevel2ParentId = level === 2 ? commentRealId : level2ParentId;
   
   const handleMeow = () => {
     if (!comment.has_meowed) {
@@ -96,7 +109,15 @@ export const EnhancedCommentItem = ({
         finalContent += markdown;
       }
       
-      await onReply(comment.id, finalContent);
+      // If we're at level 3, use the level 2 parent ID as the target
+      let targetId = commentRealId; // Default to replying directly to this comment
+      
+      if (level === 3 && level2ParentId) {
+        // If we're at level 3, reply to the level 2 parent instead
+        targetId = getRealIdIfAvailable(level2ParentId);
+      }
+      
+      await onReply(targetId, finalContent);
       setReplyContent('');
       setUploadedMedia(null);
       setIsReplying(false);
@@ -109,7 +130,13 @@ export const EnhancedCommentItem = ({
 
   const handleReplyClick = () => {
     if (isMobile && onOpenMobileReply) {
-      onOpenMobileReply(comment.id, comment.handle, comment.avatar_url, comment.content);
+      // For level 3 comments on mobile, we need to pass level2ParentId
+      if (level === 3 && level2ParentId) {
+        // Pass the level 2 parent ID along with this comment's details
+        onOpenMobileReply(comment.id, comment.handle, comment.avatar_url, comment.content, level2ParentId);
+      } else {
+        onOpenMobileReply(comment.id, comment.handle, comment.avatar_url, comment.content);
+      }
     } else {
       setIsReplying(!isReplying);
     }
@@ -183,16 +210,15 @@ export const EnhancedCommentItem = ({
               </span>
             </Button>
             
-            {level < maxLevel && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={handleReplyClick}
-                className="h-8 px-2 text-xs gap-1.5 rounded-full hover:bg-secondary/80"
-              >
-                {isReplying && !isMobile ? 'Cancel' : 'Reply'}
-              </Button>
-            )}
+            {/* Always show the Reply button regardless of level */}
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleReplyClick}
+              className="h-8 px-2 text-xs gap-1.5 rounded-full hover:bg-secondary/80"
+            >
+              {isReplying && !isMobile ? 'Cancel' : 'Reply'}
+            </Button>
           </div>
           
           {isReplying && !isMobile && (
@@ -253,33 +279,33 @@ export const EnhancedCommentItem = ({
                   )}
                 </div>
                 
-                <div className="flex justify-end gap-2">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm" 
+              <div className="flex justify-end gap-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
                     onClick={() => {
                       setIsReplying(false);
                       setReplyContent('');
                       setUploadedMedia(null);
                     }}
-                    className="text-xs h-8"
-                  >
-                    Cancel
-                  </Button>
-                  <Button 
-                    type="submit" 
-                    size="sm" 
+                  className="text-xs h-8"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit" 
+                  size="sm" 
                     disabled={(!replyContent.trim() && !uploadedMedia) || isSending}
-                    className="text-xs h-8 gap-1.5"
-                  >
-                    {isSending ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Send className="h-3.5 w-3.5" />
-                    )}
-                    Reply
-                  </Button>
+                  className="text-xs h-8 gap-1.5"
+                >
+                  {isSending ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Send className="h-3.5 w-3.5" />
+                  )}
+                  Reply
+                </Button>
                 </div>
               </div>
             </form>
@@ -301,6 +327,8 @@ export const EnhancedCommentItem = ({
               isAuthorReplying={reply.handle === postAuthorHandle}
               isMobile={isMobile}
               onOpenMobileReply={onOpenMobileReply}
+              level2ParentId={currentLevel2ParentId}
+              optimisticToRealIdMap={optimisticToRealIdMap}
             />
           ))}
         </div>

@@ -321,7 +321,7 @@ export const createPost = async (params: {
     if (!body || body.trim() === '') {
       throw new Error('Post content is required');
     }
-
+    
     console.log('Creating post:', params);
     
     // Send the post body which already includes embedded media URLs

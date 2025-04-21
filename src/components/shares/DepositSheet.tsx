@@ -48,34 +48,34 @@ export const DepositSheet = ({
   // Fetch wallet address from API
   useEffect(() => {
     const fetchWalletAddress = async () => {
-      setIsLoading(true);
+        setIsLoading(true);
       setError(null);
-      try {
+        try {
         // Use relative proxy path
         const response = await fetch("/api/get_wallet_address", {
-          method: 'GET',
+            method: 'GET',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include' // Add credentials
-        });
-
-        if (!response.ok) {
+          });
+          
+          if (!response.ok) {
           throw new Error('Failed to fetch wallet address');
-        }
-
-        const data = await response.json();
+          }
+          
+          const data = await response.json();
         if (data.success && data.address) {
           setWalletAddress(data.address);
-          if (data.qr_code) {
-            setQrCodeData(data.qr_code);
-          }
-        } else {
+            if (data.qr_code) {
+              setQrCodeData(data.qr_code);
+            }
+          } else {
           throw new Error(data.message || 'Could not retrieve wallet address');
-        }
+          }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An unknown error occurred');
         console.error("Fetch wallet error:", err);
-      } finally {
-        setIsLoading(false);
+        } finally {
+          setIsLoading(false);
       }
     };
     

@@ -153,7 +153,7 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
                 setAuthProcessed(true);
                 setIsAuthLoading(false);
                 setAuthRequestInProgress(false);
-                return; 
+                return;
               }
               
               // --- STORE USER INFO (NOW SAFER) ---
@@ -181,7 +181,7 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
                 setAuthRequestInProgress(false);
                 return;
               }
-
+              
               // --- REVISED REDIRECT LOGIC (Ensure it uses the correctly stored status) ---
               const finalRegisteredStatus = localStorage.getItem('dapps_user_registered');
               
@@ -200,8 +200,8 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
                   
                 if (!isOnAuthPage) {
                    debugLog("User registered, redirecting to feed");
-                   navigate('/feed');
-                   toast.success('Successfully logged in!');
+                  navigate('/feed');
+                  toast.success('Successfully logged in!');
                 } else {
                   debugLog("User registered, already on an authenticated page, skipping redirect.");
                   // No redirect needed

@@ -86,10 +86,10 @@ const AvatarHandlePage = () => {
       setError('Handle must be 3-15 alphanumeric characters or underscores.');
       return;
     }
-
+    
     setIsLoading(true);
     setError('');
-
+    
     try {
       const response = await fetch('/api/choose_handle_avatar', {
         method: 'POST',
@@ -99,9 +99,9 @@ const AvatarHandlePage = () => {
         body: JSON.stringify({ handle: handle.trim(), avatarCode }),
         credentials: 'include'
       });
-
+      
       const data = await response.json();
-
+      
       if (response.ok && data.success) {
         // Update localStorage
         localStorage.setItem('dapps_user_handle', handle.trim());
@@ -110,7 +110,7 @@ const AvatarHandlePage = () => {
         
         toast.success('Profile setup successful!');
         // Navigate to the next step (e.g., request invite page)
-        navigate('/request-invite'); 
+          navigate('/request-invite');
       } else {
         // Set specific error from API or generic one
         setError(data.message || 'Failed to save profile. Handle might be taken.');

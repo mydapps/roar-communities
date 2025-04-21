@@ -193,7 +193,15 @@ const DetailedPostPage = () => {
     }
   };
   
-  const handleAddReply = async (content: string, parentId?: number): Promise<void> => {
+  const handleAddReply = async (content: string, parentId?: number): Promise<{
+    success: boolean;
+    reply_id?: number;
+    parent_id?: number;
+    handle?: string;
+    avatar_url?: string;
+    created_on?: string;
+    message?: string;
+  }> => {
     // Content check remains (will include appended markdown)
     if (!post || !content.trim()) return Promise.reject(new Error('Invalid input: requires content'));
     
@@ -219,8 +227,11 @@ const DetailedPostPage = () => {
       if (result.success) {
         // Refresh comments after successful submission
         console.log('Reply created successfully, refreshing comments');
-        handleRefreshComments();
-        return Promise.resolve();
+        // Don't immediately refresh to allow optimistic updates to work
+        setTimeout(() => handleRefreshComments(), 1000);
+        
+        // Return the successful result for optimistic updating
+        return result;
       } else {
         // Handle specific errors like not being in the community
         if (result.errCode === "004" && result.communityName) {

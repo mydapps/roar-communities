@@ -44,8 +44,8 @@ export const useCommunityMembers = (communityName: string | undefined) => {
 
       const url = `/api/get_community_members?name=${encodeURIComponent(communityName)}&page=${page}&limit=${limit}`;
       const response = await fetch(url, {
-        method: 'GET',
-        credentials: 'include'
+          method: 'GET',
+          credentials: 'include'
       });
 
       if (!response.ok) {
@@ -55,9 +55,9 @@ export const useCommunityMembers = (communityName: string | undefined) => {
       const data = await response.json();
       if (data.success) {
         setMembers(prev => (page === 1 ? data.members : [...prev, ...data.members]));
-        setPagination(data.pagination);
-        setHasMore(data.pagination.hasNext);
-        currentPage.current = page;
+      setPagination(data.pagination);
+      setHasMore(data.pagination.hasNext);
+      currentPage.current = page;
       } else {
         throw new Error('Failed to load community members');
       }

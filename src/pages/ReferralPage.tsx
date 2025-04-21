@@ -97,13 +97,13 @@ const ReferralPage = () => {
     }
     
     const loadData = async () => {
-      setIsLoading(true);
+    setIsLoading(true);
       setError(null);
-      try {
+    try {
         // Use relative proxy path for earnings
         const earningsResponse = await fetch('/api/referral_earnings', {
           credentials: 'include' // Add credentials
-        });
+      });
         if (!earningsResponse.ok) throw new Error('Failed to fetch earnings');
         const earningsData = await earningsResponse.json();
         if (earningsData.success) {
@@ -112,12 +112,12 @@ const ReferralPage = () => {
           setRewardsClaimable(earningsData.available_to_withdraw > 0);
         } else {
           throw new Error(earningsData.message || 'Could not load earnings');
-        }
-        
+      }
+      
         // Use relative proxy path for invited users
         const invitedUsersResponse = await fetch('/api/invited_users?page=1&limit=20', {
           credentials: 'include' // Add credentials
-        });
+      });
         if (!invitedUsersResponse.ok) throw new Error('Failed to fetch invited users');
         const invitedUsersData = await invitedUsersResponse.json();
         if (invitedUsersData.success) {
@@ -125,14 +125,14 @@ const ReferralPage = () => {
           setTotalInvites(invitedUsersData.total);
         } else {
           throw new Error(invitedUsersData.message || 'Could not load invited users');
-        }
+      }
 
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An unknown error occurred');
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    } finally {
+      setIsLoading(false);
+    }
+  };
     loadData();
   }, []);
   
@@ -207,27 +207,27 @@ const ReferralPage = () => {
       
       const data = await response.json();
       if (data.success) {
-        setEarnings(prev => {
-          if (!prev) return null;
-          return {
-            ...prev,
-            referral_earnings: prev.referral_earnings,
-            available_to_withdraw: 0,
-            total_withdrawn: prev.total_withdrawn + prev.available_to_withdraw
-          };
-        });
-        
-        setRewardsClaimable(false);
-        
-        // Success animation
-        confetti({
-          particleCount: 150,
-          spread: 90,
-          origin: { y: 0.6 },
-          colors: ['#4F46E5', '#10B981', '#F59E0B']
-        });
-        
-        toast.success("Rewards claimed successfully!");
+      setEarnings(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          referral_earnings: prev.referral_earnings,
+          available_to_withdraw: 0,
+          total_withdrawn: prev.total_withdrawn + prev.available_to_withdraw
+        };
+      });
+      
+      setRewardsClaimable(false);
+      
+      // Success animation
+      confetti({
+        particleCount: 150,
+        spread: 90,
+        origin: { y: 0.6 },
+        colors: ['#4F46E5', '#10B981', '#F59E0B']
+      });
+      
+      toast.success("Rewards claimed successfully!");
       } else {
         throw new Error(data.message || 'Failed to claim rewards');
       }
