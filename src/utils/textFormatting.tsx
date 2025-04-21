@@ -1,24 +1,101 @@
 import React from 'react';
 
 /**
- * Process text content to convert mentions, community references, and URLs to clickable links
+ * Process text content to convert mentions, community references, URLs, and media markdown to interactive elements
  * @param content The raw text content to process
- * @returns React elements with proper links
+ * @returns React elements with proper links and media rendering
  */
 export const processTextContent = (content: string): React.ReactNode => {
   if (!content) return null;
   
-  // First, split the content by image markdown pattern to avoid processing it
-  const parts = content.split(/(!?\[.*?\]\(https:\/\/img\.dapps\.co\/[^)]+\))/g);
+  // Add console logging to debug the input content
+  console.log('Processing content:', content);
+  
+  // Updated regex to handle both newline and non-newline image markdown cases
+  // This handles ![](url) with optional newline before it
+  const mediaMarkdownRegex = /(\n?!\[\]\(([^)]+)\))/g; 
+  const parts = content.split(mediaMarkdownRegex);
+  
+  console.log('Split parts:', parts);
   
   return parts.map((part, index) => {
-    // Check if this part is an image markdown, if so return it as is
-    if (part.match(/^!?\[.*?\]\(https:\/\/img\.dapps\.co\/[^)]+\)$/)) {
-      return <span key={index}>{part}</span>;
+    // Check if this part is a captured media URL (from group 2 of the split regex)
+    // The split results in [text, full_markdown, url, text, full_markdown, url, ...]
+    // So, the URL is at index `i` where `i % 3 === 2`
+    if (index % 3 === 2 && part) { 
+      const mediaUrl = part.trim(); // This is the captured URL - trim to remove any whitespace
+      console.log('Processing media URL:', mediaUrl);
+      
+      // Skip if the URL is empty after trimming
+      if (!mediaUrl) {
+        console.log('Empty URL after trimming, skipping');
+        return null;
+      }
+      
+      // Check for common image/video extensions to determine type
+      const extension = mediaUrl.split('.').pop()?.toLowerCase();
+      console.log('Detected extension:', extension);
+      
+      // Determine media type
+      if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension || '')) {
+        console.log('Rendering as image with extension:', extension);
+        return (
+          <div key={index} className="mt-2 max-w-xs sm:max-w-sm md:max-w-md"> 
+            <img 
+              src={mediaUrl} 
+              alt="Comment attachment" 
+              className="rounded-md object-cover w-full h-auto border border-border/20" 
+              loading="lazy"
+              onError={(e) => {
+                 console.warn(`Error loading image: ${mediaUrl}`);
+                 e.currentTarget.style.display = 'none'; 
+              }}
+            />
+          </div>
+        );
+      } else if (['mp4', 'webm', 'mov'].includes(extension || '')) {
+        console.log('Rendering as video with extension:', extension);
+        return (
+          <div key={index} className="mt-2 max-w-xs sm:max-w-sm md:max-w-md"> 
+            <video 
+              src={mediaUrl} 
+              controls 
+              preload="metadata"
+              className="rounded-md w-full h-auto border border-border/20"
+              onError={(e) => {
+                console.warn(`Error loading video: ${mediaUrl}`);
+                e.currentTarget.style.display = 'none'; 
+              }}
+            >
+              Your browser does not support the video tag.
+            </video>
+          </div>
+        );
+      } else {
+        // Try to render as image if we can't detect extension
+        console.log('No recognized extension, attempting to render as image');
+        return (
+          <div key={index} className="mt-2 max-w-xs sm:max-w-sm md:max-w-md"> 
+            <img 
+              src={mediaUrl} 
+              alt="Comment attachment" 
+              className="rounded-md object-cover w-full h-auto border border-border/20" 
+              loading="lazy"
+              onError={(e) => {
+                 console.warn(`Error loading image with unknown extension: ${mediaUrl}`);
+                 e.currentTarget.style.display = 'none'; 
+              }}
+            />
+          </div>
+        );
+      }
+    } else if (index % 3 === 0) { 
+      // This is a regular text part (before or between media)
+      return processTextPart(part, index);
+    } else {
+      // This is the full markdown tag part, ignore it as we process the URL separately
+      return null;
     }
-    
-    // Process the non-image part for mentions, communities, and URLs
-    return processTextPart(part, index);
   });
 };
 

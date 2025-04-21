@@ -4,11 +4,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { EnhancedCommentItem } from './EnhancedCommentItem';
 import { fetchReplies, CommentReply, createReply, toggleMeow } from '@/utils/commentApi';
-import { RefreshCw, Send, Loader2 } from 'lucide-react';
+import { RefreshCw, Send, Loader2, ImageIcon, VideoIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MobileReplyDrawer } from './MobileReplyDrawer';
 import { NotInCommunitySheet } from '@/components/community/NotInCommunitySheet';
+import { MediaUpload, MediaPreview, MediaUploadResponse } from '@/components/ui/media-upload';
 
 interface EnhancedCommentsSectionProps {
   postCode: string;
@@ -39,6 +40,7 @@ export const EnhancedCommentsSection = ({
   const isMobile = useIsMobile();
   const [notInCommunitySheetOpen, setNotInCommunitySheetOpen] = useState(false);
   const [communityName, setCommunityName] = useState("");
+  const [uploadedMedia, setUploadedMedia] = useState<MediaUploadResponse | null>(null);
 
   const fetchComments = useCallback(async () => {
     if (!postCode) return;
@@ -70,19 +72,53 @@ export const EnhancedCommentsSection = ({
     }
   }, [fetchComments, initialReplies.length]);
   
+  const handleMediaUploaded = (media: MediaUploadResponse) => {
+    if (uploadedMedia) {
+      toast.error("You can only attach one image or video per comment.");
+      return;
+    }
+    if (!media || typeof media !== 'object' || !media.type || !media.url) {
+      console.error("Invalid media object received:", media);
+      toast.error('Invalid media data received from server');
+      return;
+    }
+    setUploadedMedia(media);
+    toast.success(`${media.type === 'image' ? 'Image' : 'Video'} added`);
+  };
+
+  const removeMedia = () => {
+    setUploadedMedia(null);
+  };
+
   const handleSubmitComment = async (e?: React.FormEvent) => {
     if (e) {
       e.preventDefault();
       e.stopPropagation();
     }
     
-    if (!newComment.trim()) return;
+    if (!newComment.trim() && !uploadedMedia) return;
     
     setSubmitting(true);
     
+    let finalContent = newComment.trim();
+    if (uploadedMedia && uploadedMedia.url) {
+      let mediaUrl = uploadedMedia.url;
+      if (!mediaUrl.startsWith('http')) {
+        if (mediaUrl.startsWith('//')) {
+          mediaUrl = 'https:' + mediaUrl;
+        } else if (mediaUrl.startsWith('/')) {
+          mediaUrl = window.location.origin + mediaUrl;
+        }
+      }
+      
+      const markdown = finalContent.length > 0 ? `\n\n![](${mediaUrl})` : `![](${mediaUrl})`;
+      console.log('Adding media markdown:', markdown);
+      finalContent += markdown;
+    }
+    
     try {
-      console.log('Submitting comment to post:', postCode);
-      const response = await createReply(postCode, newComment);
+      console.log('Submitting comment to post:', postCode, 'Content:', finalContent);
+      const response = await createReply(postCode, finalContent);
       
       if (!response.success && response.errCode === "004" && response.communityName) {
         setCommunityName(response.communityName);
@@ -99,7 +135,7 @@ export const EnhancedCommentsSection = ({
           uid: 0,
           handle: response.handle || localStorage.getItem('dapps_user_handle') || 'you',
           avatar_url: response.avatar_url || localStorage.getItem('dapps_user_avatar') || 'default',
-          content: newComment,
+          content: finalContent,
           created_on: response.created_on || new Date().toISOString(),
           time_ago: 'just now',
           upvotes: 0,
@@ -113,6 +149,7 @@ export const EnhancedCommentsSection = ({
         setReplies(prev => [...prev, newReply]);
         setReplyCount(prev => prev + 1);
         setNewComment('');
+        setUploadedMedia(null);
         toast.success('Comment added successfully');
       } else {
         console.error('API response missing reply_id or success=false:', response);
@@ -316,115 +353,156 @@ export const EnhancedCommentsSection = ({
     }
   };
 
-  const userAvatar = localStorage.getItem('dapps_user_avatar') || 'default';
-
   return (
-    <div className="space-y-6" onClick={(e) => e.stopPropagation()}>
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Comments ({replyCount})</h2>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            fetchComments();
-          }}
-          disabled={loading}
-          className="gap-1.5"
-        >
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          <span>Refresh</span>
-        </Button>
-      </div>
-      
-      <form 
-        onSubmit={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          handleSubmitComment(e);
-        }} 
-        className="flex gap-3 bg-muted/20 p-4 rounded-lg border border-border/40"
-      >
-        <Avatar className="h-10 w-10 shrink-0 border border-muted/60">
-          <AvatarImage src={`https://img.dapps.co/avatar/${userAvatar}.svg`} />
-          <AvatarFallback>Y</AvatarFallback>
-        </Avatar>
-        <div className="flex-1 space-y-2">
-          {isMobile ? (
-            <Button 
-              type="button"
-              variant="outline" 
-              className="w-full justify-start text-muted-foreground font-normal"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                openReplyDrawer(0, postAuthorHandle, userAvatar, "Main post", true);
-              }}
-            >
-              Add a comment...
-            </Button>
-          ) : (
-            <Textarea 
-              placeholder="Add a comment..." 
-              className="resize-none bg-background min-h-[80px]"
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              onClick={(e) => e.stopPropagation()}
-            />
+    <div className="space-y-8">
+      <div className="space-y-4">
+        <h2 className="text-lg font-medium">Comments ({replyCount})</h2>
+        
+        <div className="space-y-4">
+          <form onSubmit={handleSubmitComment} className="space-y-4">
+            <div className="flex gap-3">
+              <Avatar className="h-10 w-10 mt-1">
+                <AvatarImage 
+                  src={`https://img.dapps.co/avatar/${localStorage.getItem('dapps_user_avatar') || 'default'}.svg`} 
+                />
+                <AvatarFallback>U</AvatarFallback>
+              </Avatar>
+              
+              <div className="flex-1 space-y-2">
+                <Textarea
+                  placeholder="Join the conversation..."
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  rows={3}
+                  className="resize-none"
+                />
+                
+                {/* Media Upload Options */}
+                <div className="flex items-center justify-between">
+                  <div className="flex gap-2 items-center">
+                    {uploadedMedia ? (
+                      <div className="w-24 h-24 relative">
+                        <MediaPreview
+                          media={uploadedMedia}
+                          onRemove={removeMedia}
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <MediaUpload
+                          onMediaUploaded={handleMediaUploaded}
+                          disabled={submitting}
+                          acceptedTypes="image"
+                          maxFiles={1}
+                        >
+                          <Button 
+                            type="button" 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 w-8 p-0"
+                            disabled={submitting}
+                          >
+                            <ImageIcon className="h-4 w-4" />
+                          </Button>
+                        </MediaUpload>
+                        
+                        <MediaUpload
+                          onMediaUploaded={handleMediaUploaded}
+                          disabled={submitting}
+                          acceptedTypes="video"
+                          maxFiles={1}
+                        >
+                          <Button 
+                            type="button" 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-8 w-8 p-0"
+                            disabled={submitting}
+                          >
+                            <VideoIcon className="h-4 w-4" />
+                          </Button>
+                        </MediaUpload>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <Button 
+                    type="submit" 
+                    disabled={(!newComment.trim() && !uploadedMedia) || submitting}
+                    className="gap-1.5"
+                  >
+                    {submitting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Posting...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4" />
+                        Comment
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </form>
+          
+          {loading && replies.length === 0 && (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
           )}
           
-          {!isMobile && (
-            <div className="flex justify-end">
-              <Button 
-                type="submit" 
-                disabled={!newComment.trim() || submitting}
-                className="gap-1.5"
-              >
-                {submitting ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-                Comment
-              </Button>
+          {!loading && replies.length === 0 && (
+            <div className="text-center py-8 bg-muted/20 rounded-lg border border-border/40">
+              <p className="text-muted-foreground">No comments yet. Be the first to comment!</p>
             </div>
           )}
+          
+          {replies.length > 0 && (
+            <>
+              <div className="flex items-center justify-between pt-4">
+                <h3 className="text-sm font-medium">Recent Comments</h3>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={fetchComments} 
+                  disabled={loading}
+                  className="h-8 text-xs gap-1"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+              </div>
+              
+              <div className="space-y-6 divide-y divide-border/20">
+                {replies.map(reply => (
+                  <div key={reply.id} className="pt-6 first:pt-0">
+                    <EnhancedCommentItem 
+                      comment={reply}
+                      postAuthorHandle={postAuthorHandle}
+                      onMeowChange={handleMeowChange}
+                      onReply={handleReplyToComment}
+                      isMobile={false}
+                    />
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
-      </form>
+      </div>
       
-      {replies.length > 0 ? (
-        <div className="space-y-6 pt-4 divide-y divide-border/20">
-          {replies.map(reply => (
-            <div key={reply.id} className="pt-6 first:pt-0">
-              <EnhancedCommentItem 
-                comment={reply}
-                postAuthorHandle={postAuthorHandle}
-                onMeowChange={handleMeowChange}
-                onReply={handleReplyToComment}
-                isMobile={isMobile}
-                onOpenMobileReply={(commentId, handle, avatar, content) => {
-                  openReplyDrawer(commentId, handle, avatar, content);
-                }}
-              />
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-8 bg-muted/20 rounded-lg border border-border/40">
-          <p className="text-muted-foreground">No comments yet. Be the first to comment!</p>
-        </div>
-      )}
-      
-      {isMobile && replyTarget && (
-        <MobileReplyDrawer 
+      {isMobile && (
+        <MobileReplyDrawer
           open={drawerOpen}
           onOpenChange={setDrawerOpen}
+          targetUser={replyTarget?.handle || ''}
+          targetUserAvatar={replyTarget?.avatar || 'default'}
+          targetContent={replyTarget?.content || ''}
+          isReplyingTo={replyTarget?.isPost ? 'post' : 'comment'}
           onSubmit={handleDrawerSubmit}
-          targetUser={replyTarget.handle}
-          targetUserAvatar={replyTarget.avatar}
-          targetContent={replyTarget.content}
-          isReplyingTo={replyTarget.isPost ? 'post' : 'comment'}
         />
       )}
       

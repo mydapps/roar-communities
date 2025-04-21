@@ -194,7 +194,8 @@ const DetailedPostPage = () => {
   };
   
   const handleAddReply = async (content: string, parentId?: number): Promise<void> => {
-    if (!post || !content.trim()) return Promise.reject(new Error('Invalid input'));
+    // Content check remains (will include appended markdown)
+    if (!post || !content.trim()) return Promise.reject(new Error('Invalid input: requires content'));
     
     if (!isLoggedIn) {
       toast.error('You need to login to comment', {
@@ -208,17 +209,28 @@ const DetailedPostPage = () => {
     }
     
     try {
-      console.log(`Creating reply to post ${post.code} with parentId ${parentId || 0} and content: ${content}`);
+      console.log(`Creating reply for post ${post.code}, parent ${parentId || 0}, content:`, content);
       
-      // Don't actually create the reply here, since MobileCommentsSection already does that
-      // We only want to refresh comments to keep server and client state consistent
+      // Call the actual API function
+      const result = await createReply(post.code, content, parentId);
       
-      // Use a slight delay before refreshing to prevent race conditions
-      setTimeout(() => {
+      console.log('Reply creation result:', result);
+      
+      if (result.success) {
+        // Refresh comments after successful submission
+        console.log('Reply created successfully, refreshing comments');
         handleRefreshComments();
-      }, 1000);
-      
-      return Promise.resolve();
+        return Promise.resolve();
+      } else {
+        // Handle specific errors like not being in the community
+        if (result.errCode === "004" && result.communityName) {
+          setCommunityName(result.communityName);
+          setNotInCommunitySheetOpen(true);
+        } else {
+          toast.error(result.message || 'Failed to post comment');
+        }
+        return Promise.reject(new Error(result.message || 'Failed to post comment'));
+      }
     } catch (error) {
       console.error('Error adding reply:', error);
       toast.error('Failed to post your comment. Please try again.');

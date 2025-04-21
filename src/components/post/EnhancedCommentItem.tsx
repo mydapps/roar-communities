@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Cat, Send, Loader2 } from 'lucide-react';
+import { Cat, Send, Loader2, ImageIcon, VideoIcon } from 'lucide-react';
 import { CommentReply } from '@/utils/commentApi';
 import { Link } from 'react-router-dom';
 import { processTextContent } from '@/utils/textFormatting';
+import { MediaUpload, MediaPreview, MediaUploadResponse } from '@/components/ui/media-upload';
+import { toast } from 'sonner';
 
 interface EnhancedCommentItemProps {
   comment: CommentReply;
@@ -34,11 +36,11 @@ export const EnhancedCommentItem = ({
   const [replyContent, setReplyContent] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [meowAnimating, setMeowAnimating] = useState(false);
+  const [uploadedMedia, setUploadedMedia] = useState<MediaUploadResponse | null>(null);
   
   const isPostAuthor = comment.handle === postAuthorHandle;
   
   const handleMeow = () => {
-    // Only animate when adding a meow, not removing it
     if (!comment.has_meowed) {
       setMeowAnimating(true);
       setTimeout(() => setMeowAnimating(false), 1000);
@@ -47,16 +49,56 @@ export const EnhancedCommentItem = ({
     onMeowChange(comment.id, !comment.has_meowed);
   };
   
+  // Handle successful media upload
+  const handleMediaUploaded = (media: MediaUploadResponse) => {
+    if (uploadedMedia) {
+      toast.error("You can only attach one image or video per reply.");
+      return;
+    }
+    if (!media || typeof media !== 'object' || !media.type || !media.url) {
+      console.error("Invalid media object received:", media);
+      toast.error('Invalid media data received from server');
+      return;
+    }
+    setUploadedMedia(media);
+    toast.success(`${media.type === 'image' ? 'Image' : 'Video'} added`);
+  };
+
+  // Remove media
+  const removeMedia = () => {
+    setUploadedMedia(null);
+  };
+  
   const handleSubmitReply = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!replyContent.trim()) return;
+    if (!replyContent.trim() && !uploadedMedia) return;
     
     setIsSending(true);
     
     try {
-      await onReply(comment.id, replyContent);
+      // Prepare content with media markdown if needed
+      let finalContent = replyContent.trim();
+      if (uploadedMedia && uploadedMedia.url) {
+        // Ensure URL is properly formatted
+        let mediaUrl = uploadedMedia.url;
+        if (!mediaUrl.startsWith('http')) {
+          if (mediaUrl.startsWith('//')) {
+            mediaUrl = 'https:' + mediaUrl;
+          } else if (mediaUrl.startsWith('/')) {
+            mediaUrl = window.location.origin + mediaUrl;
+          }
+        }
+        
+        // Format the markdown - ensure there's proper spacing if there's already content
+        const markdown = finalContent.length > 0 ? `\n\n![](${mediaUrl})` : `![](${mediaUrl})`;
+        console.log('Adding media markdown to reply:', markdown);
+        finalContent += markdown;
+      }
+      
+      await onReply(comment.id, finalContent);
       setReplyContent('');
+      setUploadedMedia(null);
       setIsReplying(false);
     } catch (error) {
       console.error('Error submitting reply:', error);
@@ -114,7 +156,7 @@ export const EnhancedCommentItem = ({
             <span className="text-muted-foreground text-xs">{comment.time_ago}</span>
           </div>
           
-          <div className="text-sm whitespace-pre-wrap break-words">
+          <div className="text-sm whitespace-pre-wrap break-words mt-1">
             {processTextContent(comment.content)}
           </div>
           
@@ -161,29 +203,84 @@ export const EnhancedCommentItem = ({
                 onChange={(e) => setReplyContent(e.target.value)}
                 className="min-h-[60px] text-sm"
               />
-              <div className="flex justify-end gap-2">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => setIsReplying(false)}
-                  className="text-xs h-8"
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit" 
-                  size="sm" 
-                  disabled={!replyContent.trim() || isSending}
-                  className="text-xs h-8 gap-1.5"
-                >
-                  {isSending ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              
+              {/* Media Upload and Preview */}
+              <div className="flex items-start justify-between">
+                <div className="flex gap-1 items-center">
+                  {uploadedMedia ? (
+                    <div className="w-16 h-16 relative">
+                      <MediaPreview
+                        media={uploadedMedia}
+                        onRemove={removeMedia}
+                      />
+                    </div>
                   ) : (
-                    <Send className="h-3.5 w-3.5" />
+                    <div className="flex gap-1">
+                      <MediaUpload
+                        onMediaUploaded={handleMediaUploaded}
+                        disabled={isSending}
+                        acceptedTypes="image"
+                        maxFiles={1}
+                      >
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-7 w-7 p-0"
+                          disabled={isSending}
+                        >
+                          <ImageIcon className="h-3.5 w-3.5" />
+                        </Button>
+                      </MediaUpload>
+                      
+                      <MediaUpload
+                        onMediaUploaded={handleMediaUploaded}
+                        disabled={isSending}
+                        acceptedTypes="video"
+                        maxFiles={1}
+                      >
+                        <Button 
+                          type="button" 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-7 w-7 p-0"
+                          disabled={isSending}
+                        >
+                          <VideoIcon className="h-3.5 w-3.5" />
+                        </Button>
+                      </MediaUpload>
+                    </div>
                   )}
-                  Reply
-                </Button>
+                </div>
+                
+                <div className="flex justify-end gap-2">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      setIsReplying(false);
+                      setReplyContent('');
+                      setUploadedMedia(null);
+                    }}
+                    className="text-xs h-8"
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    size="sm" 
+                    disabled={(!replyContent.trim() && !uploadedMedia) || isSending}
+                    className="text-xs h-8 gap-1.5"
+                  >
+                    {isSending ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Send className="h-3.5 w-3.5" />
+                    )}
+                    Reply
+                  </Button>
+                </div>
               </div>
             </form>
           )}

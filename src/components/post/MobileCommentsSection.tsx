@@ -134,61 +134,48 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
     setReplyingTo(null);
   }, []);
 
-  // Main comment submission handler
-  const handleSubmit = async (content: string, parentId?: number) => {
-    if (!content.trim()) return;
-    
+  // Main comment submission handler - NOW DELEGATES TO PARENT
+  const handleSubmit = async (content: string, parentId?: number): Promise<void> => {
+    // Basic validation before passing up
+    if (!content.trim()) {
+      toast.error('Comment cannot be empty.');
+      return Promise.reject(new Error('Comment cannot be empty'));
+    }
+
     try {
-      console.log(`Mobile - Submitting ${parentId ? 'reply' : 'comment'} with content: ${content}`);
+      console.log(`Mobile - Passing comment/reply to parent: parentId=${parentId}, content length=${content.length}`);
       
-      // API call to create the reply/comment
-      const response = await createReply(postCode, content, parentId || 0);
-      
-      // Check if user is not part of the community
-      if (!response.success && response.errCode === "004" && response.communityName) {
-        // Show the not in community modal
-        setCommunityName(response.communityName);
-        setNotInCommunitySheetOpen(true);
-        return;
-      }
-      
-      if (!response.success || !response.reply_id) {
-        console.error('API returned success=false or missing reply_id:', response);
-        throw new Error('Failed to create comment/reply');
-      }
-      
-      console.log(`Mobile - Created ${parentId ? 'reply' : 'comment'} with server ID: ${response.reply_id}`);
-      
-      // Create the new comment/reply object
+      // Create an optimistic comment/reply
       const userHandle = localStorage.getItem('dapps_user_handle') || 'you';
       const userAvatar = localStorage.getItem('dapps_user_avatar') || 'default';
       
-      // Immediately update UI with the new comment before notifying parent
+      // Create optimistic reply object
+      const optimisticReply: CommentReply = {
+        id: -Date.now(), // Temporary negative ID to identify it as optimistic
+        uid: Number(localStorage.getItem('dapps_user_id') || '0'),
+        handle: userHandle,
+        avatar_url: userAvatar,
+        content: content,
+        created_on: new Date().toISOString(),
+        time_ago: 'just now',
+        upvotes: 0,
+        meow_count: 0,
+        has_meowed: false,
+        sub_replies: []
+      };
+      
+      // Update UI optimistically
       if (parentId) {
-        // This is a reply to a comment
+        // This is a reply to an existing comment
         setLocalReplies(prevReplies => {
           const addReplyToComment = (comments: CommentReply[]): CommentReply[] => {
             return comments.map(comment => {
               if (comment.id === parentId) {
-                // Add reply to this comment
-                const newReply: CommentReply = {
-                  id: response.reply_id,
-                  uid: 0,
-                  handle: userHandle,
-                  avatar_url: userAvatar,
-                  content: content,
-                  created_on: new Date().toISOString(),
-                  time_ago: 'just now',
-                  upvotes: 0,
-                  meow_count: 0,
-                  has_meowed: false
-                };
-                
                 return {
                   ...comment,
                   sub_replies: comment.sub_replies 
-                    ? [...comment.sub_replies, newReply] 
-                    : [newReply]
+                    ? [...comment.sub_replies, optimisticReply] 
+                    : [optimisticReply]
                 };
               } else if (comment.sub_replies) {
                 return {
@@ -204,38 +191,34 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
         });
       } else {
         // This is a top-level comment
-        const newComment: CommentReply = {
-          id: response.reply_id,
-          uid: 0,
-          handle: userHandle,
-          avatar_url: userAvatar,
-          content: content,
-          created_on: new Date().toISOString(),
-          time_ago: 'just now',
-          upvotes: 0,
-          meow_count: 0,
-          has_meowed: false,
-          sub_replies: []
-        };
-        
-        setLocalReplies(prevReplies => [...prevReplies, newComment]);
+        setLocalReplies(prevReplies => [...prevReplies, optimisticReply]);
       }
       
-      // Notify parent component about the new comment (for state consistency)
-      // but we don't need to wait for this to update our UI
-      onAddComment(content, parentId).catch(error => {
-        console.error('Error notifying parent about new comment:', error);
-      });
+      // Call the parent handler to process the actual API call
+      await onAddComment(content, parentId);
       
-      // Clear reply mode after successful submission
+      // Clear reply mode after successful submission (assuming success from parent)
       setReplyingTo(null);
       
-      // Toast notification
-      toast.success('Comment posted successfully');
     } catch (error) {
-      console.error('Error submitting comment:', error);
-      toast.error('Failed to post comment. Please try again.');
-      throw error; // Let the input component handle the error
+      console.error('Error submitting comment via parent:', error);
+      // Remove optimistic comment in case of failure
+      setLocalReplies(prevReplies => {
+        const removeOptimisticReply = (comments: CommentReply[]): CommentReply[] => {
+          return comments.filter(comment => comment.id >= 0).map(comment => {
+            if (comment.sub_replies) {
+              return {
+                ...comment,
+                sub_replies: removeOptimisticReply(comment.sub_replies)
+              };
+            }
+            return comment;
+          });
+        };
+        
+        return removeOptimisticReply(prevReplies);
+      });
+      throw error; // Re-throw to allow input component to handle isSubmitting state
     }
   };
 

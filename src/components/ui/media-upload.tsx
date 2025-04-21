@@ -27,13 +27,15 @@ interface MediaUploadProps {
   disabled?: boolean;
   maxFiles?: number;
   acceptedTypes?: 'image' | 'video' | 'both';
+  children?: React.ReactNode;
 }
 
 export function MediaUpload({
   onMediaUploaded,
   disabled = false,
   maxFiles = 30, // Increased to 30 per requirement
-  acceptedTypes = 'both'
+  acceptedTypes = 'both',
+  children
 }: MediaUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -141,6 +143,20 @@ export function MediaUpload({
               }
             };
             
+            // Ensure URLs are properly formatted
+            if (mediaResponse.url && !mediaResponse.url.startsWith('http')) {
+              console.log('URL is not properly formatted, ensuring it starts with https:', mediaResponse.url);
+              if (mediaResponse.url.startsWith('//')) {
+                mediaResponse.url = 'https:' + mediaResponse.url;
+              } else if (mediaResponse.url.startsWith('/')) {
+                // It's a relative URL, prepend the origin
+                mediaResponse.url = window.location.origin + mediaResponse.url;
+              } else {
+                // Some other format, prepend https:// as a fallback
+                mediaResponse.url = 'https://' + mediaResponse.url;
+              }
+            }
+            
             console.log("Sending media response to parent:", mediaResponse);
             
             // Call the callback with media data
@@ -195,14 +211,18 @@ export function MediaUpload({
   
   return (
     <div className="space-y-2">
-      <div className="flex gap-2">
+      <div className="flex gap-2" onClick={() => !disabled && !uploading && fileInputRef.current?.click()}>
+        {children ? (
+          <div className="cursor-pointer">
+            {children}
+          </div>
+        ) : (
         <Button
           type="button"
           variant="outline"
           size="sm"
           className="gap-1.5"
           disabled={disabled || uploading}
-          onClick={() => fileInputRef.current?.click()}
         >
           {uploading ? (
             <>
@@ -220,6 +240,7 @@ export function MediaUpload({
             </>
           )}
         </Button>
+        )}
         
         <input
           type="file"
