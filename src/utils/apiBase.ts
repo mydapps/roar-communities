@@ -1,47 +1,10 @@
 import { toast } from 'sonner';
 
-/**
- * Base API URL for all requests
- */
-export const API_BASE_URL = 'https://api.dapps.co';
-
 // Debug logging function
 export const debugLog = (message: string, ...args: any[]): void => {
   if (process.env.NODE_ENV === 'development') {
     console.log(`[API] ${message}`, ...args);
   }
-};
-
-// Key validation state cache
-interface KeyValidationState {
-  lastChecked: number;
-  isValid: boolean;
-  retryCount: number;
-  inProgress: boolean;
-}
-
-// Cache to store validation state and prevent excessive retries
-const keyValidationCache: Record<string, KeyValidationState> = {};
-
-// Time thresholds (in milliseconds)
-const VALIDATION_CACHE_TIME = 5 * 60 * 1000; // 5 minutes 
-const MIN_RETRY_INTERVAL = 10 * 1000; // 10 seconds
-const MAX_RETRY_COUNT = 3; // Maximum number of retries in a short period
-
-/**
- * Get the user's API key from local storage
- * @returns The user's API key or null if not found
- */
-export const getUserApiKey = (): string | null => {
-  const userKey = localStorage.getItem('dapps_user_key');
-  
-  if (!userKey) {
-    console.error('No user key found');
-    toast.error('Authentication required. Please log in again.');
-    return null;
-  }
-  
-  return userKey;
 };
 
 /**
@@ -74,69 +37,19 @@ export const shouldRefreshAuth = (): boolean => {
 };
 
 /**
- * Check if the user's API key is valid
- * @returns Promise that resolves to true if valid, false otherwise
+ * Check if the user is authenticated via cookies
+ * @returns Promise that resolves to true if authenticated, false otherwise
  */
-export const validateUserApiKey = async (): Promise<boolean> => {
-  const userKey = localStorage.getItem('dapps_user_key');
-  
-  if (!userKey) {
-    console.error('No user key found for validation');
-    return false;
-  }
-  
-  // Check the cache to avoid repeated validation attempts
-  const cacheKey = userKey.substring(0, 8); // Use first 8 chars as cache key
-  const now = Date.now();
-  const cachedState = keyValidationCache[cacheKey];
-  
-  if (cachedState) {
-    // If we checked recently and it was valid, return the cached result
-    if (cachedState.isValid && now - cachedState.lastChecked < VALIDATION_CACHE_TIME) {
-      return true;
-    }
-    
-    // If we're already checking, don't start another check
-    if (cachedState.inProgress) {
-      return cachedState.isValid;
-    }
-    
-    // If we've tried too many times recently and all failed, back off
-    if (!cachedState.isValid && 
-        cachedState.retryCount >= MAX_RETRY_COUNT && 
-        now - cachedState.lastChecked < MIN_RETRY_INTERVAL) {
-      console.warn(`Too many validation attempts for key ${cacheKey}. Backing off.`);
-      return false;
-    }
-  }
-  
-  // Initialize or update the cache entry
-  keyValidationCache[cacheKey] = {
-    lastChecked: now,
-    isValid: cachedState?.isValid || false,
-    retryCount: cachedState?.retryCount || 0,
-    inProgress: true
-  };
-  
+export const validateAuthentication = async (): Promise<boolean> => {
   try {
-    // Use a lightweight API call to check if the key is valid
-    const response = await fetch(`${API_BASE_URL}/get_wallet_balance`, {
+    // Use relative path for proxy
+    const response = await fetch(`/api/test-auth`, {
       method: 'GET',
-      headers: {
-        'x-user-key': userKey
-      }
+      credentials: 'include', // Important for cookie-based auth
     });
     
     if (response.status === 401) {
-      console.warn('User API key is invalid or expired');
-      
-      // Update cache
-      keyValidationCache[cacheKey] = {
-        lastChecked: now,
-        isValid: false,
-        retryCount: (cachedState?.retryCount || 0) + 1,
-        inProgress: false
-      };
+      console.warn('User authentication is invalid or expired');
       
       // Handle recovery process
       handleAuthRecovery();
@@ -144,51 +57,22 @@ export const validateUserApiKey = async (): Promise<boolean> => {
       return false;
     }
     
-    // Update cache with successful validation
-    keyValidationCache[cacheKey] = {
-      lastChecked: now,
-      isValid: true,
-      retryCount: 0,
-      inProgress: false
-    };
-    
-    return true;
+    // Try to parse the response to verify it's successful
+    const data = await response.json();
+    return data.authenticated === true;
   } catch (error) {
-    console.error('Error validating API key:', error);
-    
-    // Update cache
-    keyValidationCache[cacheKey] = {
-      lastChecked: now,
-      isValid: false, 
-      retryCount: (cachedState?.retryCount || 0) + 1,
-      inProgress: false
-    };
-    
+    console.error('Error validating authentication:', error);
     return false;
   }
 };
 
 /**
- * Create headers with the user's API key
- * @returns Headers object with the user's API key
+ * Create headers for requests
+ * @returns Headers object with content type
  */
 export const createAuthHeaders = (contentType = true): Record<string, string> => {
   try {
-    const userKey = localStorage.getItem('dapps_user_key');
-    
-    if (!userKey) {
-      console.warn('createAuthHeaders: No user key found in localStorage');
-      return {};
-    }
-    
-    // Debug log the key (truncated for security)
-    const keyStart = userKey.substring(0, 5);
-    const keyEnd = userKey.substring(userKey.length - 5);
-    console.log(`Using API key: ${keyStart}...${keyEnd}`);
-    
-    const headers: Record<string, string> = {
-      'x-user-key': userKey,
-    };
+    const headers: Record<string, string> = {};
     
     if (contentType) {
       headers['Content-Type'] = 'application/json';
@@ -196,7 +80,7 @@ export const createAuthHeaders = (contentType = true): Record<string, string> =>
     
     return headers;
   } catch (error) {
-    console.error('Error creating auth headers:', error);
+    console.error('Error creating headers:', error);
     return {};
   }
 };
@@ -215,25 +99,17 @@ export const setupEventListener = (eventName: string, callback: () => void) => {
 };
 
 /**
- * Logout user from current device by invalidating the current API key
+ * Logout user from current device by invalidating the current session cookie
  * @returns Promise that resolves to true if successful
  */
 export const logoutCurrentDevice = async (): Promise<boolean> => {
-  const userKey = localStorage.getItem('dapps_user_key');
-  
-  if (!userKey) {
-    // No key to invalidate, just clear local storage
-    localStorage.clear();
-    return true;
-  }
-  
   try {
-    // Call the logout endpoint to invalidate only this key
-    const response = await fetch(`${API_BASE_URL}/logout`, {
+    // Use relative path for proxy
+    const response = await fetch(`/api/logout`, {
       method: 'POST',
+      credentials: 'include', // Important for cookie-based auth
       headers: {
         'Content-Type': 'application/json',
-        'x-user-key': userKey
       }
     });
     
@@ -321,12 +197,10 @@ export interface AvailableBoostersResponse {
  */
 export const fetchAvailableBoosters = async (): Promise<AvailableBoostersResponse | null> => {
   try {
-    const userKey = getUserApiKey();
-    if (!userKey) return null;
-    
-    const response = await fetch(`${API_BASE_URL}/roar_available_boosters`, {
+    // Use relative path for proxy
+    const response = await fetch(`/api/roar_available_boosters`, {
       method: 'GET',
-      headers: createAuthHeaders()
+      credentials: 'include', // Important for cookie-based auth
     });
     
     if (!response.ok) {
@@ -395,14 +269,10 @@ export interface GoldenBoosterClaimResponse {
  */
 export const fetchGoldenBoosterStatus = async (): Promise<GoldenBoosterStatusResponse | null> => {
   try {
-    const userKey = getUserApiKey();
-    if (!userKey) return null;
-    
-    const response = await fetch(`${API_BASE_URL}/golden_boosters/status`, {
+    // Use relative path for proxy
+    const response = await fetch(`/api/golden_boosters/status`, {
       method: 'GET',
-      headers: {
-        'x-user-key': userKey
-      }
+      credentials: 'include', // Important for cookie-based auth
     });
     
     if (!response.ok) {
@@ -426,14 +296,12 @@ export const fetchGoldenBoosterStatus = async (): Promise<GoldenBoosterStatusRes
  */
 export const claimGoldenBooster = async (type: string): Promise<GoldenBoosterClaimResponse | null> => {
   try {
-    const userKey = getUserApiKey();
-    if (!userKey) return null;
-    
-    const response = await fetch(`${API_BASE_URL}/golden_boosters/claim`, {
+    // Use relative path for proxy
+    const response = await fetch(`/api/golden_boosters/claim`, {
       method: 'POST',
+      credentials: 'include', // Important for cookie-based auth
       headers: {
         'Content-Type': 'application/json',
-        'x-user-key': userKey
       },
       body: JSON.stringify({ type })
     });
@@ -458,13 +326,12 @@ export const claimGoldenBooster = async (type: string): Promise<GoldenBoosterCla
  */
 export const claimAllGoldenBoosters = async (): Promise<GoldenBoosterClaimResponse | null> => {
   try {
-    const userKey = getUserApiKey();
-    if (!userKey) return null;
-    
-    const response = await fetch(`${API_BASE_URL}/golden_boosters/claim_all`, {
+    // Use relative path for proxy
+    const response = await fetch(`/api/golden_boosters/claim_all`, {
       method: 'POST',
+      credentials: 'include', // Important for cookie-based auth
       headers: {
-        'x-user-key': userKey
+        'Content-Type': 'application/json',
       }
     });
     
@@ -547,14 +414,10 @@ export interface RegularBoosterClaimResponse {
  */
 export const fetchRegularBoosterStatus = async (): Promise<RegularBoosterStatusResponse | null> => {
   try {
-    const userKey = getUserApiKey();
-    if (!userKey) return null;
-    
-    const response = await fetch(`${API_BASE_URL}/boosters/status`, {
+    // Use relative path for proxy
+    const response = await fetch(`/api/boosters/status`, {
       method: 'GET',
-      headers: {
-        'x-user-key': userKey
-      }
+      credentials: 'include', // Important for cookie-based auth
     });
     
     if (!response.ok) {
@@ -578,13 +441,12 @@ export const fetchRegularBoosterStatus = async (): Promise<RegularBoosterStatusR
  */
 export const claimRegularBooster = async (type: string): Promise<RegularBoosterClaimResponse | null> => {
   try {
-    const userKey = getUserApiKey();
-    if (!userKey) return null;
-    
-    const response = await fetch(`${API_BASE_URL}/boosters/${type}`, {
+    // Use relative path for proxy
+    const response = await fetch(`/api/boosters/${type}`, {
       method: 'POST',
+      credentials: 'include', // Important for cookie-based auth
       headers: {
-        'x-user-key': userKey
+        'Content-Type': 'application/json',
       }
     });
     
@@ -609,14 +471,12 @@ export const claimRegularBooster = async (type: string): Promise<RegularBoosterC
  */
 export const useBooster = async (boosterId: number): Promise<RegularBoosterClaimResponse | null> => {
   try {
-    const userKey = getUserApiKey();
-    if (!userKey) return null;
-    
-    const response = await fetch(`${API_BASE_URL}/boosters/use`, {
+    // Use relative path for proxy
+    const response = await fetch(`/api/boosters/use`, {
       method: 'POST',
+      credentials: 'include', // Important for cookie-based auth
       headers: {
         'Content-Type': 'application/json',
-        'x-user-key': userKey
       },
       body: JSON.stringify({ booster_id: boosterId })
     });
@@ -660,15 +520,10 @@ export interface AchievementsResponse {
  */
 export const fetchAchievements = async (): Promise<AchievementsResponse | null> => {
   try {
-    const userKey = getUserApiKey();
-    if (!userKey) return null;
-    
-    const response = await fetch(`${API_BASE_URL}/achievements`, {
+    // Use relative path for proxy
+    const response = await fetch(`/api/achievements`, {
       method: 'GET',
-      headers: {
-        'x-user-key': userKey,
-        'Content-Type': 'application/json'
-      }
+      credentials: 'include', // Important for cookie-based auth
     });
     
     if (!response.ok) {
@@ -700,10 +555,12 @@ export interface EthPriceResponse {
  */
 export const fetchEthPrice = async (): Promise<EthPriceResponse> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/eth_price`, {
+    // Use relative path for proxy
+    const response = await fetch(`/api/eth_price`, {
       method: 'GET',
+      credentials: 'include', // Important for cookie-based auth
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       }
     });
     
@@ -720,3 +577,24 @@ export const fetchEthPrice = async (): Promise<EthPriceResponse> => {
     return { success: false, error: 'Failed to fetch ETH price' };
   }
 };
+
+/**
+ * Configure global defaults for axios if it's used
+ * This is a precaution in case axios is used elsewhere in the codebase
+ */
+export const setupAxiosDefaults = (): void => {
+  try {
+    // Try to import axios dynamically
+    import('axios').then((axios) => {
+      axios.default.defaults.withCredentials = true;
+      console.log('Axios configured to use credentials with all requests');
+    }).catch(() => {
+      // If axios is not installed, just skip silently
+    });
+  } catch (error) {
+    // Ignore errors if axios is not available
+  }
+};
+
+// Call the setup function immediately
+setupAxiosDefaults();

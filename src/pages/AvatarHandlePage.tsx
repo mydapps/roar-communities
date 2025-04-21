@@ -16,14 +16,16 @@ const AvatarHandlePage = () => {
   const [showError, setShowError] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string>('');
   const { isMobile } = useResponsive();
   const navigate = useNavigate();
   
   // Check localStorage on mount
   useEffect(() => {
-    const userKey = localStorage.getItem('dapps_user_key');
+    // Don't check for userKey, just userId to see if logged in
+    const userId = localStorage.getItem('dapps_user_id');
     
-    if (!userKey) {
+    if (!userId) {
       // Clear localStorage and redirect to index
       localStorage.clear();
       navigate('/');
@@ -66,65 +68,56 @@ const AvatarHandlePage = () => {
     setIsHandleValid(null); // Keep neutral while typing
   };
   
+  const handleAvatarSelect = (code: string) => {
+    setAvatarCode(code);
+    setError(''); // Clear error when avatar is selected
+  };
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (handle.trim().length === 0) {
+    if (!handle.trim() || !avatarCode) {
+      setError('Please enter a handle and select an avatar.');
       return;
     }
     
+    // Validate handle format (e.g., alphanumeric, length)
+    if (!/^[a-zA-Z0-9_]{3,15}$/.test(handle.trim())) {
+      setError('Handle must be 3-15 alphanumeric characters or underscores.');
+      return;
+    }
+
     setIsLoading(true);
-    
+    setError('');
+
     try {
-      const userKey = localStorage.getItem('dapps_user_key');
-      
-      if (!userKey) {
-        toast.error('Authentication error. Please log in again.');
-        localStorage.clear();
-        navigate('/');
-        return;
-      }
-      
-      const response = await fetch('https://api.dapps.co/choose_handle_avatar', {
+      const response = await fetch('/api/choose_handle_avatar', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-key': userKey
         },
-        body: JSON.stringify({
-          handle: handle.trim(),
-          avatarCode: avatarCode
-        })
+        body: JSON.stringify({ handle: handle.trim(), avatarCode }),
+        credentials: 'include'
       });
-      
+
       const data = await response.json();
-      
-      if (data.success) {
-        // Store the selected avatar and handle in localStorage
+
+      if (response.ok && data.success) {
+        // Update localStorage
+        localStorage.setItem('dapps_user_handle', handle.trim());
         localStorage.setItem('dapps_user_avatar', avatarCode);
-        localStorage.setItem('dapps_user_handle', data.handle || handle);
+        // Maybe set registered = 0.5 or similar if backend doesn't do it?
         
-        toast.success('Profile created successfully!');
-        
-        // Check registration status
-        const registered = localStorage.getItem('dapps_user_registered');
-        if (registered === "1") {
-          navigate('/feed');
-        } else {
-          navigate('/request-invite');
-        }
+        toast.success('Profile setup successful!');
+        // Navigate to the next step (e.g., request invite page)
+        navigate('/request-invite'); 
       } else {
-        setIsHandleValid(false);
-        setShowError(true);
-        setErrorMessage(data.message || 'There was an error creating your profile.');
-        toast.error(data.message || 'Failed to create profile');
+        // Set specific error from API or generic one
+        setError(data.message || 'Failed to save profile. Handle might be taken.');
       }
-    } catch (error) {
-      console.error('Error submitting handle and avatar:', error);
-      toast.error('Network error. Please try again.');
-      setIsHandleValid(false);
-      setShowError(true);
-      setErrorMessage('Network error. Please try again later.');
+    } catch (err) {
+      console.error('Error submitting handle/avatar:', err);
+      setError('An error occurred. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -197,6 +190,7 @@ const AvatarHandlePage = () => {
               )}
             </div>
           </form>
+          {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
         </CardContent>
         
         <CardFooter>

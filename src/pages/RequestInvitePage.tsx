@@ -116,28 +116,20 @@ const RequestInvitePage = () => {
   ];
 
   useEffect(() => {
-    const userKey = localStorage.getItem('dapps_user_key');
+    // Check for user ID instead of API key
+    const userId = localStorage.getItem('dapps_user_id'); 
     const isRegistered = localStorage.getItem('dapps_user_registered');
     const isOnboarded = localStorage.getItem('dapps_onboarded');
     
     console.log('RequestInvitePage - User registration status:', isRegistered);
+    console.log('RequestInvitePage - User ID found:', !!userId);
     
-    if (!userKey) {
-      console.log('RequestInvitePage - No user key found, redirecting to home');
-      localStorage.clear();
+    // If there's no userId, the user shouldn't be here (likely auth failed earlier)
+    // Redirect to login/home page. Avoid clearing localStorage here.
+    if (!userId) { 
+      console.log('RequestInvitePage - No user ID found, redirecting to home');
+      // localStorage.clear(); // DO NOT CLEAR LOCAL STORAGE HERE
       navigate('/');
-      return;
-    }
-    
-    if (isRegistered === '1') {
-      console.log('RequestInvitePage - User is registered');
-      if (isOnboarded === '1') {
-        console.log('RequestInvitePage - User is onboarded, redirecting to feed');
-        navigate('/feed');
-      } else {
-        console.log('RequestInvitePage - User not onboarded, redirecting to onboarding');
-        navigate('/successful-onboarding');
-      }
       return;
     }
     
@@ -169,7 +161,8 @@ const RequestInvitePage = () => {
     
     setLoadingTimeoutId(timeout);
     
-    fetchInviteStatus(userKey);
+    // Fetch status using cookie auth (no key needed)
+    fetchInviteStatus(); 
     
     return () => {
       if (timeout) clearTimeout(timeout);
@@ -216,30 +209,17 @@ const RequestInvitePage = () => {
     }
   }, [tasks]);
 
-  const fetchInviteStatus = async (userKey: string) => {
+  // Removed userKey parameter, rely on cookie auth
+  const fetchInviteStatus = async () => { 
     setIsLoading(true);
     try {
-      // Double-check registration status before fetching
-      const currentIsRegistered = localStorage.getItem('dapps_user_registered');
-      const currentIsOnboarded = localStorage.getItem('dapps_onboarded');
-      
-      if (currentIsRegistered === '1') {
-        console.log('RequestInvitePage - User is registered (pre-fetch check)');
-        if (currentIsOnboarded === '1') {
-          console.log('RequestInvitePage - User is onboarded, redirecting to feed');
-          navigate('/feed');
-        } else {
-          console.log('RequestInvitePage - User not onboarded, redirecting to onboarding');
-          navigate('/successful-onboarding');
-        }
-        return;
-      }
-      
-      const response = await fetch('https://api.dapps.co/request_invite_status', {
+      // Use relative path for proxy
+      const response = await fetch('/api/request_invite_status', {
         method: 'GET',
         headers: {
-          'x-user-key': userKey
-        }
+          // Remove x-user-key header
+        },
+        credentials: 'include' // Keep this for cookie auth
       });
       
       if (response.ok) {
@@ -366,11 +346,12 @@ const RequestInvitePage = () => {
   };
 
   const handleConnectTwitter = async () => {
-    const userKey = localStorage.getItem('dapps_user_key');
-    if (!userKey) {
+    // Check for user ID instead of API key
+    const userId = localStorage.getItem('dapps_user_id');
+    if (!userId) {
       toast({
         title: "Error",
-        description: "User key not found. Please try signing in again.",
+        description: "User not authenticated. Please sign in again.",
         variant: "destructive"
       });
       return;
@@ -384,11 +365,13 @@ const RequestInvitePage = () => {
         description: "Connecting to X account...",
       });
       
-      const response = await fetch('https://api.dapps.co/twitter_auth', {
+      // Use relative path for proxy
+      const response = await fetch('/api/twitter_auth', {
         method: 'GET',
         headers: { 
-          'x-user-key': userKey 
-        }
+          // Remove x-user-key header
+        },
+        credentials: 'include' // Keep this for cookie auth
       });
       
       if (response.ok) {
@@ -424,11 +407,13 @@ const RequestInvitePage = () => {
             // Set up interval to check for success
             const interval = setInterval(async () => {
               try {
-                const statusResponse = await fetch('https://api.dapps.co/request_invite_status', {
+                // Use relative path for proxy in status check
+                const statusResponse = await fetch('/api/request_invite_status', {
                   method: 'GET',
                   headers: {
-                    'x-user-key': userKey
-                  }
+                    // Remove x-user-key header
+                  },
+                  credentials: 'include' // Keep this for cookie auth
                 });
                 
                 if (statusResponse.ok) {
@@ -457,7 +442,8 @@ const RequestInvitePage = () => {
                     setTasks(updatedTasks);
                     setIsConnectingTwitter(false);
                     
-                    fetchInviteStatus(userKey);
+                    // Fetch status using cookie auth
+                    fetchInviteStatus(); 
                   }
                 }
               } catch (error) {
@@ -496,7 +482,8 @@ const RequestInvitePage = () => {
               setTasks(updatedTasks);
               setIsConnectingTwitter(false);
               
-              fetchInviteStatus(userKey);
+              // Fetch status using cookie auth
+              fetchInviteStatus(); 
             }, 1500);
           }
         } else {
@@ -527,11 +514,12 @@ const RequestInvitePage = () => {
   };
 
   const handleTweet = async () => {
-    const userKey = localStorage.getItem('dapps_user_key');
-    if (!userKey) {
+    // Check for user ID instead of API key
+    const userId = localStorage.getItem('dapps_user_id');
+    if (!userId) {
       toast({
         title: "Error",
-        description: "User key not found. Please try signing in again.",
+        description: "User not authenticated. Please sign in again.",
         variant: "destructive"
       });
       return;
@@ -550,12 +538,14 @@ const RequestInvitePage = () => {
         description: "Posting tweet about dapps.co...",
       });
       
-      const response = await fetch('https://api.dapps.co/twitter_tweet', {
+      // Use relative path for proxy
+      const response = await fetch('/api/twitter_tweet', {
         method: 'POST',
         headers: {
-          'x-user-key': userKey,
+          // Remove x-user-key header
           'Content-Type': 'application/json'
-        }
+        },
+        credentials: 'include' // Keep this for cookie auth
       });
       
       if (response.ok) {
@@ -572,7 +562,8 @@ const RequestInvitePage = () => {
           updatedTasks[taskIndex].disabled = false;
           setTasks(updatedTasks);
           
-          fetchInviteStatus(userKey);
+          // Fetch status using cookie auth
+          fetchInviteStatus(); 
         } else {
           toast({
             title: "Error",
@@ -604,11 +595,12 @@ const RequestInvitePage = () => {
   };
 
   const handleQuoteTweet = async () => {
-    const userKey = localStorage.getItem('dapps_user_key');
-    if (!userKey) {
+    // Check for user ID instead of API key
+    const userId = localStorage.getItem('dapps_user_id');
+    if (!userId) {
       toast({
         title: "Error",
-        description: "User key not found. Please try signing in again.",
+        description: "User not authenticated. Please sign in again.",
         variant: "destructive"
       });
       return;
@@ -627,12 +619,14 @@ const RequestInvitePage = () => {
         description: "Posting quote tweet about dapps.co...",
       });
       
-      const response = await fetch('https://api.dapps.co/twitter_quote_tweet', {
+      // Use relative path for proxy
+      const response = await fetch('/api/twitter_quote_tweet', {
         method: 'POST',
         headers: {
-          'x-user-key': userKey,
+          // Remove x-user-key header
           'Content-Type': 'application/json'
-        }
+        },
+        credentials: 'include' // Keep this for cookie auth
       });
       
       if (response.ok) {
@@ -649,7 +643,8 @@ const RequestInvitePage = () => {
           updatedTasks[taskIndex].disabled = false;
           setTasks(updatedTasks);
           
-          fetchInviteStatus(userKey);
+          // Fetch status using cookie auth
+          fetchInviteStatus(); 
         } else {
           toast({
             title: "Error",
@@ -694,11 +689,12 @@ const RequestInvitePage = () => {
     setIsSubmitting(true);
     setErrorMessage('');
     
-    const userKey = localStorage.getItem('dapps_user_key');
-    if (!userKey) {
+    // Check for user ID instead of API key
+    const userId = localStorage.getItem('dapps_user_id');
+    if (!userId) {
       toast({
         title: "Error",
-        description: "User key not found. Please try signing in again.",
+        description: "User not authenticated. Please sign in again.",
         variant: "destructive"
       });
       setIsSubmitting(false);
@@ -706,13 +702,15 @@ const RequestInvitePage = () => {
     }
 
     try {
-      const response = await fetch('https://api.dapps.co/invite_code_submit', {
+      // Use relative path for proxy
+      const response = await fetch('/api/invite_code_submit', {
         method: 'POST',
         headers: {
-          'x-user-key': userKey,
+          // Remove x-user-key header
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ inviteCode: inviteCode })
+        body: JSON.stringify({ inviteCode: inviteCode }),
+        credentials: 'include' // Keep this for cookie auth
       });
       
       const data = await response.json();

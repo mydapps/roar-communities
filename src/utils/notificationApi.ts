@@ -1,5 +1,5 @@
 import { toast } from 'sonner';
-import { API_BASE_URL, getUserApiKey, createAuthHeaders } from './apiBase';
+import { createAuthHeaders } from './apiBase';
 
 /**
  * Notification type enum
@@ -66,23 +66,14 @@ export const fetchNotifications = async (
   limit: number = 10
 ): Promise<NotificationResponse> => {
   try {
-    const userKey = getUserApiKey();
-    
-    if (!userKey) {
-      return { 
-        success: false, 
-        notifications: [], 
-        pagination: { total: 0, offset, limit, has_more: false }
-      };
-    }
-    
     console.log(`Fetching notifications with offset ${offset}, limit ${limit}`);
     
     const response = await fetch(
-      `${API_BASE_URL}/get_notifications?offset=${offset}&limit=${limit}`,
+      `/api/get_notifications?offset=${offset}&limit=${limit}`,
       {
         method: 'GET',
-        headers: createAuthHeaders()
+        headers: createAuthHeaders(),
+        credentials: 'include'
       }
     );
     
@@ -111,17 +102,14 @@ export const fetchNotifications = async (
  */
 export const getUnreadNotificationsCount = async (): Promise<number> => {
   try {
-    const userKey = getUserApiKey();
-    
-    if (!userKey) {
-      return 0;
-    }
+    console.log(`Fetching unread notification count`);
     
     const response = await fetch(
-      `${API_BASE_URL}/get_unread_notifications_count`,
+      `/api/get_unread_notifications_count`,
       {
         method: 'GET',
-        headers: createAuthHeaders()
+        headers: createAuthHeaders(),
+        credentials: 'include'
       }
     );
     
@@ -147,18 +135,15 @@ export const getUnreadNotificationsCount = async (): Promise<number> => {
  */
 export const markNotificationSeen = async (id: number): Promise<MarkNotificationResponse> => {
   try {
-    const userKey = getUserApiKey();
-    
-    if (!userKey) {
-      return { success: false, message: 'Not authenticated' };
-    }
+    console.log(`Marking notification ${id} as seen`);
     
     const response = await fetch(
-      `${API_BASE_URL}/mark_notification_seen`,
+      `/api/mark_notification_seen`,
       {
         method: 'POST',
         headers: createAuthHeaders(),
-        body: JSON.stringify({ id })
+        body: JSON.stringify({ id }),
+        credentials: 'include'
       }
     );
     
@@ -182,17 +167,14 @@ export const markNotificationSeen = async (id: number): Promise<MarkNotification
  */
 export const markAllNotificationsSeen = async (): Promise<MarkNotificationResponse> => {
   try {
-    const userKey = getUserApiKey();
-    
-    if (!userKey) {
-      return { success: false, message: 'Not authenticated' };
-    }
+    console.log(`Marking all notifications as seen`);
     
     const response = await fetch(
-      `${API_BASE_URL}/mark_all_notifications_seen`,
+      `/api/mark_all_notifications_seen`,
       {
         method: 'POST',
-        headers: createAuthHeaders()
+        headers: createAuthHeaders(),
+        credentials: 'include'
       }
     );
     

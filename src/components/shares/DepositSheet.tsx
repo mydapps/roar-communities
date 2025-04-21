@@ -42,42 +42,40 @@ export const DepositSheet = ({
   const [walletAddress, setWalletAddress] = useState('');
   const [qrCodeData, setQrCodeData] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const isMobile = useIsMobile();
 
   // Fetch wallet address from API
   useEffect(() => {
     const fetchWalletAddress = async () => {
-      if (open) {
-        setIsLoading(true);
-        try {
-          const headers = createAuthHeaders(false);
-          const response = await fetch("https://api.dapps.co/get_wallet_address", {
-            method: 'GET',
-            headers: headers
-          });
-          
-          if (!response.ok) {
-            throw new Error(`API error: ${response.status}`);
-          }
-          
-          const data = await response.json();
-          if (data.success && data.wallet) {
-            setWalletAddress(data.wallet);
-            if (data.qr_code) {
-              setQrCodeData(data.qr_code);
-            }
-          } else {
-            // Fallback to a default address if API fails
-            setWalletAddress('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045');
-            console.error('Failed to fetch wallet address');
-          }
-        } catch (error) {
-          console.error('Error fetching wallet address:', error);
-          // Fallback
-          setWalletAddress('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045');
-        } finally {
-          setIsLoading(false);
+      setIsLoading(true);
+      setError(null);
+      try {
+        // Use relative proxy path
+        const response = await fetch("/api/get_wallet_address", {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include' // Add credentials
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch wallet address');
         }
+
+        const data = await response.json();
+        if (data.success && data.address) {
+          setWalletAddress(data.address);
+          if (data.qr_code) {
+            setQrCodeData(data.qr_code);
+          }
+        } else {
+          throw new Error(data.message || 'Could not retrieve wallet address');
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An unknown error occurred');
+        console.error("Fetch wallet error:", err);
+      } finally {
+        setIsLoading(false);
       }
     };
     

@@ -85,15 +85,6 @@ export function MediaUpload({
       const formData = new FormData();
       formData.append('media', file);
       
-      // Get user authentication key
-      const userKey = localStorage.getItem('dapps_user_key');
-      if (!userKey) {
-        console.log("No user key found");
-        toast.error('Authentication required. Please log in again.');
-        setUploading(false);
-        return;
-      }
-      
       // Create XMLHttpRequest for progress tracking
       const xhr = new XMLHttpRequest();
       
@@ -122,7 +113,7 @@ export function MediaUpload({
               throw new Error('Empty response from server');
             }
             
-            const response = JSON.parse(responseText);
+            const response = JSON.parse(responseText) as MediaUploadResponse;
             console.log("Parsed response:", response);
             
             // Validate response structure
@@ -188,10 +179,11 @@ export function MediaUpload({
         setUploading(false);
       });
       
-      // Send the request
-      console.log("Sending upload request to https://api.dapps.co/upload_media");
-      xhr.open('POST', 'https://api.dapps.co/upload_media');
-      xhr.setRequestHeader('x-user-key', userKey);
+      // Use relative proxy path
+      console.log("Sending upload request to /api/upload_media");
+      xhr.open('POST', '/api/upload_media');
+      xhr.withCredentials = true;
+      
       xhr.send(formData);
       
     } catch (error) {

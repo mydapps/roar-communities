@@ -53,66 +53,36 @@ export const useCommunityPosts = (communityName: string | undefined) => {
   const loadingElementRef = useRef<HTMLDivElement | null>(null);
   const isFetchingRef = useRef<boolean>(false);
   
-  const fetchPosts = useCallback(async (page: number = 1, append: boolean = false) => {
-    if (!communityName || isFetchingRef.current) {
-      return;
-    }
-
+  const fetchPosts = useCallback(async (pageToFetch: number) => {
+    if (loading || !communityName) return;
+    setLoading(true);
+    setError(null);
     try {
-      isFetchingRef.current = true;
-      setLoading(true);
-      setError(null);
-
-      const userKey = localStorage.getItem('dapps_user_key');
-      const headers: HeadersInit = {
-        'Accept': 'application/json',
-      };
-
-      if (userKey) {
-        headers['x-user-key'] = userKey;
-      }
-
-      console.log(`Fetching community posts: ${communityName}, page: ${page}`);
-      
-      const response = await fetch(
-        `https://api.dapps.co/fetch_posts?c=${encodeURIComponent(communityName)}&page=${page}`,
-        {
-          method: 'GET',
-          headers,
-        }
-      );
+      // Use relative proxy path
+      const url = `/api/fetch_posts?c=${encodeURIComponent(communityName)}&page=${pageToFetch}`;
+      const response = await fetch(url, {
+        method: 'GET',
+        credentials: 'include' // Add credentials
+      });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch community posts: ${response.status} ${response.statusText}`);
+        throw new Error(`HTTP error! Status: ${response.status}`);
       }
-
-      const data: CommunityPost[] = await response.json();
-      
-      console.log(`Received posts data: ${data.length} posts for page ${page}`);
-      
-      if (!Array.isArray(data)) {
-        throw new Error('Invalid response format for community posts');
-      }
-
-      // Check if we received fewer posts than expected (assuming 10 per page)
-      // This means we've reached the end of the list
-      const hasMorePosts = data.length > 0;
-      
-      setPosts(prev => append ? [...prev, ...data] : data);
-      setHasMore(hasMorePosts);
-      currentPage.current = page;
-
+      const data = await response.json();
+      // Assuming API returns an array directly under a 'posts' key, or just the array
+      const fetchedPosts = Array.isArray(data) ? data : (data.posts || []); 
+      setPosts(prev => pageToFetch === 1 ? fetchedPosts : [...prev, ...fetchedPosts]);
+      // Determine hasMore based on whether fewer posts than requested were returned
+      // Or if the API provides explicit pagination info (adjust as needed)
+      setHasMore(fetchedPosts.length === 10); // Assuming limit is 10
+      currentPage.current = pageToFetch;
     } catch (err) {
-      console.error('Error fetching community posts:', err);
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
-      toast.error('Failed to load community posts. Please try again.');
+      console.error("Failed to fetch community posts:", err);
     } finally {
       setLoading(false);
-      setTimeout(() => {
-        isFetchingRef.current = false;
-      }, 200); // Reduced delay to make infinite scrolling more responsive
     }
-  }, [communityName]);
+  }, [communityName, loading]);
 
   // Set up intersection observer for infinite scrolling
   useEffect(() => {
@@ -177,7 +147,7 @@ export const useCommunityPosts = (communityName: string | undefined) => {
     isFetchingRef.current = false;
     
     if (communityName) {
-      fetchPosts(1, false);
+      fetchPosts(1);
     }
   }, [communityName, fetchPosts]);
 
@@ -189,7 +159,7 @@ export const useCommunityPosts = (communityName: string | undefined) => {
     
     console.log("Loading more posts, page:", currentPage.current + 1);
     const nextPage = currentPage.current + 1;
-    fetchPosts(nextPage, true);
+    fetchPosts(nextPage);
   }, [loading, hasMore, fetchPosts]);
 
   return { 

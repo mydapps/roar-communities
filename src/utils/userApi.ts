@@ -1,4 +1,4 @@
-import { API_BASE_URL, createAuthHeaders } from './apiBase';
+import { createAuthHeaders } from './apiBase';
 
 // User profile interface
 export interface UserCommunity {
@@ -44,9 +44,10 @@ export const getUserProfile = async (handle: string): Promise<UserProfileRespons
   try {
     const headers = createAuthHeaders();
     
-    const response = await fetch(`${API_BASE_URL}/user/${handle}`, {
+    const response = await fetch(`/api/user/${handle}`, {
       method: 'GET',
-      headers
+      headers,
+      credentials: 'include'
     });
 
     if (!response.ok) {
@@ -68,13 +69,10 @@ export const followUser = async (handle: string): Promise<{ success: boolean, me
   try {
     const headers = createAuthHeaders();
     
-    if (!headers['x-user-key']) {
-      throw new Error('Authentication required to follow a user');
-    }
-    
-    const response = await fetch(`${API_BASE_URL}/follow/${handle}`, {
+    const response = await fetch(`/api/follow/${handle}`, {
       method: 'POST',
-      headers
+      headers,
+      credentials: 'include'
     });
 
     if (!response.ok) {
@@ -120,14 +118,11 @@ export const updateUserProfile = async (
   try {
     const headers = createAuthHeaders();
     
-    if (!headers['x-user-key']) {
-      throw new Error('Authentication required to update profile');
-    }
-    
-    const response = await fetch(`${API_BASE_URL}/update_user_details`, {
+    const response = await fetch(`/api/update_user_details`, {
       method: 'POST',
       headers,
-      body: JSON.stringify(params)
+      body: JSON.stringify(params),
+      credentials: 'include'
     });
 
     if (!response.ok) {
@@ -151,14 +146,11 @@ export const updateUserAvatar = async (
   try {
     const headers = createAuthHeaders();
     
-    if (!headers['x-user-key']) {
-      throw new Error('Authentication required to update avatar');
-    }
-    
-    const response = await fetch(`${API_BASE_URL}/update_avatar`, {
+    const response = await fetch(`/api/update_avatar`, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ avatarCode })
+      body: JSON.stringify({ avatarCode }),
+      credentials: 'include'
     });
 
     if (!response.ok) {
@@ -227,9 +219,10 @@ export const getUserPosts = async (
   try {
     const headers = createAuthHeaders();
     
-    const response = await fetch(`${API_BASE_URL}/user/${handle}/posts?page=${page}&limit=${limit}`, {
+    const response = await fetch(`/api/user/${handle}/posts?page=${page}&limit=${limit}`, {
       method: 'GET',
-      headers
+      headers,
+      credentials: 'include'
     });
 
     if (!response.ok) {
@@ -313,9 +306,10 @@ export const getUserReplies = async (
     
     console.log(`Fetching replies for ${handle}, page ${page}, limit ${limit}`);
     
-    const response = await fetch(`${API_BASE_URL}/user/${handle}/replies?page=${page}&limit=${limit}`, {
+    const response = await fetch(`/api/user/${handle}/replies?page=${page}&limit=${limit}`, {
       method: 'GET',
-      headers
+      headers,
+      credentials: 'include'
     });
 
     if (!response.ok) {

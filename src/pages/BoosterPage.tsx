@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Gift, Twitter, Users, Medal, Calendar, Clock, Link as LinkIcon, CheckCircle2, LucideIcon, Trophy, Rocket, Zap, Share2, MessageCircle, Award, ArrowRight, RefreshCw, ChevronRight, UserPlus, User, Gem, Target, Globe, Loader2, Lock, X, Info, Bell } from 'lucide-react';
+import { Sparkles, Gift, Twitter, Users, Medal, Calendar, Clock, Link as LinkIcon, CheckCircle2, LucideIcon, Trophy, Rocket, Zap, Share2, MessageCircle, Award, ArrowRight, RefreshCw, ChevronRight, UserPlus, User, Gem, Target, Loader2, Lock, X, Info, Bell, Globe } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -9,7 +9,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { createAuthHeaders, fetchAvailableBoosters, fetchGoldenBoosterStatus, claimGoldenBooster, claimAllGoldenBoosters, AvailableBoostersResponse, GoldenBoosterStatusResponse, API_BASE_URL, getUserApiKey, fetchRegularBoosterStatus, claimRegularBooster, useBooster, RegularBoosterStatusResponse, fetchAchievements, Achievement as ApiAchievement, AchievementsResponse } from '@/utils/apiBase';
+import { 
+  fetchAvailableBoosters, 
+  fetchGoldenBoosterStatus, 
+  claimGoldenBooster, 
+  claimAllGoldenBoosters, 
+  AvailableBoostersResponse, 
+  GoldenBoosterStatusResponse, 
+  fetchRegularBoosterStatus, 
+  claimRegularBooster, 
+  useBooster, 
+  RegularBoosterStatusResponse, 
+  fetchAchievements, 
+  Achievement as ApiAchievement, 
+  AchievementsResponse 
+} from '@/utils/apiBase';
 import { Link, useNavigate } from 'react-router-dom';
 import { BoosterDetailModal } from '@/components/shared/BoosterDetailModal';
 import { useEffect as useReactEffect, useLayoutEffect } from 'react';
@@ -385,11 +399,10 @@ const BoosterCard: React.FC<BoosterCardProps> = ({ activity, onClaim, isProcessi
     // If it's Twitter connect but not eligible, we need special handling
     if (activity.id === "twitter_connect" && activity.eligible === false) {
       try {
-        const response = await fetch(`${API_BASE_URL}/twitter_auth`, {
+        // Use relative proxy path
+        const response = await fetch(`/api/twitter_auth`, {
           method: 'GET',
-          headers: {
-            'x-user-key': getUserApiKey() || '',
-          }
+          credentials: 'include'
         });
         
         if (response.ok) {

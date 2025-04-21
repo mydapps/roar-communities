@@ -81,64 +81,24 @@ export const useCommunityData = (communityName: string | undefined) => {
       setLoading(true);
       setError(null);
 
-      const userKey = localStorage.getItem('dapps_user_key');
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
-
-      if (userKey) {
-        headers['x-user-key'] = userKey;
-      }
-
-      debugLog(`Fetching community data for: ${communityName}`);
-
-      const response = await fetch(`https://api.dapps.co/get_community?name=${encodeURIComponent(communityName)}`, {
+      // Use relative proxy path
+      const response = await fetch(`/api/get_community?name=${encodeURIComponent(communityName)}`, {
         method: 'GET',
-        headers,
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include' // Add credentials
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch community data: ${response.status} ${response.statusText}`);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-
-      const responseData = await response.json();
-      
-      debugLog("Community API response:", responseData);
-      
-      if (!responseData.success) {
-        throw new Error(responseData.message || 'Failed to fetch community data');
+      const data = await response.json();
+      if (data.success) {
+        setData(data);
+      } else {
+        throw new Error(data.message || 'Failed to load community data');
       }
-      
-      // Process rewards data if available
-      if (responseData.community && responseData.community.rewards) {
-        debugLog("Full community data received:", responseData.community);
-        
-        try {
-          const rawRewards = responseData.community.rewards;
-          debugLog("Raw rewards data:", rawRewards);
-          debugLog("Rewards type:", typeof rawRewards);
-          debugLog("Available rewards type:", typeof rawRewards.available_rewards);
-          debugLog("Available rewards value:", rawRewards.available_rewards);
-          
-          // Format available rewards to 8 decimal places
-          if (typeof rawRewards.available_rewards === 'number') {
-            responseData.community.rewards.available_rewards = parseFloat(
-              rawRewards.available_rewards.toFixed(8)
-            );
-          }
-          
-          debugLog("Processed rewards data:", responseData.community.rewards);
-        } catch (rewardsError) {
-          console.error('Error processing rewards data:', rewardsError);
-        }
-      }
-      
-      // Add refetch function to the returned data
-      responseData.refetch = fetchCommunityData;
-
-      setData(responseData);
     } catch (err) {
-      console.error('Error fetching community data:', err);
+      console.error("Failed to fetch community data:", err);
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
       toast.error('Failed to load community data. Please try again.');
     } finally {

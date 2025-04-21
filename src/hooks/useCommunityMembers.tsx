@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 
@@ -43,38 +42,25 @@ export const useCommunityMembers = (communityName: string | undefined) => {
       setLoading(true);
       setError(null);
 
-      const userKey = localStorage.getItem('dapps_user_key');
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
-
-      if (userKey) {
-        headers['x-user-key'] = userKey;
-      }
-
-      const response = await fetch(
-        `https://api.dapps.co/get_community_members?name=${encodeURIComponent(communityName)}&page=${page}&limit=${limit}`,
-        {
-          method: 'GET',
-          headers,
-        }
-      );
+      const url = `/api/get_community_members?name=${encodeURIComponent(communityName)}&page=${page}&limit=${limit}`;
+      const response = await fetch(url, {
+        method: 'GET',
+        credentials: 'include'
+      });
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch community members: ${response.status} ${response.statusText}`);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data: CommunityMembersResponse = await response.json();
-      
-      if (!data.success) {
-        throw new Error('Failed to fetch community members');
+      const data = await response.json();
+      if (data.success) {
+        setMembers(prev => (page === 1 ? data.members : [...prev, ...data.members]));
+        setPagination(data.pagination);
+        setHasMore(data.pagination.hasNext);
+        currentPage.current = page;
+      } else {
+        throw new Error('Failed to load community members');
       }
-
-      setMembers(prev => append ? [...prev, ...data.members] : data.members);
-      setPagination(data.pagination);
-      setHasMore(data.pagination.hasNext);
-      currentPage.current = page;
-
     } catch (err) {
       console.error('Error fetching community members:', err);
       setError(err instanceof Error ? err.message : 'An unknown error occurred');

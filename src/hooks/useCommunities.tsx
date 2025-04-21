@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { fetchCommunities, Community } from '@/utils/communityApi';
 import { useInView } from 'react-intersection-observer';
 import { toast } from 'sonner';
+import { validateAuthentication } from '@/utils/apiBase';
 
 interface UseCommunitiesProps {
   category?: string;
@@ -44,11 +45,14 @@ export const useCommunities = ({
       
       setError(null);
       
-      // Additional logging for personal communities
+      // For personal communities, check authentication
       if (personal) {
         console.log('Attempting to fetch personal communities...');
-        const userKey = localStorage.getItem('dapps_user_key');
-        if (!userKey) {
+        
+        // Use validateAuthentication instead of checking for API key
+        const isAuthenticated = await validateAuthentication();
+        
+        if (!isAuthenticated) {
           console.warn('User is not authenticated. Cannot fetch personal communities.');
           setIsLoading(false);
           setIsRefreshing(false);
@@ -63,14 +67,6 @@ export const useCommunities = ({
       }
       
       console.log(`Fetching communities for page ${pageNum}${personal ? ', personal' : ''}${trending ? ', trending' : ''}${newest ? ', newest' : ''}${mostRewards ? ', most rewards' : ''}`);
-      
-      // Build headers with user key if available
-      const headers: HeadersInit = {};
-      const userKey = localStorage.getItem('dapps_user_key');
-      if (userKey) {
-        headers['x-user-key'] = userKey;
-        console.log('Added user key to request headers');
-      }
       
       const fetchedCommunities = await fetchCommunities({
         page: pageNum,

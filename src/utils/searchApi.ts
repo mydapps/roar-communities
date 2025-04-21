@@ -1,4 +1,4 @@
-import { getUserApiKey } from './apiBase';
+import { createAuthHeaders } from './apiBase';
 
 // Types for search responses
 export interface SearchUserItem {
@@ -73,16 +73,12 @@ export interface PostsSearchResponse {
  */
 export const searchUsers = async (query: string, page = 1, limit = 10): Promise<UsersSearchResponse> => {
   try {
-    const userKey = getUserApiKey();
-    if (!userKey) {
-      return { success: false, error: 'User not authenticated' };
-    }
+    const headers = createAuthHeaders();
 
-    const response = await fetch(`https://api.dapps.co/search?user=${encodeURIComponent(query)}&page=${page}&limit=${limit}`, {
+    const response = await fetch(`/api/search?user=${encodeURIComponent(query)}&page=${page}&limit=${limit}`, {
       method: 'GET',
-      headers: {
-        'X-User-Key': userKey
-      }
+      headers,
+      credentials: 'include'
     });
 
     if (!response.ok) {
@@ -102,16 +98,12 @@ export const searchUsers = async (query: string, page = 1, limit = 10): Promise<
  */
 export const searchCommunities = async (query: string, page = 1, limit = 10): Promise<CommunitiesSearchResponse> => {
   try {
-    const userKey = getUserApiKey();
-    if (!userKey) {
-      return { success: false, error: 'User not authenticated' };
-    }
+    const headers = createAuthHeaders();
 
-    const response = await fetch(`https://api.dapps.co/search?community=${encodeURIComponent(query)}&page=${page}&limit=${limit}`, {
+    const response = await fetch(`/api/search?community=${encodeURIComponent(query)}&page=${page}&limit=${limit}`, {
       method: 'GET',
-      headers: {
-        'X-User-Key': userKey
-      }
+      headers,
+      credentials: 'include'
     });
 
     if (!response.ok) {
@@ -131,16 +123,12 @@ export const searchCommunities = async (query: string, page = 1, limit = 10): Pr
  */
 export const searchPosts = async (query: string, page = 1, limit = 10): Promise<PostsSearchResponse> => {
   try {
-    const userKey = getUserApiKey();
-    if (!userKey) {
-      return { success: false, error: 'User not authenticated' };
-    }
+    const headers = createAuthHeaders();
 
-    const response = await fetch(`https://api.dapps.co/search?post=${encodeURIComponent(query)}&page=${page}&limit=${limit}`, {
+    const response = await fetch(`/api/search?post=${encodeURIComponent(query)}&page=${page}&limit=${limit}`, {
       method: 'GET',
-      headers: {
-        'X-User-Key': userKey
-      }
+      headers,
+      credentials: 'include'
     });
 
     if (!response.ok) {

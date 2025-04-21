@@ -36,6 +36,7 @@ const LaunchCountdown: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [progress, setProgress] = useState<number>(0);
   const [intervalId, setIntervalId] = useState<NodeJS.Timeout | null>(null);
+  const [launchDate, setLaunchDate] = useState<Date | null>(null);
 
   useEffect(() => {
     // Check if the user has dismissed the banner
@@ -43,6 +44,28 @@ const LaunchCountdown: React.FC = () => {
     if (bannerDismissed) {
       setIsVisible(false);
     }
+
+    const fetchLaunchTime = async () => {
+      try {
+        // Use relative proxy path
+        const response = await fetch('/api/launch_time');
+        if (!response.ok) {
+          throw new Error('Failed to fetch launch time');
+        }
+        const data = await response.json();
+        if (data.success && data.launch_time) {
+          setLaunchDate(new Date(data.launch_time * 1000));
+        }
+      } catch (error) {
+        console.error('Error fetching launch time:', error);
+        // Use fallback if fetch fails
+        setLaunchDate(new Date('2025-08-01T00:00:00Z'));
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchLaunchTime();
 
     // Fetch launch data from the API
     const fetchLaunchData = async () => {

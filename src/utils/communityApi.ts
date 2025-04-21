@@ -1,5 +1,5 @@
 import { toast } from 'sonner';
-import { API_BASE_URL, getUserApiKey, createAuthHeaders, validateUserApiKey } from './apiBase';
+import { createAuthHeaders, validateAuthentication } from './apiBase';
 
 /**
  * Interface for community data
@@ -217,79 +217,57 @@ export interface ShareValueResponse {
  * Fetch communities with optional search query
  */
 export const fetchCommunities = async (options: FetchCommunitiesOptions): Promise<Community[]> => {
-  try {
     const { personal, search, page = 1, limit = 10, category, trending, newest, mostRewards } = options;
     
-    // Get user API key from local storage
-    const userKey = getUserApiKey();
+  try {
+    // Build the URL with query parameters
+    const queryParams = new URLSearchParams();
+    if (personal) queryParams.append('personal', '1');
+    if (search) queryParams.append('search', search);
+    if (page) queryParams.append('page', page.toString());
+    if (limit) queryParams.append('limit', limit.toString());
+    if (category) queryParams.append('category', category);
+    if (trending) queryParams.append('trending', '1');
+    if (newest) queryParams.append('newest', '1');
+    if (mostRewards) queryParams.append('most_rewards', '1');
     
-    if (!userKey && personal) {
-      return [];
-    }
+    // Create base URL
+    const url = `/api/get_communities?${queryParams.toString()}`;
     
-    // If this is a request that requires authentication, validate the key first
-    if (personal && userKey) {
-      const isValidKey = await validateUserApiKey();
-      if (!isValidKey) {
+    // Create the request headers
+    const headers = createAuthHeaders();
+    
+    // If this is a request that requires authentication, validate authentication first
+    if (personal) {
+      const isAuthenticated = await validateAuthentication();
+      if (!isAuthenticated) {
         return [];
       }
     }
     
-    // Construct API URL based on options
-    let url = `${API_BASE_URL}/get_communities?page=${page}&limit=${limit}`;
-    
-    if (personal) {
-      url += '&personal=1';
-    }
-    
-    if (trending) {
-      url += '&trending=1';
-    }
-    
-    if (newest) {
-      url += '&newest=1';
-    }
-    
-    if (mostRewards) {
-      url += '&mostRewards=1';
-    }
-    
-    if (category) {
-      url += `&category=${encodeURIComponent(category)}`;
-    }
-    
-    if (search && search.trim() !== '') {
-      url += `&search=${encodeURIComponent(search.trim())}`;
-    }
-    
-    // Make the API request with headers
-    const headers: HeadersInit = {};
-    if (userKey) {
-      headers['x-user-key'] = userKey;
-    }
-    
+    // Make the request
     const response = await fetch(url, {
       method: 'GET',
+      credentials: 'include',
       headers,
     });
     
+    // Check if the response is OK
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Failed to fetch communities: ${errorText}`);
+      throw new Error(`API returned status ${response.status}`);
     }
     
+    // Parse the response
     const data = await response.json();
     
-    if (!data.success) {
-      return [];
+    // Check if the request was successful
+    if (data.success) {
+      return data.communities || [];
+    } else {
+      throw new Error(data.message || 'Failed to fetch communities');
     }
-    
-    if (!Array.isArray(data.communities)) {
-      return [];
-    }
-    
-    return data.communities;
   } catch (error) {
+    console.error('Error fetching communities:', error);
     return [];
   }
 };
@@ -299,25 +277,12 @@ export const fetchCommunities = async (options: FetchCommunitiesOptions): Promis
  */
 export const getSharePrice = async (communityName: string, shareQuantity: number): Promise<SharePriceResponse> => {
   try {
-    const userKey = getUserApiKey();
-    if (!userKey) {
-      throw new Error('User key not found');
-    }
-
-    // Ensure shareQuantity is passed correctly as a number
-    const quantity = Number(shareQuantity);
-    if (isNaN(quantity) || quantity <= 0) {
-      shareQuantity = 1;
-    }
-
-    // Use the correct parameter name 'shares' instead of 'shareQuantity'
-    const url = `${API_BASE_URL}/get_share_price?communityName=${encodeURIComponent(communityName)}&shares=${quantity}`;
+    const url = `/api/get_share_price?communityName=${encodeURIComponent(communityName)}&shares=${shareQuantity}`;
     
     const response = await fetch(url, {
       method: 'GET',
-      headers: {
-        'x-user-key': userKey
-      }
+      credentials: 'include',
+      headers: createAuthHeaders()
     });
     
     if (!response.ok) {
@@ -338,9 +303,9 @@ export const getSharePrice = async (communityName: string, shareQuantity: number
  */
 export const buySharesPrecheck = async (communityName: string, shareQuantity: number): Promise<SharePrecheckResponse> => {
   try {
-    // First, validate the user's API key
-    const isValidApiKey = await validateUserApiKey();
-    if (!isValidApiKey) {
+    // First, validate the user's authentication
+    const isAuthenticated = await validateAuthentication();
+    if (!isAuthenticated) {
       return {
         status: 'ERROR',
         error: 'Authentication error. Please refresh the page and try again.',
@@ -353,7 +318,7 @@ export const buySharesPrecheck = async (communityName: string, shareQuantity: nu
       };
     }
     
-    const url = `${API_BASE_URL}/buy_shares_precheck`;
+    const url = `/api/buy_shares_precheck`;
     const headers = createAuthHeaders();
     
     if (!communityName) {
@@ -384,6 +349,7 @@ export const buySharesPrecheck = async (communityName: string, shareQuantity: nu
     
     const response = await fetch(url, {
       method: 'POST',
+      credentials: 'include',
       headers,
       body: JSON.stringify({
         communityName,
@@ -452,7 +418,7 @@ export const buySharesPrecheck = async (communityName: string, shareQuantity: nu
  */
 export const buySharesConfirm = async (communityName: string, shareQuantity: number): Promise<ShareConfirmResponse> => {
   try {
-    const url = `${API_BASE_URL}/buy_shares_confirm`;
+    const url = `/api/buy_shares_confirm`;
     const headers = createAuthHeaders();
     
     if (!communityName) {
@@ -465,6 +431,7 @@ export const buySharesConfirm = async (communityName: string, shareQuantity: num
     
     const response = await fetch(url, {
       method: 'POST',
+      credentials: 'include',
       headers,
       body: JSON.stringify({
         communityName,
@@ -498,9 +465,9 @@ export const buySharesConfirm = async (communityName: string, shareQuantity: num
  */
 export const sellSharesPrecheck = async (communityName: string, shareQuantity: number): Promise<SharePrecheckResponse> => {
   try {
-    // First, validate the user's API key
-    const isValidApiKey = await validateUserApiKey();
-    if (!isValidApiKey) {
+    // First, validate the user's authentication
+    const isAuthenticated = await validateAuthentication();
+    if (!isAuthenticated) {
       return {
         status: 'ERROR',
         error: 'Authentication error. Please refresh the page and try again.',
@@ -513,11 +480,12 @@ export const sellSharesPrecheck = async (communityName: string, shareQuantity: n
       };
     }
     
-    const url = `${API_BASE_URL}/sell_shares_precheck`;
+    const url = `/api/sell_shares_precheck`;
     const headers = createAuthHeaders();
     
     const response = await fetch(url, {
       method: 'POST',
+      credentials: 'include',
       headers,
       body: JSON.stringify({
         communityName,
@@ -573,11 +541,12 @@ export const sellSharesPrecheck = async (communityName: string, shareQuantity: n
  */
 export const sellSharesConfirm = async (communityName: string, shareQuantity: number): Promise<ShareConfirmResponse> => {
   try {
-    const url = `${API_BASE_URL}/sell_shares_confirm`;
+    const url = `/api/sell_shares_confirm`;
     const headers = createAuthHeaders();
     
     const response = await fetch(url, {
       method: 'POST',
+      credentials: 'include',
       headers,
       body: JSON.stringify({
         communityName,
@@ -621,91 +590,78 @@ const walletBalanceCache: {
 };
 
 export const getWalletBalance = async (forceRefresh = false): Promise<WalletBalanceResponse> => {
-  // Use cached data if available and not expired (5 minutes) unless forceRefresh is true
-  const now = Date.now();
-  if (!forceRefresh && walletBalanceCache.data && (now - walletBalanceCache.timestamp < 5 * 60 * 1000)) {
-    debugLog("Using cached wallet balance");
-    return walletBalanceCache.data;
-  }
-
-  debugLog("Fetching wallet balance");
-  
   try {
-    const userKey = localStorage.getItem('dapps_user_key');
-    
-    if (!userKey) {
-      // Return a default response with empty balance if no user key
+    // First, validate the user's authentication
+    const isAuthenticated = await validateAuthentication();
+    if (!isAuthenticated) {
       return {
-        success: true,
+        success: false,
         wallet: '',
         balance: {
-          eth: '0.000',
+          eth: '0',
           usd: 0,
-          formatted: '0.000 ETH ($0.00)'
+          formatted: '0'
         },
-        recentActivity: null
+        recentActivity: {
+          count: 0,
+          lastUpdated: ''
+        }
       };
     }
     
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-      'x-user-key': userKey
-    };
+    const cachedBalance = localStorage.getItem('dapps_wallet_balance');
+    const cachedTimestamp = localStorage.getItem('dapps_wallet_balance_timestamp');
     
-    const response = await fetch('https://api.dapps.co/get_wallet_balance', {
+    // Use cached balance if available and not forced refresh
+    if (!forceRefresh && cachedBalance && cachedTimestamp) {
+      const timestamp = parseInt(cachedTimestamp);
+      const now = Date.now();
+      const fiveMinutesInMs = 5 * 60 * 1000;
+      
+      if (now - timestamp < fiveMinutesInMs) {
+        return JSON.parse(cachedBalance);
+      }
+    }
+    
+    // Fetch fresh balance
+    const response = await fetch('/api/get_wallet_balance', {
       method: 'GET',
-      headers
+      credentials: 'include',
+      headers: createAuthHeaders()
     });
     
     if (!response.ok) {
-      // Get status code to handle different errors
-      const statusCode = response.status;
-      const errorData = await response.json();
-      
-      // Only log the error, don't throw
-      debugLog(`Wallet balance fetch failed (${statusCode}):`, errorData);
-      
-      // If it's an auth error, don't treat it as critical
-      if (statusCode === 401) {
-        // Return a default balance
-        const defaultResponse = {
-          success: true,
-          wallet: '',
-          balance: {
-            eth: '0.000',
-            usd: 0,
-            formatted: '0.000 ETH ($0.00)'
-          },
-          recentActivity: null
-        };
-        return defaultResponse;
-      }
-      
-      throw new Error(`Failed to fetch wallet balance: ${JSON.stringify(errorData)}`);
+      throw new Error(`Failed to get wallet balance: ${response.status}`);
     }
     
     const data = await response.json();
-    debugLog("Wallet balance response:", data);
     
-    // Update the cache
-    walletBalanceCache.data = data;
-    walletBalanceCache.timestamp = now;
+    if (data.success) {
+      // Cache the result
+      localStorage.setItem('dapps_wallet_balance', JSON.stringify(data));
+      localStorage.setItem('dapps_wallet_balance_timestamp', Date.now().toString());
     
     return data;
+    } else {
+      throw new Error(data.message || 'Failed to get wallet balance');
+    }
   } catch (error) {
-    // Only log the error here, don't notify the user
-    debugLog("Error fetching wallet balance:", error);
+    console.error('Error getting wallet balance:', error);
+    toast.error('Failed to get wallet balance');
     
-    // Return a default response to prevent app disruption
+    // Create a default response
     return {
-      success: true,
+      success: false,
       wallet: '',
       balance: {
-        eth: '0.000',
+        eth: '0',
         usd: 0,
-        formatted: '0.000 ETH ($0.00)'
+        formatted: '0'
       },
-      recentActivity: null
+      recentActivity: {
+        count: 0,
+        lastUpdated: ''
+      }
     };
   }
 };
@@ -715,18 +671,12 @@ export const getWalletBalance = async (forceRefresh = false): Promise<WalletBala
  */
 export const getShareValue = async (communityName: string): Promise<ShareValueResponse> => {
   try {
-    const userKey = getUserApiKey();
-    if (!userKey) {
-      throw new Error('User key not found');
-    }
-    
-    const url = `${API_BASE_URL}/share_value?community=${encodeURIComponent(communityName)}`;
+    const url = `/api/share_value?community=${encodeURIComponent(communityName)}`;
     
     const response = await fetch(url, {
       method: 'GET',
-      headers: {
-        'x-user-key': userKey
-      }
+      credentials: 'include',
+      headers: createAuthHeaders()
     });
     
     if (!response.ok) {
@@ -751,18 +701,12 @@ export const getShareValue = async (communityName: string): Promise<ShareValueRe
  */
 export const getUserPortfolio = async (page = 1, limit = 10): Promise<UserPortfolioResponse> => {
   try {
-    const userKey = getUserApiKey();
-    if (!userKey) {
-      throw new Error('User key not found');
-    }
-    
-    const url = `${API_BASE_URL}/user_portfolio?page=${page}&limit=${limit}`;
+    const url = `/api/user_portfolio?page=${page}&limit=${limit}`;
     
     const response = await fetch(url, {
       method: 'GET',
-      headers: {
-        'x-user-key': userKey
-      }
+      credentials: 'include',
+      headers: createAuthHeaders()
     });
     
     if (!response.ok) {
@@ -853,31 +797,27 @@ export const transferShares = async (
   toAddress: string
 ): Promise<ShareTransferResponse> => {
   try {
-    const url = `${API_BASE_URL}/transfer_shares`;
-    const headers = createAuthHeaders();
-    
-    if (!communityName) {
-      throw new Error('Community name is required');
+    // Check if we have a valid API key
+    if (!(await validateAuthentication())) {
+      return {
+        success: false,
+        message: 'Authentication required',
+        error: 'Not authenticated'
+      };
     }
     
-    if (!amount || parseFloat(amount) <= 0) {
-      throw new Error('Amount must be greater than 0');
-    }
+    const url = `/api/transfer_shares`;
     
-    if (!toAddress) {
-      throw new Error('Recipient address is required');
-    }
-    
-    // Prepare the request body
     const requestBody = {
-      communityName,
-      amount,
-      toAddress
+      community: communityName,
+      amount: amount,
+      to: toAddress
     };
     
     const response = await fetch(url, {
       method: 'POST',
-      headers,
+      credentials: 'include',
+      headers: createAuthHeaders(),
       body: JSON.stringify(requestBody)
     });
     
@@ -940,11 +880,12 @@ export interface UserSearchResponse {
  */
 export const searchUsers = async (query: string, page: number = 1, limit: number = 5): Promise<UserSearchResponse> => {
   try {
-    const url = `${API_BASE_URL}/search?user=${encodeURIComponent(query)}&page=${page}&limit=${limit}`;
+    const url = `/api/search?user=${encodeURIComponent(query)}&page=${page}&limit=${limit}`;
     const headers = createAuthHeaders();
     
     const response = await fetch(url, {
       method: 'GET',
+      credentials: 'include',
       headers
     });
     
@@ -1004,7 +945,7 @@ export const getETHWithdrawalGasEstimate = async (
   isAddress: boolean
 ): Promise<ETHGasEstimateResponse> => {
   try {
-    const url = `${API_BASE_URL}/withdraw_eth_gas_estimate`;
+    const url = `/api/withdraw_eth_gas_estimate`;
     const headers = createAuthHeaders();
     
     // Build request body based on whether recipient is an address or handle
@@ -1015,6 +956,7 @@ export const getETHWithdrawalGasEstimate = async (
     
     const response = await fetch(url, {
       method: 'POST',
+      credentials: 'include',
       headers,
       body: JSON.stringify(requestBody)
     });
@@ -1063,7 +1005,7 @@ export const withdrawETH = async (
   isAddress: boolean
 ): Promise<ETHWithdrawalResponse> => {
   try {
-    const url = `${API_BASE_URL}/withdraw_eth`;
+    const url = `/api/withdraw_eth`;
     const headers = createAuthHeaders();
     
     // Build request body based on whether recipient is an address or handle
@@ -1074,6 +1016,7 @@ export const withdrawETH = async (
     
     const response = await fetch(url, {
       method: 'POST',
+      credentials: 'include',
       headers,
       body: JSON.stringify(requestBody)
     });
@@ -1223,7 +1166,7 @@ export const createCommunityConfig = async (config: CreateCommunityConfig): Prom
     }
 
     // Check if we have a valid API key
-    if (!(await validateUserApiKey())) {
+    if (!(await validateAuthentication())) {
       return {
         success: false,
         message: "Authentication failed. Please log in again."
@@ -1251,8 +1194,9 @@ export const createCommunityConfig = async (config: CreateCommunityConfig): Prom
     }
 
     // Make the API call
-    const response = await fetch(`${API_BASE_URL}/create_community_config`, {
+    const response = await fetch(`/api/create_community_config`, {
       method: 'POST',
+      credentials: 'include',
       headers: createAuthHeaders(),
       body: JSON.stringify(requestBody)
     });
@@ -1300,8 +1244,9 @@ export const createCommunity = async (config: CreateCommunityConfig): Promise<an
         config_id: configResult.data.config_id
       };
       
-      const response = await fetch(`${API_BASE_URL}/create_community`, {
+      const response = await fetch(`/api/create_community`, {
         method: 'POST',
+        credentials: 'include',
         headers: createAuthHeaders(),
         body: JSON.stringify(requestBody)
       });
@@ -1343,8 +1288,9 @@ export const createCommunity = async (config: CreateCommunityConfig): Promise<an
       };
       
       // Make the API call
-      const response = await fetch(`${API_BASE_URL}/create_community`, {
+      const response = await fetch(`/api/create_community`, {
         method: 'POST',
+        credentials: 'include',
         headers: createAuthHeaders(),
         body: JSON.stringify(requestBody)
       });

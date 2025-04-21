@@ -1,4 +1,3 @@
-
 import { toast } from 'sonner';
 import { createAuthHeaders } from './apiBase';
 
@@ -8,12 +7,14 @@ import { createAuthHeaders } from './apiBase';
  */
 export const fetchReferralEarnings = async () => {
   try {
-    const response = await fetch('https://api.dapps.co/referral_earnings', {
-      headers: createAuthHeaders()
+    const response = await fetch('/api/referral_earnings', {
+      headers: createAuthHeaders(),
+      credentials: 'include'
     });
     
     if (!response.ok) {
-      throw new Error(`Error fetching referral earnings: ${response.status}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Failed to fetch referral earnings: ${response.status}`);
     }
     
     const data = await response.json();
@@ -45,12 +46,14 @@ export const fetchReferralEarnings = async () => {
  */
 export const fetchInvitedUsers = async (page = 1, limit = 20) => {
   try {
-    const response = await fetch(`https://api.dapps.co/invited_users?page=${page}&limit=${limit}`, {
-      headers: createAuthHeaders()
+    const response = await fetch('/api/invited_users?page=' + page + '&limit=' + limit, {
+      headers: createAuthHeaders(),
+      credentials: 'include'
     });
     
     if (!response.ok) {
-      throw new Error(`Error fetching invited users: ${response.status}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Failed to fetch invited users: ${response.status}`);
     }
     
     const data = await response.json();
@@ -73,14 +76,15 @@ export const fetchInvitedUsers = async (page = 1, limit = 20) => {
  */
 export const claimReferralRewards = async () => {
   try {
-    // This API endpoint is hypothetical and would need to be implemented
-    const response = await fetch('https://api.dapps.co/claim_referral_rewards', {
+    const response = await fetch('/api/claim_referral_rewards', {
       method: 'POST',
-      headers: createAuthHeaders()
+      headers: createAuthHeaders(),
+      credentials: 'include'
     });
     
     if (!response.ok) {
-      throw new Error(`Error claiming rewards: ${response.status}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Failed to claim referral rewards: ${response.status}`);
     }
     
     const data = await response.json();

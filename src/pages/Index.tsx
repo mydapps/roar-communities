@@ -33,12 +33,11 @@ const Index = () => {
 
   useEffect(() => {
     const userId = localStorage.getItem('dapps_user_id');
-    const userKey = localStorage.getItem('dapps_user_key');
     const registered = localStorage.getItem('dapps_user_registered');
     const handle = localStorage.getItem('dapps_user_handle');
     const avatar = localStorage.getItem('dapps_user_avatar');
     
-    if (userId && userKey) {
+    if (userId) {
       console.log('User already logged in, redirecting...');
       console.log('Registration status:', registered);
       
@@ -59,7 +58,8 @@ const Index = () => {
   useEffect(() => {
     const fetchWaitlistCount = async () => {
       try {
-        const response = await fetch('https://api.dapps.co/waitlist_count');
+        // Use relative path for proxy
+        const response = await fetch('/api/waitlist_count', { credentials: 'include' });
         const data = await response.json();
         if (data.success) {
           setTotalWaitlist(data.count);
@@ -87,7 +87,8 @@ const Index = () => {
         try {
           // Convert code to lowercase
           const lowercaseCode = code.toLowerCase();
-          const response = await fetch(`https://api.dapps.co/check_invite_code?code=${lowercaseCode}`);
+          // Use relative path for proxy
+          const response = await fetch(`/api/check_invite_code?code=${lowercaseCode}`, { credentials: 'include' });
           const data = await response.json();
           
           if (data.success && data.valid === 1) {

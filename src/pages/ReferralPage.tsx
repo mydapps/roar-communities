@@ -84,6 +84,7 @@ const ReferralPage = () => {
   const [earnings, setEarnings] = useState<ReferralEarnings | null>(null);
   const [invitedUsers, setInvitedUsers] = useState<InvitedUser[]>([]);
   const [totalInvites, setTotalInvites] = useState(0);
+  const [error, setError] = useState<string | null>(null);
   
   // Generate referral URL with user handle
   const referralUrl = userHandle ? `dapps.co/invite/${userHandle.toLowerCase()}` : 'dapps.co/invite';
@@ -95,46 +96,45 @@ const ReferralPage = () => {
       setUserHandle(storedHandle);
     }
     
-    // Fetch referral earnings and invited users
-    fetchReferralData();
-  }, []);
-  
-  const fetchReferralData = async () => {
-    setIsLoading(true);
-    try {
-      // Fetch referral earnings
-      const earningsResponse = await fetch('https://api.dapps.co/referral_earnings', {
-        headers: createAuthHeaders()
-      });
-      
-      if (earningsResponse.ok) {
+    const loadData = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        // Use relative proxy path for earnings
+        const earningsResponse = await fetch('/api/referral_earnings', {
+          credentials: 'include' // Add credentials
+        });
+        if (!earningsResponse.ok) throw new Error('Failed to fetch earnings');
         const earningsData = await earningsResponse.json();
         if (earningsData.success) {
           setEarnings(earningsData);
           // Set rewards claimable if available to withdraw > 0
           setRewardsClaimable(earningsData.available_to_withdraw > 0);
+        } else {
+          throw new Error(earningsData.message || 'Could not load earnings');
         }
-      }
-      
-      // Fetch invited users
-      const invitedUsersResponse = await fetch('https://api.dapps.co/invited_users?page=1&limit=20', {
-        headers: createAuthHeaders()
-      });
-      
-      if (invitedUsersResponse.ok) {
-        const invitedUsersData: InvitedUsersResponse = await invitedUsersResponse.json();
+        
+        // Use relative proxy path for invited users
+        const invitedUsersResponse = await fetch('/api/invited_users?page=1&limit=20', {
+          credentials: 'include' // Add credentials
+        });
+        if (!invitedUsersResponse.ok) throw new Error('Failed to fetch invited users');
+        const invitedUsersData = await invitedUsersResponse.json();
         if (invitedUsersData.success) {
           setInvitedUsers(invitedUsersData.invited_users);
           setTotalInvites(invitedUsersData.total);
+        } else {
+          throw new Error(invitedUsersData.message || 'Could not load invited users');
         }
+
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An unknown error occurred');
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error('Error fetching referral data:', error);
-      toast.error('Failed to load referral data');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    };
+    loadData();
+  }, []);
   
   // Add confetti burst function
   const triggerConfetti = (intensity = 'medium') => {
@@ -196,35 +196,43 @@ const ReferralPage = () => {
     setIsClaimingRewards(true);
     
     try {
-      // Here you would typically call an API to claim rewards
-      // For now, we'll simulate it with a delay
-
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Update state after claiming
-      setEarnings(prev => {
-        if (!prev) return null;
-        return {
-          ...prev,
-          referral_earnings: prev.referral_earnings,
-          available_to_withdraw: 0,
-          total_withdrawn: prev.total_withdrawn + prev.available_to_withdraw
-        };
+      // Use relative proxy path
+      const response = await fetch('/api/claim_referral_rewards', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }, // Keep content type for POST
+        credentials: 'include' // Add credentials
       });
       
-      setRewardsClaimable(false);
+      if (!response.ok) throw new Error('Failed to claim rewards');
       
-      // Success animation
-      confetti({
-        particleCount: 150,
-        spread: 90,
-        origin: { y: 0.6 },
-        colors: ['#4F46E5', '#10B981', '#F59E0B']
-      });
-      
-      toast.success("Rewards claimed successfully!");
-    } catch (error) {
-      console.error('Error claiming rewards:', error);
+      const data = await response.json();
+      if (data.success) {
+        setEarnings(prev => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            referral_earnings: prev.referral_earnings,
+            available_to_withdraw: 0,
+            total_withdrawn: prev.total_withdrawn + prev.available_to_withdraw
+          };
+        });
+        
+        setRewardsClaimable(false);
+        
+        // Success animation
+        confetti({
+          particleCount: 150,
+          spread: 90,
+          origin: { y: 0.6 },
+          colors: ['#4F46E5', '#10B981', '#F59E0B']
+        });
+        
+        toast.success("Rewards claimed successfully!");
+      } else {
+        throw new Error(data.message || 'Failed to claim rewards');
+      }
+    } catch (err) {
+      console.error('Error claiming rewards:', err);
       toast.error('Failed to claim rewards');
     } finally {
       setIsClaimingRewards(false);

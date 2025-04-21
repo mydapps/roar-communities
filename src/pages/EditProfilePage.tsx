@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,14 +11,20 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { getUserProfile, updateUserProfile, updateUserAvatar, UpdateProfileParams, UserProfile } from '@/utils/userApi';
+import { 
+  UserProfile, 
+  UpdateProfileParams, 
+  getUserProfile, 
+  updateUserProfile, 
+  updateUserAvatar
+} from '@/utils/userApi';
 import { Calendar, Check, Image, Link2, Loader2, MapPin, Pencil, RefreshCcw, RotateCw, Save, Upload, User, X, ArrowLeft } from 'lucide-react';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { MediaUploadResponse } from '@/components/ui/media-upload';
-import { API_BASE_URL } from '@/utils/apiBase';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 import { Link } from 'react-router-dom';
+import { AvatarSelectionDialog } from '@/components/shared/AvatarSelectionDialog';
 
 const EditProfilePage = () => {
   const navigate = useNavigate();
@@ -36,6 +42,7 @@ const EditProfilePage = () => {
   // Media upload states
   const [uploadingBackground, setUploadingBackground] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadedImageUrl, setUploadedImageUrl] = useState('');
   
   // Current user handle from localStorage
   const userHandle = localStorage.getItem('dapps_user_handle');
@@ -158,13 +165,6 @@ const EditProfilePage = () => {
       return;
     }
     
-    // Get user key for authentication
-    const userKey = localStorage.getItem('dapps_user_key');
-    if (!userKey) {
-      toast.error('Authentication required. Please log in again.');
-      return;
-    }
-    
     try {
       setUploadingBackground(true);
       setUploadProgress(10);
@@ -212,8 +212,11 @@ const EditProfilePage = () => {
       });
       
       // Send the request
-      xhr.open('POST', `${API_BASE_URL}/upload_media`);
-      xhr.setRequestHeader('x-user-key', userKey);
+      xhr.open('POST', '/api/upload_media');
+      xhr.withCredentials = true; // Important for cookie-based auth
+      
+      // No longer need to set the API key - HttpOnly cookies will handle auth
+      
       xhr.send(formData);
       
       // Wait for upload to complete
@@ -390,6 +393,52 @@ const EditProfilePage = () => {
   const selectAvatarFromGallery = (code: string) => {
     setAvatarCode(code);
     setShowAvatarGallery(false);
+  };
+  
+  const handleBannerUpload = (file: File) => {
+    if (!file) return;
+    
+    const formData = new FormData();
+    formData.append('media', file);
+    formData.append('type', 'banner');
+
+    const xhr = new XMLHttpRequest();
+
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) {
+        const percent = Math.round((event.loaded / event.total) * 100);
+      }
+    };
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          const response = JSON.parse(xhr.responseText);
+          if (response.success && response.url) {
+            setFormData(prev => ({
+              ...prev,
+              background_image: response.url
+            }));
+            toast.success('Banner updated successfully!');
+          } else {
+            toast.error(response.message || 'Banner upload failed.');
+          }
+        } catch (e) {
+          toast.error('Failed to parse banner upload response.');
+        }
+      } else {
+        toast.error(`Banner upload failed: ${xhr.statusText || xhr.status}`);
+      }
+    };
+
+    xhr.onerror = () => {
+      toast.error('Banner upload failed due to network error.');
+    };
+
+    console.log("Sending banner upload request to /api/upload_media");
+    xhr.open('POST', '/api/upload_media');
+    xhr.withCredentials = true;
+    xhr.send(formData);
   };
   
   if (loading) {

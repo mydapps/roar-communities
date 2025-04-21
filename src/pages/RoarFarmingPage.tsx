@@ -90,6 +90,7 @@ const RoarFarmingPage = () => {
   
   // Load total roars and farming status on mount and when farming state changes
   useEffect(() => {
+    // Call these at the start of the effect
     fetchTotalRoars();
     checkFarmingStatus();
     
@@ -123,7 +124,9 @@ const RoarFarmingPage = () => {
   const fetchTotalRoars = async () => {
     try {
       setTotalRoarsLoading(true);
-      const response = await fetch('https://api.dapps.co/roar_total');
+      const response = await fetch('/api/roar_total', {
+        credentials: 'include'
+      });
       const data = await response.json();
       
       if (data.success) {
@@ -143,9 +146,10 @@ const RoarFarmingPage = () => {
       const userKey = localStorage.getItem('dapps_user_key');
       if (!userKey) return;
       
-      const response = await fetch('https://api.dapps.co/roar_farming_status', {
+      const response = await fetch('/api/roar_farming_status', {
         method: 'GET',
-        headers: createAuthHeaders()
+        headers: createAuthHeaders(),
+        credentials: 'include'
       });
       
       const data = await response.json();
@@ -405,10 +409,11 @@ const RoarFarmingPage = () => {
     try {
       setIsStarting(true);
       
-      const response = await fetch('https://api.dapps.co/roar_farming_start', {
+      const response = await fetch('/api/roar_farming_start', {
         method: 'POST',
         headers: createAuthHeaders(),
-        body: JSON.stringify({})
+        body: JSON.stringify({}),
+        credentials: 'include'
       });
       
       const data = await response.json();
@@ -452,10 +457,11 @@ const RoarFarmingPage = () => {
     try {
       setIsClaiming(true);
       
-      const response = await fetch('https://api.dapps.co/roar_farming_claim', {
+      const response = await fetch('/api/roar_farming_claim', {
         method: 'POST',
         headers: createAuthHeaders(),
-        body: JSON.stringify({})
+        body: JSON.stringify({}),
+        credentials: 'include'
       });
       
       const data = await response.json();

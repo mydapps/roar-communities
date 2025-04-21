@@ -3,7 +3,7 @@ import { PrivyProvider, usePrivy } from '@privy-io/react-auth';
 import { toast } from 'sonner';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
-import { API_BASE_URL, shouldRefreshAuth } from '@/utils/apiBase';
+import { shouldRefreshAuth } from '@/utils/apiBase';
 
 interface PrivyAuthProviderProps {
   children: ReactNode;
@@ -57,15 +57,15 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
   // Helper function to check if we should refresh auth
   const shouldCheckAuth = (): boolean => {
     try {
-      // Check if we have existing credentials
-      const existingUserKey = localStorage.getItem('dapps_user_key');
+      // Check if we have existing user ID - the only thing we need to verify
+      // with cookie-based auth (the actual auth token is in the HttpOnly cookie)
       const existingUserId = localStorage.getItem('dapps_user_id');
       
-      debugLog("Auth check:", { existingUserKey: !!existingUserKey, existingUserId: !!existingUserId });
+      debugLog("Auth check:", { existingUserId: !!existingUserId });
       
-      // If we're missing any credentials, we need to authenticate
-      if (!existingUserKey || !existingUserId) {
-        debugLog("Missing credentials, auth required");
+      // If we're missing user ID, we need to authenticate
+      if (!existingUserId) {
+        debugLog("Missing user ID, auth required");
         return true;
       }
       
@@ -96,6 +96,12 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
           if (!needsAuthRefresh) {
             debugLog("Using existing credentials, skipping authentication request");
             setAuthProcessed(true);
+            
+            // If on index or login page, redirect to feed
+            if (pathname === '/' || pathname === '/login' || pathname === '/index') {
+              debugLog("Redirecting to feed (using existing auth)");
+              navigate('/feed');
+            }
             return;
           }
           
@@ -119,8 +125,9 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
           
           debugLog('Sending authentication request with token');
           
-          const response = await fetch('https://api.dapps.co/privy_auth', {
+          const response = await fetch('/api/privy_auth', {
             method: 'POST',
+            credentials: 'include',
             headers: {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${token}`
@@ -135,82 +142,133 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
           if (response.ok) {
             const data = await response.json();
             
+            console.log('[Auth] Received data from /privy_auth:', JSON.stringify(data, null, 2));
+            
             if (data.success) {
-              // Store all returned values in localStorage
-              localStorage.setItem('dapps_user_id', data.userId.toString());
-              localStorage.setItem('dapps_user_key', data.userKey);
+              // --- VALIDATE RESPONSE DATA ---
+              if (!data.userId) {
+                console.error('CRITICAL AUTH ERROR: userId missing from /privy_auth response', data);
+                toast.error('Authentication failed: Missing user identifier from server.');
+                // Stop processing here to prevent partial state
+                setAuthProcessed(true);
+                setIsAuthLoading(false);
+                setAuthRequestInProgress(false);
+                return; 
+              }
               
-              // Set the authentication timestamp to track when we last authenticated
-              localStorage.setItem('dapps_last_auth_time', Date.now().toString());
+              // --- STORE USER INFO (NOW SAFER) ---
+              try {
+                const userIdStr = data.userId.toString();
+                localStorage.setItem('dapps_user_id', userIdStr);
+                console.log(`[Auth] Attempted to set dapps_user_id: ${userIdStr}. Retrieved:`, localStorage.getItem('dapps_user_id'));
+                
+                const authTime = Date.now().toString();
+                localStorage.setItem('dapps_last_auth_time', authTime);
+                console.log(`[Auth] Attempted to set dapps_last_auth_time: ${authTime}. Retrieved:`, localStorage.getItem('dapps_last_auth_time'));
+                
+                // Conditionally set handle/avatar only if they exist in the response
+                if (data.handle) localStorage.setItem('dapps_user_handle', data.handle);
+                if (data.avatar) localStorage.setItem('dapps_user_avatar', data.avatar);
+                const registeredStatus = data.registered ? data.registered.toString() : "0";
+                localStorage.setItem('dapps_user_registered', registeredStatus); 
+                debugLog('Authentication successful, stored user info. Registered status:', registeredStatus);
+              } catch (storageError) {
+                console.error('[Auth] CRITICAL ERROR storing user info in localStorage:', storageError, 'Data received:', data);
+                toast.error('Authentication partially failed: Could not save session.');
+                // Stop processing here
+                setAuthProcessed(true);
+                setIsAuthLoading(false);
+                setAuthRequestInProgress(false);
+                return;
+              }
+
+              // --- REVISED REDIRECT LOGIC (Ensure it uses the correctly stored status) ---
+              const finalRegisteredStatus = localStorage.getItem('dapps_user_registered');
               
-              // Store additional data if available
-              if (data.handle) localStorage.setItem('dapps_user_handle', data.handle);
-              if (data.avatar) localStorage.setItem('dapps_user_avatar', data.avatar);
-              
-              // Ensure we properly store the registered status
-              localStorage.setItem('dapps_user_registered', data.registered || "0");
-              
-              debugLog('Authentication successful, registered status:', data.registered);
-              
-              // Don't redirect if we're already on a protected page that requires authentication
-              // This fixes the refresh issue on pages like referral and my-shares
-              if (pathname === '/referral' || 
+              if (finalRegisteredStatus === "1") {
+                // User is fully registered. Redirect to feed UNLESS already on an auth page.
+                const isOnAuthPage = 
+                  pathname === '/feed' ||
+                  pathname === '/referral' || 
                   pathname === '/my-shares' ||
                   pathname === '/account' ||
                   pathname === '/communities' ||
                   pathname === '/search' ||
-                  pathname.startsWith('/u/')) {
-                debugLog('Already on a protected page, skipping redirect');
-                setAuthProcessed(true);
-                setIsAuthLoading(false);
-                setAuthRequestInProgress(false);
-                return;
-              }
-              
-              // Don't redirect if we're already on community or post page
-              if (isCommunityPage || isPostPage) {
-                debugLog('Already on community/post page, skipping redirect');
-                setAuthProcessed(true);
-                setIsAuthLoading(false);
-                setAuthRequestInProgress(false);
-                return;
-              }
-              
-              // Check registration status
-              if (data.registered === "1") {
-                // User is fully registered, redirect to feed if on login/index page
-                if (pathname === '/' || pathname === '/login' || pathname === '/index') {
-                  debugLog("Redirecting to feed from public route");
-                  navigate('/feed');
-                  toast.success('Successfully logged in!');
+                  pathname.startsWith('/u/') ||
+                  isCommunityPage ||
+                  isPostPage;
+                  
+                if (!isOnAuthPage) {
+                   debugLog("User registered, redirecting to feed");
+                   navigate('/feed');
+                   toast.success('Successfully logged in!');
+                } else {
+                  debugLog("User registered, already on an authenticated page, skipping redirect.");
+                  // No redirect needed
                 }
               } else {
-                // User needs to complete registration
-                if (data.handle && data.avatar) {
-                  // Both handle and avatar are set, redirect to request-invite
-                  if (pathname !== '/request-invite' && pathname !== '/feed') {
-                    debugLog("Redirecting to request-invite");
+                // User needs to complete registration (finalRegisteredStatus !== "1")
+                debugLog("User not fully registered, checking profile status for redirect...");
+                const handle = localStorage.getItem('dapps_user_handle');
+                const avatar = localStorage.getItem('dapps_user_avatar');
+                if (handle && avatar) {
+                  // Has profile info but not registered? Send to request-invite.
+                  if (pathname !== '/request-invite') {
+                    debugLog("Redirecting to request-invite (handle/avatar set, but not registered)");
                     navigate('/request-invite');
                   }
                 } else {
                   // Missing handle or avatar, redirect to avatar-handle page
                   if (pathname !== '/avatar-handle') {
-                    debugLog("Redirecting to avatar-handle");
+                    debugLog("Redirecting to avatar-handle (missing profile info)");
                     navigate('/avatar-handle');
                     toast.info('Please complete your profile');
                   }
                 }
               }
+              // --- END OF REVISED REDIRECT LOGIC ---
+              
+              // Mark auth as processed after successful storage and navigation decision
+              setAuthProcessed(true);
+              setIsAuthLoading(false);
+              setAuthRequestInProgress(false);
+              return; // Important: Exit after handling success
+              
             } else {
               toast.error('Authentication failed: ' + (data.message || 'Unknown error'));
             }
           } else {
-            const errorData = await response.json().catch(() => ({}));
-            console.error('Authentication error response:', errorData);
-            toast.error('Authentication failed. Please try again.');
+            // Handle HTTP errors (4xx, 5xx) more robustly
+            let errorBody = '';
+            // Define a type for potential error JSON
+            interface ApiError { message?: string; error?: string; }
+            let errorData: ApiError = {}; 
+            try {
+              // Try reading the response body as text first
+              errorBody = await response.text();
+              // Attempt to parse as JSON only if it looks like JSON
+              if (errorBody && errorBody.startsWith('{') && errorBody.endsWith('}')) {
+                 errorData = JSON.parse(errorBody);
+              }
+            } catch (parseError) {
+              // Ignore errors during text reading or JSON parsing
+              console.error('Error reading/parsing error response body:', parseError);
+            }
+            
+            console.error(`Authentication failed with status: ${response.status}`, {
+              status: response.status,
+              statusText: response.statusText,
+              errorBody: errorBody, // Log the raw text body
+              parsedJson: errorData // Log the parsed JSON (if successful)
+            });
+            
+            // Show a more informative error if possible
+            // Now accessing .message and .error is type-safe
+            const message = errorData.message || errorData.error || errorBody || 'Please try again.';
+            toast.error(`Authentication failed (${response.status}): ${message}`);
           }
           
-          // Mark auth as processed to prevent loops
+          // Mark auth as processed to prevent loops (Only reached if response.ok was false or data.success was false)
           setAuthProcessed(true);
           setIsAuthLoading(false);
           setAuthRequestInProgress(false);

@@ -45,15 +45,17 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const [hasCommunities, setHasCommunities] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [userHandle, setUserHandle] = useState('');
+  const [personalCommunities, setPersonalCommunities] = useState<Community[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   
   // Check authentication status on mount and listen for auth events
   useEffect(() => {
-    const userKey = localStorage.getItem('dapps_user_key');
+    const userId = localStorage.getItem('dapps_user_id');
     const handle = localStorage.getItem('dapps_user_handle');
-    setIsLoggedIn(!!userKey);
+    setIsLoggedIn(!!userId);
     setUserHandle(handle || '');
     
-    if (userKey) {
+    if (userId) {
       fetchCommunities();
     }
     
@@ -75,33 +77,27 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     setLoadingCommunities(true);
     
     try {
-      // Check if we have a user key in localStorage
-      const userKey = localStorage.getItem('dapps_user_key');
-      if (!userKey) {
+      // Check if we have a user ID in localStorage to know if user is logged in
+      const userId = localStorage.getItem('dapps_user_id');
+      if (!userId) {
         setLoadingCommunities(false);
         return;
       }
       
-      // Use auth headers utility from apiBase to ensure proper authentication
+      // Create headers with just content type
       const headers = createAuthHeaders(false);
       
-      // Double check if we have headers (if not, user not authenticated)
-      if (!headers['x-user-key']) {
-        // If no headers but retry count is low, try again after a delay
-        if (retryCount < 3) {
-          setTimeout(() => {
-            setRetryCount(prev => prev + 1);
-            fetchCommunities();
-          }, 1000);
+      // If retry count is high, show error and stop trying
+      if (retryCount >= 3) {
+        toast.error('Unable to load communities. Please refresh the page.');
+        setLoadingCommunities(false);
           return;
-        } else {
-          throw new Error('Authentication required. Please log in again.');
-        }
       }
       
-      const response = await fetch("https://api.dapps.co/get_communities?personal=1&category=popular&page=1&limit=5", {
+      const response = await fetch("/api/get_communities?personal=1&category=popular&page=1&limit=5", {
         method: 'GET',
-        headers: headers
+        headers: headers,
+        credentials: 'include'
       });
       
       if (!response.ok) {
@@ -126,8 +122,8 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         setHasCommunities(false);
       }
     } catch (error) {
-      // If 401 error and retries < 3, try again after delay (auth might still be initializing)
-      if (error instanceof Error && error.message.includes('401') && retryCount < 3) {
+      // If error and retries < 3, try again after delay (auth might still be initializing)
+      if (retryCount < 3) {
         setTimeout(() => {
           setRetryCount(prev => prev + 1);
           fetchCommunities();
@@ -135,11 +131,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         return;
       }
       
-      if (retryCount >= 3) {
-        toast.error('Unable to load communities. Please refresh the page.');
-      } else {
         toast.error('Failed to load communities');
-      }
     } finally {
       setLoadingCommunities(false);
     }
@@ -162,6 +154,41 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
       document.body.style.overflow = '';
     };
   }, [isOpen]);
+
+  useEffect(() => {
+    const fetchPersonalCommunities = async () => {
+      const userId = localStorage.getItem('dapps_user_id');
+      if (!userId) {
+        setPersonalCommunities([]);
+        setIsLoading(false);
+        return;
+      }
+      
+      setIsLoading(true);
+      try {
+        // Use relative proxy path
+        const response = await fetch("/api/get_communities?personal=1&category=popular&page=1&limit=5", {
+          credentials: 'include' // Add credentials
+        });
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        const data = await response.json();
+        if (data.success && Array.isArray(data.communities)) {
+          setPersonalCommunities(data.communities.slice(0, 5)); // Limit to 5
+        } else {
+          setPersonalCommunities([]);
+        }
+      } catch (error) {
+        console.error("Failed to fetch personal communities:", error);
+        setPersonalCommunities([]); // Set empty on error
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchPersonalCommunities();
+  }, []);
 
   return (
     <>

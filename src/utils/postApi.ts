@@ -1,5 +1,5 @@
 import { toast } from 'sonner';
-import { API_BASE_URL, getUserApiKey, createAuthHeaders, setupEventListener } from './apiBase';
+import { createAuthHeaders, setupEventListener } from './apiBase';
 import { POST_MIRRORED_EVENT } from '@/components/feed/post/MirrorButton';
 
 /**
@@ -130,15 +130,8 @@ export const fetchPosts = async (options: FetchPostsOptions): Promise<Post[]> =>
   try {
     const { page, personal, trending, global } = options;
     
-    // Get user API key from local storage
-    const userKey = getUserApiKey();
-    
-    if (!userKey) {
-      return [];
-    }
-    
     // Construct API URL based on options
-    let url = `${API_BASE_URL}/fetch_posts?page=${page}`;
+    let url = `/api/fetch_posts?page=${page}`;
     if (personal) {
       url += '&personal=1';
     }
@@ -154,9 +147,8 @@ export const fetchPosts = async (options: FetchPostsOptions): Promise<Post[]> =>
     // Make the API request
     const response = await fetch(url, {
       method: 'GET',
-      headers: {
-        'x-user-key': userKey,
-      },
+      headers: createAuthHeaders(),
+      credentials: 'include'
     });
     
     console.log(`API response status: ${response.status}`);
@@ -193,20 +185,10 @@ export const fetchPost = async (postCode: string): Promise<{
   reply_count?: number;
 }> => {
   try {
-    const userKey = getUserApiKey();
-    
-    if (!userKey) {
-      throw new Error('Authentication required. Please log in again.');
-    }
-    
-    console.log(`Fetching post with code: ${postCode}`);
-    
-    // Fix the parameter name from 'post' to 'code'
-    const response = await fetch(`${API_BASE_URL}/get_post?code=${postCode}`, {
+    const response = await fetch(`/api/get_post?code=${postCode}`, {
       method: 'GET',
-      headers: {
-        'x-user-key': userKey,
-      },
+      headers: createAuthHeaders(),
+      credentials: 'include'
     });
     
     console.log(`Post API response status: ${response.status}`);
@@ -233,18 +215,11 @@ export const fetchPost = async (postCode: string): Promise<{
  */
 export const toggleRoar = async (postCode: string): Promise<boolean | { status: string; errCode: string; message: string; community: string }> => {
   try {
-    const userKey = getUserApiKey();
-    
-    if (!userKey) {
-      return false;
-    }
-    
-    console.log(`Toggling roar for post: ${postCode}`);
-    
-    const response = await fetch(`${API_BASE_URL}/roar_post`, {
+    const response = await fetch(`/api/roar_post`, {
       method: 'POST',
       headers: createAuthHeaders(),
-      body: JSON.stringify({ postCode })
+      body: JSON.stringify({ postCode }),
+      credentials: 'include'
     });
     
     console.log(`Roar toggle API response status: ${response.status}`);
@@ -295,31 +270,12 @@ export const mirrorPost = async (params: {
       console.error('Missing required parameters for mirroring post');
       throw new Error('Post code and destination community are required');
     }
-
-    const userKey = getUserApiKey();
     
-    if (!userKey) {
-      throw new Error('Authentication required. Please log in again.');
-    }
-    
-    console.log(`Mirroring post:`, params);
-    
-    // Use the exact field names expected by the API
-    const requestBody = {
-      postCode,
-      communityTo,
-      quoteText: quoteText?.trim() || undefined
-    };
-    
-    console.log(`Request payload:`, JSON.stringify(requestBody));
-    
-    const response = await fetch(`${API_BASE_URL}/mirror_post`, {
+    const response = await fetch(`/api/mirror_post`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-user-key': userKey
-      },
-      body: JSON.stringify(requestBody)
+      headers: createAuthHeaders(),
+      body: JSON.stringify(params),
+      credentials: 'include'
     });
     
     console.log(`Response status: ${response.status}`);
@@ -366,12 +322,6 @@ export const createPost = async (params: {
       throw new Error('Post content is required');
     }
 
-    const userKey = getUserApiKey();
-    
-    if (!userKey) {
-      throw new Error('Authentication required. Please log in again.');
-    }
-    
     console.log('Creating post:', params);
     
     // Send the post body which already includes embedded media URLs
@@ -391,10 +341,11 @@ export const createPost = async (params: {
     
     console.log('Request payload:', JSON.stringify(requestBody));
     
-    const response = await fetch(`${API_BASE_URL}/create_post`, {
+    const response = await fetch(`/api/create_post`, {
       method: 'POST',
       headers: createAuthHeaders(),
-      body: JSON.stringify(requestBody)
+      body: JSON.stringify(requestBody),
+      credentials: 'include'
     });
     
     console.log(`Response status: ${response.status}`);

@@ -40,9 +40,10 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
   const isHomePage = location.pathname === '/' || location.pathname === '/index';
   
   useEffect(() => {
-    const userKey = localStorage.getItem('dapps_user_key');
+    // Check for user ID instead of API key
+    const userId = localStorage.getItem('dapps_user_id');
     const handle = localStorage.getItem('dapps_user_handle');
-    setIsLoggedIn(!!userKey);
+    setIsLoggedIn(!!userId); // Use userId to determine login status
     setUserHandle(handle || '');
     
     const avatar = localStorage.getItem('dapps_user_avatar');
@@ -50,8 +51,8 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
       setUserAvatar(avatar);
     }
     
-    // Fetch user roar balance if logged in
-    if (userKey && handle) {
+    // Fetch user roar balance if logged in (using handle)
+    if (handle) { // Use handle existence, which implies login
       fetchUserRoarBalance(handle);
     }
     

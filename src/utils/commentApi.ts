@@ -1,5 +1,5 @@
 import { toast } from 'sonner';
-import { API_BASE_URL, getUserApiKey, createAuthHeaders } from './apiBase';
+import { createAuthHeaders } from './apiBase';
 
 /**
  * Interface for comment reply data
@@ -27,20 +27,14 @@ export const fetchReplies = async (postCode: string, limit = 10): Promise<{
   total_count: number;
 }> => {
   try {
-    const userKey = getUserApiKey();
-    
-    if (!userKey) {
-      return { success: false, replies: [], total_count: 0 };
-    }
-    
+    // No need to check for API key - cookies will handle authentication
     console.log(`Fetching replies for post: ${postCode}, limit: ${limit}`);
     
     // Use the correct API endpoint and parameter name
-    const response = await fetch(`${API_BASE_URL}/get_replies?postCode=${postCode}&limit=${limit}`, {
+    const response = await fetch(`/api/get_replies?postCode=${postCode}&limit=${limit}`, {
       method: 'GET',
-      headers: {
-        'x-user-key': userKey,
-      },
+      headers: createAuthHeaders(false),
+      credentials: 'include'
     });
     
     console.log(`Replies API response status: ${response.status}`);
@@ -94,12 +88,7 @@ export const createReply = async (postCode: string, content: string, parentId = 
   message?: string;
 }> => {
   try {
-    const userKey = getUserApiKey();
-    
-    if (!userKey) {
-      toast.error('Authentication required. Please log in again.');
-      return { success: false };
-    }
+    // No need to check for API key - cookies will handle authentication
     
     // Get user handle and avatar from localStorage
     const userHandle = localStorage.getItem('dapps_user_handle');
@@ -107,14 +96,15 @@ export const createReply = async (postCode: string, content: string, parentId = 
     
     console.log(`Creating reply to post ${postCode}, parent ${parentId}, content: ${content}`);
     
-    const response = await fetch(`${API_BASE_URL}/create_reply`, {
+    const response = await fetch(`/api/create_reply`, {
       method: 'POST',
       headers: createAuthHeaders(),
       body: JSON.stringify({
         postCode,
         content,
         parentId
-      })
+      }),
+      credentials: 'include'
     });
     
     console.log(`Create reply API response status: ${response.status}`);
@@ -176,21 +166,17 @@ export const toggleMeow = async (commentId: number): Promise<{
   meow_count?: number;
 }> => {
   try {
-    const userKey = getUserApiKey();
-    
-    if (!userKey) {
-      toast.error('Authentication required. Please log in again.');
-      return { success: false, message: 'Not authenticated' };
-    }
+    // No need to check for API key - cookies will handle authentication
     
     console.log(`Toggling meow for comment: ${commentId}`);
     
-    const response = await fetch(`${API_BASE_URL}/meow_reply`, {
+    const response = await fetch(`/api/meow_reply`, {
       method: 'POST',
       headers: createAuthHeaders(),
       body: JSON.stringify({
         replyId: commentId
-      })
+      }),
+      credentials: 'include'
     });
     
     console.log(`Toggle meow API response status: ${response.status}`);

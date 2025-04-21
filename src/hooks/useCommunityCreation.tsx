@@ -1,13 +1,12 @@
 import { useState, useCallback } from 'react';
 import { 
   CreateCommunityConfig, 
-  createCommunity, 
+  createCommunity as apiCreateCommunity, 
   createCommunityConfig, 
   validateCommunityConfig 
 } from '../utils/communityApi';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
-import { getUserApiKey } from '../utils/apiBase';
 
 export type CommunityTypeOption = 'general' | 'niche' | 'advanced';
 
@@ -133,9 +132,13 @@ export const useCommunityCreation = () => {
   const [txHash, setTxHash] = useState<string | null>(null);
   const [advancedTypeId, setAdvancedTypeId] = useState<string | null>(null);
   const [advancedTypeGasEstimate, setAdvancedTypeGasEstimate] = useState<AdvancedTypeGasEstimate | null>(null);
+  const [isCreatingCommunity, setIsCreatingCommunity] = useState(false);
+  const [communityCreated, setCommunityCreated] = useState(false);
+  const [createdCommunityId, setCreatedCommunityId] = useState<string | null>(null);
+  const [createError, setCreateError] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const updateField = (field: keyof CommunityState, value: any) => {
+  const updateField = (field: keyof CommunityState, value: string | boolean | CommunityTypeOption) => {
     setState(prev => {
       // If changing communityType, clear any advanced config errors
       const updates: Partial<CommunityState> = { [field]: value };
@@ -156,7 +159,7 @@ export const useCommunityCreation = () => {
     }
   };
 
-  const updateAdvancedConfig = (field: keyof CommunityState['advancedConfig'], value: any) => {
+  const updateAdvancedConfig = (field: keyof CommunityState['advancedConfig'], value: string | number) => {
     setState(prev => ({
       ...prev,
       advancedConfig: {
@@ -250,12 +253,6 @@ export const useCommunityCreation = () => {
       const adminFeeBps = Math.round(adminEarningPercentage * 100);
       const memberRewardsBps = Math.round(rewardPercentage * 100);
       
-      // Get user API key from localStorage
-      const userKey = getUserApiKey();
-      if (!userKey) {
-        throw new Error('Authentication required. Please log in again.');
-      }
-      
       console.log('Requesting gas estimate with params:', {
         basePrice: basePrice.toString(),
         alpha: alpha.toString(),
@@ -264,13 +261,13 @@ export const useCommunityCreation = () => {
         memberRewardsBps: memberRewardsBps.toString(),
       });
       
-      // Use the correct endpoint
-      const response = await fetch('https://api.dapps.co/community_type_gas_estimator', {
+      // Use relative proxy path
+      const response = await fetch('/api/community_type_gas_estimator', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'x-user-key': userKey
+          'Content-Type': 'application/json'
         },
+        credentials: 'include', // Add credentials
         body: JSON.stringify({
           basePrice: basePrice.toString(),
           alpha: alpha.toString(),
@@ -365,19 +362,13 @@ export const useCommunityCreation = () => {
     }
   };
 
-  const initializeCommunityType = async (): Promise<boolean> => {
+  const initializeCommunityType = useCallback(async (): Promise<boolean> => {
     try {
       const { k, alpha, basePrice, rewardPercentage, adminEarningPercentage } = state.advancedConfig;
       
       // Convert percentages to basis points (e.g., 1.5% = 150 bps)
       const adminFeeBps = Math.round(adminEarningPercentage * 100);
       const memberRewardsBps = Math.round(rewardPercentage * 100);
-      
-      // Get user API key from localStorage
-      const userKey = getUserApiKey();
-      if (!userKey) {
-        throw new Error('Authentication required. Please log in again.');
-      }
       
       console.log('Initializing community type with params:', {
         basePrice: basePrice.toString(),
@@ -387,13 +378,13 @@ export const useCommunityCreation = () => {
         memberRewardsBps: memberRewardsBps.toString(),
       });
       
-      // Call the initialize_community_type API
-      const response = await fetch('https://api.dapps.co/initialize_community_type', {
+      // Use relative proxy path
+      const response = await fetch('/api/initialize_community_type', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'x-user-key': userKey
+          'Content-Type': 'application/json'
         },
+        credentials: 'include', // Add credentials
         body: JSON.stringify({
           basePrice: basePrice.toString(),
           alpha: alpha.toString(),
@@ -442,7 +433,7 @@ export const useCommunityCreation = () => {
       toast.error(error instanceof Error ? error.message : 'Failed to initialize community type');
       return false;
     }
-  };
+  }, [state.advancedConfig, setAdvancedTypeId]);
 
   const validateCommunityCreation = async () => {
     if (!validateForm()) {
@@ -461,31 +452,27 @@ export const useCommunityCreation = () => {
           ? '1' 
           : advancedTypeId || '2'; // Fallback to '2' if for some reason we don't have the ID
       
-      // Get user API key from localStorage
-      const userKey = getUserApiKey();
-      if (!userKey) {
-        setErrors({ name: 'Authentication required. Please log in again.' });
-        throw new Error('Authentication required. Please log in again.');
-      }
-      
-      // Fix the payload to use correct field names and values
-      const requestPayload = {
-        communityName: state.name, // Use the community NAME not handle
-        name: state.handle, // Keep name for backward compatibility
-        description: state.description || '', // Ensure description is at least an empty string
+      console.log('Validation request payload:', {
+        communityName: state.name,
+        name: state.handle,
+        description: state.description || '',
         type: typeValue,
         encrypt: state.isEncrypted ? '1' : '0',
-      };
+      });
       
-      console.log('Validation request payload:', requestPayload);
-      
-      const response = await fetch('https://api.dapps.co/create_community_validate', {
+      const response = await fetch('/api/create_community_validate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-key': userKey
         },
-        body: JSON.stringify(requestPayload),
+        body: JSON.stringify({
+          communityName: state.name,
+          name: state.handle,
+          description: state.description || '',
+          type: typeValue,
+          encrypt: state.isEncrypted ? '1' : '0',
+        }),
+        credentials: 'include',
       });
       
       console.log('Validation response status:', response.status);
@@ -573,31 +560,27 @@ export const useCommunityCreation = () => {
           ? '1' 
           : advancedTypeId || '2'; // Fallback to '2' if missing
       
-      // Get user API key
-      const userKey = getUserApiKey();
-      if (!userKey) {
-        setErrors({ name: 'Authentication required. Please log in again.' });
-        throw new Error('Authentication required. Please log in again.');
-      }
-      
-      // Fix the payload structure to match what the API expects
-      const requestPayload = {
-        communityName: state.name, // Use the community NAME not handle
-        name: state.handle, // Keep name for backward compatibility
-        description: state.description || '', // Ensure description is at least an empty string
+      console.log('Confirmation request payload:', {
+        communityName: state.name,
+        name: state.handle,
+        description: state.description || '',
         type: typeValue,
         encrypt: state.isEncrypted ? '1' : '0',
-      };
+      });
       
-      console.log('Confirmation request payload:', requestPayload);
-      
-      const response = await fetch('https://api.dapps.co/create_community_confirm', {
+      const response = await fetch('/api/create_community_confirm', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-key': userKey
         },
-        body: JSON.stringify(requestPayload),
+        body: JSON.stringify({
+          communityName: state.name,
+          name: state.handle,
+          description: state.description || '',
+          type: typeValue,
+          encrypt: state.isEncrypted ? '1' : '0',
+        }),
+        credentials: 'include',
       });
       
       console.log('Confirmation response status:', response.status);
@@ -642,7 +625,7 @@ export const useCommunityCreation = () => {
         setStep('advanced');
       }
     }
-  }, [state.communityType, state.advancedConfig]);
+  }, [state.communityType, initializeCommunityType, setStep]);
 
   const handleCreateCommunity = async (): Promise<void> => {
     console.log('handleCreateCommunity called, current step:', step);
@@ -729,6 +712,80 @@ export const useCommunityCreation = () => {
     }
   };
 
+  const createCommunity = async (): Promise<boolean> => {
+    try {
+      setIsCreatingCommunity(true);
+      
+      const communityData = {
+        name: state.name,
+        description: state.description,
+        logoFile: null, // Replace with actual state if needed
+        bannerFile: null, // Replace with actual state if needed
+        communityTypeId: advancedTypeId || null,
+        isPrivate: false, // Replace with actual state if needed
+        // Only include discord webhook if it exists
+        discordWebhook: undefined // Replace with actual state if needed
+      };
+      
+      const formData = new FormData();
+      
+      // Add all the text fields
+      formData.append('name', communityData.name);
+      formData.append('description', communityData.description);
+      formData.append('isPrivate', JSON.stringify(communityData.isPrivate));
+      formData.append('communityTypeId', communityData.communityTypeId || '');
+      
+      if (communityData.discordWebhook) {
+        formData.append('discordWebhook', communityData.discordWebhook);
+      }
+      
+      // Add the image files if they exist
+      if (communityData.logoFile) {
+        formData.append('logo', communityData.logoFile);
+      }
+      
+      if (communityData.bannerFile) {
+        formData.append('banner', communityData.bannerFile);
+      }
+      
+      console.log('Creating community with data:', {
+        name: communityData.name,
+        description: communityData.description,
+        isPrivate: communityData.isPrivate,
+        communityTypeId: communityData.communityTypeId,
+        hasLogo: !!communityData.logoFile,
+        hasBanner: !!communityData.bannerFile,
+        hasDiscordWebhook: !!communityData.discordWebhook,
+      });
+      
+      const response = await fetch('/api/community', {
+        method: 'POST',
+        credentials: 'include', // Important for cookie-based auth
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create community');
+      }
+      
+      const data = await response.json();
+      console.log('Community created successfully:', data);
+      
+      // Update success state
+      setCommunityCreated(true);
+      setCreatedCommunityId(data.id);
+      
+      return true;
+    } catch (error) {
+      console.error('Error creating community:', error);
+      setCreateError(error instanceof Error ? error.message : 'An unknown error occurred');
+      return false;
+    } finally {
+      setIsCreatingCommunity(false);
+    }
+  };
+
   return {
     state,
     errors,
@@ -750,5 +807,6 @@ export const useCommunityCreation = () => {
     confirmCommunityCreation,
     prepareAdvancedTypeCreation,
     confirmAdvancedTypeCreation,
+    createCommunity,
   };
 }; 

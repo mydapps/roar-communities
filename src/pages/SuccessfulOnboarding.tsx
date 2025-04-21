@@ -73,10 +73,11 @@ const SuccessfulOnboarding: React.FC = () => {
       }
 
       try {
-        const response = await fetch('https://api.dapps.co/referral_rewards', {
+        const response = await fetch('/api/referral_rewards', {
           headers: {
             'x-user-key': userKey
-          }
+          },
+          credentials: 'include'
         });
 
         const data = await response.json();
