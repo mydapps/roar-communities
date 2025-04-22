@@ -43,6 +43,7 @@ export const DepositSheet = ({
   const [qrCodeData, setQrCodeData] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [walletCode, setWalletCode] = useState('');
   const isMobile = useIsMobile();
 
   // Fetch wallet address from API
@@ -63,10 +64,13 @@ export const DepositSheet = ({
           }
           
           const data = await response.json();
-        if (data.success && data.address) {
-          setWalletAddress(data.address);
+        if (data.success && data.wallet) {
+          setWalletAddress(data.wallet);
             if (data.qr_code) {
               setQrCodeData(data.qr_code);
+            }
+            if (data.wallet_code) {
+              setWalletCode(data.wallet_code);
             }
           } else {
           throw new Error(data.message || 'Could not retrieve wallet address');
@@ -82,8 +86,8 @@ export const DepositSheet = ({
     fetchWalletAddress();
   }, [open]);
 
-  // Mock deposit code (this can be replaced with an API call too if needed)
-  const depositCode = '429871';
+  // Fallback deposit code if API doesn't return wallet_code
+  const depositCode = walletCode || '429871';
   
   const handleCopy = () => {
     navigator.clipboard.writeText(walletAddress);
@@ -170,9 +174,13 @@ export const DepositSheet = ({
                 <div className="text-center space-y-3">
                   <h3 className="text-sm font-medium text-muted-foreground">Your deposit code</h3>
                   <div className="text-3xl font-mono font-bold tracking-wider py-2 px-6 bg-muted/30 rounded-lg">
-                    {depositCode.split('').map((digit, i) => (
-                      <span key={i} className="mx-1">{digit}</span>
-                    ))}
+                    {isLoading ? (
+                      <div className="h-10 w-36 animate-pulse bg-muted-foreground/20 rounded" />
+                    ) : (
+                      depositCode.split('').map((digit, i) => (
+                        <span key={i} className="mx-1">{digit}</span>
+                      ))
+                    )}
                   </div>
                 </div>
               </div>
