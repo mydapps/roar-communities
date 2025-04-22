@@ -135,7 +135,7 @@ export const EnhancedCommentItem = ({
         // Pass the level 2 parent ID along with this comment's details
         onOpenMobileReply(comment.id, comment.handle, comment.avatar_url, comment.content, level2ParentId);
       } else {
-        onOpenMobileReply(comment.id, comment.handle, comment.avatar_url, comment.content);
+      onOpenMobileReply(comment.id, comment.handle, comment.avatar_url, comment.content);
       }
     } else {
       setIsReplying(!isReplying);
@@ -211,14 +211,14 @@ export const EnhancedCommentItem = ({
             </Button>
             
             {/* Always show the Reply button regardless of level */}
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={handleReplyClick}
-              className="h-8 px-2 text-xs gap-1.5 rounded-full hover:bg-secondary/80"
-            >
-              {isReplying && !isMobile ? 'Cancel' : 'Reply'}
-            </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleReplyClick}
+                className="h-8 px-2 text-xs gap-1.5 rounded-full hover:bg-secondary/80"
+              >
+                {isReplying && !isMobile ? 'Cancel' : 'Reply'}
+              </Button>
           </div>
           
           {isReplying && !isMobile && (

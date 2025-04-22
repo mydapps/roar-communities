@@ -1,18 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import { Helmet } from 'react-helmet-async';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, ArrowRight, Sparkles, Award, Clock, AlertTriangle, TrendingUp, ChevronRight } from 'lucide-react';
+import { Loader2, ArrowRight, Sparkles, Award, Clock, AlertTriangle, TrendingUp, ChevronRight, Rocket } from 'lucide-react';
 import { createAuthHeaders, fetchAvailableBoosters, AvailableBoostersResponse } from '@/utils/apiBase';
 import { toast } from 'sonner';
 import { Link, useNavigate } from 'react-router-dom';
 import { BoosterDisplay, SimpleBoosterDisplay } from '@/components/shared/BoosterDisplay';
 import { BoosterDetailModal } from '@/components/shared/BoosterDetailModal';
+import confetti from 'canvas-confetti';
+import { Badge } from '@/components/ui/badge';
 
 // Constants
-const TOTAL_ROARS_GOAL = 10_000_000; // 10 million roars goal (updated from 1 billion)
+const PHASE_1_GOAL = 10_000_000;
+const PHASE_2_GOAL = 100_000_000;
 const DEFAULT_FARMING_RATE = 0.1; // Default farming rate in Roar/s
 
 interface FarmingStatus {
@@ -86,7 +89,16 @@ const RoarFarmingPage = () => {
   const [isLoadingBoosters, setIsLoadingBoosters] = useState<boolean>(false);
   const [boosterModalOpen, setBoosterModalOpen] = useState<boolean>(false);
   
+  // State for Phase 2 Transition
+  const [phase, setPhase] = useState<1 | 2>(1);
+  const [displayGoal, setDisplayGoal] = useState<number>(PHASE_1_GOAL);
+  const [displayProgress, setDisplayProgress] = useState<number>(0);
+  const [hasSeenPhase2Transition, setHasSeenPhase2Transition] = useState<boolean>(false);
+  const [animationStep, setAnimationStep] = useState<'idle' | 'completingPhase1' | 'phase1Done' | 'startingPhase2' | 'phase2Active'>('idle');
+  const [showPhase2Blink, setShowPhase2Blink] = useState<boolean>(false);
+
   const navigate = useNavigate();
+  const progressAnimationControls = useAnimation(); // Animation controls for progress bar
   
   // Load total roars and farming status on mount and when farming state changes
   useEffect(() => {
@@ -131,10 +143,49 @@ const RoarFarmingPage = () => {
       
       if (data.success) {
         setTotalRoars(data.total_roars);
+
+        // --- Phase 2 Logic --- 
+        const currentPhase = data.total_roars >= PHASE_1_GOAL ? 2 : 1;
+        setPhase(currentPhase);
+
+        const seenTransition = localStorage.getItem('hasSeenPhase2Transition') === 'true';
+        setHasSeenPhase2Transition(seenTransition);
+
+        const currentDisplayProgress = currentPhase === 2 
+            ? (data.total_roars / PHASE_2_GOAL) * 100 
+            : (data.total_roars / PHASE_1_GOAL) * 100;
+
+        if (currentPhase === 2 && !seenTransition && animationStep === 'idle') {
+          // Start the transition animation if Phase 2 reached and animation not seen yet
+          setDisplayGoal(PHASE_1_GOAL); // Start with phase 1 goal
+          setDisplayProgress((data.total_roars / PHASE_1_GOAL) * 100); // Calculate initial progress based on phase 1
+          progressAnimationControls.start({ width: `${(data.total_roars / PHASE_1_GOAL) * 100}%` }, { duration: 0 }); // Set initial width
+          console.log("Starting Phase 2 transition animation");
+          setAnimationStep('completingPhase1');
+        } else if (currentPhase === 2 && seenTransition) {
+          // Phase 2 already active and seen, just set goal and trigger blink
+          setDisplayGoal(PHASE_2_GOAL);
+          setDisplayProgress(currentDisplayProgress);
+          progressAnimationControls.start({ width: `${currentDisplayProgress}%` }, { duration: 0 }); // Set initial progress without animation
+          setShowPhase2Blink(true);
+          setTimeout(() => setShowPhase2Blink(false), 3000); // Blink for 3 seconds
+          setAnimationStep('phase2Active'); // Ensure animation state is correct
+        } else {
+          // Still in Phase 1
+          setDisplayGoal(PHASE_1_GOAL);
+          setDisplayProgress(currentDisplayProgress);
+          progressAnimationControls.start({ width: `${currentDisplayProgress}%` }, { duration: 0 }); // Set initial progress without animation
+          setAnimationStep('idle'); // Reset animation state if needed
+        }
+        // --- End Phase 2 Logic ---
+
       }
     } catch (error) {
       console.error('Error fetching total roars:', error);
       toast.error('Failed to load total roars data');
+      // Set defaults even on error
+      setDisplayGoal(PHASE_1_GOAL);
+      setDisplayProgress(0);
     } finally {
       setTotalRoarsLoading(false);
     }
@@ -290,14 +341,8 @@ const RoarFarmingPage = () => {
         setFarmingProgress(100);
         
         // Stop the animation frame updates
-        if (timeRemainingIntervalRef.current) {
-          clearInterval(timeRemainingIntervalRef.current);
-          timeRemainingIntervalRef.current = null;
-        }
-        
-        // Check status from server
-        checkFarmingStatus();
-        return;
+        // Note: No need to clear interval here, rely on the backup interval clear
+        return; 
       }
       
       // Continue animation loop
@@ -352,23 +397,25 @@ const RoarFarmingPage = () => {
     }, 10000);
     
     // Store both intervals for cleanup
-    farmingIntervalRef.current = setInterval(() => {}, 100); // Dummy interval to track state
+    farmingIntervalRef.current = setInterval(() => {}, 10000); // Adjust interval time as needed
     
-    // Clean up on unmount
-    return () => {
+    // Clean up function needs to clear both intervals
+    const cleanup = () => {
       clearInterval(lionInterval);
       clearInterval(progressInterval);
-      farmingIntervalRef.current = null;
+      if (farmingIntervalRef.current) {
+         clearInterval(farmingIntervalRef.current);
+         farmingIntervalRef.current = null;
+      }
     };
+
+    return cleanup;
   };
   
   // Stop farming animation
   const stopFarmingAnimation = () => {
-    if (farmingIntervalRef.current) {
-      clearInterval(farmingIntervalRef.current);
-      farmingIntervalRef.current = null;
-    }
-    
+    // No need to clear intervals here, the cleanup function handles it
+    // Just reset the visual state
     setLionScale(1);
     setLionRotate(0);
     setProgressPulse(false);
@@ -509,10 +556,11 @@ const RoarFarmingPage = () => {
     return num.toFixed(0);
   };
   
+  // Use displayProgress for the gradient calculation
   const getProgressGradient = () => {
-    if (totalRoars / TOTAL_ROARS_GOAL > 0.8) {
+    if (displayProgress > 80) { // Adjust threshold based on displayProgress
       return "bg-gradient-to-r from-amber-500 via-red-500 to-amber-500";
-    } else if (totalRoars / TOTAL_ROARS_GOAL > 0.5) {
+    } else if (displayProgress > 50) {
       return "bg-gradient-to-r from-amber-400 to-amber-500";
     } else {
       return "bg-amber-400";
@@ -526,13 +574,112 @@ const RoarFarmingPage = () => {
       const data = await fetchAvailableBoosters();
       if (data && data.success) {
         setBoosterData(data);
+      } else {
+        // Handle case where fetchAvailableBoosters fails or returns success: false
+        console.warn('Failed to fetch booster data or API returned unsuccessful status.');
+        setBoosterData(null); // Or set to a default error state if needed
       }
     } catch (error) {
       console.error('Error fetching booster data:', error);
+      setBoosterData(null); // Ensure boosterData is null on error
     } finally {
       setIsLoadingBoosters(false);
     }
   };
+
+  // useEffect hook to handle animation steps
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout | null = null;
+    let confettiIntervalId: NodeJS.Timeout | null = null;
+
+    const playSound = (sound: 'complete' | 'start') => {
+      // Placeholder for sound effect logic
+      console.log(`SOUND: Playing sound - ${sound}`);
+      // try { const audio = new Audio(`/sounds/${sound}.mp3`); audio.play(); } catch(e) {}
+    }
+
+    if (animationStep === 'completingPhase1') {
+      // Animate progress to 100% quickly
+      const duration = 1500; // Animation duration in ms
+      progressAnimationControls.start({ width: "100%" }, { duration: duration / 1000, ease: "easeOut" });
+
+      // Play sound
+      playSound('complete');
+
+      // Trigger confetti continuously during hold
+      const endConfetti = Date.now() + 4500; // confetti for 4.5 seconds (matches hold + transition time)
+      const confettiTick = () => {
+        confetti({
+          particleCount: 5,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0 },
+          colors: ['#FFD700', '#FFC107', '#FFEB3B']
+        });
+        confetti({
+          particleCount: 5,
+          angle: 120,
+          spread: 55,
+          origin: { x: 1 },
+          colors: ['#FFD700', '#FFC107', '#FFEB3B']
+        });
+
+        if (Date.now() < endConfetti) {
+          confettiIntervalId = setTimeout(confettiTick, 100);
+        } else {
+          if (confettiIntervalId) clearTimeout(confettiIntervalId);
+        }
+      };
+      confettiTick(); // Start the confetti
+
+      // Transition to next step after progress animation finishes
+      timeoutId = setTimeout(() => {
+        setAnimationStep('phase1Done');
+      }, duration + 100); // Wait for progress animation + buffer
+
+    } else if (animationStep === 'phase1Done') {
+      // Hold the "Phase 1 Completed" message
+      timeoutId = setTimeout(() => {
+        setAnimationStep('startingPhase2');
+      }, 3000); // Hold for 3 seconds
+
+    } else if (animationStep === 'startingPhase2') {
+      // Play phase 2 start sound
+      playSound('start');
+
+      // Calculate new progress target
+      const targetProgress = (totalRoars / PHASE_2_GOAL) * 100;
+      setDisplayGoal(PHASE_2_GOAL);
+
+      // Animate progress bar down to new percentage
+      progressAnimationControls.start({ width: `${targetProgress}%` }, { duration: 1.5, ease: "easeInOut" })
+        .then(() => {
+          // Animation complete, move to final state
+          localStorage.setItem('hasSeenPhase2Transition', 'true');
+          setHasSeenPhase2Transition(true);
+          setAnimationStep('phase2Active');
+          // Manually set displayProgress state after animation
+          setDisplayProgress(targetProgress);
+        });
+
+      // Hold "Starting Phase 2" text for slightly longer than progress animation
+      timeoutId = setTimeout(() => {
+        // If animation didn't complete, force state update (fallback)
+        if (animationStep === 'startingPhase2') {
+           localStorage.setItem('hasSeenPhase2Transition', 'true');
+           setHasSeenPhase2Transition(true);
+           setAnimationStep('phase2Active');
+           setDisplayProgress(targetProgress);
+        }
+      }, 2500); // Hold text for 2.5s
+    } 
+
+    return () => { 
+      if (timeoutId) clearTimeout(timeoutId); 
+      if (confettiIntervalId) clearTimeout(confettiIntervalId); 
+    };
+  }, [animationStep, totalRoars, progressAnimationControls]);
+
   
   return (
     <>
@@ -550,57 +697,158 @@ const RoarFarmingPage = () => {
       {/* Added extra top margin to prevent content from being cut off by navigation */}
       <div className="container max-w-md mx-auto px-4 py-6 mt-14">
         {/* Global progress card - now a separate section */}
-        <Card className="border-amber-200 dark:border-amber-800/40 shadow-md mb-5">
+        <Card className="border-amber-200 dark:border-amber-800/40 shadow-md mb-5 relative overflow-hidden">
           <CardContent className="p-4">
-            <div className="flex flex-col">
-              <div className="flex justify-between items-center mb-1">
-                <h3 className="text-sm font-medium text-amber-800 dark:text-amber-200">Global Roar Progress</h3>
-                <span className="text-xs text-muted-foreground">
-                  {((totalRoars / TOTAL_ROARS_GOAL) * 100).toFixed(1)}% Complete
-                </span>
-              </div>
-              
-              <div className="flex justify-between text-xs text-muted-foreground mb-2">
-                <span>Community Goal</span>
-                <span className="font-medium tabular-nums">
-                  {formatLargeNumber(totalRoars)} / {formatLargeNumber(TOTAL_ROARS_GOAL)} ROAR
-                </span>
-              </div>
-              
-              <Progress 
-                value={(totalRoars / TOTAL_ROARS_GOAL) * 100} 
-                className="h-2.5 bg-amber-100 dark:bg-amber-950/40"
-                style={{
-                  backgroundImage: getProgressGradient()
-                }}
-              />
-              
-              {/* Add warning label when running out */}
-              {totalRoars / TOTAL_ROARS_GOAL > 0.7 && (
-                <div className="mt-2 flex items-center justify-center">
-                  <motion.div
-                    animate={{ opacity: [0.7, 1, 0.7] }}
-                    transition={{ repeat: Infinity, duration: 2 }}
-                    className="flex items-center gap-1 bg-amber-50 text-amber-800 px-2 py-1 rounded text-xs font-medium border border-amber-200"
-                  >
-                    <AlertTriangle className="h-3 w-3" />
-                    <span>Running out fast! Don't miss out</span>
-                  </motion.div>
-                </div>
-              )}
-              
-              {/* Add link to boosters page */}
-              <div className="flex justify-end mt-3">
-                <Link 
-                  to="/boosters" 
-                  className="text-xs flex items-center gap-1 text-amber-600 hover:text-amber-700 hover:underline"
+            <AnimatePresence mode="wait">
+              {animationStep === 'completingPhase1' || animationStep === 'phase1Done' ? (
+                <motion.div
+                  key="phase1-complete"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  className="absolute inset-0 bg-gradient-to-br from-green-400 to-emerald-500 flex flex-col items-center justify-center z-10 p-4 text-center"
                 >
-                  <Sparkles className="h-3 w-3" />
-                  View all boosters
-                  <ChevronRight className="h-3 w-3" />
-                </Link>
+                  {/* Enhanced Phase 1 Complete Visuals */}
+                  <motion.div 
+                    initial={{ scale: 0.5, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: 0.2, type: "spring", stiffness: 150 }}
+                  >
+                    <Award className="h-16 w-16 text-white mb-3 drop-shadow-lg" />
+                  </motion.div>
+                  <motion.h3 
+                    className="text-3xl font-bold text-white drop-shadow-md"
+                    initial={{ y: 10, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.4 }}
+                  >
+                    Phase 1 Completed!
+                  </motion.h3>
+                  {/* Add subtle sparkles */}
+                  {[...Array(5)].map((_, i) => (
+                    <motion.div
+                      key={`sparkle-${i}`}
+                      className="absolute text-white text-xl"
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ 
+                        scale: [0, 1, 0],
+                        opacity: [0, 1, 0],
+                        x: `${Math.random() * 160 - 80}%`, // Random horizontal position
+                        y: `${Math.random() * 160 - 80}%`, // Random vertical position
+                      }}
+                      transition={{
+                        repeat: Infinity,
+                        duration: 1 + Math.random() * 1,
+                        delay: 0.5 + Math.random() * 1,
+                      }}
+                    >✨</motion.div>
+                  ))}
+                </motion.div>
+              ) : animationStep === 'startingPhase2' ? (
+                <motion.div
+                  key="phase2-starting"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  className="absolute inset-0 bg-gradient-to-br from-purple-500 to-indigo-600 flex flex-col items-center justify-center z-10 p-4 text-center"
+                >
+                   {/* Enhanced Phase 2 Starting Visuals */}
+                  <motion.div 
+                    initial={{ scale: 0.5, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: 0.2, type: "spring", stiffness: 150 }}
+                  >
+                    <Rocket className="h-16 w-16 text-white mb-3 drop-shadow-lg" />
+                  </motion.div>
+                  <motion.h3 
+                    className="text-3xl font-bold text-white drop-shadow-md"
+                    initial={{ y: 10, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.4 }}
+                  >
+                    Starting Phase 2!
+                  </motion.h3>
+                  {/* Add subtle energy pulses */}
+                  <motion.div
+                    className="absolute inset-0 border-4 border-white/20 rounded-lg"
+                    initial={{ scale: 1, opacity: 0 }}
+                    animate={{ scale: [1, 1.2], opacity: [0.5, 0]}}
+                    transition={{ duration: 1.5, repeat: Infinity, ease: "easeOut"}}
+                  />
+                </motion.div>
+              ) : showPhase2Blink ? (
+                <motion.div
+                  key="phase2-active-blink"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: [0, 1, 0] }}
+                  transition={{ duration: 0.8, times: [0, 0.5, 1], repeat: 2, repeatType: "loop" }}
+                  className="absolute top-2 right-2 z-10"
+                >
+                  <Badge className="bg-purple-500/20 text-purple-700 border-purple-500/30 animate-pulse">
+                    Phase 2 Farming Active!
+                  </Badge>
+                </motion.div>
+              ) : null}
+            </AnimatePresence>
+            
+            <motion.div
+              initial={false}
+              animate={{ filter: animationStep !== 'idle' && animationStep !== 'phase2Active' ? 'blur(4px)' : 'blur(0px)' }}
+              transition={{ duration: 0.5 }}
+            >
+              <div className="flex flex-col">
+                <div className="flex justify-between items-center mb-1">
+                  <h3 className="text-sm font-medium text-amber-800 dark:text-amber-200">Global Roar Progress {phase === 2 ? '(Phase 2)' : '(Phase 1)'}</h3>
+                  <span className="text-xs text-muted-foreground">
+                    {/* Use displayProgress */}
+                    {displayProgress.toFixed(1)}% Complete
+                  </span>
+                </div>
+                
+                <div className="flex justify-between text-xs text-muted-foreground mb-2">
+                  <span>Community Goal</span>
+                  <span className="font-medium tabular-nums">
+                    {/* Use totalRoars and displayGoal */}
+                    {formatLargeNumber(totalRoars)} / {formatLargeNumber(displayGoal)} ROAR
+                  </span>
+                </div>
+                
+                {/* Animated Progress Bar */}
+                 <motion.div className="h-2.5 bg-amber-100 dark:bg-amber-950/40 rounded-full overflow-hidden">
+                  <motion.div 
+                    className={`h-full ${getProgressGradient()}`} 
+                    initial={{ width: "0%" }}
+                    animate={progressAnimationControls}
+                  />
+                </motion.div>
+                
+                {/* Warning label */}
+                {phase === 2 && totalRoars / PHASE_2_GOAL > 0.7 && (
+                  <div className="mt-2 flex items-center justify-center">
+                    <motion.div
+                      animate={{ opacity: [0.7, 1, 0.7] }}
+                      transition={{ repeat: Infinity, duration: 2 }}
+                      className="flex items-center gap-1 bg-amber-50 text-amber-800 px-2 py-1 rounded text-xs font-medium border border-amber-200"
+                    >
+                      <AlertTriangle className="h-3 w-3" />
+                      <span>Running out fast! Don't miss out</span>
+                    </motion.div>
+                  </div>
+                )}
+                
+                {/* Booster link */}
+                <div className="flex justify-end mt-3">
+                  <Link 
+                    to="/boosters" 
+                    className="text-xs flex items-center gap-1 text-amber-600 hover:text-amber-700 hover:underline"
+                  >
+                    <Sparkles className="h-3 w-3" />
+                    View all boosters
+                    <ChevronRight className="h-3 w-3" />
+                  </Link>
+                </div>
               </div>
-            </div>
+            </motion.div>
           </CardContent>
         </Card>
         
@@ -641,13 +889,15 @@ const RoarFarmingPage = () => {
                       className="dark:opacity-30"
                     />
                     {isFarming && (
-                      <circle 
+                      <motion.circle 
                         cx="50" cy="50" r="40" 
                         stroke="url(#gradient)" 
                         strokeWidth="8" 
                         fill="none" 
                         strokeDasharray={`${2 * Math.PI * 40}`}
-                        strokeDashoffset={`${2 * Math.PI * 40 * (1 - farmingProgress / 100)}`}
+                        initial={{ strokeDashoffset: `${2 * Math.PI * 40}` }}
+                        animate={{ strokeDashoffset: `${2 * Math.PI * 40 * (1 - farmingProgress / 100)}`}}
+                        transition={{ duration: 0.5, ease: "linear" }}
                         className={`transition-all duration-500 ${progressPulse ? 'opacity-80' : 'opacity-100'}`}
                       />
                     )}

@@ -64,8 +64,8 @@ export const DepositSheet = ({
           }
           
           const data = await response.json();
-        if (data.success && data.wallet) {
-          setWalletAddress(data.wallet);
+          if (data.success && data.wallet) {
+            setWalletAddress(data.wallet);
             if (data.qr_code) {
               setQrCodeData(data.qr_code);
             }
@@ -178,7 +178,7 @@ export const DepositSheet = ({
                       <div className="h-10 w-36 animate-pulse bg-muted-foreground/20 rounded" />
                     ) : (
                       depositCode.split('').map((digit, i) => (
-                        <span key={i} className="mx-1">{digit}</span>
+                      <span key={i} className="mx-1">{digit}</span>
                       ))
                     )}
                   </div>

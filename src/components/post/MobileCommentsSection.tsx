@@ -176,7 +176,7 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
     
     // If parentId is provided, get the real ID if this is an optimistic comment
     const realParentId = parentId ? getRealIdIfAvailable(parentId) : undefined;
-    
+      
     // Generate optimistic ID (negative to identify it as optimistic) - moved outside try/catch
     const optimisticId = -Date.now();
     
@@ -191,17 +191,17 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
       const optimisticReply: CommentReply = {
         id: optimisticId,
         uid: Number(localStorage.getItem('dapps_user_id') || '0'),
-        handle: userHandle,
-        avatar_url: userAvatar,
-        content: content,
-        created_on: new Date().toISOString(),
-        time_ago: 'just now',
-        upvotes: 0,
-        meow_count: 0,
+                  handle: userHandle,
+                  avatar_url: userAvatar,
+                  content: content,
+                  created_on: new Date().toISOString(),
+                  time_ago: 'just now',
+                  upvotes: 0,
+                  meow_count: 0,
         has_meowed: false,
         sub_replies: []
-      };
-      
+                };
+                
       // Update UI optimistically, finding the correct parent using realParentId
       if (realParentId) {
         // This is a reply to an existing comment
@@ -267,7 +267,7 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
           };
           
           return updateCommentId(prevReplies);
-        });
+      });
       }
       
       // Clear reply mode after successful submission
