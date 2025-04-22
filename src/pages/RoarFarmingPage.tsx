@@ -96,7 +96,7 @@ const RoarFarmingPage = () => {
   const [hasSeenPhase2Transition, setHasSeenPhase2Transition] = useState<boolean>(false);
   const [animationStep, setAnimationStep] = useState<'idle' | 'completingPhase1' | 'phase1Done' | 'startingPhase2' | 'phase2Active'>('idle');
   const [showPhase2Blink, setShowPhase2Blink] = useState<boolean>(false);
-
+  
   const navigate = useNavigate();
   const progressAnimationControls = useAnimation(); // Animation controls for progress bar
   
@@ -342,7 +342,7 @@ const RoarFarmingPage = () => {
         
         // Stop the animation frame updates
         // Note: No need to clear interval here, rely on the backup interval clear
-        return; 
+        return;
       }
       
       // Continue animation loop
@@ -405,7 +405,7 @@ const RoarFarmingPage = () => {
       clearInterval(progressInterval);
       if (farmingIntervalRef.current) {
          clearInterval(farmingIntervalRef.current);
-         farmingIntervalRef.current = null;
+      farmingIntervalRef.current = null;
       }
     };
 
@@ -796,58 +796,58 @@ const RoarFarmingPage = () => {
               animate={{ filter: animationStep !== 'idle' && animationStep !== 'phase2Active' ? 'blur(4px)' : 'blur(0px)' }}
               transition={{ duration: 0.5 }}
             >
-              <div className="flex flex-col">
-                <div className="flex justify-between items-center mb-1">
+            <div className="flex flex-col">
+              <div className="flex justify-between items-center mb-1">
                   <h3 className="text-sm font-medium text-amber-800 dark:text-amber-200">Global Roar Progress {phase === 2 ? '(Phase 2)' : '(Phase 1)'}</h3>
-                  <span className="text-xs text-muted-foreground">
+                <span className="text-xs text-muted-foreground">
                     {/* Use displayProgress */}
                     {displayProgress.toFixed(1)}% Complete
-                  </span>
-                </div>
-                
-                <div className="flex justify-between text-xs text-muted-foreground mb-2">
-                  <span>Community Goal</span>
-                  <span className="font-medium tabular-nums">
+                </span>
+              </div>
+              
+              <div className="flex justify-between text-xs text-muted-foreground mb-2">
+                <span>Community Goal</span>
+                <span className="font-medium tabular-nums">
                     {/* Use totalRoars and displayGoal */}
                     {formatLargeNumber(totalRoars)} / {formatLargeNumber(displayGoal)} ROAR
-                  </span>
-                </div>
-                
+                </span>
+              </div>
+              
                 {/* Animated Progress Bar */}
                  <motion.div className="h-2.5 bg-amber-100 dark:bg-amber-950/40 rounded-full overflow-hidden">
                   <motion.div 
                     className={`h-full ${getProgressGradient()}`} 
                     initial={{ width: "0%" }}
                     animate={progressAnimationControls}
-                  />
+              />
                 </motion.div>
-                
+              
                 {/* Warning label */}
                 {phase === 2 && totalRoars / PHASE_2_GOAL > 0.7 && (
-                  <div className="mt-2 flex items-center justify-center">
-                    <motion.div
-                      animate={{ opacity: [0.7, 1, 0.7] }}
-                      transition={{ repeat: Infinity, duration: 2 }}
-                      className="flex items-center gap-1 bg-amber-50 text-amber-800 px-2 py-1 rounded text-xs font-medium border border-amber-200"
-                    >
-                      <AlertTriangle className="h-3 w-3" />
-                      <span>Running out fast! Don't miss out</span>
-                    </motion.div>
-                  </div>
-                )}
-                
-                {/* Booster link */}
-                <div className="flex justify-end mt-3">
-                  <Link 
-                    to="/boosters" 
-                    className="text-xs flex items-center gap-1 text-amber-600 hover:text-amber-700 hover:underline"
+                <div className="mt-2 flex items-center justify-center">
+                  <motion.div
+                    animate={{ opacity: [0.7, 1, 0.7] }}
+                    transition={{ repeat: Infinity, duration: 2 }}
+                    className="flex items-center gap-1 bg-amber-50 text-amber-800 px-2 py-1 rounded text-xs font-medium border border-amber-200"
                   >
-                    <Sparkles className="h-3 w-3" />
-                    View all boosters
-                    <ChevronRight className="h-3 w-3" />
-                  </Link>
+                    <AlertTriangle className="h-3 w-3" />
+                    <span>Running out fast! Don't miss out</span>
+                  </motion.div>
                 </div>
+              )}
+              
+                {/* Booster link */}
+              <div className="flex justify-end mt-3">
+                <Link 
+                  to="/boosters" 
+                  className="text-xs flex items-center gap-1 text-amber-600 hover:text-amber-700 hover:underline"
+                >
+                  <Sparkles className="h-3 w-3" />
+                  View all boosters
+                  <ChevronRight className="h-3 w-3" />
+                </Link>
               </div>
+            </div>
             </motion.div>
           </CardContent>
         </Card>

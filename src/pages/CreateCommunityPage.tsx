@@ -727,7 +727,7 @@ const CreateCommunityPage = () => {
             {errors.name && (
               <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
                 <AlertCircle className="h-3 w-3" />
-                <span>{errors.name}</span>
+                <span dangerouslySetInnerHTML={{ __html: errors.name }} />
               </p>
             )}
           </div>
