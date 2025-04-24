@@ -598,3 +598,97 @@ export const setupAxiosDefaults = (): void => {
 
 // Call the setup function immediately
 setupAxiosDefaults();
+
+// Add type for Referral Gas Estimate API Response
+export interface ReferralGasEstimateResponse {
+  success: boolean;
+  estimated_gas?: number;
+  gas_cost_eth?: string;
+  available_earnings?: string;
+  net_amount?: string;
+  is_profitable?: boolean;
+  message?: string; // For errors
+}
+
+// Add type for Referral Withdrawal API Response
+export interface ReferralWithdrawalResponse {
+  success: boolean;
+  transaction_hash?: string;
+  withdrawn_amount?: string;
+  address?: string;
+  message?: string; // For errors
+  error?: { // For detailed errors
+    status: string;
+    message: string;
+  };
+}
+
+// Function to fetch referral withdrawal gas estimate
+export const fetchReferralGasEstimate = async (): Promise<ReferralGasEstimateResponse> => {
+  debugLog('Fetching referral gas estimate...');
+  try {
+    const response = await fetch('/api/referral_gas_estimate', {
+      method: 'GET',
+      headers: createAuthHeaders(false), // No content-type needed for GET
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const errorData: ReferralGasEstimateResponse = await response.json().catch(() => ({
+        success: false,
+        message: `HTTP error ${response.status}: Failed to fetch gas estimate`,
+      }));
+      debugLog('Error fetching referral gas estimate:', errorData);
+      return { ...errorData, success: false };
+    }
+
+    const data: ReferralGasEstimateResponse = await response.json();
+    debugLog('Referral gas estimate fetched successfully:', data);
+    return data;
+
+  } catch (error) {
+    debugLog('Network or other error fetching referral gas estimate:', error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'An unknown error occurred while fetching the gas estimate.',
+    };
+  }
+};
+
+// Function to withdraw referral earnings
+export const withdrawReferralEarnings = async (): Promise<ReferralWithdrawalResponse> => {
+  debugLog('Attempting to withdraw referral earnings...');
+  try {
+    const response = await fetch('/api/withdraw_referral_earnings', {
+      method: 'POST',
+      headers: createAuthHeaders(), // Includes Content-Type: application/json
+      credentials: 'include',
+      // No body needed for this specific withdrawal endpoint as per user description
+    });
+
+    if (!response.ok) {
+       const errorData: ReferralWithdrawalResponse = await response.json().catch(() => ({
+        success: false,
+        message: `HTTP error ${response.status}: Withdrawal failed`,
+       }));
+       debugLog('Error withdrawing referral earnings:', errorData);
+      // Ensure the error structure from the API is preserved if available
+      return {
+        success: false,
+        message: errorData.message || `HTTP error ${response.status}: Withdrawal failed`,
+        error: errorData.error,
+       };
+    }
+
+    const data: ReferralWithdrawalResponse = await response.json();
+    debugLog('Referral earnings withdrawn successfully:', data);
+    return data;
+
+  } catch (error) {
+    debugLog('Network or other error withdrawing referral earnings:', error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : 'An unknown error occurred during withdrawal.',
+    };
+  }
+};

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { 
@@ -17,7 +17,9 @@ import {
   ArrowRight,
   Link as LinkIcon,
   Wallet,
-  Calendar
+  Calendar,
+  Check,
+  Loader2
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -26,9 +28,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { toast } from 'sonner';
 import { shareToSocialMedia, SharePlatform } from '@/utils/shareUtils';
 import { useResponsive } from '@/hooks/use-mobile';
-import { createAuthHeaders } from '@/utils/apiBase';
+import { createAuthHeaders, fetchEthPrice, fetchReferralGasEstimate, withdrawReferralEarnings, ReferralGasEstimateResponse, ReferralWithdrawalResponse } from '@/utils/apiBase';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
+import { WithdrawalSheet } from '@/components/referral/WithdrawalSheet';
+import { formatNumber } from '@/utils/formatUtils';
 
 // Define types for API responses
 interface ReferralEarnings {
@@ -72,52 +76,54 @@ const XLogoIcon = () => (
 const ReferralPage = () => {
   const { isMobile } = useResponsive();
   const [copied, setCopied] = useState(false);
-  const [rewardsClaimable, setRewardsClaimable] = useState(false);
-  const [isClaimingRewards, setIsClaimingRewards] = useState(false);
   const [showCopyNotification, setShowCopyNotification] = useState(false);
   
   // User data
   const [userHandle, setUserHandle] = useState<string>('');
   
   // API data states
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingData, setIsLoadingData] = useState(true);
   const [earnings, setEarnings] = useState<ReferralEarnings | null>(null);
   const [invitedUsers, setInvitedUsers] = useState<InvitedUser[]>([]);
   const [totalInvites, setTotalInvites] = useState(0);
   const [error, setError] = useState<string | null>(null);
   
+  // ETH Price State
+  const [ethPrice, setEthPrice] = useState<number | null>(null);
+  const [isEthPriceLoading, setIsEthPriceLoading] = useState(false);
+
+  // Withdrawal State
+  const [isWithdrawSheetOpen, setIsWithdrawSheetOpen] = useState(false);
+  const [withdrawalStep, setWithdrawalStep] = useState<'estimate' | 'confirming' | 'complete' | 'error'>('estimate');
+  const [isProcessingWithdrawal, setIsProcessingWithdrawal] = useState(false);
+  const [withdrawalEstimateData, setWithdrawalEstimateData] = useState<ReferralGasEstimateResponse | null>(null);
+  const [withdrawalTxHash, setWithdrawalTxHash] = useState<string | null>(null);
+  const [withdrawalError, setWithdrawalError] = useState<{ message?: string; details?: string } | null>(null);
+  
   // Generate referral URL with user handle
   const referralUrl = userHandle ? `dapps.co/invite/${userHandle.toLowerCase()}` : 'dapps.co/invite';
   
-  useEffect(() => {
-    // Get user handle from local storage
-    const storedHandle = localStorage.getItem('dapps_user_handle');
-    if (storedHandle) {
-      setUserHandle(storedHandle);
-    }
-    
-    const loadData = async () => {
-    setIsLoading(true);
+  // Function to load main page data (hoisted and wrapped in useCallback)
+  const loadData = useCallback(async () => {
+      setIsLoadingData(true);
       setError(null);
-    try {
+      try {
         // Use relative proxy path for earnings
         const earningsResponse = await fetch('/api/referral_earnings', {
           credentials: 'include' // Add credentials
-      });
+        });
         if (!earningsResponse.ok) throw new Error('Failed to fetch earnings');
         const earningsData = await earningsResponse.json();
         if (earningsData.success) {
           setEarnings(earningsData);
-          // Set rewards claimable if available to withdraw > 0
-          setRewardsClaimable(earningsData.available_to_withdraw > 0);
         } else {
           throw new Error(earningsData.message || 'Could not load earnings');
-      }
-      
+        }
+
         // Use relative proxy path for invited users
         const invitedUsersResponse = await fetch('/api/invited_users?page=1&limit=20', {
           credentials: 'include' // Add credentials
-      });
+        });
         if (!invitedUsersResponse.ok) throw new Error('Failed to fetch invited users');
         const invitedUsersData = await invitedUsersResponse.json();
         if (invitedUsersData.success) {
@@ -125,16 +131,45 @@ const ReferralPage = () => {
           setTotalInvites(invitedUsersData.total);
         } else {
           throw new Error(invitedUsersData.message || 'Could not load invited users');
-      }
+        }
 
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An unknown error occurred');
+        toast.error(err instanceof Error ? err.message : 'Could not load referral data');
+      } finally {
+        setIsLoadingData(false);
+      }
+    }, []); // Empty dependency array as it doesn't depend on props/state outside its scope
+
+  // Fetch initial data and ETH price
+  useEffect(() => {
+    // Get user handle from local storage
+    const storedHandle = localStorage.getItem('dapps_user_handle');
+    if (storedHandle) {
+      setUserHandle(storedHandle);
+    }
+    
+    const getEthPrice = async () => {
+      setIsEthPriceLoading(true);
+    try {
+        const response = await fetchEthPrice();
+        if (response.success && response.price) {
+          setEthPrice(response.price);
+        } else {
+          console.error('Failed to fetch ETH price:', response.error);
+          setEthPrice(3000); // Fallback
+      }
+    } catch (error) {
+        console.error('Error fetching ETH price:', error);
+        setEthPrice(3000); // Fallback
     } finally {
-      setIsLoading(false);
+        setIsEthPriceLoading(false);
     }
   };
-    loadData();
-  }, []);
+
+    loadData(); // Call the hoisted loadData function
+    getEthPrice();
+  }, [loadData]); // Add loadData to dependency array
   
   // Add confetti burst function
   const triggerConfetti = (intensity = 'medium') => {
@@ -190,53 +225,88 @@ const ReferralPage = () => {
     });
   };
 
-  const handleClaimRewards = async () => {
-    if (!earnings || !rewardsClaimable) return;
-    
-    setIsClaimingRewards(true);
-    
+  // Function to estimate USD value
+  const estimateUsdValue = (ethValue: number | string | undefined): string => {
+    if (ethValue === undefined || ethPrice === null) return '0.00';
+    const ethNum = typeof ethValue === 'string' ? parseFloat(ethValue) : ethValue;
+    if (isNaN(ethNum)) return '0.00';
+    return (ethNum * ethPrice).toFixed(2);
+  };
+
+  // Handler to initiate withdrawal
+  const handleWithdrawClick = async () => {
+    setIsProcessingWithdrawal(true);
+    setWithdrawalError(null);
+    setWithdrawalEstimateData(null); // Clear previous estimate
+    setWithdrawalStep('estimate'); // Start at estimate step
+    setIsWithdrawSheetOpen(true); // Open sheet immediately to show loading
+
     try {
-      // Use relative proxy path
-      const response = await fetch('/api/claim_referral_rewards', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }, // Keep content type for POST
-        credentials: 'include' // Add credentials
-      });
-      
-      if (!response.ok) throw new Error('Failed to claim rewards');
-      
-      const data = await response.json();
-      if (data.success) {
-      setEarnings(prev => {
-        if (!prev) return null;
-        return {
-          ...prev,
-          referral_earnings: prev.referral_earnings,
-          available_to_withdraw: 0,
-          total_withdrawn: prev.total_withdrawn + prev.available_to_withdraw
-        };
-      });
-      
-      setRewardsClaimable(false);
-      
-      // Success animation
-      confetti({
-        particleCount: 150,
-        spread: 90,
-        origin: { y: 0.6 },
-        colors: ['#4F46E5', '#10B981', '#F59E0B']
-      });
-      
-      toast.success("Rewards claimed successfully!");
+      const estimate = await fetchReferralGasEstimate();
+      setWithdrawalEstimateData(estimate); // Store estimate data (success or failure)
+
+      if (!estimate.success) {
+         // Error is shown within the sheet based on withdrawalEstimateData
+         console.error("Gas estimation failed:", estimate.message);
+         // Keep the sheet open to show the error from estimate view
+      }
+      // If estimate is successful, sheet will show details based on withdrawalEstimateData
+
+    } catch (err) {
+      console.error("Error fetching withdrawal estimate:", err);
+      setWithdrawalError({ message: 'Failed to fetch withdrawal details. Please try again.' });
+      setWithdrawalEstimateData({ success: false, message: 'Failed to fetch withdrawal details. Please try again.' }); // Set explicit failure data
+      // Keep sheet open to show error
+    } finally {
+      setIsProcessingWithdrawal(false); // Stop button loading, sheet handles internal loading
+    }
+  };
+
+  // Handler to confirm and execute withdrawal (passed to WithdrawalSheet)
+  const handleConfirmWithdrawal = async () => {
+    setIsProcessingWithdrawal(true);
+    setWithdrawalStep('confirming');
+    setWithdrawalError(null);
+    setWithdrawalTxHash(null);
+
+    try {
+      const result = await withdrawReferralEarnings();
+
+      if (result.success && result.transaction_hash) {
+        setWithdrawalTxHash(result.transaction_hash);
+        // Optionally update withdrawalEstimateData if API returns final withdrawn amount
+        if (result.withdrawn_amount) {
+          setWithdrawalEstimateData(prev => prev ? {...prev, net_amount: result.withdrawn_amount} : null);
+        }
+        setWithdrawalStep('complete');
+        toast.success('Withdrawal successful!');
+        // Refresh earnings data in the background
+        loadData();
       } else {
-        throw new Error(data.message || 'Failed to claim rewards');
+        throw new Error(result.message || 'Withdrawal failed');
       }
     } catch (err) {
-      console.error('Error claiming rewards:', err);
-      toast.error('Failed to claim rewards');
+      console.error("Withdrawal error:", err);
+      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred during withdrawal.';
+      setWithdrawalError({ message: 'Withdrawal Failed', details: errorMessage });
+      setWithdrawalStep('error');
+      toast.error(errorMessage);
     } finally {
-      setIsClaimingRewards(false);
+      setIsProcessingWithdrawal(false);
     }
+  };
+
+  // Handler for closing the sheet
+   const handleSheetClose = () => {
+     setIsWithdrawSheetOpen(false);
+     // Optional: Reset state after a short delay to allow closing animation
+     setTimeout(() => {
+       setWithdrawalStep('estimate');
+       setWithdrawalEstimateData(null);
+       setWithdrawalTxHash(null);
+       setWithdrawalError(null);
+       setIsProcessingWithdrawal(false); // Ensure loading state is reset
+     }, 300);
   };
   
   const formatDate = (dateString: string) => {
@@ -294,7 +364,7 @@ const ReferralPage = () => {
             whileTap={{ scale: 0.98 }}
           >
             <div className="text-sm text-muted-foreground">Your Invites</div>
-            {isLoading ? (
+            {isLoadingData ? (
               <Skeleton className="h-8 w-12 mx-auto" />
             ) : (
               <motion.div 
@@ -364,17 +434,12 @@ const ReferralPage = () => {
                         className="pr-20 py-5 text-base font-medium border-primary/20 bg-muted/30"
                       />
                       <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="absolute right-0 top-0 h-full border-l border-primary/10 rounded-none px-3 text-primary"
+                        variant="outline"
+                        size="icon"
                         onClick={handleCopy}
+                        className="h-10 w-10 flex-shrink-0"
                       >
-                        {copied ? (
-                          <CheckCircle2 className="h-4 w-4 mr-1" />
-                        ) : (
-                          <CopyIcon className="h-4 w-4 mr-1" />
-                        )}
-                        {isMobile ? '' : (copied ? 'Copied!' : 'Copy')}
+                        <CopyIcon className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
@@ -452,7 +517,7 @@ const ReferralPage = () => {
             </CardHeader>
             
             <CardContent className="pt-4">
-              {isLoading ? (
+              {isLoadingData ? (
                 <div className="space-y-4">
                   <Skeleton className="h-14 w-full" />
                   <Skeleton className="h-14 w-full" />
@@ -480,8 +545,8 @@ const ReferralPage = () => {
                     </div>
                     <motion.div 
                       className="text-xl font-bold text-primary"
-                      animate={isClaimingRewards ? { scale: [1, 1.05, 1] } : {}}
-                      transition={{ repeat: isClaimingRewards ? Infinity : 0, duration: 0.5 }}
+                      animate={isProcessingWithdrawal ? { scale: [1, 1.05, 1] } : {}}
+                      transition={{ repeat: isProcessingWithdrawal ? Infinity : 0, duration: 0.5 }}
                     >
                       {earnings?.referral_earnings.toFixed(4)} ETH
                     </motion.div>
@@ -503,11 +568,11 @@ const ReferralPage = () => {
                       </div>
                       <motion.div 
                         className="text-xl font-bold text-amber-500"
-                        animate={rewardsClaimable && !isClaimingRewards ? { 
+                        animate={earnings.available_to_withdraw > 0 ? { 
                           scale: [1, 1.05, 1],
                         } : {}}
                         transition={{ 
-                          repeat: rewardsClaimable && !isClaimingRewards ? Infinity : 0, 
+                          repeat: earnings.available_to_withdraw > 0 ? Infinity : 0, 
                           duration: 1.5 
                         }}
                       >
@@ -516,6 +581,7 @@ const ReferralPage = () => {
                     </motion.div>
                   )}
                   
+                  {/* Withdraw Button */}
                   {earnings && earnings.available_to_withdraw > 0 && (
                     <motion.div
                       initial={{ opacity: 0, y: 5 }}
@@ -523,27 +589,17 @@ const ReferralPage = () => {
                       transition={{ delay: 0.5 }}
                     >
                       <Button 
-                        variant={rewardsClaimable ? "default" : "outline"}
+                        variant={earnings.available_to_withdraw > 0 ? "default" : "outline"}
                         className="w-full"
-                        disabled={!rewardsClaimable || isClaimingRewards}
-                        onClick={handleClaimRewards}
+                        disabled={isProcessingWithdrawal || !earnings.available_to_withdraw || earnings.available_to_withdraw <= 0 || isLoadingData}
+                        onClick={handleWithdrawClick}
                       >
-                        {isClaimingRewards ? (
-                          <>
-                            <motion.div
-                              animate={{ rotate: 360 }}
-                              transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-                              className="mr-1.5"
-                            >
-                              <Sparkles className="h-4 w-4" />
-                            </motion.div>
-                            Claiming Rewards...
-                          </>
-                        ) : rewardsClaimable ? (
-                          <>Claim Rewards</>
+                        {isProcessingWithdrawal ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         ) : (
-                          <>No Rewards Available</>
+                          <Wallet className="mr-2 h-4 w-4" />
                         )}
+                        Withdraw Earnings
                       </Button>
                     </motion.div>
                   )}
@@ -681,7 +737,7 @@ const ReferralPage = () => {
           </CardHeader>
           
           <CardContent>
-            {isLoading ? (
+            {isLoadingData ? (
               <div className="space-y-2">
                 {[1, 2, 3, 4, 5].map(i => (
                   <Skeleton key={i} className="h-16 w-full" />
@@ -751,6 +807,20 @@ const ReferralPage = () => {
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* Render Withdrawal Sheet */}
+       <WithdrawalSheet
+         open={isWithdrawSheetOpen}
+         onOpenChange={setIsWithdrawSheetOpen}
+         step={withdrawalStep}
+         isLoading={isProcessingWithdrawal}
+         withdrawalData={withdrawalEstimateData}
+         errorData={withdrawalError}
+         txHash={withdrawalTxHash}
+         onConfirm={handleConfirmWithdrawal}
+         onClose={handleSheetClose}
+         estimateUsdValue={estimateUsdValue}
+       />
     </div>
   );
 };

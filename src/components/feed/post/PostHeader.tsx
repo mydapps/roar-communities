@@ -67,7 +67,7 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
             onClick={handleUserProfileClick}
           >
             <AvatarImage src={avatar ? `https://img.dapps.co/avatar/${avatar}.svg` : undefined} />
-            <AvatarFallback>{username[0].toUpperCase()}</AvatarFallback>
+            <AvatarFallback>{username && username[0] ? username[0].toUpperCase() : '?'}</AvatarFallback>
           </Avatar>
           <div className="flex flex-col">
             <div className="flex items-center gap-1">
