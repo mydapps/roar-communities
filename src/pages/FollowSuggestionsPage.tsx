@@ -42,8 +42,6 @@ const FollowSuggestionsPage: React.FC = () => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [lastFollowedUser, setLastFollowedUser] = useState<SuggestedUser | null>(null);
-  const [showAhaMoment, setShowAhaMoment] = useState(false);
   const MIN_FOLLOWS_REQUIRED = 5;
   const USERS_PER_PAGE = 10;
   const observerTarget = useRef<HTMLDivElement>(null);
@@ -361,19 +359,6 @@ const FollowSuggestionsPage: React.FC = () => {
       
       const isCurrentlyFollowing = updatedUsers[userIndex].following;
       
-      // Only trigger aha moment when following (not unfollowing)
-      if (!isCurrentlyFollowing) {
-        setLastFollowedUser(user);
-        setShowAhaMoment(true);
-        
-        // Hide aha moment after 3 seconds
-        setTimeout(() => {
-          if (isMounted.current) {
-            setShowAhaMoment(false);
-          }
-        }, 3000);
-      }
-      
       // Optimistic update
       updatedUsers[userIndex] = {
         ...updatedUsers[userIndex],
@@ -436,69 +421,6 @@ const FollowSuggestionsPage: React.FC = () => {
           <div className="absolute -top-[40%] -right-[10%] w-[70%] h-[70%] rounded-full bg-gradient-to-br from-[#31bcc3]/10 via-primary/5 to-transparent blur-3xl"></div>
           <div className="absolute -bottom-[40%] -left-[10%] w-[70%] h-[70%] rounded-full bg-gradient-to-br from-[#31bcc3]/10 via-primary/5 to-transparent blur-3xl"></div>
         </div>
-
-        {/* Aha Moment Animation - Appears when user follows someone */}
-        <AnimatePresence mode="wait">
-          {showAhaMoment && lastFollowedUser && (
-            <motion.div
-              key="aha-moment-modal"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              className="fixed inset-0 flex items-center justify-center z-50 bg-black/50 backdrop-blur-sm"
-              onClick={() => setShowAhaMoment(false)}
-            >
-              <motion.div
-                initial={{ y: 50 }}
-                animate={{ y: 0 }}
-                transition={{ type: "spring", damping: 12 }}
-                className="bg-card rounded-xl shadow-2xl p-6 max-w-md mx-4 border border-primary/20"
-                onClick={e => e.stopPropagation()}
-              >
-                <div className="text-center">
-                  <div className="w-20 h-20 mx-auto mb-4 relative">
-                    <motion.div
-                      animate={{ 
-                        scale: [1, 1.1, 1], 
-                        rotate: [0, 5, -5, 0] 
-                      }}
-                      transition={{ 
-                        duration: 1.5,
-                        repeat: Infinity,
-                        repeatType: "loop" 
-                      }}
-                      className="absolute inset-0"
-                    >
-                      <Avatar className="w-full h-full border-4 border-primary">
-                        <AvatarImage src={lastFollowedUser.avatar} alt={lastFollowedUser.handle} />
-                        <AvatarFallback className="bg-primary/10 text-primary">
-                          {lastFollowedUser.handle.substring(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                    </motion.div>
-                  </div>
-                  
-                  <h3 className="text-xl font-bold mb-2">You're now following @{lastFollowedUser.handle}!</h3>
-                  <p className="text-muted-foreground mb-4">Their content will now appear in your feed</p>
-                  
-                  <div className="bg-muted/30 p-3 rounded-lg mb-4 text-center">
-                    <p className="text-sm font-medium">
-                      {lastFollowedUser.followers} others follow @{lastFollowedUser.handle}
-                    </p>
-                  </div>
-                  
-                  <Button
-                    onClick={() => setShowAhaMoment(false)}
-                    variant="outline"
-                    className="mt-2 w-full"
-                  >
-                    Continue Exploring
-                  </Button>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         <div className="relative flex-1 flex flex-col h-full" ref={scrollRef}>
           {/* Fixed sticky header */}

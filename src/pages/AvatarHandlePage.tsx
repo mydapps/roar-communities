@@ -112,7 +112,7 @@ const AvatarHandlePage = () => {
         
         toast.success('Profile setup successful!');
         // Navigate to the next step (e.g., request invite page)
-        navigate('/request-invite');
+          navigate('/request-invite');
       } else {
         // Set specific error from API or generic one
         setError(data.message || 'Failed to save profile. Handle might be taken.');
@@ -157,8 +157,8 @@ const AvatarHandlePage = () => {
               <CardTitle className="text-xl md:text-2xl font-bold">Welcome to dapps.co</CardTitle>
               <CardDescription className="text-white/80 mt-1">Let's create your unique identity</CardDescription>
             </motion.div>
-          </CardHeader>
-          
+        </CardHeader>
+        
           <CardContent className="space-y-8 pt-8">
             <div className="flex flex-col items-center space-y-5">
               <div className="relative">
@@ -190,26 +190,26 @@ const AvatarHandlePage = () => {
                   transition={{ type: "spring", bounce: 0.5 }}
                 >
                   <Avatar className={`border-4 border-gradient-to-r from-purple-400 to-indigo-400 shadow-xl transition-all duration-300 ${isMobile ? 'w-36 h-36' : 'w-48 h-48'}`}>
-                    <AvatarImage src={`https://img.dapps.co/avatar/${avatarCode}.svg`} alt="Your Avatar" className="object-cover" />
+                <AvatarImage src={`https://img.dapps.co/avatar/${avatarCode}.svg`} alt="Your Avatar" className="object-cover" />
                     <AvatarFallback className="bg-gradient-to-br from-purple-400 to-indigo-500 text-white">
-                      <RefreshCcw className="w-8 h-8" />
-                    </AvatarFallback>
-                  </Avatar>
+                  <RefreshCcw className="w-8 h-8" />
+                </AvatarFallback>
+              </Avatar>
                 </motion.div>
                 
                 <motion.div
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  <Button 
-                    variant="secondary" 
-                    size="icon" 
-                    className="absolute -bottom-2 -right-2 rounded-full shadow-md bg-white hover:bg-purple-100 border border-purple-200"
-                    onClick={generateNewAvatar}
-                    aria-label="Generate new avatar"
-                  >
-                    <RefreshCcw className="w-4 h-4 text-purple-700" />
-                  </Button>
+              <Button 
+                variant="secondary" 
+                size="icon" 
+                className="absolute -bottom-2 -right-2 rounded-full shadow-md bg-white hover:bg-purple-100 border border-purple-200"
+                onClick={generateNewAvatar}
+                aria-label="Generate new avatar"
+              >
+                <RefreshCcw className="w-4 h-4 text-purple-700" />
+              </Button>
                 </motion.div>
               </div>
               
@@ -225,8 +225,8 @@ const AvatarHandlePage = () => {
               >
                 <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent font-semibold">Tap</span> to explore different avatars
               </motion.button>
-            </div>
-            
+          </div>
+          
             <motion.form 
               onSubmit={handleSubmit} 
               className="space-y-6"
@@ -237,72 +237,72 @@ const AvatarHandlePage = () => {
               <div className="space-y-3">
                 <Label htmlFor="handle" className="text-sm font-medium text-gray-700 flex items-center">
                   <span className="bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent font-semibold">
-                    Choose your unique handle
+                Choose your unique handle
                   </span>
-                </Label>
-                <div className="relative">
+              </Label>
+              <div className="relative">
                   <div className="absolute inset-y-0 left-3 flex items-center text-gray-700 text-base md:text-lg font-medium pointer-events-none z-10">
                     @
                   </div>
-                  <Input
-                    id="handle"
+                <Input
+                  id="handle"
                     placeholder="awesome_user"
-                    value={handle}
-                    onChange={handleInputChange}
+                  value={handle}
+                  onChange={handleInputChange}
                     className={`pl-8 md:pl-10 pr-10 h-12 text-base ${
-                      isHandleValid === true 
-                        ? 'border-green-500 focus-visible:ring-green-500' 
-                        : isHandleValid === false && showError
-                          ? 'border-red-500 focus-visible:ring-red-500' 
+                    isHandleValid === true 
+                      ? 'border-green-500 focus-visible:ring-green-500' 
+                      : isHandleValid === false && showError
+                        ? 'border-red-500 focus-visible:ring-red-500' 
                           : 'border-purple-200 focus-visible:ring-purple-500'
-                    }`}
-                    autoComplete="off"
-                  />
-                  {isHandleValid !== null && (
-                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                      {isHandleValid ? (
-                        <Check className="h-5 w-5 text-green-500" />
-                      ) : (
-                        <X className="h-5 w-5 text-red-500" />
-                      )}
-                    </div>
-                  )}
-                </div>
-                {showError && isHandleValid === false && (
+                  }`}
+                  autoComplete="off"
+                />
+                {isHandleValid !== null && (
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                    {isHandleValid ? (
+                      <Check className="h-5 w-5 text-green-500" />
+                    ) : (
+                      <X className="h-5 w-5 text-red-500" />
+                    )}
+                  </div>
+                )}
+              </div>
+              {showError && isHandleValid === false && (
                   <motion.div 
                     className="flex items-center gap-1.5 text-sm text-red-500 mt-1.5"
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                   >
-                    <AlertCircle className="h-4 w-4" />
-                    <span>{errorMessage}</span>
+                  <AlertCircle className="h-4 w-4" />
+                  <span>{errorMessage}</span>
                   </motion.div>
-                )}
-              </div>
+              )}
+            </div>
               
               <motion.div 
                 className="pt-2"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                <Button 
-                  type="submit" 
+          <Button 
+            type="submit" 
                   className="w-full h-12 text-base bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white group transition-all"
-                  disabled={handle.trim().length === 0 || isLoading}
-                  onClick={handleSubmit}
-                >
-                  {isLoading ? (
-                    <>
+            disabled={handle.trim().length === 0 || isLoading}
+            onClick={handleSubmit}
+          >
+            {isLoading ? (
+              <>
                       <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
+                Processing...
+              </>
+            ) : (
+              <>
                       Get Started
                       <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
-                    </>
-                  )}
-                </Button>
+              </>
+            )}
+          </Button>
               </motion.div>
             </motion.form>
             
@@ -319,8 +319,8 @@ const AvatarHandlePage = () => {
           
           <CardFooter className="pb-6">
             
-          </CardFooter>
-        </Card>
+        </CardFooter>
+      </Card>
       </motion.div>
     </div>
   );
