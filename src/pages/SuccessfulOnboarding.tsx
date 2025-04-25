@@ -125,12 +125,12 @@ const SuccessfulOnboarding: React.FC = () => {
     }
   };
 
-  // Continue to feed
-  const continueToFeed = () => {
-    // Mark user as onboarded and remove the show onboarding flag
-    localStorage.setItem('dapps_onboarded', '1');
-    localStorage.removeItem('dapps_show_onboarding');
-    navigate('/feed');
+  // Continue to follow suggestions page instead of feed
+  const continueToFollowSuggestions = () => {
+    // We don't mark as fully onboarded yet - that will happen after follow suggestions
+    // localStorage.setItem('dapps_onboarded', '1');
+    // localStorage.removeItem('dapps_show_onboarding');
+    navigate('/follow-suggestions');
   };
 
   return (
@@ -447,7 +447,7 @@ const SuccessfulOnboarding: React.FC = () => {
                 </CardContent>
               </Card>
 
-              {/* Continue to Feed Button */}
+              {/* Continue Button */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -455,7 +455,7 @@ const SuccessfulOnboarding: React.FC = () => {
                 className="w-full mt-auto"
               >
                 <Button 
-                  onClick={continueToFeed}
+                  onClick={continueToFollowSuggestions}
                   className="w-full bg-gradient-to-r from-[#31bcc3] to-primary hover:from-primary hover:to-[#31bcc3] text-white py-6 text-lg"
                 >
                   <motion.div 
@@ -463,7 +463,7 @@ const SuccessfulOnboarding: React.FC = () => {
                     whileHover={{ scale: 1.05 }}
                     transition={{ type: "spring", stiffness: 400, damping: 10 }}
                   >
-                    <span>Continue to Feed</span>
+                    <span>Continue</span>
                     <motion.span
                       initial={{ x: 0 }}
                       whileHover={{ x: 5 }}

@@ -29,6 +29,7 @@ import RoarFarmingPage from '@/pages/RoarFarmingPage';
 import BoosterPage from '@/pages/BoosterPage';
 import AuthTestPage from '@/pages/AuthTestPage';
 import { validateAuthentication } from '@/utils/apiBase';
+import FollowSuggestionsPage from '@/pages/FollowSuggestionsPage';
 
 // Lazy loaded components
 const LazyMySharesPage = lazy(() => import('@/pages/MySharesPage'));
@@ -150,6 +151,11 @@ function App() {
                 ) : (
                   <Navigate to="/feed" replace />
                 )}
+              </ProtectedRoute>
+            } />
+            <Route path="follow-suggestions" element={
+              <ProtectedRoute>
+                <FollowSuggestionsPage />
               </ProtectedRoute>
             } />
             
