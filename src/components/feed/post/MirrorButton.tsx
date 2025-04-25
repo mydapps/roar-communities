@@ -4,7 +4,7 @@ import { Repeat2 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter, SheetClose } from '@/components/ui/sheet';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter, DrawerClose, DrawerTrigger } from '@/components/ui/drawer';
-import { MirrorContent } from './MirrorContent';
+import { MirrorContent, PERSONAL_FEED } from './MirrorContent';
 import { useToast } from '@/hooks/use-toast';
 import { mirrorPost } from '@/utils/api';
 import { toast } from 'sonner';
@@ -70,14 +70,14 @@ export const MirrorButton = ({
     if (!selectedCommunity) {
       uiToast({
         title: "Error",
-        description: "Please select a community to mirror to",
+        description: "Please select where to mirror this post",
         variant: "destructive"
       });
       return;
     }
     
     // Validate that user is not trying to mirror to the same community
-    if (community && selectedCommunity === community) {
+    if (community && selectedCommunity === community && selectedCommunity !== PERSONAL_FEED) {
       uiToast({
         title: "Cannot Mirror",
         description: "You cannot mirror a post to the same community it's already in",
@@ -112,18 +112,28 @@ export const MirrorButton = ({
       }
       
       // Using the proper parameter names as expected by the API
-      const success = await mirrorPost({
+      // If mirroring to personal feed, use empty string for communityTo
+      const mirrorParams = {
         postCode: postCode, 
-        communityTo: selectedCommunity,
+        communityTo: selectedCommunity === PERSONAL_FEED ? "" : selectedCommunity,
         quoteText: quoteText.trim() || undefined
-      });
+      };
+      
+      console.log("Sending mirror request with params:", mirrorParams);
+      
+      const success = await mirrorPost(mirrorParams);
       
       if (success) {
         // Close the mirror dialog first
         onOpenChange(false);
         
+        // Destination text for the success message
+        const destination = selectedCommunity === PERSONAL_FEED 
+          ? "your feed" 
+          : selectedCommunity;
+        
         // Then show toast notification
-        toast.success(`Post mirrored to ${selectedCommunity}`, {
+        toast.success(`Post mirrored to ${destination}`, {
           description: "Your mirrored post has been published successfully",
           duration: 5000,
         });
@@ -135,7 +145,8 @@ export const MirrorButton = ({
         const mirroredEvent = new CustomEvent(POST_MIRRORED_EVENT, {
           detail: {
             originalPostCode: postCode,
-            communityTo: selectedCommunity
+            communityTo: selectedCommunity === PERSONAL_FEED ? "" : selectedCommunity,
+            isPersonalFeed: selectedCommunity === PERSONAL_FEED
           }
         });
         document.dispatchEvent(mirroredEvent);
@@ -186,7 +197,7 @@ export const MirrorButton = ({
           <DrawerHeader className="border-b">
             <DrawerTitle>Mirror Post</DrawerTitle>
             <DrawerDescription>
-              Share this post with other communities
+              Share this post to your feed or other communities
             </DrawerDescription>
           </DrawerHeader>
           
@@ -247,7 +258,7 @@ export const MirrorButton = ({
         <SheetHeader>
           <SheetTitle>Mirror Post</SheetTitle>
           <SheetDescription>
-            Share this post with other communities
+            Share this post to your feed or other communities
           </SheetDescription>
         </SheetHeader>
         
@@ -264,7 +275,7 @@ export const MirrorButton = ({
           sourceCommunity={community}
         />
         
-        <SheetFooter className="flex flex-row justify-between gap-2 mt-6 sticky bottom-4 z-10">
+        <SheetFooter className="flex-row justify-between gap-2 p-4 border-t bg-background sticky bottom-0 left-0 right-0 z-10">
           <SheetClose asChild>
             <Button variant="outline" onClick={(e) => e.stopPropagation()}>Cancel</Button>
           </SheetClose>

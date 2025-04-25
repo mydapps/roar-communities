@@ -3,12 +3,15 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
-import { Check, Loader2, Search } from 'lucide-react';
+import { Check, Loader2, Search, User } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from 'sonner';
 import { fetchCommunities, Community } from '@/utils/api';
 import { Badge } from '@/components/ui/badge';
 import { debounce } from '@/utils/helpers';
+
+// Special value for mirroring to personal feed
+export const PERSONAL_FEED = "MY_FEED";
 
 interface MirrorContentProps {
   username: string;
@@ -75,6 +78,35 @@ const CommunityItem = React.memo(({
               {formatMemberCount(community.membersCount)} members
             </div>
           )}
+        </div>
+      </div>
+      {isSelected && <Check className="h-4 w-4 text-primary" />}
+    </div>
+  );
+});
+
+// Special component for the Personal Feed option
+const PersonalFeedOption = React.memo(({ 
+  isSelected, 
+  onSelect 
+}: { 
+  isSelected: boolean; 
+  onSelect: () => void;
+}) => {
+  return (
+    <div 
+      className={`flex items-center justify-between p-2 ${isSelected ? 'bg-primary/10' : 'hover:bg-muted/50'} rounded-md cursor-pointer mb-2 border border-primary/20`}
+      onClick={onSelect}
+    >
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+          <User className="h-4 w-4 text-primary" />
+        </div>
+        <div>
+          <div className="font-medium">My Feed</div>
+          <div className="text-xs text-muted-foreground">
+            Mirror to your personal feed
+          </div>
         </div>
       </div>
       {isSelected && <Check className="h-4 w-4 text-primary" />}
@@ -154,7 +186,11 @@ export const MirrorContent = ({
   useEffect(() => {
     loadCommunities();
     
-    // No need for explicit cleanup since our debounce doesn't have a cancel method
+    // Set the personal feed as selected by default
+    if (!selectedCommunity) {
+      onCommunitySelect(PERSONAL_FEED);
+    }
+    
   }, []);
   
   const loadCommunities = async () => {
@@ -221,6 +257,15 @@ export const MirrorContent = ({
     }
   }, [selectedCommunity, onCommunitySelect, sourceCommunity]);
   
+  // Handle personal feed selection
+  const handlePersonalFeedSelect = useCallback(() => {
+    if (selectedCommunity === PERSONAL_FEED) {
+      onCommunitySelect(null);
+    } else {
+      onCommunitySelect(PERSONAL_FEED);
+    }
+  }, [selectedCommunity, onCommunitySelect]);
+  
   // Memoize the communities list to prevent unnecessary re-renders
   const communitiesList = useMemo(() => {
     // Limit the number of items rendered for better performance, especially on mobile
@@ -229,6 +274,22 @@ export const MirrorContent = ({
     
     return (
       <div className="mt-4 space-y-1 max-h-[300px] overflow-y-auto overscroll-contain">
+        {/* Always show the Personal Feed option at the top */}
+        {searchQuery.trim() === '' && (
+          <PersonalFeedOption
+            isSelected={selectedCommunity === PERSONAL_FEED}
+            onSelect={handlePersonalFeedSelect}
+          />
+        )}
+        
+        {/* Add a separator between My Feed and communities */}
+        {searchQuery.trim() === '' && displayedCommunities.length > 0 && (
+          <div className="py-1">
+            <Separator />
+            <div className="py-1 text-xs text-muted-foreground text-center">Communities</div>
+          </div>
+        )}
+        
         {displayedCommunities.map((community, index) => (
           <CommunityItem
             key={`community-${community.name}-${index}`} /* Use name and index as key */
@@ -253,7 +314,7 @@ export const MirrorContent = ({
         )}
       </div>
     );
-  }, [filteredCommunities, selectedCommunity, handleCommunitySelect, sourceCommunity, mobile]);
+  }, [filteredCommunities, selectedCommunity, handleCommunitySelect, sourceCommunity, mobile, searchQuery, handlePersonalFeedSelect]);
   
   // Memoize the content preview
   const contentPreview = useMemo(() => {
@@ -295,7 +356,7 @@ export const MirrorContent = ({
       
       {/* Select community section */}
       <div className="mt-2">
-        <Label htmlFor="community" className="block mb-2">Select a community to mirror to</Label>
+        <Label htmlFor="community" className="block mb-2">Select where to mirror</Label>
         <div className="relative">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input

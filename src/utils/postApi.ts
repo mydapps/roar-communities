@@ -256,7 +256,7 @@ export const toggleRoar = async (postCode: string): Promise<boolean | { status: 
 };
 
 /**
- * Mirror a post to another community
+ * Mirror a post to another community or to the user's feed
  */
 export const mirrorPost = async (params: {
   postCode: string;
@@ -266,10 +266,12 @@ export const mirrorPost = async (params: {
   try {
     const { postCode, communityTo, quoteText } = params;
 
-    if (!postCode || !communityTo) {
+    if (!postCode) {
       console.error('Missing required parameters for mirroring post');
-      throw new Error('Post code and destination community are required');
+      throw new Error('Post code is required');
     }
+    
+    // communityTo can now be an empty string when mirroring to personal feed
     
     const response = await fetch(`/api/mirror_post`, {
       method: 'POST',
