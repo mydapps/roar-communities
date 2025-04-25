@@ -974,13 +974,13 @@ const RoarFarmingPage = () => {
           times: [0, 0.2, 0.4, 0.6, 1] // Keyframe timing distribution
         }
       ).then(() => {
-        // Animation complete, move to final state
+          // Animation complete, move to final state
         localStorage.setItem('hasSeenPhase3Transition', 'true');
         setHasSeenPhase3Transition(true);
         setAnimationStep('phase3Active');
-        // Manually set displayProgress state after animation
-        setDisplayProgress(targetProgress);
-      });
+          // Manually set displayProgress state after animation
+          setDisplayProgress(targetProgress);
+        });
 
       // Create dynamic particles that follow cursor during the transition
       const createDynamicParticles = () => {
@@ -1085,13 +1085,13 @@ const RoarFarmingPage = () => {
 
     return () => { 
       if (timeoutId) clearTimeout(timeoutId); 
-      if (confettiIntervalId) clearTimeout(confettiIntervalId);
+      if (confettiIntervalId) clearTimeout(confettiIntervalId); 
       if (particleIntervalId) clearInterval(particleIntervalId);
       if (lionEmojiIntervalId) clearInterval(lionEmojiIntervalId);
       lionEmojis.forEach(lion => lion.remove());
     };
   }, [animationStep, totalRoars, progressAnimationControls]);
-
+  
   return (
     <>
       <Helmet>
@@ -1219,7 +1219,7 @@ const RoarFarmingPage = () => {
                         }}
                       >
                         🦁
-                      </motion.div>
+                  </motion.div>
                     </div>
                   </motion.div>
                   
@@ -1293,13 +1293,13 @@ const RoarFarmingPage = () => {
                           repeat: Infinity,
                           delay: Math.random() * 2,
                         }}
-                      />
+                  />
                     ))}
-                  </motion.div>
+                </motion.div>
                   
                   {/* Energy waves emanating from center */}
                   {[...Array(3)].map((_, i) => (
-                    <motion.div
+                <motion.div
                       key={`wave-${i}`}
                       className="absolute inset-0 border-2 border-white/10 rounded-lg"
                       initial={{ scale: 0.6, opacity: 0 }}
@@ -1367,7 +1367,7 @@ const RoarFarmingPage = () => {
                     className={`h-full ${getProgressGradient()}`} 
                     initial={{ width: "0%" }}
                     animate={progressAnimationControls}
-                />
+              />
                 </motion.div>
               
                 {/* Warning label - enhanced for Phase 3 */}

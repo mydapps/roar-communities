@@ -181,6 +181,8 @@ export interface UserPost {
   community: string | null;
   title: string;
   body: string;
+  body_preview: string;
+  body_shrunk: number;
   upvotes: number;
   comments: number;
   created_at: string;
@@ -190,12 +192,31 @@ export interface UserPost {
     handle: string;
     avatar: string;
   };
+  handle: string;
+  avatar: string;
+  timeAgo: string;
+  roar: number;
   has_upvoted: boolean;
   image: number;
   image_url: string;
   multiple_images: number;
   images: string[];
   has_video: number;
+  // Mirror-related fields
+  is_mirror: number;
+  mirror_quote?: string;
+  original_post_code?: string;
+  original_community?: string;
+  original_title?: string;
+  original_body?: string;
+  original_author?: string;
+  original_author_avatar?: string;
+  original_created_on?: string;
+  original_image?: number;
+  original_image_url?: string;
+  original_multiple_images?: number;
+  original_images?: string[];
+  original_has_video?: number;
 }
 
 export interface UserPostsResponse {
@@ -230,7 +251,26 @@ export const getUserPosts = async (
       throw new Error(errorData.message || `Failed to fetch user posts: ${response.status}`);
     }
 
-    return await response.json();
+    const data = await response.json();
+    
+    // Process the response to ensure mirror-related fields are properly formatted
+    if (data.success && data.posts) {
+      data.posts = data.posts.map((post: any) => {
+        return {
+          ...post,
+          // Ensure type consistency by converting numeric flags to numbers if they're boolean
+          is_mirror: typeof post.is_mirror === 'boolean' ? (post.is_mirror ? 1 : 0) : post.is_mirror,
+          image: typeof post.image === 'boolean' ? (post.image ? 1 : 0) : post.image,
+          multiple_images: typeof post.multiple_images === 'boolean' ? (post.multiple_images ? 1 : 0) : post.multiple_images,
+          has_video: typeof post.has_video === 'boolean' ? (post.has_video ? 1 : 0) : post.has_video,
+          original_image: typeof post.original_image === 'boolean' ? (post.original_image ? 1 : 0) : post.original_image,
+          original_multiple_images: typeof post.original_multiple_images === 'boolean' ? (post.original_multiple_images ? 1 : 0) : post.original_multiple_images,
+          original_has_video: typeof post.original_has_video === 'boolean' ? (post.original_has_video ? 1 : 0) : post.original_has_video,
+        };
+      });
+    }
+
+    return data;
   } catch (error) {
     console.error('Error fetching user posts:', error);
     throw error;

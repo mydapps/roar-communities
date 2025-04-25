@@ -38,6 +38,13 @@ export const useUserPosts = ({
       const response = await getUserPosts(handle, pageNum, initialLimit);
       
       if (response.success) {
+        // Log received posts for debugging roar status
+        if (response.posts.length > 0) {
+          console.log(`Received ${response.posts.length} posts, first post roar status:`, 
+            response.posts[0].code, 
+            'has_upvoted:', response.posts[0].has_upvoted);
+        }
+        
         if (replace) {
           setPosts(response.posts);
         } else {
@@ -66,6 +73,7 @@ export const useUserPosts = ({
   }, [fetchPosts, hasMore, loading, page]);
   
   const refreshPosts = useCallback(async () => {
+    console.log('Refreshing posts after roar...');
     setPage(1);
     await fetchPosts(1, true);
   }, [fetchPosts]);

@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { useUserPosts } from '@/hooks/useUserPosts';
 import { Post } from '@/components/feed/Post';
 import { Button } from '@/components/ui/button';
@@ -21,17 +21,78 @@ export const UserPosts: React.FC<UserPostsProps> = ({ handle }) => {
     refreshPosts
   } = useUserPosts({ handle });
   
+  // State to track locally roared posts
+  const [roaredPosts, setRoaredPosts] = useState<Record<string, boolean>>({});
+  // State to track locally updated roar counts
+  const [roarCounts, setRoarCounts] = useState<Record<string, number>>({});
+  
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadingRef = useRef<HTMLDivElement | null>(null);
   
   // Handle roar/upvote on posts
   const handleRoar = async (postCode: string) => {
     try {
-      await toggleRoar(postCode);
-      refreshPosts(); // Refresh posts to get updated state
+      console.log(`Toggling roar for post: ${postCode}`);
+      
+      // Find current post to check its status before update
+      const currentPost = posts.find(p => p.code === postCode);
+      if (!currentPost) return;
+      
+      const currentRoarStatus = roaredPosts[postCode] ?? currentPost.has_upvoted ?? false;
+      const currentCount = roarCounts[postCode] ?? currentPost.upvotes ?? 0;
+      
+      // Calculate new count for optimistic update
+      const newCount = currentRoarStatus ? currentCount - 1 : currentCount + 1;
+      
+      // Update UI immediately (optimistic update)
+      setRoaredPosts(prev => ({
+        ...prev,
+        [postCode]: !currentRoarStatus
+      }));
+      
+      // Update roar count
+      setRoarCounts(prev => ({
+        ...prev,
+        [postCode]: newCount
+      }));
+      
+      // Make API call
+      const result = await toggleRoar(postCode);
+      console.log(`Toggle roar result:`, result);
+      
+      if (result === false) {
+        // If the API call fails, revert the optimistic update
+        setRoaredPosts(prev => ({
+          ...prev,
+          [postCode]: currentRoarStatus
+        }));
+        
+        // Revert roar count
+        setRoarCounts(prev => ({
+          ...prev,
+          [postCode]: currentCount
+        }));
+        
+        toast.error('Failed to update post. Please try again.');
+      }
     } catch (error) {
       console.error('Error roaring post:', error);
       toast.error('Failed to roar. Please try again.');
+      
+      // Find current post to revert its status on error
+      const currentPost = posts.find(p => p.code === postCode);
+      if (currentPost) {
+        setRoaredPosts(prev => ({
+          ...prev,
+          [postCode]: currentPost.has_upvoted ?? false
+        }));
+        
+        // Revert roar count
+        setRoarCounts(prev => ({
+          ...prev,
+          [postCode]: currentPost.upvotes
+        }));
+      }
     }
   };
   
@@ -55,6 +116,31 @@ export const UserPosts: React.FC<UserPostsProps> = ({ handle }) => {
       }
     };
   }, [loading, hasMore, loadMore]);
+  
+  // Initialize roaredPosts state from loaded posts
+  useEffect(() => {
+    if (posts.length > 0) {
+      const initialRoaredState = posts.reduce((acc, post) => {
+        acc[post.code] = post.has_upvoted;
+        return acc;
+      }, {} as Record<string, boolean>);
+      
+      const initialRoarCounts = posts.reduce((acc, post) => {
+        acc[post.code] = post.upvotes;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      setRoaredPosts(prev => ({
+        ...prev,
+        ...initialRoaredState
+      }));
+      
+      setRoarCounts(prev => ({
+        ...prev,
+        ...initialRoarCounts
+      }));
+    }
+  }, [posts]);
   
   if (loading && posts.length === 0) {
     return (
@@ -92,26 +178,53 @@ export const UserPosts: React.FC<UserPostsProps> = ({ handle }) => {
   
   return (
     <div className="space-y-4 mt-6">
-      {posts.map((post) => (
-        <Post
-          key={`post-${post.code}`}
-          username={post.author.handle}
-          avatar={post.author.avatar || ''}
-          community={post.community || undefined}
-          timeAgo={post.time_ago}
-          content={post.body} // Using body instead of title as requested
-          roarCount={post.upvotes}
-          commentCount={post.comments}
-          shareCount={0}
-          postCode={post.code}
-          roared={post.has_upvoted}
-          onRoar={() => handleRoar(post.code)}
-          images={post.images && post.images.length > 0 
-            ? post.images 
-            : (post.image === 1 && post.image_url ? [post.image_url] : undefined)}
-          video={post.has_video === 1 ? post.image_url : undefined}
-        />
-      ))}
+      {posts.map((post) => {
+        // Ensure is_mirror is properly converted to boolean
+        const isMirrorPost = post.is_mirror === 1 || Boolean(post.is_mirror);
+        
+        // Use local state for roar status if available, otherwise use API value
+        const isRoared = roaredPosts[post.code] !== undefined 
+          ? roaredPosts[post.code] 
+          : post.has_upvoted;
+        
+        // Use local state for roar count if available, otherwise use API value
+        const roarCount = roarCounts[post.code] !== undefined
+          ? roarCounts[post.code]
+          : post.upvotes;
+        
+        return (
+          <Post
+            key={`post-${post.code}`}
+            username={post.author.handle}
+            avatar={post.author.avatar || ''}
+            community={post.community || undefined}
+            timeAgo={post.time_ago}
+            content={post.body} // Using body instead of title as requested
+            roarCount={roarCount}
+            commentCount={post.comments}
+            shareCount={0}
+            postCode={post.code}
+            roared={isRoared}
+            onRoar={() => handleRoar(post.code)}
+            images={post.images && post.images.length > 0 
+              ? post.images 
+              : (post.image === 1 && post.image_url ? [post.image_url] : undefined)}
+            video={post.has_video === 1 ? post.image_url : undefined}
+            // Mirror-related props
+            isMirror={isMirrorPost}
+            mirrorData={isMirrorPost ? {
+              quote: post.mirror_quote || '',
+              originalAuthor: post.original_author || '',
+              originalCommunity: post.original_community || '',
+              originalBody: post.original_body || '',
+              originalTimeAgo: post.original_created_on || '',
+              originalAvatar: post.original_author_avatar || '',
+              originalImages: post.original_images || [],
+              originalTitle: post.original_title || ''
+            } : undefined}
+          />
+        );
+      })}
       
       {/* Loading indicator & intersection observer target */}
       {hasMore && (
