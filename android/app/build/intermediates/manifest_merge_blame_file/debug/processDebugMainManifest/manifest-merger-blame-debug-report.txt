@@ -1,0 +1,204 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="co.dapps.app"
+4    android:versionCode="1"
+5    android:versionName="1.0" >
+6
+7    <uses-sdk
+8        android:minSdkVersion="23"
+9        android:targetSdkVersion="34" />
+10
+11    <!-- Permissions -->
+12    <uses-permission android:name="android.permission.INTERNET" />
+12-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:50:5-67
+12-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:50:22-64
+13    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+13-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:51:5-79
+13-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:51:22-76
+14    <uses-permission android:name="android.permission.VIBRATE" />
+14-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:52:5-66
+14-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:52:22-63
+15    <uses-permission
+15-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:53:5-107
+16        android:name="android.permission.READ_EXTERNAL_STORAGE"
+16-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:53:22-77
+17        android:maxSdkVersion="32" />
+17-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:53:78-104
+18    <uses-permission
+18-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:54:5-108
+19        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+19-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:54:22-78
+20        android:maxSdkVersion="32" />
+20-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:54:79-105
+21    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+21-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:55:5-76
+21-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:55:22-73
+22
+23    <permission
+23-->[androidx.core:core:1.12.0] /home/mohit/.gradle/caches/transforms-4/420879bff2da359e6cce0da7e386dbb4/transformed/core-1.12.0/AndroidManifest.xml:22:5-24:47
+24        android:name="co.dapps.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+24-->[androidx.core:core:1.12.0] /home/mohit/.gradle/caches/transforms-4/420879bff2da359e6cce0da7e386dbb4/transformed/core-1.12.0/AndroidManifest.xml:23:9-81
+25        android:protectionLevel="signature" />
+25-->[androidx.core:core:1.12.0] /home/mohit/.gradle/caches/transforms-4/420879bff2da359e6cce0da7e386dbb4/transformed/core-1.12.0/AndroidManifest.xml:24:9-44
+26
+27    <uses-permission android:name="co.dapps.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+27-->[androidx.core:core:1.12.0] /home/mohit/.gradle/caches/transforms-4/420879bff2da359e6cce0da7e386dbb4/transformed/core-1.12.0/AndroidManifest.xml:26:5-97
+27-->[androidx.core:core:1.12.0] /home/mohit/.gradle/caches/transforms-4/420879bff2da359e6cce0da7e386dbb4/transformed/core-1.12.0/AndroidManifest.xml:26:22-94
+28
+29    <application
+29-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:4:5-47:19
+30        android:allowBackup="true"
+30-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:5:9-35
+31        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+31-->[androidx.core:core:1.12.0] /home/mohit/.gradle/caches/transforms-4/420879bff2da359e6cce0da7e386dbb4/transformed/core-1.12.0/AndroidManifest.xml:28:18-86
+32        android:debuggable="true"
+33        android:extractNativeLibs="false"
+34        android:icon="@mipmap/ic_launcher"
+34-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:6:9-43
+35        android:label="@string/app_name"
+35-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:7:9-41
+36        android:networkSecurityConfig="@xml/network_security_config"
+36-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:12:9-69
+37        android:roundIcon="@mipmap/ic_launcher_round"
+37-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:8:9-54
+38        android:supportsRtl="true"
+38-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:9:9-35
+39        android:theme="@style/AppTheme"
+39-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:10:9-40
+40        android:usesCleartextTraffic="true" >
+40-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:11:9-44
+41        <activity
+41-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:14:9-36:20
+42            android:name="co.dapps.app.MainActivity"
+42-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:16:13-41
+43            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation"
+43-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:15:13-140
+44            android:exported="true"
+44-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:20:13-36
+45            android:label="@string/title_activity_main"
+45-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:17:13-56
+46            android:launchMode="singleTask"
+46-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:19:13-44
+47            android:screenOrientation="portrait"
+47-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:21:13-49
+48            android:theme="@style/AppTheme.NoActionBarLaunch" >
+48-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:18:13-62
+49            <intent-filter>
+49-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:23:13-26:29
+50                <action android:name="android.intent.action.MAIN" />
+50-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:24:17-69
+50-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:24:25-66
+51
+52                <category android:name="android.intent.category.LAUNCHER" />
+52-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:25:17-77
+52-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:25:27-74
+53            </intent-filter>
+54
+55            <!-- Deep linking -->
+56            <intent-filter android:autoVerify="true" >
+56-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:29:13-34:29
+56-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:29:28-53
+57                <action android:name="android.intent.action.VIEW" />
+57-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:30:17-69
+57-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:30:25-66
+58
+59                <category android:name="android.intent.category.DEFAULT" />
+59-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:31:17-76
+59-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:31:27-73
+60                <category android:name="android.intent.category.BROWSABLE" />
+60-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:32:17-78
+60-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:32:27-75
+61
+62                <data
+62-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:33:17-72
+63                    android:host="dapps.co"
+63-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:33:46-69
+64                    android:scheme="https" />
+64-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:33:23-45
+65            </intent-filter>
+66        </activity>
+67
+68        <provider
+69            android:name="androidx.core.content.FileProvider"
+69-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:39:13-62
+70            android:authorities="co.dapps.app.fileprovider"
+70-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:40:13-64
+71            android:exported="false"
+71-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:41:13-37
+72            android:grantUriPermissions="true" >
+72-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:42:13-47
+73            <meta-data
+73-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:43:13-45:64
+74                android:name="android.support.FILE_PROVIDER_PATHS"
+74-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:44:17-67
+75                android:resource="@xml/file_paths" />
+75-->/home/mohit/Metadata/dapps.co/cursor/roar-communities/android/app/src/main/AndroidManifest.xml:45:17-51
+76        </provider>
+77        <provider
+77-->[androidx.emoji2:emoji2:1.2.0] /home/mohit/.gradle/caches/transforms-4/664e02a76bdd8ab41f8f7a64704984cf/transformed/emoji2-1.2.0/AndroidManifest.xml:24:9-32:20
+78            android:name="androidx.startup.InitializationProvider"
+78-->[androidx.emoji2:emoji2:1.2.0] /home/mohit/.gradle/caches/transforms-4/664e02a76bdd8ab41f8f7a64704984cf/transformed/emoji2-1.2.0/AndroidManifest.xml:25:13-67
+79            android:authorities="co.dapps.app.androidx-startup"
+79-->[androidx.emoji2:emoji2:1.2.0] /home/mohit/.gradle/caches/transforms-4/664e02a76bdd8ab41f8f7a64704984cf/transformed/emoji2-1.2.0/AndroidManifest.xml:26:13-68
+80            android:exported="false" >
+80-->[androidx.emoji2:emoji2:1.2.0] /home/mohit/.gradle/caches/transforms-4/664e02a76bdd8ab41f8f7a64704984cf/transformed/emoji2-1.2.0/AndroidManifest.xml:27:13-37
+81            <meta-data
+81-->[androidx.emoji2:emoji2:1.2.0] /home/mohit/.gradle/caches/transforms-4/664e02a76bdd8ab41f8f7a64704984cf/transformed/emoji2-1.2.0/AndroidManifest.xml:29:13-31:52
+82                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+82-->[androidx.emoji2:emoji2:1.2.0] /home/mohit/.gradle/caches/transforms-4/664e02a76bdd8ab41f8f7a64704984cf/transformed/emoji2-1.2.0/AndroidManifest.xml:30:17-75
+83                android:value="androidx.startup" />
+83-->[androidx.emoji2:emoji2:1.2.0] /home/mohit/.gradle/caches/transforms-4/664e02a76bdd8ab41f8f7a64704984cf/transformed/emoji2-1.2.0/AndroidManifest.xml:31:17-49
+84            <meta-data
+84-->[androidx.lifecycle:lifecycle-process:2.6.1] /home/mohit/.gradle/caches/transforms-4/a5ba2caad090d891a165130c97797d0d/transformed/lifecycle-process-2.6.1/AndroidManifest.xml:29:13-31:52
+85                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+85-->[androidx.lifecycle:lifecycle-process:2.6.1] /home/mohit/.gradle/caches/transforms-4/a5ba2caad090d891a165130c97797d0d/transformed/lifecycle-process-2.6.1/AndroidManifest.xml:30:17-78
+86                android:value="androidx.startup" />
+86-->[androidx.lifecycle:lifecycle-process:2.6.1] /home/mohit/.gradle/caches/transforms-4/a5ba2caad090d891a165130c97797d0d/transformed/lifecycle-process-2.6.1/AndroidManifest.xml:31:17-49
+87            <meta-data
+87-->[androidx.profileinstaller:profileinstaller:1.3.0] /home/mohit/.gradle/caches/transforms-4/f605d6e6d3c8a90a6dcb027299008c39/transformed/profileinstaller-1.3.0/AndroidManifest.xml:29:13-31:52
+88                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+88-->[androidx.profileinstaller:profileinstaller:1.3.0] /home/mohit/.gradle/caches/transforms-4/f605d6e6d3c8a90a6dcb027299008c39/transformed/profileinstaller-1.3.0/AndroidManifest.xml:30:17-85
+89                android:value="androidx.startup" />
+89-->[androidx.profileinstaller:profileinstaller:1.3.0] /home/mohit/.gradle/caches/transforms-4/f605d6e6d3c8a90a6dcb027299008c39/transformed/profileinstaller-1.3.0/AndroidManifest.xml:31:17-49
+90        </provider>
+91
+92        <receiver
+92-->[androidx.profileinstaller:profileinstaller:1.3.0] /home/mohit/.gradle/caches/transforms-4/f605d6e6d3c8a90a6dcb027299008c39/transformed/profileinstaller-1.3.0/AndroidManifest.xml:34:9-52:20
+93            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+93-->[androidx.profileinstaller:profileinstaller:1.3.0] /home/mohit/.gradle/caches/transforms-4/f605d6e6d3c8a90a6dcb027299008c39/transformed/profileinstaller-1.3.0/AndroidManifest.xml:35:13-76
+94            android:directBootAware="false"
+94-->[androidx.profileinstaller:profileinstaller:1.3.0] /home/mohit/.gradle/caches/transforms-4/f605d6e6d3c8a90a6dcb027299008c39/transformed/profileinstaller-1.3.0/AndroidManifest.xml:36:13-44
+95            android:enabled="true"
+95-->[androidx.profileinstaller:profileinstaller:1.3.0] /home/mohit/.gradle/caches/transforms-4/f605d6e6d3c8a90a6dcb027299008c39/transformed/profileinstaller-1.3.0/AndroidManifest.xml:37:13-35
+96            android:exported="true"
+96-->[androidx.profileinstaller:profileinstaller:1.3.0] /home/mohit/.gradle/caches/transforms-4/f605d6e6d3c8a90a6dcb027299008c39/transformed/profileinstaller-1.3.0/AndroidManifest.xml:38:13-36
+97            android:permission="android.permission.DUMP" >
+97-->[androidx.profileinstaller:profileinstaller:1.3.0] /home/mohit/.gradle/caches/transforms-4/f605d6e6d3c8a90a6dcb027299008c39/transformed/profileinstaller-1.3.0/AndroidManifest.xml:39:13-57
+98            <intent-filter>
+98-->[androidx.profileinstaller:profileinstaller:1.3.0] /home/mohit/.gradle/caches/transforms-4/f605d6e6d3c8a90a6dcb027299008c39/transformed/profileinstaller-1.3.0/AndroidManifest.xml:40:13-42:29
+99                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+99-->[androidx.profileinstaller:profileinstaller:1.3.0] /home/mohit/.gradle/caches/transforms-4/f605d6e6d3c8a90a6dcb027299008c39/transformed/profileinstaller-1.3.0/AndroidManifest.xml:41:17-91
+99-->[androidx.profileinstaller:profileinstaller:1.3.0] /home/mohit/.gradle/caches/transforms-4/f605d6e6d3c8a90a6dcb027299008c39/transformed/profileinstaller-1.3.0/AndroidManifest.xml:41:25-88
+100            </intent-filter>
+101            <intent-filter>
+101-->[androidx.profileinstaller:profileinstaller:1.3.0] /home/mohit/.gradle/caches/transforms-4/f605d6e6d3c8a90a6dcb027299008c39/transformed/profileinstaller-1.3.0/AndroidManifest.xml:43:13-45:29
+102                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+102-->[androidx.profileinstaller:profileinstaller:1.3.0] /home/mohit/.gradle/caches/transforms-4/f605d6e6d3c8a90a6dcb027299008c39/transformed/profileinstaller-1.3.0/AndroidManifest.xml:44:17-85
+102-->[androidx.profileinstaller:profileinstaller:1.3.0] /home/mohit/.gradle/caches/transforms-4/f605d6e6d3c8a90a6dcb027299008c39/transformed/profileinstaller-1.3.0/AndroidManifest.xml:44:25-82
+103            </intent-filter>
+104            <intent-filter>
+104-->[androidx.profileinstaller:profileinstaller:1.3.0] /home/mohit/.gradle/caches/transforms-4/f605d6e6d3c8a90a6dcb027299008c39/transformed/profileinstaller-1.3.0/AndroidManifest.xml:46:13-48:29
+105                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+105-->[androidx.profileinstaller:profileinstaller:1.3.0] /home/mohit/.gradle/caches/transforms-4/f605d6e6d3c8a90a6dcb027299008c39/transformed/profileinstaller-1.3.0/AndroidManifest.xml:47:17-88
+105-->[androidx.profileinstaller:profileinstaller:1.3.0] /home/mohit/.gradle/caches/transforms-4/f605d6e6d3c8a90a6dcb027299008c39/transformed/profileinstaller-1.3.0/AndroidManifest.xml:47:25-85
+106            </intent-filter>
+107            <intent-filter>
+107-->[androidx.profileinstaller:profileinstaller:1.3.0] /home/mohit/.gradle/caches/transforms-4/f605d6e6d3c8a90a6dcb027299008c39/transformed/profileinstaller-1.3.0/AndroidManifest.xml:49:13-51:29
+108                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+108-->[androidx.profileinstaller:profileinstaller:1.3.0] /home/mohit/.gradle/caches/transforms-4/f605d6e6d3c8a90a6dcb027299008c39/transformed/profileinstaller-1.3.0/AndroidManifest.xml:50:17-95
+108-->[androidx.profileinstaller:profileinstaller:1.3.0] /home/mohit/.gradle/caches/transforms-4/f605d6e6d3c8a90a6dcb027299008c39/transformed/profileinstaller-1.3.0/AndroidManifest.xml:50:25-92
+109            </intent-filter>
+110        </receiver>
+111    </application>
+112
+113</manifest>

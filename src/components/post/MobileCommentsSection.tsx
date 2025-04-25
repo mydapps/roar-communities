@@ -1,10 +1,11 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo, memo } from 'react';
 import { CommentReply, toggleMeow, createReply } from '@/utils/commentApi';
 import { EnhancedCommentItem } from './EnhancedCommentItem';
 import { MobileCommentInput } from './MobileCommentInput';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { NotInCommunitySheet } from '@/components/community/NotInCommunitySheet';
+import { debounce } from '@/utils/helpers'; // Import debounce utility or create if needed
 
 interface MobileCommentsSectionProps {
   postCode: string;
@@ -22,6 +23,35 @@ interface MobileCommentsSectionProps {
   onRefresh: () => void;
 }
 
+// Memoized comment item to prevent unnecessary renders
+const MemoizedCommentItem = memo(({ 
+  comment,
+  postAuthorHandle,
+  onMeowChange,
+  onReply,
+  onOpenMobileReply,
+  optimisticToRealIdMap
+}: {
+  comment: CommentReply;
+  postAuthorHandle: string;
+  onMeowChange: (commentId: number, newState: boolean) => void;
+  onReply: (parentId: number, content: string) => Promise<void>;
+  onOpenMobileReply: (id: number, handle: string, avatar: string, content: string, level2ParentId?: number) => void;
+  optimisticToRealIdMap: Record<number, number>;
+}) => (
+  <div key={comment.id} className="pt-6 first:pt-0">
+    <EnhancedCommentItem 
+      comment={comment}
+      postAuthorHandle={postAuthorHandle}
+      onMeowChange={onMeowChange}
+      onReply={onReply}
+      isMobile={true}
+      onOpenMobileReply={onOpenMobileReply}
+      optimisticToRealIdMap={optimisticToRealIdMap}
+    />
+  </div>
+));
+
 export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
   postCode,
   postAuthorHandle,
@@ -36,27 +66,44 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
     content: string;
     level2ParentId?: number;
   } | null>(null);
-  const [meowedComments, setMeowedComments] = useState<Record<number, boolean>>({});
+  
+  // Use refs for data that doesn't need to trigger re-renders
+  const meowedCommentsRef = useRef<Record<number, boolean>>({});
   const [localReplies, setLocalReplies] = useState<CommentReply[]>(replies);
   const isMobile = useIsMobile();
   const [notInCommunitySheetOpen, setNotInCommunitySheetOpen] = useState(false);
   const [communityName, setCommunityName] = useState("");
   
   // Map for tracking optimistic IDs to real IDs
+  const optimisticToRealIdMapRef = useRef<Record<number, number>>({});
   const [optimisticToRealIdMap, setOptimisticToRealIdMap] = useState<Record<number, number>>({});
   
+  // Store a reference to the previous replies for comparison
+  const previousRepliesRef = useRef<CommentReply[]>(replies);
+  
   // Helper function to get real ID if available, or return original ID
-  const getRealIdIfAvailable = (id: number): number => {
+  const getRealIdIfAvailable = useCallback((id: number): number => {
     return optimisticToRealIdMap[id] || id;
-  };
+  }, [optimisticToRealIdMap]);
 
-  // Update local replies when prop changes
+  // Update local replies when prop changes - optimized to prevent unnecessary updates
   useEffect(() => {
-    setLocalReplies(replies);
+    // Only update if the replies have actually changed
+    if (JSON.stringify(previousRepliesRef.current) !== JSON.stringify(replies)) {
+      previousRepliesRef.current = replies;
+      setLocalReplies(replies);
+    }
   }, [replies]);
 
-  // Handle meow (like) on a comment
-  const handleMeowChange = async (commentId: number, newState: boolean) => {
+  // Debounced function to update local replies to improve performance
+  const debouncedSetLocalReplies = useRef(
+    debounce((updater: (prevReplies: CommentReply[]) => CommentReply[]) => {
+      setLocalReplies(updater);
+    }, 100)
+  ).current;
+
+  // Handle meow (like) on a comment - optimized with useCallback
+  const handleMeowChange = useCallback(async (commentId: number, newState: boolean) => {
     try {
       // Use real ID if this is an optimistic comment that's been saved
       const realCommentId = getRealIdIfAvailable(commentId);
@@ -68,16 +115,14 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
         return;
       }
       
-      console.log(`Mobile - Toggling meow for comment ID: ${realCommentId} to ${newState}`);
-      
-      // Update optimistically in UI first
-      setMeowedComments(prev => ({
-        ...prev,
+      // Update refs immediately without re-rendering
+      meowedCommentsRef.current = {
+        ...meowedCommentsRef.current,
         [commentId]: newState
-      }));
+      };
       
-      // Update comment's meow count in local state
-      setLocalReplies(prevReplies => {
+      // Update optimistically in UI using debounced function
+      debouncedSetLocalReplies((prevReplies) => {
         const updateMeowCount = (comments: CommentReply[]): CommentReply[] => {
           return comments.map(comment => {
             if (comment.id === commentId) {
@@ -107,14 +152,15 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
       }
     } catch (error) {
       console.error(`Error toggling meow for comment ID ${commentId}:`, error);
+      
       // Revert optimistic update on error
-      setMeowedComments(prev => ({
-        ...prev,
+      meowedCommentsRef.current = {
+        ...meowedCommentsRef.current,
         [commentId]: !newState
-      }));
+      };
       
       // Revert the count update too
-      setLocalReplies(prevReplies => {
+      debouncedSetLocalReplies((prevReplies) => {
         const revertMeowCount = (comments: CommentReply[]): CommentReply[] => {
           return comments.map(comment => {
             if (comment.id === commentId) {
@@ -138,9 +184,9 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
       
       toast.error('Failed to update reaction');
     }
-  };
+  }, [getRealIdIfAvailable, debouncedSetLocalReplies]);
 
-  // Handle opening the reply form
+  // Handle opening the reply form - optimized with useCallback
   const handleOpenReply = useCallback((
     id: number, 
     handle: string, 
@@ -159,15 +205,15 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
       content,
       level2ParentId: realLevel2ParentId
     });
-  }, [optimisticToRealIdMap]);
+  }, [getRealIdIfAvailable]);
 
-  // Cancel reply mode
+  // Cancel reply mode - optimized with useCallback
   const handleCancelReply = useCallback(() => {
     setReplyingTo(null);
   }, []);
 
-  // Main comment submission handler - NOW DELEGATES TO PARENT
-  const handleSubmit = async (content: string, parentId?: number): Promise<void> => {
+  // Main comment submission handler - optimized with useCallback
+  const handleSubmit = useCallback(async (content: string, parentId?: number): Promise<void> => {
     // Basic validation before passing up
     if (!content.trim()) {
       toast.error('Comment cannot be empty.');
@@ -177,12 +223,10 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
     // If parentId is provided, get the real ID if this is an optimistic comment
     const realParentId = parentId ? getRealIdIfAvailable(parentId) : undefined;
       
-    // Generate optimistic ID (negative to identify it as optimistic) - moved outside try/catch
+    // Generate optimistic ID (negative to identify it as optimistic)
     const optimisticId = -Date.now();
     
     try {
-      console.log(`Mobile - Passing comment/reply to parent: parentId=${realParentId}, content length=${content.length}`);
-      
       // Create an optimistic comment/reply
       const userHandle = localStorage.getItem('dapps_user_handle') || 'you';
       const userAvatar = localStorage.getItem('dapps_user_avatar') || 'default';
@@ -191,16 +235,16 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
       const optimisticReply: CommentReply = {
         id: optimisticId,
         uid: Number(localStorage.getItem('dapps_user_id') || '0'),
-                  handle: userHandle,
-                  avatar_url: userAvatar,
-                  content: content,
-                  created_on: new Date().toISOString(),
-                  time_ago: 'just now',
-                  upvotes: 0,
-                  meow_count: 0,
+        handle: userHandle,
+        avatar_url: userAvatar,
+        content: content,
+        created_on: new Date().toISOString(),
+        time_ago: 'just now',
+        upvotes: 0,
+        meow_count: 0,
         has_meowed: false,
         sub_replies: []
-                };
+      };
                 
       // Update UI optimistically, finding the correct parent using realParentId
       if (realParentId) {
@@ -240,8 +284,13 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
       
       // Handle successful API response
       if (result.success && result.reply_id) {
-        // Map the optimistic ID to the real ID returned by the server
-        console.log(`Mapping optimistic ID ${optimisticId} to real ID ${result.reply_id}`);
+        // Store mapping in ref first to avoid re-renders
+        optimisticToRealIdMapRef.current = {
+          ...optimisticToRealIdMapRef.current,
+          [optimisticId]: result.reply_id
+        };
+        
+        // Then update state for components that need it
         setOptimisticToRealIdMap(prev => ({
           ...prev,
           [optimisticId]: result.reply_id
@@ -267,7 +316,7 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
           };
           
           return updateCommentId(prevReplies);
-      });
+        });
       }
       
       // Clear reply mode after successful submission
@@ -296,61 +345,60 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
       });
       throw error; // Re-throw to allow input component to handle isSubmitting state
     }
-  };
+  }, [getRealIdIfAvailable, onAddComment]);
 
-  // Modified to match the expected function signature
+  // Memoized function to find comment depth and level 2 parent
+  const findCommentDepthAndLevel2Parent = useCallback((
+    comments: CommentReply[], 
+    id: number, 
+    depth = 1, 
+    level2ParentId?: number
+  ): { depth: number; level2ParentId?: number } => {
+    for (const comment of comments) {
+      // Use the real ID for comparison if available
+      const commentRealId = getRealIdIfAvailable(comment.id);
+      
+      if (commentRealId === id) {
+        return { depth, level2ParentId };
+      }
+      
+      // If this is a level 2 comment, pass its ID as the level2ParentId to children
+      const nextLevel2ParentId = depth === 2 ? commentRealId : level2ParentId;
+      
+      if (comment.sub_replies && comment.sub_replies.length > 0) {
+        const result = findCommentDepthAndLevel2Parent(
+          comment.sub_replies,
+          id,
+          depth + 1,
+          nextLevel2ParentId
+        );
+        
+        if (result.depth > 0) { // Found the comment
+          return result;
+        }
+      }
+    }
+    
+    return { depth: 0, level2ParentId: undefined };
+  }, [getRealIdIfAvailable]);
+
+  // Modified to match the expected function signature - optimized with useCallback
   const handleReplySubmit = useCallback((parentId: number, content: string) => {
     // Get real ID if this is an optimistic comment
     const realParentId = getRealIdIfAvailable(parentId);
-    
-    // We need to check if this is a level 3 comment and find its level 2 parent
-    const findCommentDepthAndLevel2Parent = (
-      comments: CommentReply[], 
-      id: number, 
-      depth = 1, 
-      level2ParentId?: number
-    ): { depth: number; level2ParentId?: number } => {
-      for (const comment of comments) {
-        // Use the real ID for comparison if available
-        const commentRealId = getRealIdIfAvailable(comment.id);
-        
-        if (commentRealId === id) {
-          return { depth, level2ParentId };
-        }
-        
-        // If this is a level 2 comment, pass its ID as the level2ParentId to children
-        const nextLevel2ParentId = depth === 2 ? commentRealId : level2ParentId;
-        
-        if (comment.sub_replies && comment.sub_replies.length > 0) {
-          const result = findCommentDepthAndLevel2Parent(
-            comment.sub_replies,
-            id,
-            depth + 1,
-            nextLevel2ParentId
-          );
-          
-          if (result.depth > 0) { // Found the comment
-            return result;
-          }
-        }
-      }
-      
-      return { depth: 0, level2ParentId: undefined };
-    };
     
     // Check if this is a level 3 comment, if so, use its level 2 parent ID instead
     const { depth, level2ParentId } = findCommentDepthAndLevel2Parent(localReplies, realParentId);
     
     if (depth === 3 && level2ParentId) {
-      console.log(`Mobile - Level 3 reply detected, redirecting to level 2 parent: ${level2ParentId}`);
       return handleSubmit(content, level2ParentId);
     }
     
     // Normal case - level 1 or 2 comment
     return handleSubmit(content, realParentId);
-  }, [handleSubmit, localReplies, optimisticToRealIdMap]);
+  }, [handleSubmit, localReplies, getRealIdIfAvailable, findCommentDepthAndLevel2Parent]);
 
-  // Handle a reply to comment by opening the drawer
+  // Handle a reply to comment by opening the drawer - optimized with useCallback
   const handleOpenMobileReply = useCallback((
     id: number, 
     handle: string, 
@@ -363,7 +411,34 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
     const realLevel2ParentId = level2ParentId ? getRealIdIfAvailable(level2ParentId) : undefined;
     
     handleOpenReply(realId, handle, avatar, content, realLevel2ParentId);
-  }, [handleOpenReply, optimisticToRealIdMap]);
+  }, [handleOpenReply, getRealIdIfAvailable]);
+
+  // Create a memoized list of comment components
+  const commentsList = useMemo(() => {
+    if (localReplies.length === 0) {
+      return (
+        <div className="text-center py-8 bg-muted/20 rounded-lg border border-border/40">
+          <p className="text-muted-foreground">No comments yet. Be the first to comment!</p>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="space-y-6 divide-y divide-border/20">
+        {localReplies.map(reply => (
+          <MemoizedCommentItem
+            key={reply.id}
+            comment={reply}
+            postAuthorHandle={postAuthorHandle}
+            onMeowChange={handleMeowChange}
+            onReply={handleReplySubmit}
+            onOpenMobileReply={handleOpenMobileReply}
+            optimisticToRealIdMap={optimisticToRealIdMap}
+          />
+        ))}
+      </div>
+    );
+  }, [localReplies, postAuthorHandle, handleMeowChange, handleReplySubmit, handleOpenMobileReply, optimisticToRealIdMap]);
 
   if (!isMobile) {
     return null;
@@ -373,27 +448,7 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
     <>
       {/* Comments list */}
       <div className="space-y-6 mb-24">
-        {localReplies.length > 0 ? (
-          <div className="space-y-6 divide-y divide-border/20">
-            {localReplies.map(reply => (
-              <div key={reply.id} className="pt-6 first:pt-0">
-                <EnhancedCommentItem 
-                  comment={reply}
-                  postAuthorHandle={postAuthorHandle}
-                  onMeowChange={handleMeowChange}
-                  onReply={handleReplySubmit}
-                  isMobile={true}
-                  onOpenMobileReply={handleOpenMobileReply}
-                  optimisticToRealIdMap={optimisticToRealIdMap}
-                />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-8 bg-muted/20 rounded-lg border border-border/40">
-            <p className="text-muted-foreground">No comments yet. Be the first to comment!</p>
-          </div>
-        )}
+        {commentsList}
       </div>
       
       {/* Floating comment input */}
