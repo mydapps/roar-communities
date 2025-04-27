@@ -7,13 +7,15 @@ import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useDevice } from '@/components/providers/DeviceProvider';
 import { cn } from '@/lib/utils';
+import { isMobileApp } from '@/utils/deviceUtils';
 
 const MainLayout = () => {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useIsMobile();
-  const { isMobileApp } = useDevice();
+  const { isMobileApp: isMobileAppContext } = useDevice();
+  const isMobileAppUser = isMobileApp();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   
   // Check if we're on a post detail page
@@ -79,21 +81,20 @@ const MainLayout = () => {
   // Apply safe area insets for mobile app
   const mainContentClass = cn(
     isMobile && !isPostDetailPage ? "pb-16" : "",
-    isMobileApp ? "safe-area-inset-y" : ""
+    isMobileAppContext ? "safe-area-inset-y" : ""
   );
   
   return (
     <div className={cn(
       "min-h-screen flex flex-col bg-background",
-      isMobileApp ? "safe-area-inset-y" : ""
+      isMobileAppContext ? "safe-area-inset-y" : ""
     )}>
-      <div className="sticky top-0 z-50">
-        <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
-      </div>
+      {/* Navbar - visible on web, and on mobile app after logging in, but styled differently */}
+      <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
       
       {/* Main content area - modified for proper sidebar scrolling */}
       <div className="flex flex-1">
-        {isLoggedIn && (
+        {isLoggedIn && !isMobileAppUser && (
           <div className="hidden md:block"> 
             <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
           </div>
@@ -104,7 +105,11 @@ const MainLayout = () => {
             onRefresh={handleRefresh}
             className="transition-all duration-300 ease-in-out h-full"
           >
-            <main className={mainContentClass}>
+            <main className={cn(
+              mainContentClass,
+              // Add top padding when using mobile app to account for navbar
+              isMobileAppUser ? "pt-16" : ""
+            )}>
               <div className="container py-6 px-4 sm:px-6 max-w-5xl mx-auto animate-fade-in">
                 <Outlet />
               </div>
@@ -113,8 +118,8 @@ const MainLayout = () => {
         </div>
       </div>
       
-      {/* Only show MobileBottomNav when not on a post detail page */}
-      {isMobile && isLoggedIn && <MobileBottomNav />}
+      {/* Mobile Bottom Navigation */}
+      {(isMobile || isMobileAppUser) && isLoggedIn && <MobileBottomNav />}
     </div>
   );
 };

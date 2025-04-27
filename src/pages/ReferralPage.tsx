@@ -213,13 +213,13 @@ const ReferralPage = () => {
       setTimeout(() => setCopied(false), 2000);
     } else {
       // For web, use the standard clipboard API
-      navigator.clipboard.writeText(referralUrl);
-      setCopied(true);
-      toast.success("Invite link copied!");
-      setShowCopyNotification(true);
-      setTimeout(() => setShowCopyNotification(false), 2000);
-      triggerConfetti('medium');
-      setTimeout(() => setCopied(false), 2000);
+    navigator.clipboard.writeText(referralUrl);
+    setCopied(true);
+    toast.success("Invite link copied!");
+    setShowCopyNotification(true);
+    setTimeout(() => setShowCopyNotification(false), 2000);
+    triggerConfetti('medium');
+    setTimeout(() => setCopied(false), 2000);
     }
   };
   

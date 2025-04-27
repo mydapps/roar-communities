@@ -1,10 +1,10 @@
 import React from 'react';
-import { createRoot } from 'react-dom/client';
+import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App.tsx';
 import './index.css';
 import { setupBrowserErrorHandler } from './utils/browserUtils';
-import { getDeviceInfo } from './utils/deviceUtils';
+import { isMobileApp, isAndroidApp, isIOSApp, getPlatformType } from './utils/deviceUtils';
 
 // Setup error handler to prevent browser extension errors from breaking the app
 setupBrowserErrorHandler();
@@ -14,7 +14,7 @@ const injectGoogleAnalytics = () => {
   // Create the first script element (gtag.js)
   const gtagScript = document.createElement('script');
   gtagScript.async = true;
-  gtagScript.src = 'https://www.googletagmanager.com/gtag/js?id=G-TCYSPC0DWM';
+  gtagScript.src = 'https://www.googletagmanager.com/gtag/js?id=G-ZGP95X97YJ';
   document.head.appendChild(gtagScript);
 
   // Create the second script element (configuration)
@@ -23,33 +23,30 @@ const injectGoogleAnalytics = () => {
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
-    gtag('config', 'G-TCYSPC0DWM');
+    gtag('config', 'G-ZGP95X97YJ');
   `;
   document.head.appendChild(configScript);
 };
 
-// Initialize WebToNative library
-const initWebToNative = async () => {
+// Initialize mobile app detection
+const initMobileAppDetection = () => {
   try {
-    // Try to get device info to check if it's an app
-    const deviceInfo = await getDeviceInfo();
+    // Get device platform based on user agent
+    const platform = getPlatformType();
     
-    if (deviceInfo) {
-      console.log('WebToNative initialized with device info:', deviceInfo);
-      
-      // Add device type to window for other scripts to access
-      window.isNativeMobileApp = true;
-      window.devicePlatform = deviceInfo.platform || '';
-      
-      // Log to console for debugging
-      console.log(`Running on ${deviceInfo.platform} platform`);
-    } else {
-      console.log('WebToNative not detected or not running in a native app');
-      window.isNativeMobileApp = false;
+    // Set device info to window for other scripts to access
+    window.isWebToNativeInitialized = isMobileApp();
+    window.devicePlatform = platform;
+    
+    // Log for debugging
+    console.log(`Running on platform: ${platform}, isNativeApp: ${isMobileApp()}`);
+    if (isMobileApp()) {
+      console.log(`App type: ${isAndroidApp() ? 'Android' : 'iOS'}`);
     }
   } catch (error) {
-    console.error('Error initializing WebToNative:', error);
-    window.isNativeMobileApp = false;
+    console.error('Error initializing mobile app detection:', error);
+    window.isWebToNativeInitialized = false;
+    window.devicePlatform = 'web';
   }
 };
 
@@ -57,12 +54,12 @@ const initWebToNative = async () => {
 const initApp = async () => {
   // Initialize Google Analytics
   injectGoogleAnalytics();
-  
-  // Initialize WebToNative
-  await initWebToNative();
-  
+
+  // Initialize mobile app detection
+  initMobileAppDetection();
+
   // Start React app
-  createRoot(document.getElementById("root")!).render(
+  ReactDOM.createRoot(document.getElementById("root")!).render(
     <React.StrictMode>
       <BrowserRouter>
         <App />
@@ -77,7 +74,7 @@ initApp();
 // Add TypeScript declarations for window properties
 declare global {
   interface Window {
-    isNativeMobileApp?: boolean;
+    isWebToNativeInitialized?: boolean;
     devicePlatform?: string;
   }
 }

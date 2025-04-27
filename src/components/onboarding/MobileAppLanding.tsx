@@ -2,24 +2,19 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useAnimation, cubicBezier } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Shield, Coins, Users, ArrowRight, Zap, Sparkles, MessageCircle, Share2, Heart } from 'lucide-react';
-import { DeviceInfo } from '@/utils/deviceUtils';
 import { cn } from '@/lib/utils';
+import { Link } from 'react-router-dom';
+import { isAndroidApp, isIOSApp } from '@/utils/deviceUtils';
 
 interface MobileAppLandingProps {
   onGetStarted: () => void;
   isLoggingIn: boolean;
-  deviceInfo: DeviceInfo | null;
-  isAndroidApp: boolean;
-  isIOSApp: boolean;
   onPrivyClosed?: () => void; // Add callback for when Privy is closed
 }
 
 const MobileAppLanding: React.FC<MobileAppLandingProps> = ({
   onGetStarted,
   isLoggingIn,
-  deviceInfo,
-  isAndroidApp,
-  isIOSApp,
   onPrivyClosed
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -266,8 +261,11 @@ const MobileAppLanding: React.FC<MobileAppLandingProps> = ({
     onGetStarted();
   };
   
+  // Check for iOS using the utility function directly
+  const isOnIOS = isIOSApp();
+  
   // Apply safe area insets for iOS
-  const safeAreaClass = isIOSApp ? 'safe-area-inset-all' : '';
+  const safeAreaClass = isOnIOS ? 'safe-area-inset-all' : '';
   
   return (
     <div 
@@ -292,7 +290,7 @@ const MobileAppLanding: React.FC<MobileAppLandingProps> = ({
         <motion.div 
           className={cn(
             "flex justify-center items-center relative mb-6",
-            isIOSApp ? "mt-6" : ""
+            isOnIOS ? "mt-6" : ""
           )}
           initial={{ y: -30, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -432,7 +430,7 @@ const MobileAppLanding: React.FC<MobileAppLandingProps> = ({
       </main>
       
       {/* Bottom Section - Call to Action */}
-      <footer className={cn("pb-10 px-8 z-10", isIOSApp ? "mb-2" : "")}>
+      <footer className={cn("pb-10 px-8 z-10", isOnIOS ? "mb-2" : "")}>
         <motion.div
           initial={{ y: 30, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
@@ -510,6 +508,12 @@ const MobileAppLanding: React.FC<MobileAppLandingProps> = ({
             </Button>
           </div>
         </motion.div>
+        
+        <div className="flex justify-center mt-6 gap-4 text-xs text-muted-foreground">
+          <Link to="/terms" className="hover:text-foreground transition-colors">Terms</Link>
+          <Link to="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
+          <a href="mailto:m@dapps.co" className="hover:text-foreground transition-colors">Contact</a>
+        </div>
       </footer>
     </div>
   );

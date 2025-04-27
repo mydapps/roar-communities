@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Home, Search, Users, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useDevice } from '@/components/providers/DeviceProvider';
+import { isMobileApp, isIOSApp } from '@/utils/deviceUtils';
 
 const MobileBottomNav = () => {
   const location = useLocation();
-  const { isMobileApp } = useDevice();
+  const isAppUser = isMobileApp();
+  const isIOSUser = isIOSApp();
   const [visible, setVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   
@@ -59,16 +60,17 @@ const MobileBottomNav = () => {
     return null;
   }
 
-  // Apply safe area bottom inset for iOS devices
-  const safeAreaBottomClass = isMobileApp ? 'safe-area-bottom' : '';
+  // Add proper safe area padding for iOS mobile app plus animation classes
+  const bottomNavClass = cn(
+    "fixed bottom-0 left-0 right-0 bg-background border-t border-border z-50 md:hidden transition-transform duration-300 ease-in-out",
+    !visible && isScrollSensitive ? "translate-y-full" : "translate-y-0",
+    isIOSUser ? "pb-6" : "pb-2", // Extra padding for iOS notch devices
+    "pt-2"
+  );
 
   return (
-    <div className={cn(
-      "fixed bottom-0 left-0 right-0 z-50 bg-card border-t md:hidden transition-transform duration-300 ease-in-out",
-      !visible && isScrollSensitive ? "translate-y-full" : "translate-y-0",
-      safeAreaBottomClass
-    )}>
-      <div className="flex justify-around items-center py-3 px-2">
+    <div className={bottomNavClass}>
+      <div className="w-full flex justify-around items-center py-3">
         <NavItem to="/feed" icon={<Home className="h-5 w-5" />} label="Feed" />
         <NavItem to="/search" icon={<Search className="h-5 w-5" />} label="Search" />
         <NavItem to="/communities" icon={<Users className="h-5 w-5" />} label="Communities" />
@@ -90,9 +92,9 @@ const NavItem = ({ to, icon, label }: NavItemProps) => {
       to={to}
       className={({ isActive }) =>
         cn(
-          "flex flex-col items-center justify-center rounded-md p-2 text-xs transition-all",
+          "flex flex-col items-center justify-center p-2 text-xs transition-all w-full",
           isActive
-            ? "text-primary scale-110 font-medium"
+            ? "text-primary font-medium"
             : "text-muted-foreground hover:text-foreground"
         )
       }
@@ -100,8 +102,8 @@ const NavItem = ({ to, icon, label }: NavItemProps) => {
       {({ isActive }) => (
         <>
           <div className={cn(
-            "relative mb-1 flex items-center justify-center",
-            isActive ? "after:absolute after:-bottom-1.5 after:h-1 after:w-1 after:rounded-full after:bg-primary" : ""
+            "relative flex items-center justify-center mb-1",
+            isActive ? "after:absolute after:-bottom-1 after:h-1 after:w-1 after:rounded-full after:bg-primary" : ""
           )}>
             {icon}
           </div>

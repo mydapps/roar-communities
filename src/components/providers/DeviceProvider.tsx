@@ -2,11 +2,12 @@ import React, { ReactNode, createContext, useContext, useEffect, useState } from
 import {
   DeviceInfo,
   getDeviceInfo,
-  hasWTNBridge,
+  isNativeMobileApp,
   isAndroid,
   isIOS,
-  isNativeMobileApp,
-  hasMobileAppIndicators
+  isMobileApp,
+  isAndroidApp,
+  isIOSApp
 } from "@/utils/deviceUtils";
 
 // Define the context shape
@@ -15,8 +16,8 @@ interface DeviceContextType {
   isIOSApp: boolean;
   isAndroidApp: boolean;
   deviceInfo: DeviceInfo | null;
-  deviceInfoLoading: boolean;
-  isLoading: boolean; // Added for backwards compatibility with existing code
+  isLoading: boolean;
+  detectionComplete: boolean;
 }
 
 // Create context with default values
@@ -25,8 +26,8 @@ const DeviceContext = createContext<DeviceContextType>({
   isIOSApp: false,
   isAndroidApp: false,
   deviceInfo: null,
-  deviceInfoLoading: true,
-  isLoading: true
+  isLoading: true,
+  detectionComplete: false
 });
 
 // Provider props type
@@ -38,140 +39,83 @@ interface DeviceProviderProps {
  * Provider component that makes device information available throughout the app
  */
 export const DeviceProvider: React.FC<DeviceProviderProps> = ({ children }) => {
-  const [isMobileApp, setIsMobileApp] = useState<boolean>(false);
-  const [isIOSApp, setIsIOSApp] = useState<boolean>(false);
-  const [isAndroidApp, setIsAndroidApp] = useState<boolean>(false);
   const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | null>(null);
-  const [deviceInfoLoading, setDeviceInfoLoading] = useState<boolean>(true);
+  const [isMobileAppState, setIsMobileApp] = useState<boolean>(false);
+  const [isAndroidAppState, setIsAndroidApp] = useState<boolean>(false);
+  const [isIOSAppState, setIsIOSApp] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [detectionComplete, setDetectionComplete] = useState<boolean>(false);
 
-  // Attempt immediate deviceInfo check on mount
+  // Only run device detection once on mount
   useEffect(() => {
-    const immediateCheck = async () => {
-      console.log("DeviceProvider: Attempting immediate deviceInfo check...");
+    // Prevent running detection again if already complete
+    if (detectionComplete) return;
+
+    console.log('DeviceProvider: Running device detection on mount');
+    
+    const detectDevice = async () => {
       try {
-        // Try to get device info directly - this should work in the native app
-        const device = await getDeviceInfo();
-        console.log("DeviceProvider: Immediate deviceInfo result:", device);
+        // Directly check the user agent string for app identifiers
+        const mobileAppResult = isMobileApp();
+        const isAndroidResult = isAndroidApp();
+        const isIOSResult = isIOSApp();
         
-        if (device && (device.platform === "android" || device.platform === "ios")) {
-          console.log("DeviceProvider: Found mobile platform in immediate check:", device.platform);
-          setIsMobileApp(true);
-          setDeviceInfo(device);
-          
-          if (device.platform === "android") {
-            console.log("DeviceProvider: Setting Android app");
-            setIsAndroidApp(true);
-          }
-          
-          if (device.platform === "ios") {
-            console.log("DeviceProvider: Setting iOS app");
-            setIsIOSApp(true);
-          }
-        }
+        console.log('DeviceProvider: Mobile app check result:', mobileAppResult);
+        console.log('DeviceProvider: Platform checks - iOS:', isIOSResult, 'Android:', isAndroidResult);
+        console.log('DeviceProvider: User agent:', navigator.userAgent);
+        
+        // Get device info (now uses the same user agent detection)
+        const deviceInfoResult = await getDeviceInfo();
+        
+        // Update all state at once to avoid multiple renders
+        setDeviceInfo(deviceInfoResult);
+        setIsMobileApp(mobileAppResult);
+        setIsAndroidApp(isAndroidResult);
+        setIsIOSApp(isIOSResult);
+        setIsLoading(false);
+        setDetectionComplete(true);
+        
+        console.log('DeviceProvider: Device detection complete', {
+          isMobileApp: mobileAppResult,
+          isAndroidApp: isAndroidResult,
+          isIOSApp: isIOSResult,
+          deviceInfo: deviceInfoResult
+        });
       } catch (error) {
-        console.log("DeviceProvider: Immediate deviceInfo check failed:", error);
-        // We'll continue with other detection methods
+        console.error('DeviceProvider: Error detecting device:', error);
+        
+        // Even on error, we should stop loading and mark detection as complete
+        setIsLoading(false);
+        setDetectionComplete(true);
       }
     };
     
-    immediateCheck();
-  }, []);
+    detectDevice();
+  }, []); // Empty dependency array ensures this only runs once on mount
 
-  // Check for direct WTN bridge presence immediately
+  // Context value 
+  const contextValue: DeviceContextType = {
+    isMobileApp: isMobileAppState,
+    isAndroidApp: isAndroidAppState,
+    isIOSApp: isIOSAppState,
+    deviceInfo,
+    isLoading,
+    detectionComplete
+  };
+
+  // Debug log when values change, but don't include in dependency array
   useEffect(() => {
-    const wtnPresent = hasWTNBridge();
-    console.log("DeviceProvider: Initial WTN bridge check:", wtnPresent);
-    if (wtnPresent) {
-      setIsMobileApp(true);
-      
-      // If WTN is present, try to determine platform from user agent
-      const userAgent = navigator.userAgent.toLowerCase();
-      const isIOSDetected = userAgent.includes('iphone') || 
-                          userAgent.includes('ipad') || 
-                          userAgent.includes('ipod');
-      const isAndroidDetected = userAgent.includes('android');
-      
-      console.log("DeviceProvider: Quick platform check from user agent:", { 
-        isIOSDetected, isAndroidDetected, userAgent 
-      });
-      
-      if (isIOSDetected) setIsIOSApp(true);
-      if (isAndroidDetected) setIsAndroidApp(true);
-    }
-  }, []);
-
-  // Complete device check with all methods
-  useEffect(() => {
-    const checkDevice = async () => {
-      console.log("DeviceProvider: Starting complete device detection...");
-      try {
-        // First try the new mobile indicators check
-        const hasMobileIndicators = await hasMobileAppIndicators();
-        console.log("DeviceProvider: hasMobileAppIndicators result:", hasMobileIndicators);
-        if (hasMobileIndicators) {
-          console.log("DeviceProvider: Mobile indicators found, setting isMobileApp=true");
-          setIsMobileApp(true);
-        }
-        
-        // Fallback to the comprehensive check
-        if (!hasMobileIndicators) {
-          const mobileApp = await isNativeMobileApp();
-          console.log("DeviceProvider: isNativeMobileApp detection result:", mobileApp);
-          setIsMobileApp(prev => prev || mobileApp);
-        }
-
-        // If we've determined this is a mobile app through any method, check platform details
-        if (isMobileApp) {
-          // Check if running on iOS
-          const ios = await isIOS();
-          console.log("DeviceProvider: isIOS detection result:", ios);
-          setIsIOSApp(ios);
-
-          // Check if running on Android
-          const android = await isAndroid();
-          console.log("DeviceProvider: isAndroid detection result:", android);
-          setIsAndroidApp(android);
-
-          // Get detailed device info
-          const deviceInfoResult = await getDeviceInfo();
-          console.log("DeviceProvider: getDeviceInfo result:", deviceInfoResult);
-          setDeviceInfo(deviceInfoResult);
-        }
-      } catch (error) {
-        console.error("DeviceProvider: Error in complete device detection:", error);
-      } finally {
-        console.log("DeviceProvider: Complete device detection finished");
-        setDeviceInfoLoading(false);
-      }
-    };
-
-    checkDevice();
-  }, [isMobileApp]);
-
-  useEffect(() => {
-    // Log complete state after all checks are done
-    if (!deviceInfoLoading) {
-      console.log("DeviceProvider final state:", {
-        isMobileApp,
-        isIOSApp,
-        isAndroidApp,
-        deviceInfo,
-        userAgent: navigator.userAgent
-      });
-    }
-  }, [deviceInfoLoading, isMobileApp, isIOSApp, isAndroidApp, deviceInfo]);
+    console.log('DeviceProvider: Context value updated', {
+      isMobileApp: isMobileAppState,
+      isAndroidApp: isAndroidAppState,
+      isIOSApp: isIOSAppState,
+      isLoading,
+      deviceInfoExists: !!deviceInfo
+    });
+  }, [isMobileAppState, isAndroidAppState, isIOSAppState, isLoading, deviceInfo]);
 
   return (
-    <DeviceContext.Provider
-      value={{
-        isMobileApp,
-        isIOSApp,
-        isAndroidApp,
-        deviceInfo,
-        deviceInfoLoading,
-        isLoading: deviceInfoLoading // Added for backwards compatibility
-      }}
-    >
+    <DeviceContext.Provider value={contextValue}>
       {children}
     </DeviceContext.Provider>
   );

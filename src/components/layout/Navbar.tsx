@@ -145,11 +145,16 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
   return (
     <header className={cn(
       "fixed left-0 right-0 z-50 w-full border-b bg-background/95 backdrop-blur-xl shadow-sm top-0",
-      safeAreaTopClass
+      isMobileApp ? "safe-area-top bg-background" : ""
     )}>
-      <div className="container flex h-16 items-center justify-between px-4">
+      <div className={cn(
+        "container flex h-16 items-center justify-between px-4",
+        // For mobile app, use space-between for layout
+        isMobileApp ? "justify-between" : ""
+      )}>
+        {/* Logo and back button area */}
         <div className="flex items-center gap-2">
-          {!isMobile && (
+          {!isMobile && !isMobileApp && (
             <Button
               variant="ghost"
               size="icon"
@@ -191,7 +196,8 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
           </Link>
         </div>
 
-        {isLoggedIn && (
+        {/* Search bar - only show on web, not on mobile app */}
+        {isLoggedIn && !isMobileApp && (
           <div className="hidden md:flex items-center space-x-1 flex-1 justify-center max-w-md mx-auto">
             <form onSubmit={handleSearchSubmit} className="relative w-full">
               <div className={cn(
@@ -226,9 +232,11 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
           </div>
         )}
 
+        {/* User account and actions area */}
         <div className="flex items-center gap-3">
           {isLoggedIn ? (
             <>
+              {/* Restore gift icon for all mobile devices including app */}
               {isMobile && (
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                   <Button variant="ghost" size="icon" asChild className="relative">
@@ -239,6 +247,7 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
                 </motion.div>
               )}
               
+              {/* Restore notification icon for all platforms including mobile app */}
               <motion.div 
                 whileHover={{ scale: 1.05 }} 
                 whileTap={{ scale: 0.95 }}
