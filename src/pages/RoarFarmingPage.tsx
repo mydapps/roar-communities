@@ -212,7 +212,6 @@ const RoarFarmingPage = () => {
       }
     } catch (error) {
       console.error('Error fetching total roars:', error);
-      toast.error('Failed to load total roars data');
       // Set defaults even on error
       setDisplayGoal(PHASE_1_GOAL);
       setDisplayProgress(0);
@@ -507,8 +506,6 @@ const RoarFarmingPage = () => {
         // Set initial time remaining before the tracker starts
         setTimeRemaining(data.time_remaining_formatted || '6h 0m 0s');
         
-        toast.success('Roar farming started successfully!');
-        
         // Start animation and time tracking
         startFarmingAnimation();
         startTimeTracker(21600); // 6 hours in seconds
@@ -519,11 +516,10 @@ const RoarFarmingPage = () => {
           checkFarmingStatus();
         }, 1000);
       } else {
-        toast.error(data.message || 'Failed to start farming');
+        console.error(data.message || 'Failed to start farming');
       }
     } catch (error) {
       console.error('Error starting farming:', error);
-      toast.error('Failed to start farming');
     } finally {
       setIsStarting(false);
     }
@@ -544,8 +540,6 @@ const RoarFarmingPage = () => {
       const data = await response.json();
       
       if (data.success) {
-        toast.success(`Successfully claimed ${data.amount.toFixed(2)} Roars! 🦁`);
-        
         // Reset all farming states
         setIsFarming(false);
         setCanClaim(false);
@@ -567,11 +561,10 @@ const RoarFarmingPage = () => {
         // Refresh total roars
         fetchTotalRoars();
       } else {
-        toast.error(data.message || 'Failed to claim roars');
+        console.error(data.message || 'Failed to claim roars');
       }
     } catch (error) {
       console.error('Error claiming roars:', error);
-      toast.error('Failed to claim roars');
     } finally {
       setIsClaiming(false);
     }
