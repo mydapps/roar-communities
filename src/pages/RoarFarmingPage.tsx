@@ -94,10 +94,6 @@ const RoarFarmingPage = () => {
   const [phase, setPhase] = useState<1 | 2 | 3>(1);
   const [displayGoal, setDisplayGoal] = useState<number>(PHASE_1_GOAL);
   const [displayProgress, setDisplayProgress] = useState<number>(0);
-  const [hasSeenPhase2Transition, setHasSeenPhase2Transition] = useState<boolean>(false);
-  const [hasSeenPhase3Transition, setHasSeenPhase3Transition] = useState<boolean>(false);
-  const [animationStep, setAnimationStep] = useState<'idle' | 'completingPhase2' | 'phase2Done' | 'startingPhase3' | 'phase3Active'>('idle');
-  const [showPhase3Blink, setShowPhase3Blink] = useState<boolean>(false);
   
   const navigate = useNavigate();
   const progressAnimationControls = useAnimation(); // Animation controls for progress bar
@@ -159,54 +155,24 @@ const RoarFarmingPage = () => {
         
         setPhase(currentPhase);
 
-        const seenPhase2Transition = localStorage.getItem('hasSeenPhase2Transition') === 'true';
-        const seenPhase3Transition = localStorage.getItem('hasSeenPhase3Transition') === 'true';
-        setHasSeenPhase2Transition(seenPhase2Transition);
-        setHasSeenPhase3Transition(seenPhase3Transition);
-
-        // Calculate current progress based on current phase
-        let currentDisplayProgress;
-        let currentGoal;
-        
+        // Skip transition animations and set directly to phase3Active state
         if (currentPhase === 3) {
-          currentDisplayProgress = (data.total_roars / PHASE_3_GOAL) * 100;
-          currentGoal = PHASE_3_GOAL;
-        } else if (currentPhase === 2) {
-          currentDisplayProgress = (data.total_roars / PHASE_2_GOAL) * 100;
-          currentGoal = PHASE_2_GOAL;
-        } else {
-          currentDisplayProgress = (data.total_roars / PHASE_1_GOAL) * 100;
-          currentGoal = PHASE_1_GOAL;
-        }
-
-        // Handle Phase 3 transition animation
-        if (currentPhase === 3 && !seenPhase3Transition && animationStep === 'idle') {
-          // Start the Phase 3 transition animation
-          setDisplayGoal(PHASE_2_GOAL); // Start with Phase 2 goal
-          setDisplayProgress((data.total_roars / PHASE_2_GOAL) * 100); // Calculate initial progress based on Phase 2
-          progressAnimationControls.start({ width: `${(data.total_roars / PHASE_2_GOAL) * 100}%` }, { duration: 0 }); // Set initial width
-          console.log("Starting Phase 3 transition animation");
-          setAnimationStep('completingPhase2');
-        } else if (currentPhase === 3 && seenPhase3Transition) {
-          // Phase 3 already active and seen, just set goal and trigger blink
           setDisplayGoal(PHASE_3_GOAL);
+          const currentDisplayProgress = (data.total_roars / PHASE_3_GOAL) * 100;
           setDisplayProgress(currentDisplayProgress);
           progressAnimationControls.start({ width: `${currentDisplayProgress}%` }, { duration: 0 }); // Set initial progress without animation
-          setShowPhase3Blink(true);
-          setTimeout(() => setShowPhase3Blink(false), 3000); // Blink for 3 seconds
-          setAnimationStep('phase3Active'); // Ensure animation state is correct
         } else if (currentPhase === 2) {
           // Already in Phase 2, just set the correct goal and progress
           setDisplayGoal(PHASE_2_GOAL);
+          const currentDisplayProgress = (data.total_roars / PHASE_2_GOAL) * 100;
           setDisplayProgress(currentDisplayProgress);
           progressAnimationControls.start({ width: `${currentDisplayProgress}%` }, { duration: 0 }); // Set initial progress without animation
-          setAnimationStep('idle'); // Reset animation state if needed
         } else {
           // Still in Phase 1
           setDisplayGoal(PHASE_1_GOAL);
+          const currentDisplayProgress = (data.total_roars / PHASE_1_GOAL) * 100;
           setDisplayProgress(currentDisplayProgress);
           progressAnimationControls.start({ width: `${currentDisplayProgress}%` }, { duration: 0 }); // Set initial progress without animation
-          setAnimationStep('idle'); // Reset animation state if needed
         }
         // --- End Phase Transition Logic ---
       }
@@ -540,6 +506,9 @@ const RoarFarmingPage = () => {
       const data = await response.json();
       
       if (data.success) {
+        // Create an exciting celebration effect
+        celebrateSuccessfulClaim(displayedEarnedRoars);
+        
         // Reset all farming states
         setIsFarming(false);
         setCanClaim(false);
@@ -568,6 +537,348 @@ const RoarFarmingPage = () => {
     } finally {
       setIsClaiming(false);
     }
+  };
+  
+  // Add celebration animation function
+  const celebrateSuccessfulClaim = (earnedAmount: number) => {
+    // Create and add CSS for celebration animations if not present
+    if (!document.getElementById('celebration-styles')) {
+      const style = document.createElement('style');
+      style.id = 'celebration-styles';
+      style.innerHTML = `
+        @keyframes float-up {
+          0% { transform: translateY(0); opacity: 0; }
+          10% { opacity: 1; }
+          80% { opacity: 1; }
+          100% { transform: translateY(-120px); opacity: 0; }
+        }
+        
+        @keyframes scale-pulse {
+          0% { transform: scale(1); }
+          50% { transform: scale(1.2); }
+          100% { transform: scale(1); }
+        }
+        
+        @keyframes rotate-glow {
+          0% { transform: rotate(0deg); filter: hue-rotate(0deg); }
+          100% { transform: rotate(360deg); filter: hue-rotate(360deg); }
+        }
+        
+        .celebration-roar {
+          position: fixed;
+          font-size: 24px;
+          color: #F59E0B;
+          font-weight: bold;
+          text-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+          user-select: none;
+          pointer-events: none;
+          z-index: 9999;
+          animation: float-up 2s ease-out forwards;
+          will-change: transform, opacity;
+        }
+        
+        .claim-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.7);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 9999;
+          animation: fade-in 0.3s ease-out;
+        }
+        
+        .claim-card {
+          background: radial-gradient(circle, #FEF3C7, #F59E0B);
+          border-radius: 16px;
+          padding: 24px;
+          text-align: center;
+          box-shadow: 0 0 30px rgba(245, 158, 11, 0.7);
+          max-width: 90%;
+          width: 350px;
+          position: relative;
+          overflow: hidden;
+        }
+        
+        .rotating-glow {
+          position: absolute;
+          inset: -100px;
+          background: conic-gradient(
+            rgba(245, 158, 11, 0),
+            rgba(245, 158, 11, 0.3),
+            rgba(245, 158, 11, 0.7),
+            rgba(245, 158, 11, 0.3),
+            rgba(245, 158, 11, 0)
+          );
+          animation: rotate-glow 8s linear infinite;
+          z-index: -1;
+        }
+        
+        .glow-bg {
+          position: absolute;
+          inset: 0;
+          border-radius: 16px;
+          background: radial-gradient(circle at center, rgba(255, 215, 0, 0.3) 0%, transparent 70%);
+          animation: scale-pulse 2s ease-in-out infinite;
+          z-index: -1;
+        }
+        
+        @keyframes lion-bounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-20px); }
+        }
+        
+        @keyframes fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        
+        @keyframes shine {
+          0% { background-position: -100px; }
+          60% { background-position: 200px; }
+          100% { background-position: 200px; }
+        }
+        
+        .shine-text {
+          position: relative;
+          overflow: hidden;
+        }
+        
+        .shine-text::after {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(
+            to right, 
+            rgba(255, 255, 255, 0) 0%, 
+            rgba(255, 255, 255, 0.8) 50%, 
+            rgba(255, 255, 255, 0) 100%
+          );
+          background-size: 200px 100%;
+          background-repeat: no-repeat;
+          background-position: -100px;
+          animation: shine 2s infinite;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    
+    // Fire multiple confetti bursts at different angles
+    const fireConfetti = () => {
+      // Center burst
+      confetti({
+        particleCount: 100,
+        spread: 120,
+        origin: { x: 0.5, y: 0.7 },
+        colors: ['#FFD700', '#F59E0B', '#FEF3C7', '#92400E', '#FBBF24'],
+        shapes: ['circle', 'square'],
+        gravity: 1,
+        scalar: 1.2,
+        drift: 0,
+        ticks: 300
+      });
+      
+      // Left burst
+      setTimeout(() => {
+        confetti({
+          particleCount: 50,
+          angle: 60,
+          spread: 80,
+          origin: { x: 0, y: 0.8 },
+          colors: ['#FFD700', '#F59E0B', '#FEF3C7'],
+          gravity: 0.7,
+          drift: 1,
+          ticks: 250
+        });
+      }, 200);
+      
+      // Right burst
+      setTimeout(() => {
+        confetti({
+          particleCount: 50,
+          angle: 120,
+          spread: 80,
+          origin: { x: 1, y: 0.8 },
+          colors: ['#FFD700', '#F59E0B', '#FEF3C7'],
+          gravity: 0.7,
+          drift: -1,
+          ticks: 250
+        });
+      }, 400);
+      
+      // Add top "firework" bursts
+      setTimeout(() => {
+        const x = 0.3 + Math.random() * 0.4;
+        const y = 0.3 + Math.random() * 0.2;
+        confetti({
+          particleCount: 40,
+          startVelocity: 30,
+          spread: 360,
+          origin: { x, y },
+          gravity: 0.8,
+          ticks: 200,
+          colors: ['#FFD700', '#F59E0B', '#D97706']
+        });
+      }, 600);
+      
+      setTimeout(() => {
+        const x = 0.3 + Math.random() * 0.4;
+        const y = 0.3 + Math.random() * 0.2;
+        confetti({
+          particleCount: 40,
+          startVelocity: 30,
+          spread: 360,
+          origin: { x, y },
+          gravity: 0.8,
+          ticks: 200,
+          colors: ['#FFD700', '#F59E0B', '#D97706']
+        });
+      }, 900);
+    };
+    
+    // Create floating ROAR numbers animation
+    const createFloatingRoars = () => {
+      const count = 10;
+      for (let i = 0; i < count; i++) {
+        setTimeout(() => {
+          const roar = document.createElement('div');
+          roar.className = 'celebration-roar';
+          const randomValue = (Math.random() * earnedAmount * 0.2 + earnedAmount * 0.1).toFixed(1);
+          roar.textContent = `+${randomValue} 🦁`;
+          
+          // Position randomly on the screen with a bias toward the center
+          const x = 30 + Math.random() * 60; // Between 30-90% of screen width
+          const y = 30 + Math.random() * 60; // Between 30-90% of screen height
+          
+          roar.style.left = `${x}vw`;
+          roar.style.top = `${y}vh`;
+          
+          document.body.appendChild(roar);
+          
+          // Remove after animation completes
+          setTimeout(() => {
+            roar.remove();
+          }, 2000);
+        }, i * 200); // Stagger the appearances
+      }
+    };
+    
+    // Create a modal with a counting animation
+    const showClaimModal = () => {
+      // Create modal structure
+      const overlay = document.createElement('div');
+      overlay.className = 'claim-overlay';
+      
+      const card = document.createElement('div');
+      card.className = 'claim-card';
+      
+      // Add rotating glow effect
+      const rotatingGlow = document.createElement('div');
+      rotatingGlow.className = 'rotating-glow';
+      card.appendChild(rotatingGlow);
+      
+      // Add pulsing background
+      const glowBg = document.createElement('div');
+      glowBg.className = 'glow-bg';
+      card.appendChild(glowBg);
+      
+      // Add lion emoji
+      const lion = document.createElement('div');
+      lion.style.fontSize = '72px';
+      lion.style.marginBottom = '10px';
+      lion.style.animation = 'lion-bounce 1s ease-in-out infinite';
+      lion.textContent = '🦁';
+      card.appendChild(lion);
+      
+      // Add success text
+      const title = document.createElement('h2');
+      title.className = 'shine-text';
+      title.style.fontSize = '24px';
+      title.style.fontWeight = 'bold';
+      title.style.color = '#92400E';
+      title.style.marginBottom = '8px';
+      title.textContent = 'Roars Claimed!';
+      card.appendChild(title);
+      
+      // Add amount with counting animation
+      const amount = document.createElement('div');
+      amount.style.fontSize = '36px';
+      amount.style.fontWeight = 'bold';
+      amount.style.color = '#92400E';
+      amount.style.margin = '16px 0';
+      amount.style.fontFamily = 'monospace';
+      
+      // Start counting animation
+      let displayAmount = 0;
+      const step = earnedAmount / 40; // Complete in 40 steps
+      const countInterval = setInterval(() => {
+        displayAmount += step;
+        if (displayAmount >= earnedAmount) {
+          displayAmount = earnedAmount;
+          clearInterval(countInterval);
+          
+          // Add sparkle animation when counting is complete
+          amount.style.textShadow = '0 0 10px rgba(245, 158, 11, 0.8)';
+          amount.style.transition = 'text-shadow 0.3s ease-out';
+        }
+        amount.textContent = `${displayAmount.toFixed(2)} ROAR`;
+      }, 50);
+      
+      card.appendChild(amount);
+      
+      // Add close button
+      const button = document.createElement('button');
+      button.style.backgroundColor = '#92400E';
+      button.style.color = 'white';
+      button.style.border = 'none';
+      button.style.borderRadius = '8px';
+      button.style.padding = '10px 20px';
+      button.style.fontSize = '16px';
+      button.style.fontWeight = 'bold';
+      button.style.marginTop = '10px';
+      button.style.cursor = 'pointer';
+      button.style.transition = 'transform 0.2s ease, background-color 0.2s ease';
+      button.textContent = 'Awesome!';
+      
+      button.addEventListener('mouseover', () => {
+        button.style.backgroundColor = '#78350F';
+        button.style.transform = 'scale(1.05)';
+      });
+      
+      button.addEventListener('mouseout', () => {
+        button.style.backgroundColor = '#92400E';
+        button.style.transform = 'scale(1)';
+      });
+      
+      button.addEventListener('click', () => {
+        // Fade out and remove the overlay
+        overlay.style.opacity = '0';
+        overlay.style.transition = 'opacity 0.3s ease-out';
+        
+        setTimeout(() => {
+          overlay.remove();
+        }, 300);
+      });
+      
+      card.appendChild(button);
+      overlay.appendChild(card);
+      document.body.appendChild(overlay);
+    };
+    
+    // Execute all celebration effects
+    fireConfetti();
+    createFloatingRoars();
+    
+    // Show modal after a slight delay
+    setTimeout(() => {
+      showClaimModal();
+    }, 300);
   };
   
   // Update the formatLargeNumber function to handle billions
@@ -616,475 +927,6 @@ const RoarFarmingPage = () => {
     }
   };
 
-  // Add CSS for shake and highlight animations
-  useEffect(() => {
-    // Insert the style for flash animation if not already present
-    if (!document.getElementById('animation-styles')) {
-      const style = document.createElement('style');
-      style.id = 'animation-styles';
-      style.innerHTML = `
-        @keyframes screen-flash {
-          0% { background-color: transparent; }
-          10% { background-color: rgba(255, 255, 255, 0.9); }
-          100% { background-color: transparent; }
-        }
-        .flash-animation::after {
-          content: '';
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background-color: transparent;
-          z-index: 9999;
-          pointer-events: none;
-          animation: screen-flash 0.5s ease-out forwards;
-        }
-        
-        @keyframes shake {
-          0% { transform: translate(0, 0) rotate(0deg); }
-          10% { transform: translate(-5px, -5px) rotate(-1deg); }
-          20% { transform: translate(5px, 0) rotate(1deg); }
-          30% { transform: translate(-5px, 5px) rotate(0deg); }
-          40% { transform: translate(5px, 5px) rotate(1deg); }
-          50% { transform: translate(-5px, -5px) rotate(-1deg); }
-          60% { transform: translate(5px, 0) rotate(0deg); }
-          70% { transform: translate(-5px, 5px) rotate(-1deg); }
-          80% { transform: translate(5px, 5px) rotate(1deg); }
-          90% { transform: translate(-5px, -5px) rotate(0deg); }
-          100% { transform: translate(0, 0) rotate(0deg); }
-        }
-        
-        .shake-animation {
-          animation: shake 3s cubic-bezier(.36,.07,.19,.97) both;
-        }
-        
-        @keyframes highlight-pulse {
-          0% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.7); }
-          70% { box-shadow: 0 0 0 20px rgba(79, 70, 229, 0); }
-          100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); }
-        }
-        
-        .phase3-highlight {
-          animation: highlight-pulse 2s ease-out infinite;
-          border: 3px solid #4F46E5;
-        }
-        
-        .lion-emoji {
-          position: fixed;
-          font-size: 24px;
-          user-select: none;
-          pointer-events: none;
-          z-index: 9999;
-          will-change: transform, opacity;
-        }
-      `;
-      document.head.appendChild(style);
-    }
-    
-    return () => {
-      // Optional: Remove style on component unmount
-    };
-  }, []);
-
-  // Modified useEffect for animation steps with lion emoji confetti and shake effect
-  useEffect(() => {
-    let timeoutId: NodeJS.Timeout | null = null;
-    let confettiIntervalId: NodeJS.Timeout | null = null;
-    let particleIntervalId: NodeJS.Timeout | null = null;
-    let lionEmojiIntervalId: NodeJS.Timeout | null = null;
-    let lionEmojis: HTMLElement[] = [];
-
-    const playSound = (sound: 'complete' | 'start') => {
-      // Placeholder for sound effect logic
-      console.log(`SOUND: Playing sound - ${sound}`);
-      // try { const audio = new Audio(`/sounds/${sound}.mp3`); audio.play(); } catch(e) {}
-    }
-
-    // Function to create lion emoji confetti
-    const createLionEmoji = () => {
-      const lion = document.createElement('div');
-      lion.className = 'lion-emoji';
-      lion.textContent = '🦁';
-      lion.style.left = `${Math.random() * 100}vw`;
-      lion.style.top = `-50px`;
-      
-      // Random size variations for lions
-      const size = Math.random() * 30 + 20;
-      lion.style.fontSize = `${size}px`;
-      
-      // Random rotation
-      const rotation = Math.random() * 360;
-      lion.style.transform = `rotate(${rotation}deg)`;
-      
-      document.body.appendChild(lion);
-      lionEmojis.push(lion);
-      
-      // Animate lion falling with random horizontal movement
-      const duration = Math.random() * 3000 + 3000;
-      const finalX = Math.random() * 200 - 100; // Random x offset
-      const finalRotation = rotation + (Math.random() * 360 - 180);
-      
-      lion.animate([
-        { transform: `translateX(0) translateY(0) rotate(${rotation}deg)`, opacity: 1 },
-        { transform: `translateX(${finalX}px) translateY(${window.innerHeight + 100}px) rotate(${finalRotation}deg)`, opacity: 0 }
-      ], {
-        duration,
-        easing: 'cubic-bezier(0.2, 0.8, 0.3, 1)'
-      }).onfinish = () => {
-        lion.remove();
-        lionEmojis = lionEmojis.filter(l => l !== lion);
-      };
-    }
-
-    if (animationStep === 'completingPhase2') {
-      // Animate progress to 100% with a more dynamic easing
-      const duration = 2000; // Animation duration in ms
-      progressAnimationControls.start({ 
-        width: "100%", 
-        transition: { 
-          duration: duration / 1000, 
-          ease: [0.34, 1.56, 0.64, 1], // Custom spring-like ease
-        } 
-      });
-
-      // Play more exciting sound
-      playSound('complete');
-
-      // Start lion emoji confetti
-      lionEmojiIntervalId = setInterval(() => {
-        for (let i = 0; i < 3; i++) {
-          createLionEmoji();
-        }
-      }, 300);
-
-      // Trigger super enhanced confetti effect for Phase 3
-      const endConfetti = Date.now() + 9000; // Extended confetti for 9 seconds
-      const confettiTick = () => {
-        // Golden burst from the center with more particles
-        confetti({
-          particleCount: 30,
-          spread: 360,
-          origin: { x: 0.5, y: 0.5 },
-          gravity: 0.5,
-          colors: ['#FFD700', '#FFC107', '#FFEB3B', '#F57C00'],
-          shapes: ['circle', 'square'],
-          scalar: 1.2
-        });
-        
-        // Multiple side bursts with varied colors
-        confetti({
-          particleCount: 15,
-          angle: 60,
-          spread: 80,
-          origin: { x: 0 },
-          colors: ['#FFD700', '#FFC107', '#3F51B5', '#2196F3'],
-          ticks: 300
-        });
-        
-        confetti({
-          particleCount: 15,
-          angle: 120,
-          spread: 80,
-          origin: { x: 1 },
-          colors: ['#FFD700', '#FFC107', '#3F51B5', '#2196F3'],
-          ticks: 300
-        });
-
-        // Add some slower falling star-shaped confetti
-        if (Date.now() % 300 < 150) {
-          confetti({
-            particleCount: 5,
-            shapes: ['star'],
-            scalar: 1.8,
-            ticks: 300,
-            gravity: 0.2,
-            drift: Math.random() * 2 - 1,
-            origin: { x: Math.random(), y: 0.1 },
-            colors: ['#FFD700', '#f06292'],
-          });
-        }
-
-        // Add occasional firework-like bursts
-        if (Date.now() % 1200 < 50) {
-          const x = Math.random();
-          const y = Math.random() * 0.5;
-          setTimeout(() => {
-            confetti({
-              particleCount: 80,
-              startVelocity: 30,
-              spread: 360,
-              origin: { x, y },
-              colors: ['#FFD700', '#FF9800', '#F44336', '#2196F3', '#9C27B0'],
-              gravity: 0.8,
-              scalar: 0.9,
-              ticks: 300
-            });
-          }, Math.random() * 500);
-        }
-
-        if (Date.now() < endConfetti) {
-          confettiIntervalId = setTimeout(confettiTick, 100);
-        } else {
-          if (confettiIntervalId) clearTimeout(confettiIntervalId);
-          if (lionEmojiIntervalId) clearInterval(lionEmojiIntervalId);
-        }
-      };
-      confettiTick(); // Start the confetti
-
-      // Transition to next step after progress animation finishes
-      timeoutId = setTimeout(() => {
-        setAnimationStep('phase2Done');
-      }, duration + 100); // Wait for progress animation + buffer
-
-    } else if (animationStep === 'phase2Done') {
-      // Enhanced "Phase 2 Completed" screen with floating particles
-      const createParticles = () => {
-        const particles = document.createElement('div');
-        particles.classList.add('absolute', 'inset-0', 'overflow-hidden', 'pointer-events-none');
-        particles.style.zIndex = '30';
-        document.body.appendChild(particles);
-        
-        const particleElements: HTMLElement[] = [];
-        const particleCount = 30;
-        
-        for (let i = 0; i < particleCount; i++) {
-          const particle = document.createElement('div');
-          const size = Math.random() * 10 + 5;
-          
-          particle.style.position = 'absolute';
-          particle.style.width = `${size}px`;
-          particle.style.height = `${size}px`;
-          particle.style.background = `radial-gradient(circle, rgba(255,215,0,0.8) 0%, rgba(255,215,0,0) 70%)`;
-          particle.style.borderRadius = '50%';
-          particle.style.pointerEvents = 'none';
-          
-          // Random positions
-          particle.style.left = `${Math.random() * 100}%`;
-          particle.style.top = `${Math.random() * 100}%`;
-          
-          // Random floating animation
-          particle.style.animation = `float ${Math.random() * 3 + 3}s ease-in-out infinite`;
-          particle.style.animationDelay = `${Math.random() * 3}s`;
-          
-          particles.appendChild(particle);
-          particleElements.push(particle);
-        }
-        
-        // Add keyframes for floating animation if not already defined
-        if (!document.querySelector('#particle-keyframes')) {
-          const style = document.createElement('style');
-          style.id = 'particle-keyframes';
-          style.innerHTML = `
-            @keyframes float {
-              0% { transform: translate(0, 0) rotate(0deg); opacity: 0; }
-              25% { opacity: 0.8; }
-              75% { opacity: 0.8; }
-              100% { transform: translate(${Math.random() * 200 - 100}px, ${Math.random() * 200 - 100}px) rotate(${Math.random() * 360}deg); opacity: 0; }
-            }
-          `;
-          document.head.appendChild(style);
-        }
-        
-        // Continue lion emoji confetti but at a slower rate
-        lionEmojiIntervalId = setInterval(() => {
-          createLionEmoji();
-        }, 700);
-        
-        return () => {
-          particleElements.forEach(el => el.remove());
-          particles.remove();
-          if (lionEmojiIntervalId) clearInterval(lionEmojiIntervalId);
-          lionEmojis.forEach(lion => lion.remove());
-          lionEmojis = [];
-        };
-      };
-      
-      // Start particle effect
-      const cleanup = createParticles();
-      
-      // Hold the "Phase 2 Completed" message with visual enhancements
-      timeoutId = setTimeout(() => {
-        cleanup(); // Clean up particle effects
-        setAnimationStep('startingPhase3');
-      }, 3500); // Hold for 3.5 seconds for better effect
-
-    } else if (animationStep === 'startingPhase3') {
-      // Play phase 3 start sound
-      playSound('start');
-
-      // Calculate new progress target
-      const targetProgress = (totalRoars / PHASE_3_GOAL) * 100;
-      setDisplayGoal(PHASE_3_GOAL);
-
-      // Add shake effect to the entire page for 3 seconds
-      document.body.classList.add('shake-animation');
-      setTimeout(() => {
-        document.body.classList.remove('shake-animation');
-      }, 3000);
-
-      // Create a more dramatic reveal animation
-      // First flash the screen then reveal the new goal with a progressive animation
-      document.body.classList.add('flash-animation');
-      setTimeout(() => document.body.classList.remove('flash-animation'), 500);
-
-      // Add highlighting effect to the card after shaking
-      const card = document.querySelector('.card') as HTMLElement;
-      if (card) {
-        setTimeout(() => {
-          card.classList.add('phase3-highlight');
-          // Remove the highlight after 6 seconds
-          setTimeout(() => {
-            card.classList.remove('phase3-highlight');
-          }, 6000);
-        }, 3000); // Apply after shaking completes
-      }
-
-      // Continue with lion emoji confetti
-      lionEmojiIntervalId = setInterval(() => {
-        for (let i = 0; i < 2; i++) {
-          createLionEmoji();
-        }
-      }, 500);
-
-      // Animate progress bar with a much more dramatic sequence
-      progressAnimationControls.start(
-        { 
-          width: [
-            "100%", // Start fully filled
-            "120%", // Overflow dramatically (visual effect)
-            "105%", // Pulse back slightly
-            "115%", // Pulse forward again
-            `${targetProgress}%` // Final position
-          ],
-          opacity: [1, 1, 1, 1, 1],
-          scale: [1, 1.08, 1.05, 1.03, 1],
-          backgroundColor: ["#F59E0B", "#EF4444", "#8B5CF6", "#3B82F6", undefined], // Color transition
-        }, 
-        { 
-          duration: 2.8, 
-          ease: "easeInOut",
-          times: [0, 0.2, 0.4, 0.6, 1] // Keyframe timing distribution
-        }
-      ).then(() => {
-          // Animation complete, move to final state
-        localStorage.setItem('hasSeenPhase3Transition', 'true');
-        setHasSeenPhase3Transition(true);
-        setAnimationStep('phase3Active');
-          // Manually set displayProgress state after animation
-          setDisplayProgress(targetProgress);
-        });
-
-      // Create dynamic particles that follow cursor during the transition
-      const createDynamicParticles = () => {
-        let mouseX = window.innerWidth / 2;
-        let mouseY = window.innerHeight / 2;
-        
-        // Track mouse position
-        const trackMouse = (e: MouseEvent) => {
-          mouseX = e.clientX;
-          mouseY = e.clientY;
-        };
-        
-        document.addEventListener('mousemove', trackMouse);
-        
-        // Create particles that follow the cursor
-        const emitParticles = () => {
-          if (animationStep !== 'startingPhase3') return;
-          
-          const particle = document.createElement('div');
-          const size = Math.random() * 15 + 5;
-          const lifespan = Math.random() * 1000 + 800;
-          
-          particle.style.position = 'fixed';
-          particle.style.width = `${size}px`;
-          particle.style.height = `${size}px`;
-          particle.style.left = `${mouseX}px`;
-          particle.style.top = `${mouseY}px`;
-          particle.style.pointerEvents = 'none';
-          particle.style.zIndex = '9999';
-          particle.style.borderRadius = '50%';
-          
-          // Random colors from a sparkly palette
-          const colors = [
-            'rgba(255, 215, 0, 0.8)', // Gold
-            'rgba(176, 196, 222, 0.8)', // Light blue
-            'rgba(147, 112, 219, 0.8)', // Purple
-            'rgba(255, 182, 193, 0.8)', // Pink
-            'rgba(135, 206, 250, 0.8)', // Sky blue
-          ];
-          
-          particle.style.background = colors[Math.floor(Math.random() * colors.length)];
-          
-          // Add to body
-          document.body.appendChild(particle);
-          
-          // Animate particle
-          const angle = Math.random() * Math.PI * 2;
-          const velocity = Math.random() * 3 + 1;
-          const startTime = Date.now();
-          
-          const animateParticle = () => {
-            const elapsed = Date.now() - startTime;
-            if (elapsed > lifespan) {
-              particle.remove();
-              return;
-            }
-            
-            const progress = elapsed / lifespan;
-            const translateX = Math.cos(angle) * velocity * elapsed * 0.1;
-            const translateY = Math.sin(angle) * velocity * elapsed * 0.1 - (progress * progress * 100); // Parabolic arc
-            
-            particle.style.transform = `translate(${translateX}px, ${translateY}px)`;
-            particle.style.opacity = `${1 - progress}`;
-            
-            requestAnimationFrame(animateParticle);
-          };
-          
-          requestAnimationFrame(animateParticle);
-        };
-        
-        // Emit particles on interval
-        particleIntervalId = setInterval(emitParticles, 50);
-        
-        return () => {
-          document.removeEventListener('mousemove', trackMouse);
-          if (particleIntervalId) clearInterval(particleIntervalId);
-          // Clean up any remaining particles
-          document.querySelectorAll('.particle').forEach(el => el.remove());
-          if (lionEmojiIntervalId) clearInterval(lionEmojiIntervalId);
-          lionEmojis.forEach(lion => lion.remove());
-          lionEmojis = [];
-        };
-      };
-      
-      // Start dynamic particles
-      const cleanup = createDynamicParticles();
-
-      // Hold "Starting Phase 3" text for slightly longer than progress animation
-      timeoutId = setTimeout(() => {
-        // Clean up particle effects
-        cleanup(); 
-        
-        // If animation didn't complete, force state update (fallback)
-        if (animationStep === 'startingPhase3') {
-           localStorage.setItem('hasSeenPhase3Transition', 'true');
-           setHasSeenPhase3Transition(true);
-           setAnimationStep('phase3Active');
-           setDisplayProgress(targetProgress);
-        }
-      }, 3500); // Extended hold time for 3.5s
-    } 
-
-    return () => { 
-      if (timeoutId) clearTimeout(timeoutId); 
-      if (confettiIntervalId) clearTimeout(confettiIntervalId); 
-      if (particleIntervalId) clearInterval(particleIntervalId);
-      if (lionEmojiIntervalId) clearInterval(lionEmojiIntervalId);
-      lionEmojis.forEach(lion => lion.remove());
-    };
-  }, [animationStep, totalRoars, progressAnimationControls]);
-  
   return (
     <>
       <Helmet>
@@ -1103,229 +945,9 @@ const RoarFarmingPage = () => {
         {/* Global progress card - now a separate section */}
         <Card className="border-amber-200 dark:border-amber-800/40 shadow-md mb-5 relative overflow-hidden">
           <CardContent className="p-4">
-            <AnimatePresence mode="wait">
-              {animationStep === 'completingPhase2' || animationStep === 'phase2Done' ? (
-                <motion.div
-                  key="phase2-complete"
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600 flex flex-col items-center justify-center z-10 p-4 text-center"
-                >
-                  {/* Enhanced Phase 2 Complete Visuals */}
-                  <motion.div 
-                    initial={{ scale: 0.5, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ delay: 0.2, type: "spring", stiffness: 150 }}
-                  >
-                    <Award className="h-16 w-16 text-white mb-3 drop-shadow-lg" />
-                  </motion.div>
-                  <motion.h3 
-                    className="text-3xl font-bold text-white drop-shadow-md"
-                    initial={{ y: 10, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.4 }}
-                  >
-                    Phase 2 Completed!
-                  </motion.h3>
-                  <motion.p
-                    className="text-white/80 mt-2"
-                    initial={{ y: 10, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.6 }}
-                  >
-                    We've reached 100 million ROAR!
-                  </motion.p>
-
-                  {/* Add animated stars for celebration */}
-                  {[...Array(8)].map((_, i) => (
-                    <motion.div
-                      key={`star-${i}`}
-                      className="absolute text-white text-xl"
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{ 
-                        scale: [0, 1, 0],
-                        opacity: [0, 1, 0],
-                        x: `${Math.random() * 160 - 80}%`, // Random horizontal position
-                        y: `${Math.random() * 160 - 80}%`, // Random vertical position
-                        rotate: [0, 180]
-                      }}
-                      transition={{
-                        repeat: Infinity,
-                        duration: 1.5 + Math.random() * 1,
-                        delay: 0.5 + Math.random() * 1,
-                      }}
-                    >⭐</motion.div>
-                  ))}
-                </motion.div>
-              ) : animationStep === 'startingPhase3' ? (
-                <motion.div
-                  key="phase3-starting"
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 flex flex-col items-center justify-center z-10 p-4 text-center"
-                >
-                  {/* Enhanced Phase 3 Starting Visuals */}
-                  <motion.div 
-                    initial={{ scale: 0.5, opacity: 0, y: 20 }}
-                    animate={{ 
-                      scale: [0.5, 1.1, 1],
-                      opacity: 1,
-                      y: 0
-                    }}
-                    transition={{ 
-                      duration: 0.8,
-                      times: [0, 0.7, 1],
-                      ease: "easeOut"
-                    }}
-                    className="relative"
-                  >
-                    {/* Pulsing halo behind the icon */}
-                    <motion.div
-                      className="absolute inset-0 rounded-full bg-white/30"
-                      initial={{ scale: 1 }}
-                      animate={{ 
-                        scale: [1, 1.5, 1],
-                        opacity: [0.5, 0.2, 0.5]
-                      }}
-                      transition={{
-                        duration: 2,
-                        repeat: Infinity,
-                        repeatType: "reverse"
-                      }}
-                    />
-                    
-                    {/* Enhanced rocket with lion emoji */}
-                    <div className="relative">
-                      <Rocket className="h-20 w-20 text-white mb-3 drop-shadow-lg" />
-                      <motion.div 
-                        className="absolute top-0 right-0 text-4xl"
-                        animate={{
-                          rotate: [0, 15, -15, 0],
-                          scale: [1, 1.2, 1]
-                        }}
-                        transition={{
-                          duration: 2,
-                          repeat: Infinity,
-                          repeatType: "reverse"
-                        }}
-                      >
-                        🦁
-                  </motion.div>
-                    </div>
-                  </motion.div>
-                  
-                  <motion.h3 
-                    className="text-5xl font-bold text-white drop-shadow-md bg-clip-text text-transparent bg-gradient-to-r from-white to-pink-100"
-                    initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.3, duration: 0.6 }}
-                  >
-                    Phase 3 Begins!
-                  </motion.h3>
-                  
-                  <motion.p
-                    className="text-xl text-white/90 mt-2 font-medium"
-                    initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.5, duration: 0.6 }}
-                  >
-                    10 Billion ROAR Goal Unlocked!
-                  </motion.p>
-                  
-                  {/* Lion emoji ring */}
-                  <motion.div
-                    className="absolute w-full h-full pointer-events-none"
-                    animate={{ rotate: [0, 360] }}
-                    transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                  >
-                    {[...Array(8)].map((_, i) => (
-                      <motion.div
-                        key={`lion-ring-${i}`}
-                        className="absolute text-4xl"
-                        style={{ 
-                          left: '50%', 
-                          top: '50%', 
-                          transform: `rotate(${i * 45}deg) translateY(-120px) rotate(-${i * 45}deg)` 
-                        }}
-                        animate={{ 
-                          scale: [1, 1.2, 1],
-                        }}
-                        transition={{
-                          duration: 2,
-                          repeat: Infinity,
-                          delay: i * 0.25,
-                        }}
-                      >
-                        🦁
-                      </motion.div>
-                    ))}
-                  </motion.div>
-                  
-                  {/* Particle effects in the background */}
-                  <motion.div className="absolute inset-0 overflow-hidden">
-                    {[...Array(20)].map((_, i) => (
-                      <motion.div
-                        key={`particle-${i}`}
-                        className="absolute w-2 h-2 rounded-full bg-white/60"
-                        initial={{ 
-                          x: `${Math.random() * 100}%`,
-                          y: `${Math.random() * 100}%`,
-                          scale: 0,
-                          opacity: 0
-                        }}
-                        animate={{ 
-                          x: `${Math.random() * 100}%`,
-                          y: `${Math.random() * 100}%`,
-                          scale: [0, Math.random() * 0.5 + 0.5, 0],
-                          opacity: [0, 0.7, 0]
-                        }}
-                        transition={{
-                          duration: 2 + Math.random() * 3,
-                          repeat: Infinity,
-                          delay: Math.random() * 2,
-                        }}
-                  />
-                    ))}
-                </motion.div>
-                  
-                  {/* Energy waves emanating from center */}
-                  {[...Array(3)].map((_, i) => (
-                <motion.div
-                      key={`wave-${i}`}
-                      className="absolute inset-0 border-2 border-white/10 rounded-lg"
-                      initial={{ scale: 0.6, opacity: 0 }}
-                      animate={{ 
-                        scale: [0.6, 1.2],
-                        opacity: [0.8, 0]
-                      }}
-                      transition={{
-                        duration: 2,
-                        repeat: Infinity,
-                        delay: i * 0.7,
-                      }}
-                    />
-                  ))}
-                </motion.div>
-              ) : showPhase3Blink ? (
-                <motion.div
-                  key="phase3-active-blink"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: [0, 1, 0] }}
-                  transition={{ duration: 0.8, times: [0, 0.5, 1], repeat: 2, repeatType: "loop" }}
-                  className="absolute top-2 right-2 z-10"
-                >
-                  <Badge className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white border-0 shadow-md animate-pulse">
-                    Phase 3 Farming Active!
-                  </Badge>
-                </motion.div>
-              ) : null}
-            </AnimatePresence>
-            
             <motion.div
               initial={false}
-              animate={{ filter: animationStep !== 'idle' && animationStep !== 'phase3Active' ? 'blur(4px)' : 'blur(0px)' }}
+              animate={{ filter: 'blur(0px)' }}
               transition={{ duration: 0.5 }}
             >
             <div className="flex flex-col">
