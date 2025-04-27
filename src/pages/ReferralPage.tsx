@@ -1,3 +1,15 @@
+// Add at the beginning of the file, before the imports
+declare global {
+  interface Window {
+    WTN?: {
+      clipboard?: {
+        get: (options: { callback: (data: { value: string }) => void }) => void;
+        set: (options: { data: string }) => void;
+      };
+    };
+  }
+}
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
@@ -33,6 +45,7 @@ import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import { WithdrawalSheet } from '@/components/referral/WithdrawalSheet';
 import { formatNumber } from '@/utils/formatUtils';
+import { useDevice } from '@/components/providers/DeviceProvider';
 
 // Define types for API responses
 interface ReferralEarnings {
@@ -75,6 +88,7 @@ const XLogoIcon = () => (
 
 const ReferralPage = () => {
   const { isMobile } = useResponsive();
+  const { isMobileApp } = useDevice();
   const [copied, setCopied] = useState(false);
   const [showCopyNotification, setShowCopyNotification] = useState(false);
   
@@ -185,21 +199,28 @@ const ReferralPage = () => {
   
   // Enhanced copy function
   const handleCopy = () => {
-    navigator.clipboard.writeText(referralUrl);
-    setCopied(true);
-    
-    // Show success toast
-    toast.success("Invite link copied!");
-    
-    // Show copy notification
-    setShowCopyNotification(true);
-    setTimeout(() => setShowCopyNotification(false), 2000);
-    
-    // Trigger enhanced confetti effect
-    triggerConfetti('medium');
-    
-    // Reset copied state after 2s
-    setTimeout(() => setCopied(false), 2000);
+    if (isMobileApp && window.WTN && window.WTN.clipboard) {
+      // For mobile apps, use the WTN clipboard API
+      window.WTN.clipboard.set({
+        data: referralUrl
+      });
+      
+      setCopied(true);
+      toast.success("Invite link copied!");
+      setShowCopyNotification(true);
+      setTimeout(() => setShowCopyNotification(false), 2000);
+      triggerConfetti('medium');
+      setTimeout(() => setCopied(false), 2000);
+    } else {
+      // For web, use the standard clipboard API
+      navigator.clipboard.writeText(referralUrl);
+      setCopied(true);
+      toast.success("Invite link copied!");
+      setShowCopyNotification(true);
+      setTimeout(() => setShowCopyNotification(false), 2000);
+      triggerConfetti('medium');
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
   
   const handleShare = (platform: SharePlatform) => {
