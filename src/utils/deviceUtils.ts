@@ -22,12 +22,31 @@ export interface DeviceInfo {
  */
 export const isNativeMobileApp = async (): Promise<boolean> => {
   try {
+    // For testing in development: check URL param
+    if (isMobileAppParam()) {
+      return true;
+    }
+    
     const device = await deviceInfo();
     return device && (device.platform === "android" || device.platform === "ios");
   } catch (error) {
     console.log("Not using a native mobile app or error:", error);
-    return false;
+    
+    // For testing in development: check URL param as fallback
+    return isMobileAppParam();
   }
+};
+
+/**
+ * Helper function to check if the URL has a mobileapp=1 parameter (for testing)
+ */
+export const isMobileAppParam = (): boolean => {
+  // Only use this in development mode for testing
+  if (process.env.NODE_ENV === 'development') {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('mobileapp') === '1';
+  }
+  return false;
 };
 
 /**
@@ -36,10 +55,23 @@ export const isNativeMobileApp = async (): Promise<boolean> => {
  */
 export const isAndroid = async (): Promise<boolean> => {
   try {
+    // For testing in development: check URL param
+    if (isMobileAppParam()) {
+      // Default to Android when using the test parameter
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get('platform') !== 'ios';
+    }
+    
     const device = await deviceInfo();
     return device && device.platform === "android";
   } catch (error) {
     console.log("Not using an Android app or error:", error);
+    
+    // For testing in development: check URL param as fallback
+    if (isMobileAppParam()) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get('platform') !== 'ios';
+    }
     return false;
   }
 };
@@ -50,10 +82,22 @@ export const isAndroid = async (): Promise<boolean> => {
  */
 export const isIOS = async (): Promise<boolean> => {
   try {
+    // For testing in development: check URL param
+    if (isMobileAppParam()) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get('platform') === 'ios';
+    }
+    
     const device = await deviceInfo();
     return device && device.platform === "ios";
   } catch (error) {
     console.log("Not using an iOS app or error:", error);
+    
+    // For testing in development: check URL param as fallback
+    if (isMobileAppParam()) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get('platform') === 'ios';
+    }
     return false;
   }
 };
@@ -64,10 +108,41 @@ export const isIOS = async (): Promise<boolean> => {
  */
 export const getDeviceInfo = async (): Promise<DeviceInfo | null> => {
   try {
+    // For testing in development: provide mock data if URL param is present
+    if (isMobileAppParam()) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const platform = urlParams.get('platform') === 'ios' ? 'ios' : 'android';
+      
+      return {
+        platform,
+        os: platform === 'ios' ? 'iOS' : 'Android',
+        osVersion: platform === 'ios' ? '16.0' : '13',
+        model: platform === 'ios' ? 'iPhone 14' : 'Google Pixel 7',
+        appId: 'com.dapps.roarcommunities',
+        appVersion: '1.0.0',
+      };
+    }
+    
     const device = await deviceInfo();
     return device || null;
   } catch (error) {
     console.log("Error getting device info or not in mobile app:", error);
+    
+    // For testing in development: provide mock data as fallback
+    if (isMobileAppParam()) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const platform = urlParams.get('platform') === 'ios' ? 'ios' : 'android';
+      
+      return {
+        platform,
+        os: platform === 'ios' ? 'iOS' : 'Android',
+        osVersion: platform === 'ios' ? '16.0' : '13',
+        model: platform === 'ios' ? 'iPhone 14' : 'Google Pixel 7',
+        appId: 'com.dapps.roarcommunities',
+        appVersion: '1.0.0',
+      };
+    }
+    
     return null;
   }
 };
@@ -78,6 +153,12 @@ export const getDeviceInfo = async (): Promise<DeviceInfo | null> => {
  */
 export const getPlatformType = async (): Promise<string> => {
   try {
+    // For testing in development: check URL param
+    if (isMobileAppParam()) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get('platform') === 'ios' ? 'ios' : 'android';
+    }
+    
     const device = await deviceInfo();
     if (!device) return "web";
     
@@ -87,6 +168,13 @@ export const getPlatformType = async (): Promise<string> => {
     return "web";
   } catch (error) {
     console.log("Error getting platform type:", error);
+    
+    // For testing in development: check URL param as fallback
+    if (isMobileAppParam()) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get('platform') === 'ios' ? 'ios' : 'android';
+    }
+    
     return "web";
   }
 }; 

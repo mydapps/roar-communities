@@ -11,6 +11,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Helmet } from 'react-helmet-async';
 import { useDevice } from '@/components/providers/DeviceProvider';
+import MobileAppLanding from '@/components/onboarding/MobileAppLanding';
 
 const Index = () => {
   const location = useLocation();
@@ -233,6 +234,29 @@ const Index = () => {
     }
   };
 
+  // If the user is on the mobile app, render the mobile-specific landing page
+  if (isMobileApp && !isLoading) {
+    return (
+      <>
+        <Helmet>
+          <title>Dapps.co - Mobile App</title>
+          <meta name="description" content="Dapps.co mobile app - the censorship-resistant social platform with real ETH rewards" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+          <meta name="theme-color" content="#31bcc3" />
+        </Helmet>
+        
+        <MobileAppLanding 
+          onGetStarted={handleGetStarted}
+          isLoggingIn={isLoggingIn}
+          deviceInfo={deviceInfo}
+          isAndroidApp={isAndroidApp}
+          isIOSApp={isIOSApp}
+        />
+      </>
+    );
+  }
+
+  // For web users, render the original landing page
   return (
     <div className="min-h-screen flex flex-col bg-background overflow-hidden">
       <Helmet>
@@ -360,13 +384,13 @@ const Index = () => {
             >
                 <span className="block h-[3.5em] md:h-[2em] overflow-hidden mb-4">
                   <span className="bg-gradient-to-r from-[#31bcc3] to-primary bg-clip-text text-transparent">
-                    {isMobileApp ? (isAndroidApp ? "Android App" : "iOS App") : displayText}
+                    {displayText}
                     {/* Only show cursor when actively typing and not on mobile devices */}
-                    {!isMobileApp && isTyping && !isMobile && (
+                    {isTyping && !isMobile && (
                       <span className="animate-pulse">|</span>
                     )}
                     {/* For mobile devices, show cursor only when actively typing and not at line breaks */}
-                    {!isMobileApp && isTyping && isMobile && displayText.length > 0 && !displayText.endsWith(" ") && (
+                    {isTyping && isMobile && displayText.length > 0 && !displayText.endsWith(" ") && (
                       <span className="animate-pulse">|</span>
                     )}
                   </span>
