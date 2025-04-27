@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">dapps.co</string>
+    <string name="title_activity_main">dapps.co</string>
+    <string name="package_name">co.dapps.app</string>
+    <string name="custom_url_scheme">co.dapps.app</string>
+</resources>

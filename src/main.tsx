@@ -2,8 +2,10 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App.tsx';
+import CapacitorApp from './CapacitorApp';
 import './index.css';
 import { setupBrowserErrorHandler } from './utils/browserUtils';
+import { Capacitor } from '@capacitor/core';
 
 // Setup error handler to prevent browser extension errors from breaking the app
 setupBrowserErrorHandler();
@@ -30,10 +32,14 @@ const injectGoogleAnalytics = () => {
 // Initialize Google Analytics
 injectGoogleAnalytics();
 
+// Use CapacitorApp on native platforms, regular App in browser
+const isNativePlatform = Capacitor.isNativePlatform();
+const AppComponent = isNativePlatform ? CapacitorApp : App;
+
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <BrowserRouter>
-      <App />
+      <AppComponent />
     </BrowserRouter>
   </React.StrictMode>
 );

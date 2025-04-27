@@ -2,45 +2,39 @@
 	"appId": "co.dapps.app",
 	"appName": "dapps.co",
 	"webDir": "dist",
-	"server": {
-		"androidScheme": "https",
-		"iosScheme": "https",
-		"hostname": "app",
-		"cleartext": true
-	},
 	"plugins": {
 		"SplashScreen": {
 			"launchShowDuration": 2000,
 			"launchAutoHide": true,
-			"backgroundColor": "#FFFFFF",
+			"backgroundColor": "#fffbff",
 			"androidSplashResourceName": "splash",
 			"androidScaleType": "CENTER_CROP",
-			"showSpinner": true,
-			"androidSpinnerStyle": "large",
-			"iosSpinnerStyle": "small",
-			"spinnerColor": "#999999",
+			"showSpinner": false,
 			"splashFullScreen": true,
 			"splashImmersive": true
+		},
+		"StatusBar": {
+			"style": "dark",
+			"backgroundColor": "#fffbff"
+		},
+		"Keyboard": {
+			"resize": "body",
+			"style": "dark",
+			"resizeOnFullScreen": true
 		}
 	},
-	"android": {
-		"allowMixedContent": true,
-		"captureInput": true,
-		"webContentsDebuggingEnabled": true
-	},
-	"ios": {
-		"contentInset": "always",
-		"allowsLinkPreview": false,
-		"scrollEnabled": true,
-		"limitsNavigationsToAppBoundDomains": true
+	"server": {
+		"androidScheme": "https",
+		"iosScheme": "https",
+		"hostname": "app"
 	},
 	"packageClassList": [
 		"AppPlugin",
-		"DevicePlugin",
 		"HapticsPlugin",
 		"KeyboardPlugin",
-		"CAPNetworkPlugin",
+		"SharePlugin",
 		"SplashScreenPlugin",
-		"StatusBarPlugin"
+		"StatusBarPlugin",
+		"ToastPlugin"
 	]
 }
