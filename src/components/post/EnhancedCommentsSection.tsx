@@ -150,7 +150,7 @@ export const EnhancedCommentsSection = ({
         setReplyCount(prev => prev + 1);
         setNewComment('');
         setUploadedMedia(null);
-        toast.success('Comment added successfully');
+        // toast.success('Comment added successfully');
       } else {
         console.error('API response missing reply_id or success=false:', response);
         toast.error('Error adding comment. Please try again.');
@@ -246,7 +246,7 @@ export const EnhancedCommentsSection = ({
         });
         
         setReplyCount(prev => prev + 1);
-        toast.success('Reply added successfully');
+        // toast.success('Reply added successfully');
       } else {
         console.error('API response missing reply_id or success=false:', response);
         toast.error('Error adding reply. Please try again.');

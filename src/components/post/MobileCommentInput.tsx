@@ -139,7 +139,7 @@ export const MobileCommentInput: React.FC<MobileCommentInputProps> = ({
         onCancel();
       }
       
-      toast(isReplyMode ? 'Reply posted' : 'Comment posted');
+      // toast(isReplyMode ? 'Reply posted' : 'Comment posted');
     } catch (error) {
       console.error('Error posting comment:', error);
       toast.error('Failed to post your comment');

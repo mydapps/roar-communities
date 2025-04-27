@@ -139,7 +139,7 @@ const CreatePostCard = ({ onPostCreated, communityName }: CreatePostCardProps) =
       if (response === true || (typeof response === 'object' && response.status === 'SUCCESS')) {
         triggerConfetti();
         
-        toast.success('Post created successfully!');
+        // toast.success('Post created successfully!');
         
         const currentUserAvatar = localStorage.getItem('dapps_user_avatar') || '';
         const currentUserHandle = localStorage.getItem('dapps_user_handle') || '';

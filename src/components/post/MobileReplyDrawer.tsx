@@ -45,7 +45,7 @@ export const MobileReplyDrawer: React.FC<MobileReplyDrawerProps> = ({
     try {
       await onSubmit(replyContent);
       setReplyContent('');
-      toast.success('Reply posted successfully');
+      // toast.success('Reply posted successfully');
       onOpenChange(false);
     } catch (error) {
       console.error('Error submitting reply:', error);

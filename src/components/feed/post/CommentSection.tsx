@@ -89,7 +89,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
         
         onAddComment(newCommentData);
         setNewComment('');
-        toast.success('Comment added successfully');
+        // toast.success('Comment added successfully');
       } else {
         toast.error('Failed to add comment. Please try again.');
       }

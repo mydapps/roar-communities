@@ -454,10 +454,10 @@ const PostPage = () => {
       };
       setComments(prev => updateComments(prev));
       setSubmittingComment(false);
-      toast({
-        title: "Reply added",
-        description: "Your reply has been added to the comment"
-      });
+      // toast({
+      //   title: "Reply added",
+      //   description: "Your reply has been added to the comment"
+      // });
     }, 500);
   }, [toast]);
   

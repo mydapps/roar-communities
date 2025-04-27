@@ -144,7 +144,7 @@ export const useNotifications = (): UseNotificationsReturn => {
           unreadCount: 0
         }));
         
-        toast.success('All notifications marked as read');
+        // toast.success('All notifications marked as read');
       }
     } catch (error) {
       console.error('Error marking all notifications as seen:', error);
