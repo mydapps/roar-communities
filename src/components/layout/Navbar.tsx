@@ -19,6 +19,7 @@ import NotificationIcon from '@/components/notifications/NotificationIcon';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { getUserProfile } from '@/utils/userApi';
+import { useDevice } from '@/components/providers/DeviceProvider';
 
 interface NavbarProps {
   onMenuClick: () => void;
@@ -26,6 +27,7 @@ interface NavbarProps {
 
 const Navbar = ({ onMenuClick }: NavbarProps) => {
   const isMobile = useIsMobile();
+  const { isMobileApp, isIOSApp } = useDevice();
   const { logout } = usePrivy();
   const navigate = useNavigate();
   const location = useLocation();
@@ -38,6 +40,9 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
   
   const isFeedPage = location.pathname === '/feed';
   const isHomePage = location.pathname === '/' || location.pathname === '/index';
+  
+  // Use the safe area CSS classes instead of hard-coded padding
+  const safeAreaTopClass = isMobileApp ? 'safe-area-top' : '';
   
   useEffect(() => {
     // Check for user ID instead of API key
@@ -138,7 +143,10 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
   };
   
   return (
-    <header className="fixed left-0 right-0 z-50 w-full border-b bg-background/95 backdrop-blur-xl shadow-sm top-0">
+    <header className={cn(
+      "fixed left-0 right-0 z-50 w-full border-b bg-background/95 backdrop-blur-xl shadow-sm top-0",
+      safeAreaTopClass
+    )}>
       <div className="container flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-2">
           {!isMobile && (

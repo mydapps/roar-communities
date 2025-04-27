@@ -5,12 +5,15 @@ import MobileBottomNav from './MobileBottomNav';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useDevice } from '@/components/providers/DeviceProvider';
+import { cn } from '@/lib/utils';
 
 const MainLayout = () => {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useIsMobile();
+  const { isMobileApp } = useDevice();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   
   // Check if we're on a post detail page
@@ -73,8 +76,17 @@ const MainLayout = () => {
     }
   };
   
+  // Apply safe area insets for mobile app
+  const mainContentClass = cn(
+    isMobile && !isPostDetailPage ? "pb-16" : "",
+    isMobileApp ? "safe-area-inset-y" : ""
+  );
+  
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className={cn(
+      "min-h-screen flex flex-col bg-background",
+      isMobileApp ? "safe-area-inset-y" : ""
+    )}>
       <div className="sticky top-0 z-50">
         <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
       </div>
@@ -92,7 +104,7 @@ const MainLayout = () => {
             onRefresh={handleRefresh}
             className="transition-all duration-300 ease-in-out h-full"
           >
-            <main className={isMobile && !isPostDetailPage ? "pb-16" : ""}>
+            <main className={mainContentClass}>
               <div className="container py-6 px-4 sm:px-6 max-w-5xl mx-auto animate-fade-in">
                 <Outlet />
               </div>

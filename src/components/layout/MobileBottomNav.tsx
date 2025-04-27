@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Home, Search, Users, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useDevice } from '@/components/providers/DeviceProvider';
 
 const MobileBottomNav = () => {
   const location = useLocation();
+  const { isMobileApp } = useDevice();
   const [visible, setVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   
@@ -57,10 +59,14 @@ const MobileBottomNav = () => {
     return null;
   }
 
+  // Apply safe area bottom inset for iOS devices
+  const safeAreaBottomClass = isMobileApp ? 'safe-area-bottom' : '';
+
   return (
     <div className={cn(
       "fixed bottom-0 left-0 right-0 z-50 bg-card border-t md:hidden transition-transform duration-300 ease-in-out",
-      !visible && isScrollSensitive ? "translate-y-full" : "translate-y-0"
+      !visible && isScrollSensitive ? "translate-y-full" : "translate-y-0",
+      safeAreaBottomClass
     )}>
       <div className="flex justify-around items-center py-3 px-2">
         <NavItem to="/feed" icon={<Home className="h-5 w-5" />} label="Feed" />

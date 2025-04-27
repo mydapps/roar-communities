@@ -3,6 +3,7 @@ import { motion, AnimatePresence, useAnimation, cubicBezier } from 'framer-motio
 import { Button } from '@/components/ui/button';
 import { Shield, Coins, Users, ArrowRight, Zap, Sparkles, MessageCircle, Share2, Heart } from 'lucide-react';
 import { DeviceInfo } from '@/utils/deviceUtils';
+import { cn } from '@/lib/utils';
 
 interface MobileAppLandingProps {
   onGetStarted: () => void;
@@ -265,10 +266,16 @@ const MobileAppLanding: React.FC<MobileAppLandingProps> = ({
     onGetStarted();
   };
   
+  // Apply safe area insets for iOS
+  const safeAreaClass = isIOSApp ? 'safe-area-inset-all' : '';
+  
   return (
     <div 
       ref={containerRef}
-      className="flex flex-col h-[100vh] justify-between relative overflow-hidden bg-background text-foreground"
+      className={cn(
+        "flex flex-col h-[100vh] justify-between relative overflow-hidden bg-background text-foreground",
+        safeAreaClass
+      )}
     >
       {/* Animation layers */}
       <GlowEffects />
@@ -283,7 +290,10 @@ const MobileAppLanding: React.FC<MobileAppLandingProps> = ({
       <main className="flex-1 flex flex-col justify-center px-8 z-10 overflow-hidden">
         {/* Logo moved to top of main content */}
         <motion.div 
-          className="flex justify-center items-center relative mb-6"
+          className={cn(
+            "flex justify-center items-center relative mb-6",
+            isIOSApp ? "mt-6" : ""
+          )}
           initial={{ y: -30, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ type: "spring", stiffness: 400, damping: 25 }}
@@ -422,7 +432,7 @@ const MobileAppLanding: React.FC<MobileAppLandingProps> = ({
       </main>
       
       {/* Bottom Section - Call to Action */}
-      <footer className="pb-10 px-8 z-10">
+      <footer className={cn("pb-10 px-8 z-10", isIOSApp ? "mb-2" : "")}>
         <motion.div
           initial={{ y: 30, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
