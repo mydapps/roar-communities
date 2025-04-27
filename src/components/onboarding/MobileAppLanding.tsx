@@ -28,12 +28,29 @@ const MobileAppLanding: React.FC<MobileAppLandingProps> = ({
   // Handle fake button reset after 5 seconds in case onPrivyClosed isn't called
   useEffect(() => {
     let timer: NodeJS.Timeout;
+    let safetyTimer: NodeJS.Timeout;
+    
     if (isLoggingIn) {
+      console.log('MobileAppLanding: Login in progress, setting reset timers');
+      
+      // Set a 10 second timer to reset in case the message event doesn't fire
       timer = setTimeout(() => {
+        console.log('MobileAppLanding: 10s timer fired, resetting button');
         if (onPrivyClosed) onPrivyClosed();
       }, 10000);
+      
+      // Set a safety timer that will ALWAYS reset the button after 30 seconds
+      // This is a last resort to prevent the button from getting permanently stuck
+      safetyTimer = setTimeout(() => {
+        console.log('MobileAppLanding: SAFETY 30s timer fired, forcing reset');
+        if (onPrivyClosed) onPrivyClosed();
+      }, 30000);
     }
-    return () => clearTimeout(timer);
+    
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(safetyTimer);
+    };
   }, [isLoggingIn, onPrivyClosed]);
   
   // Theme colors
@@ -242,10 +259,10 @@ const MobileAppLanding: React.FC<MobileAppLandingProps> = ({
     );
   };
   
-  // Button click handler - prevent button from getting stuck
+  // Button click handler - simple and direct
   const handleButtonClick = () => {
+    console.log('MobileAppLanding: Button clicked, calling onGetStarted');
     onGetStarted();
-    // The parent component should handle the isLoggingIn state
   };
   
   return (
@@ -364,7 +381,7 @@ const MobileAppLanding: React.FC<MobileAppLandingProps> = ({
               animate={{ y: 0 }}
               transition={{ type: "spring", stiffness: 300, damping: 30, delay: 0.9 }}
             >
-              Join the first web3 platform where communities own, govern, and share in the value they create together.
+              Stop being the product. Start being the owner.
             </motion.p>
           </motion.div>
         </div>

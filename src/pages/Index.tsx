@@ -196,6 +196,7 @@ const Index = () => {
         'type' in event.data
       ) {
         if (event.data.type === 'privy:modalClosed') {
+          console.log('Index: Privy modal closed - resetting login state');
           // Reset the login state immediately when modal is closed
           setIsLoggingIn(false);
         }
@@ -207,6 +208,7 @@ const Index = () => {
   }, []);
 
   const handleGetStarted = () => {
+    console.log('Index: Starting login process');
     setIsLoggingIn(true);
     login();
   };
@@ -251,6 +253,7 @@ const Index = () => {
           deviceInfo={deviceInfo}
           isAndroidApp={isAndroidApp}
           isIOSApp={isIOSApp}
+          onPrivyClosed={() => setIsLoggingIn(false)}
         />
       </>
     );
