@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Helmet } from 'react-helmet-async';
+import { useDevice } from '@/components/providers/DeviceProvider';
 
 const Index = () => {
   const location = useLocation();
@@ -28,8 +29,21 @@ const Index = () => {
   const { login } = usePrivy();
   const isMobile = useIsMobile();
   const heroRef = useRef<HTMLDivElement>(null);
+  const { isMobileApp, isAndroidApp, isIOSApp, deviceInfo, isLoading } = useDevice();
 
   const isInviteRoute = location.pathname.includes('/invite/');
+
+  // Log device information when available
+  useEffect(() => {
+    if (!isLoading) {
+      if (isMobileApp) {
+        console.log('User is on native mobile app:', deviceInfo);
+        console.log('Platform:', isAndroidApp ? 'Android' : 'iOS');
+      } else {
+        console.log('User is on web app');
+      }
+    }
+  }, [isLoading, isMobileApp, isAndroidApp, isIOSApp, deviceInfo]);
 
   useEffect(() => {
     const userId = localStorage.getItem('dapps_user_id');
@@ -346,13 +360,13 @@ const Index = () => {
             >
                 <span className="block h-[3.5em] md:h-[2em] overflow-hidden mb-4">
                   <span className="bg-gradient-to-r from-[#31bcc3] to-primary bg-clip-text text-transparent">
-                    {displayText}
+                    {isMobileApp ? (isAndroidApp ? "Android App" : "iOS App") : displayText}
                     {/* Only show cursor when actively typing and not on mobile devices */}
-                    {isTyping && !isMobile && (
+                    {!isMobileApp && isTyping && !isMobile && (
                       <span className="animate-pulse">|</span>
                     )}
                     {/* For mobile devices, show cursor only when actively typing and not at line breaks */}
-                    {isTyping && isMobile && displayText.length > 0 && !displayText.endsWith(" ") && (
+                    {!isMobileApp && isTyping && isMobile && displayText.length > 0 && !displayText.endsWith(" ") && (
                       <span className="animate-pulse">|</span>
                     )}
                   </span>
@@ -377,6 +391,21 @@ const Index = () => {
               </span>
             </motion.h1>
             </div>
+            
+            {/* Debug information - only visible in development mode */}
+            {process.env.NODE_ENV === 'development' && isMobileApp && (
+              <motion.div 
+                className="mt-4 p-3 bg-muted/30 rounded-lg text-sm text-muted-foreground max-w-lg mx-auto"
+                variants={itemVariants}
+              >
+                <p className="font-mono">
+                  <strong>Platform:</strong> {deviceInfo?.platform}<br />
+                  <strong>OS:</strong> {deviceInfo?.os} {deviceInfo?.osVersion}<br />
+                  <strong>Model:</strong> {deviceInfo?.model}<br />
+                  <strong>App:</strong> {deviceInfo?.appId} v{deviceInfo?.appVersion}
+                </p>
+              </motion.div>
+            )}
             
             <motion.p 
               className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed"
