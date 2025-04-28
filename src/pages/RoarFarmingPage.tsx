@@ -672,18 +672,18 @@ const RoarFarmingPage = () => {
     // Fire multiple confetti bursts at different angles
     const fireConfetti = () => {
       // Center burst
-      confetti({
+        confetti({
         particleCount: 100,
         spread: 120,
         origin: { x: 0.5, y: 0.7 },
         colors: ['#FFD700', '#F59E0B', '#FEF3C7', '#92400E', '#FBBF24'],
-        shapes: ['circle', 'square'],
+          shapes: ['circle', 'square'],
         gravity: 1,
         scalar: 1.2,
         drift: 0,
         ticks: 300
-      });
-      
+        });
+        
       // Left burst
       setTimeout(() => {
         confetti({
@@ -716,7 +716,7 @@ const RoarFarmingPage = () => {
       setTimeout(() => {
         const x = 0.3 + Math.random() * 0.4;
         const y = 0.3 + Math.random() * 0.2;
-        confetti({
+          confetti({
           particleCount: 40,
           startVelocity: 30,
           spread: 360,
@@ -727,15 +727,15 @@ const RoarFarmingPage = () => {
         });
       }, 600);
       
-      setTimeout(() => {
+          setTimeout(() => {
         const x = 0.3 + Math.random() * 0.4;
         const y = 0.3 + Math.random() * 0.2;
-        confetti({
+            confetti({
           particleCount: 40,
-          startVelocity: 30,
-          spread: 360,
-          origin: { x, y },
-          gravity: 0.8,
+              startVelocity: 30,
+              spread: 360,
+              origin: { x, y },
+              gravity: 0.8,
           ticks: 200,
           colors: ['#FFD700', '#F59E0B', '#D97706']
         });
@@ -926,7 +926,7 @@ const RoarFarmingPage = () => {
       setIsLoadingBoosters(false);
     }
   };
-
+  
   return (
     <>
       <Helmet>

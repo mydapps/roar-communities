@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Wallet, SendHorizontal, Loader2 } from 'lucide-react';
@@ -21,6 +21,37 @@ export const PortfolioSummary = ({
   onDepositClick,
   onSendClick
 }: PortfolioSummaryProps) => {
+  const [ethPrice, setEthPrice] = useState<number>(0);
+  const [isPriceLoading, setIsPriceLoading] = useState<boolean>(true);
+
+  // Fetch ETH price on component mount
+  useEffect(() => {
+    fetchEthPrice();
+  }, []);
+  
+  // Function to fetch ETH price from API
+  const fetchEthPrice = async () => {
+    try {
+      setIsPriceLoading(true);
+      const response = await fetch('/api/eth_price');
+      const data = await response.json();
+      
+      if (data.success) {
+        setEthPrice(data.price);
+      } else {
+        console.error('Failed to fetch ETH price:', data);
+        // Fallback to a reasonable default price if API fails
+        setEthPrice(1800);
+      }
+    } catch (error) {
+      console.error('Error fetching ETH price:', error);
+      // Fallback to a reasonable default price if API fails
+      setEthPrice(1800);
+    } finally {
+      setIsPriceLoading(false);
+    }
+  };
+
   return (
     <Card className="animate-scale-in bg-background/95 backdrop-blur-sm">
       <CardContent className="p-6">
@@ -50,7 +81,10 @@ export const PortfolioSummary = ({
             "text-lg text-muted-foreground transition-opacity",
             isLoadingBalance && "opacity-70"
           )}>
-            ${(parseFloat(ethBalance) * 3521.89).toFixed(2)} USD
+            ${(parseFloat(ethBalance) * ethPrice).toFixed(2)} USD
+            {isPriceLoading && (
+              <Loader2 className="ml-1 inline h-3 w-3 animate-spin text-muted-foreground/50" />
+            )}
           </div>
         </div>
         

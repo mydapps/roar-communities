@@ -11,13 +11,16 @@ import { formatCurrency } from '@/utils/formatting';
 
 const WalletPage = () => {
   const [ethBalance, setEthBalance] = useState('0');
+  const [ethPrice, setEthPrice] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [isPriceLoading, setIsPriceLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
   const [transferSheetOpen, setTransferSheetOpen] = useState(false);
 
   useEffect(() => {
     fetchWalletBalance();
+    fetchEthPrice();
   }, []);
 
   const fetchWalletBalance = async () => {
@@ -33,34 +36,64 @@ const WalletPage = () => {
       setIsRefreshing(false);
     }
   };
+  
+  // Function to fetch ETH price from API
+  const fetchEthPrice = async () => {
+    try {
+      setIsPriceLoading(true);
+      const response = await fetch('/api/eth_price');
+      const data = await response.json();
+      
+      if (data.success) {
+        setEthPrice(data.price);
+      } else {
+        console.error('Failed to fetch ETH price:', data);
+        // Fallback to a reasonable default price if API fails
+        setEthPrice(1800);
+      }
+    } catch (error) {
+      console.error('Error fetching ETH price:', error);
+      // Fallback to a reasonable default price if API fails
+      setEthPrice(1800);
+    } finally {
+      setIsPriceLoading(false);
+    }
+  };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6 md:py-10 space-y-8 animate-fade-in">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Wallet</h1>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={fetchWalletBalance}
-          disabled={isRefreshing}
-          className="flex items-center gap-2"
-        >
-          {isRefreshing ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <RefreshCw className="h-4 w-4" />
-          )}
-          {isRefreshing ? 'Refreshing...' : 'Refresh'}
-        </Button>
+    <div className="container max-w-4xl px-4 py-8 animate-fade-in">
+      <div className="flex flex-col md:flex-row gap-6 mb-8">
+        <div className="md:w-3/4">
+          <h1 className="text-3xl font-bold mb-2">Wallet</h1>
+          <p className="text-muted-foreground">
+            Manage your ETH balance and transactions
+          </p>
+        </div>
+        <div className="md:w-1/4 flex justify-start md:justify-end items-start">
+          <Button 
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={fetchWalletBalance}
+            disabled={isRefreshing}
+          >
+            {isRefreshing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4" />
+            )}
+            Refresh
+          </Button>
+        </div>
       </div>
-
+      
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-2 space-y-6">
-          <Card className="shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-xl">Overview</CardTitle>
-              <CardDescription>Your wallet and transaction overview</CardDescription>
+        <div className="md:col-span-2">
+          <Card className="shadow-md">
+            <CardHeader className="pb-2">
+              <CardTitle>Overview</CardTitle>
             </CardHeader>
+            
             <CardContent>
               <div className="space-y-6">
                 <div className="flex flex-col sm:flex-row gap-6 sm:items-center sm:justify-between">
@@ -74,7 +107,10 @@ const WalletPage = () => {
                       )}
                     </div>
                     <div className="text-sm text-muted-foreground mt-1">
-                      ≈ ${formatCurrency(parseFloat(ethBalance) * 3000)}
+                      ≈ ${formatCurrency(parseFloat(ethBalance) * ethPrice)}
+                      {isPriceLoading && (
+                        <Loader2 className="ml-1 inline h-3 w-3 animate-spin text-muted-foreground/50" />
+                      )}
                     </div>
                   </div>
                   
@@ -102,27 +138,12 @@ const WalletPage = () => {
                 </div>
                 
                 <Alert className="bg-primary/5 border-primary/20">
-                  <AlertTitle className="font-medium text-primary">New ETH Transfer Feature</AlertTitle>
+                  <History className="h-4 w-4" />
+                  <AlertTitle>Recent Activity</AlertTitle>
                   <AlertDescription>
-                    You can now transfer ETH directly to other users by their username or to external wallets using their Ethereum address.
+                    Transaction history functionality is coming soon. You will be able to view all your deposit, withdrawal and transfer records here.
                   </AlertDescription>
                 </Alert>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-xl">Recent Activity</CardTitle>
-              <CardDescription>Your recent transactions</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <History className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <h3 className="text-lg font-medium">No Recent Activity</h3>
-                <p className="text-muted-foreground mt-1 max-w-md">
-                  Your recent transactions will appear here once you start making transfers or deposits.
-                </p>
               </div>
             </CardContent>
           </Card>
@@ -143,7 +164,10 @@ const WalletPage = () => {
                   <div className="text-sm text-muted-foreground">Available Balance</div>
                   <div className="text-2xl font-bold mt-1">{parseFloat(ethBalance).toFixed(6)} ETH</div>
                   <div className="text-muted-foreground text-sm mt-1">
-                    ≈ ${formatCurrency(parseFloat(ethBalance) * 3000)}
+                    ≈ ${formatCurrency(parseFloat(ethBalance) * ethPrice)}
+                    {isPriceLoading && (
+                      <Loader2 className="ml-1 inline h-3 w-3 animate-spin text-muted-foreground/50" />
+                    )}
                   </div>
                 </div>
                 

@@ -89,6 +89,7 @@ export const ETHTransferSheet = ({
   const isMobile = useIsMobile();
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [isSearching, setIsSearching] = useState(false);
+  const [ethPrice, setEthPrice] = useState<number>(0);
 
   // Format the currentBalance to display 6 decimal places
   const displayBalance = parseFloat(currentBalance).toFixed(6);
@@ -367,6 +368,34 @@ export const ETHTransferSheet = ({
         setTransactionHash(result.transaction.hash);
         setTransferStep('success');
         triggerConfetti();
+        
+        // Update the ETH balance in local storage after successful transfer
+        const formValues = form.getValues();
+        const amount = parseFloat(formValues.amount);
+        const gasValue = gasEstimate?.estimatedGasFee ? parseFloat(gasEstimate.estimatedGasFee) : 0;
+        const totalValue = amount + gasValue;
+        
+        // Get the current balance from localStorage or use current value
+        const currentBalanceValue = localStorage.getItem('dapps_wallet_balance');
+        if (currentBalanceValue) {
+          try {
+            const balanceData = JSON.parse(currentBalanceValue);
+            const newBalance = Math.max(0, parseFloat(balanceData.balance.eth) - totalValue).toFixed(6);
+            
+            // Update the balance in the cached object
+            balanceData.balance.eth = newBalance;
+            balanceData.balance.formatted = newBalance;
+            
+            // Update USD value based on ETH price
+            balanceData.balance.usd = parseFloat(newBalance) * ethPrice;
+            
+            // Store updated values in localStorage
+            localStorage.setItem('dapps_wallet_balance', JSON.stringify(balanceData));
+            localStorage.setItem('dapps_wallet_balance_timestamp', Date.now().toString());
+          } catch (error) {
+            console.error('Error updating wallet balance in localStorage:', error);
+          }
+        }
         
         // Show success for 3 seconds then close
         setTimeout(() => {
@@ -663,7 +692,7 @@ export const ETHTransferSheet = ({
           <div className="text-center mb-3">
             <div className="font-medium text-sm text-muted-foreground">You're about to send</div>
             <div className="text-2xl font-bold mt-1">{amountValue.toFixed(6)} ETH</div>
-            <div className="text-sm text-muted-foreground mt-1">≈ ${(amountValue * 3000).toFixed(2)} USD</div>
+            <div className="text-sm text-muted-foreground mt-1">≈ ${(amountValue * ethPrice).toFixed(2)} USD</div>
           </div>
         </div>
         
@@ -802,6 +831,31 @@ export const ETHTransferSheet = ({
   };
 
   const { title, description } = getHeaderContent();
+
+  // Fetch ETH price on component mount
+  useEffect(() => {
+    fetchEthPrice();
+  }, [open]);
+  
+  // Function to fetch ETH price from API
+  const fetchEthPrice = async () => {
+    try {
+      const response = await fetch('/api/eth_price');
+      const data = await response.json();
+      
+      if (data.success) {
+        setEthPrice(data.price);
+      } else {
+        console.error('Failed to fetch ETH price:', data);
+        // Fallback to a default price if API fails
+        setEthPrice(1800);
+      }
+    } catch (error) {
+      console.error('Error fetching ETH price:', error);
+      // Fallback to a default price if API fails
+      setEthPrice(1800);
+    }
+  };
 
   // For mobile, use Drawer with fixed height and sticky footer
   if (isMobile) {
