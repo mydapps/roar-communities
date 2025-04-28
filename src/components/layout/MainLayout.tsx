@@ -90,7 +90,7 @@ const MainLayout = () => {
       isMobileAppContext ? "safe-area-inset-y" : ""
     )}>
       {/* Navbar - visible on web, and on mobile app after logging in, but styled differently */}
-      <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+        <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
       
       {/* Main content area - modified for proper sidebar scrolling */}
       <div className="flex flex-1">

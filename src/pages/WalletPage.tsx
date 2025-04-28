@@ -70,23 +70,23 @@ const WalletPage = () => {
           </p>
         </div>
         <div className="md:w-1/4 flex justify-start md:justify-end items-start">
-          <Button 
-            variant="outline"
-            size="sm"
+        <Button
+          variant="outline"
+          size="sm"
             className="gap-2"
-            onClick={fetchWalletBalance}
-            disabled={isRefreshing}
-          >
-            {isRefreshing ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4" />
-            )}
+          onClick={fetchWalletBalance}
+          disabled={isRefreshing}
+        >
+          {isRefreshing ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <RefreshCw className="h-4 w-4" />
+          )}
             Refresh
-          </Button>
+        </Button>
         </div>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="md:col-span-2">
           <Card className="shadow-md">

@@ -3,12 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription }
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { RefreshCcw, Check, X, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
+import { RefreshCcw, Check, X, ArrowRight, AlertCircle, Loader2, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 import { useResponsive } from '@/hooks/use-mobile';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { usePrivy } from '@privy-io/react-auth';
+import * as apiBase from '@/utils/apiBase';
 
 const AvatarHandlePage = () => {
   const [avatarCode, setAvatarCode] = useState('');
@@ -21,6 +23,7 @@ const AvatarHandlePage = () => {
   const [avatarHistory, setAvatarHistory] = useState<string[]>([]);
   const { isMobile } = useResponsive();
   const navigate = useNavigate();
+  const { logout } = usePrivy();
   
   // Check localStorage on mount
   useEffect(() => {
@@ -125,8 +128,41 @@ const AvatarHandlePage = () => {
     }
   };
   
+  // Define handleLogout function
+  const handleLogout = async () => {
+    try {
+      console.log('Logging out user...');
+      
+      await apiBase.logoutCurrentDevice();
+      console.log('Logged out from current device, key invalidated');
+      
+      await logout();
+      console.log('Logged out from Privy');
+      
+      console.log('Redirecting to homepage...');
+      navigate('/');
+      
+      toast.success('Successfully logged out');
+      // No need to manually set state like setIsLoggedIn(false) here as page will redirect
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast.error('Error logging out. Please try again.');
+    }
+  };
+  
   return (
-    <div className="min-h-screen bg-gradient-to-b from-indigo-50 via-purple-50 to-white flex items-center justify-center p-4 overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-b from-indigo-50 via-purple-50 to-white flex items-center justify-center p-4 overflow-hidden relative">
+      {/* Logout Button */}
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        className="absolute top-4 right-4 z-20 text-gray-500 hover:text-gray-700"
+        onClick={handleLogout}
+        aria-label="Logout"
+      >
+        <LogOut className="h-5 w-5" />
+      </Button>
+      
       {/* Background elements for visual appeal */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-[20%] w-32 h-32 bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse" />

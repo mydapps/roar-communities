@@ -11,19 +11,22 @@ import {
   AlertCircle,
   Loader2,
   PartyPopper,
-  Unlock
+  Unlock,
+  LogOut
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { shareToSocialMedia } from '@/utils/shareUtils';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import confetti from 'canvas-confetti';
 import OnboardingStories from '@/components/onboarding/OnboardingStories';
 import { motion, AnimatePresence } from 'framer-motion';
+import { usePrivy } from '@privy-io/react-auth';
+import * as apiBase from '@/utils/apiBase';
 
 interface Task {
   id: string;
@@ -53,6 +56,7 @@ const RequestInvitePage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useIsMobile();
+  const { logout } = usePrivy();
   const [inviteCode, setInviteCode] = useState('');
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [queuePosition, setQueuePosition] = useState(0);
@@ -265,26 +269,14 @@ const RequestInvitePage = () => {
           
           setTasks(updatedTasks);
         } else {
-          toast({
-            title: "Error",
-            description: "Failed to fetch invite status. Please try again.",
-            variant: "destructive"
-          });
+          toast.error("Failed to fetch invite status. Please try again.");
         }
       } else {
-        toast({
-          title: "Error",
-          description: "Failed to fetch invite status. Please try again.",
-          variant: "destructive"
-        });
+        toast.error("Failed to fetch invite status. Please try again.");
       }
     } catch (error) {
       console.error('Error fetching invite status:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch invite status. Please try again.",
-        variant: "destructive"
-      });
+      toast.error("Failed to fetch invite status. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -336,11 +328,7 @@ const RequestInvitePage = () => {
     
     frame();
     
-    toast({
-      title: "🎉 Amazing work!",
-      description: "You're at the top of our list! Expect your invite very soon.",
-      variant: "default"
-    });
+    toast.success("🎉 Amazing work! You're at the top of our list! Expect your invite very soon.");
     
     setTimeout(() => setShowCelebration(false), 5000);
   };
@@ -349,21 +337,14 @@ const RequestInvitePage = () => {
     // Check for user ID instead of API key
     const userId = localStorage.getItem('dapps_user_id');
     if (!userId) {
-      toast({
-        title: "Error",
-        description: "User not authenticated. Please sign in again.",
-        variant: "destructive"
-      });
+      toast.error("User not authenticated. Please sign in again.");
       return;
     }
     
     setIsConnectingTwitter(true);
     
     try {
-      toast({
-        title: "Connecting",
-        description: "Connecting to X account...",
-      });
+      toast.loading("Connecting to X account...");
       
       // Use relative path for proxy
       const response = await fetch('/api/twitter_auth', {
@@ -428,10 +409,7 @@ const RequestInvitePage = () => {
                     }
                     setAuthWindow(null);
                     
-                    toast({
-                      title: "Success!",
-                      description: "Successfully connected X account!",
-                    });
+                    toast.success("Successfully connected X account!");
                     triggerConfetti();
                     
                     const updatedTasks = [...tasks];
@@ -459,19 +437,12 @@ const RequestInvitePage = () => {
               
               if (!tasks[0].completed) {
                 setIsConnectingTwitter(false);
-                toast({
-                  title: "Error",
-                  description: "Failed to connect X account. Please try again.",
-                  variant: "destructive"
-                });
+                toast.error("Failed to connect X account. Please try again.");
               }
             }, 120000);
           } else {
             setTimeout(() => {
-              toast({
-                title: "Success!",
-                description: "Successfully connected X account!",
-              });
+              toast.success("Successfully connected X account!");
               triggerConfetti();
               
               const updatedTasks = [...tasks];
@@ -487,28 +458,16 @@ const RequestInvitePage = () => {
             }, 1500);
           }
         } else {
-          toast({
-            title: "Error",
-            description: "Failed to connect X account. Please try again.",
-            variant: "destructive"
-          });
+          toast.error("Failed to connect X account. Please try again.");
           setIsConnectingTwitter(false);
         }
       } else {
-        toast({
-          title: "Error",
-          description: "Failed to connect X account. Please try again.",
-          variant: "destructive"
-        });
+        toast.error("Failed to connect X account. Please try again.");
         setIsConnectingTwitter(false);
       }
     } catch (error) {
       console.error('Error connecting X account:', error);
-      toast({
-        title: "Error",
-        description: "Failed to connect X account. Please try again.",
-        variant: "destructive"
-      });
+      toast.error("Failed to connect X account. Please try again.");
       setIsConnectingTwitter(false);
     }
   };
@@ -517,11 +476,7 @@ const RequestInvitePage = () => {
     // Check for user ID instead of API key
     const userId = localStorage.getItem('dapps_user_id');
     if (!userId) {
-      toast({
-        title: "Error",
-        description: "User not authenticated. Please sign in again.",
-        variant: "destructive"
-      });
+      toast.error("User not authenticated. Please sign in again.");
       return;
     }
     
@@ -533,10 +488,7 @@ const RequestInvitePage = () => {
     setTasks(updatedTasks);
     
     try {
-      toast({
-        title: "Posting",
-        description: "Posting tweet about dapps.co...",
-      });
+      toast.loading("Posting tweet about dapps.co...");
       
       // Use relative path for proxy
       const response = await fetch('/api/twitter_tweet', {
@@ -552,10 +504,7 @@ const RequestInvitePage = () => {
         const data = await response.json();
         
         if (data.success) {
-          toast({
-            title: "Success!",
-            description: "Successfully tweeted about dapps.co!",
-          });
+          toast.success("Successfully tweeted about dapps.co!");
           triggerConfetti();
           
           updatedTasks[taskIndex].completed = true;
@@ -565,30 +514,18 @@ const RequestInvitePage = () => {
           // Fetch status using cookie auth
           fetchInviteStatus(); 
         } else {
-          toast({
-            title: "Error",
-            description: "Failed to post tweet. Please try again.",
-            variant: "destructive"
-          });
+          toast.error("Failed to post tweet. Please try again.");
           updatedTasks[taskIndex].disabled = false;
           setTasks(updatedTasks);
         }
       } else {
-        toast({
-          title: "Error",
-          description: "Failed to post tweet. Please try again.",
-          variant: "destructive"
-        });
+        toast.error("Failed to post tweet. Please try again.");
         updatedTasks[taskIndex].disabled = false;
         setTasks(updatedTasks);
       }
     } catch (error) {
       console.error('Error posting tweet:', error);
-      toast({
-        title: "Error",
-        description: "Failed to post tweet. Please try again.",
-        variant: "destructive"
-      });
+      toast.error("Failed to post tweet. Please try again.");
       updatedTasks[taskIndex].disabled = false;
       setTasks(updatedTasks);
     }
@@ -598,11 +535,7 @@ const RequestInvitePage = () => {
     // Check for user ID instead of API key
     const userId = localStorage.getItem('dapps_user_id');
     if (!userId) {
-      toast({
-        title: "Error",
-        description: "User not authenticated. Please sign in again.",
-        variant: "destructive"
-      });
+      toast.error("User not authenticated. Please sign in again.");
       return;
     }
     
@@ -614,10 +547,7 @@ const RequestInvitePage = () => {
     setTasks(updatedTasks);
     
     try {
-      toast({
-        title: "Posting",
-        description: "Posting quote tweet about dapps.co...",
-      });
+      toast.loading("Posting quote tweet about dapps.co...");
       
       // Use relative path for proxy
       const response = await fetch('/api/twitter_quote_tweet', {
@@ -633,10 +563,7 @@ const RequestInvitePage = () => {
         const data = await response.json();
         
         if (data.success) {
-          toast({
-            title: "Success!",
-            description: "Successfully quote tweeted about dapps.co!",
-          });
+          toast.success("Successfully quote tweeted about dapps.co!");
           triggerConfetti();
           
           updatedTasks[taskIndex].completed = true;
@@ -646,30 +573,18 @@ const RequestInvitePage = () => {
           // Fetch status using cookie auth
           fetchInviteStatus(); 
         } else {
-          toast({
-            title: "Error",
-            description: "Failed to post quote tweet. Please try again.",
-            variant: "destructive"
-          });
+          toast.error("Failed to post quote tweet. Please try again.");
           updatedTasks[taskIndex].disabled = false;
           setTasks(updatedTasks);
         }
       } else {
-        toast({
-          title: "Error",
-          description: "Failed to post quote tweet. Please try again.",
-          variant: "destructive"
-        });
+        toast.error("Failed to post quote tweet. Please try again.");
         updatedTasks[taskIndex].disabled = false;
         setTasks(updatedTasks);
       }
     } catch (error) {
       console.error('Error posting quote tweet:', error);
-      toast({
-        title: "Error",
-        description: "Failed to post quote tweet. Please try again.",
-        variant: "destructive"
-      });
+      toast.error("Failed to post quote tweet. Please try again.");
       updatedTasks[taskIndex].disabled = false;
       setTasks(updatedTasks);
     }
@@ -692,11 +607,7 @@ const RequestInvitePage = () => {
     // Check for user ID instead of API key
     const userId = localStorage.getItem('dapps_user_id');
     if (!userId) {
-      toast({
-        title: "Error",
-        description: "User not authenticated. Please sign in again.",
-        variant: "destructive"
-      });
+      toast.error("User not authenticated. Please sign in again.");
       setIsSubmitting(false);
       return;
     }
@@ -720,10 +631,7 @@ const RequestInvitePage = () => {
         // Set a flag to show the onboarding page on this session
         localStorage.setItem('dapps_show_onboarding', '1');
         
-        toast({
-          title: "Success!",
-          description: data.message || "Welcome to dapps.co! 🚀",
-        });
+        toast.success(data.message || "Welcome to dapps.co! 🚀");
         
         triggerConfetti();
         
@@ -743,6 +651,26 @@ const RequestInvitePage = () => {
 
   const generateRandomCode = () => {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
+  };
+
+  const handleLogout = async () => {
+    try {
+      console.log('Logging out user...');
+      
+      await apiBase.logoutCurrentDevice();
+      console.log('Logged out from current device, key invalidated');
+      
+      await logout();
+      console.log('Logged out from Privy');
+      
+      console.log('Redirecting to homepage...');
+      navigate('/');
+      
+      toast.success('Successfully logged out');
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast.error('Error logging out. Please try again.');
+    }
   };
 
   if (isLoading) {
@@ -765,180 +693,187 @@ const RequestInvitePage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <div className="flex-1 overflow-auto">
-        <div className="max-w-4xl mx-auto p-4 sm:p-6 animate-fade-in">
-          <div className="text-center mb-8">
-            <img 
-              src="/images/logo1.png" 
-              alt="Dapps.co Logo" 
-              className="h-10 mr-3" 
-            />
-            <h1 className="text-3xl md:text-4xl font-bold mb-2">You're Almost There!</h1>
-            <p className="text-muted-foreground text-lg md:text-xl max-w-2xl mx-auto">
-              Complete these tasks to get early access to dapps.co.
-            </p>
-          </div>
+    <div className={cn("min-h-screen flex flex-col items-center bg-gradient-to-b from-purple-50 via-indigo-50 to-white overflow-y-auto relative", isMobile ? 'pt-16' : 'pt-24')}>
+      <Button 
+        variant="ghost" 
+        size="icon" 
+        className="absolute top-4 right-4 z-50 text-gray-500 hover:text-gray-700"
+        onClick={handleLogout}
+        aria-label="Logout"
+      >
+        <LogOut className="h-5 w-5" />
+      </Button>
+      <div className="max-w-4xl mx-auto p-4 sm:p-6 animate-fade-in">
+        <div className="text-center mb-8">
+          <img 
+            src="/images/logo1.png" 
+            alt="Dapps.co Logo" 
+            className="h-10 mr-3" 
+          />
+          <h1 className="text-3xl md:text-4xl font-bold mb-2">You're Almost There!</h1>
+          <p className="text-muted-foreground text-lg md:text-xl max-w-2xl mx-auto">
+            Complete these tasks to get early access to dapps.co.
+          </p>
+        </div>
 
-          <Card className="mb-8 overflow-hidden animate-slide-up">
-            <div className="bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-amber-500/10 p-6 text-center">
-              <h2 className="text-xl font-semibold mb-2">Your Current Position</h2>
-              <div className="flex items-center justify-center">
-                <User className="h-6 w-6 mr-2 text-muted-foreground" />
-                <AnimatePresence mode="wait">
-                  <motion.div 
-                    key={displayQueuePosition}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="text-4xl font-bold"
-                  >
-                    #{displayQueuePosition.toLocaleString()}
-                  </motion.div>
-                </AnimatePresence>
-              </div>
-              
-              <div className="mt-2 text-sm text-muted-foreground">
-                Out of {totalInQueue.toLocaleString()} people in the queue
-              </div>
-              
-              {showCelebration && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  className="mt-4 p-3 bg-green-500/20 rounded-lg flex items-center justify-center text-green-600"
+        <Card className="mb-8 overflow-hidden animate-slide-up">
+          <div className="bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-amber-500/10 p-6 text-center">
+            <h2 className="text-xl font-semibold mb-2">Your Current Position</h2>
+            <div className="flex items-center justify-center">
+              <User className="h-6 w-6 mr-2 text-muted-foreground" />
+              <AnimatePresence mode="wait">
+                <motion.div 
+                  key={displayQueuePosition}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="text-4xl font-bold"
                 >
-                  <PartyPopper className="h-5 w-5 mr-2" />
-                  <span className="font-semibold">You're at the top of our list!</span>
+                  #{displayQueuePosition.toLocaleString()}
                 </motion.div>
-              )}
+              </AnimatePresence>
             </div>
             
-            <CardContent className="pt-6">
-              {!showCodeInput ? (
-                <Button 
-                  variant="outline" 
-                  className="w-full text-base py-6" 
-                  onClick={() => setShowCodeInput(true)}
-                >
-                  I have an invite code
-                </Button>
-              ) : (
-                <form onSubmit={handleSubmitInviteCode} className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="inviteCode">Enter your invite code</Label>
-                      {inviteCode && localStorage.getItem('dapps_invite_code') === inviteCode && (
-                        <div className="flex items-center text-green-600 text-sm">
-                          <Check className="h-4 w-4 mr-1" />
-                          <span>Code verified</span>
-                        </div>
-                      )}
-                    </div>
-                    {errorMessage && (
-                      <div className="flex items-center p-3 rounded-md bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 text-sm mb-2">
-                        <AlertCircle className="h-4 w-4 mr-2 flex-shrink-0" />
-                        <p>{errorMessage}</p>
+            <div className="mt-2 text-sm text-muted-foreground">
+              Out of {totalInQueue.toLocaleString()} people in the queue
+            </div>
+            
+            {showCelebration && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                className="mt-4 p-3 bg-green-500/20 rounded-lg flex items-center justify-center text-green-600"
+              >
+                <PartyPopper className="h-5 w-5 mr-2" />
+                <span className="font-semibold">You're at the top of our list!</span>
+              </motion.div>
+            )}
+          </div>
+          
+          <CardContent className="pt-6">
+            {!showCodeInput ? (
+              <Button 
+                variant="outline" 
+                className="w-full text-base py-6" 
+                onClick={() => setShowCodeInput(true)}
+              >
+                I have an invite code
+              </Button>
+            ) : (
+              <form onSubmit={handleSubmitInviteCode} className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="inviteCode">Enter your invite code</Label>
+                    {inviteCode && localStorage.getItem('dapps_invite_code') === inviteCode && (
+                      <div className="flex items-center text-green-600 text-sm">
+                        <Check className="h-4 w-4 mr-1" />
+                        <span>Code verified</span>
                       </div>
                     )}
-                    <Input
-                      id="inviteCode"
-                      value={inviteCode}
-                      onChange={(e) => setInviteCode(e.target.value)}
-                      placeholder="Enter code (e.g. ABC123)"
-                      className={cn(
-                        "text-lg py-6",
-                        errorMessage && "border-red-500 focus-visible:ring-red-500"
-                      )}
-                      autoFocus
-                    />
                   </div>
-                  <Button 
-                    type="submit" 
-                    className="w-full py-6 text-base"
-                    disabled={isSubmitting || !inviteCode.trim()}
+                  {errorMessage && (
+                    <div className="flex items-center p-3 rounded-md bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 text-sm mb-2">
+                      <AlertCircle className="h-4 w-4 mr-2 flex-shrink-0" />
+                      <p>{errorMessage}</p>
+                    </div>
+                  )}
+                  <Input
+                    id="inviteCode"
+                    value={inviteCode}
+                    onChange={(e) => setInviteCode(e.target.value)}
+                    placeholder="Enter code (e.g. ABC123)"
+                    className={cn(
+                      "text-lg py-6",
+                      errorMessage && "border-red-500 focus-visible:ring-red-500"
+                    )}
+                    autoFocus
+                  />
+                </div>
+                <Button 
+                  type="submit" 
+                  className="w-full py-6 text-base"
+                  disabled={isSubmitting || !inviteCode.trim()}
+                >
+                  {isSubmitting ? (
+                    <span className="flex items-center">
+                      <Loader2 className="h-5 w-5 mr-2 animate-spin" /> Verifying...
+                    </span>
+                  ) : (
+                    <span className="flex items-center">
+                      <Unlock className="h-5 w-5 mr-2" /> Unlock Access
+                    </span>
+                  )}
+                </Button>
+              </form>
+            )}
+          </CardContent>
+        </Card>
+
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold">Jump the Queue</h2>
+            <div className="text-muted-foreground text-sm">
+              Complete tasks to get ahead
+            </div>
+          </div>
+          
+          <div className="grid gap-4">
+            {tasks.map((task, index) => (
+              <Card 
+                key={task.id} 
+                className={cn(
+                  "transition-all duration-300 border overflow-hidden animate-slide-up",
+                  task.completed && "border-green-500/50 bg-green-500/5",
+                  task.disabled && "opacity-70"
+                )}
+                style={{ animationDelay: `${index * 0.1}s` }}
+              >
+                <CardContent className="p-6">
+                  <div className="flex justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className={cn(
+                        "p-2 rounded-full",
+                        task.completed ? "bg-green-500/20" : "bg-secondary"
+                      )}>
+                        {task.completed ? <CheckCircle2 className="h-5 w-5 text-green-500" /> : task.icon}
+                      </div>
+                      <h3 className="font-semibold">{task.title}</h3>
+                    </div>
+                    <div className="flex items-center bg-secondary text-secondary-foreground rounded-full px-3 py-1 text-xs">
+                      <Trophy className="h-3 w-3 mr-1" />
+                      Jump ahead
+                    </div>
+                  </div>
+                  
+                  <p className="text-muted-foreground text-sm mb-4">
+                    {task.description}
+                  </p>
+                  
+                  <Button
+                    variant={task.completed ? "outline" : "default"}
+                    className={cn(
+                      "w-full",
+                      task.completed && "border-green-500 text-green-600"
+                    )}
+                    disabled={task.completed || task.disabled || (task.id === 'connect-twitter' && isConnectingTwitter)}
+                    onClick={task.action}
                   >
-                    {isSubmitting ? (
+                    {task.completed ? (
                       <span className="flex items-center">
-                        <Loader2 className="h-5 w-5 mr-2 animate-spin" /> Verifying...
+                        <Check className="h-4 w-4 mr-2" /> Completed
+                      </span>
+                    ) : task.id === 'connect-twitter' && isConnectingTwitter ? (
+                      <span className="flex items-center">
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Connecting...
                       </span>
                     ) : (
-                      <span className="flex items-center">
-                        <Unlock className="h-5 w-5 mr-2" /> Unlock Access
-                      </span>
+                      task.cta
                     )}
                   </Button>
-                </form>
-              )}
-            </CardContent>
-          </Card>
-
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold">Jump the Queue</h2>
-              <div className="text-muted-foreground text-sm">
-                Complete tasks to get ahead
-              </div>
-            </div>
-            
-            <div className="grid gap-4">
-              {tasks.map((task, index) => (
-                <Card 
-                  key={task.id} 
-                  className={cn(
-                    "transition-all duration-300 border overflow-hidden animate-slide-up",
-                    task.completed && "border-green-500/50 bg-green-500/5",
-                    task.disabled && "opacity-70"
-                  )}
-                  style={{ animationDelay: `${index * 0.1}s` }}
-                >
-                  <CardContent className="p-6">
-                    <div className="flex justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <div className={cn(
-                          "p-2 rounded-full",
-                          task.completed ? "bg-green-500/20" : "bg-secondary"
-                        )}>
-                          {task.completed ? <CheckCircle2 className="h-5 w-5 text-green-500" /> : task.icon}
-                        </div>
-                        <h3 className="font-semibold">{task.title}</h3>
-                      </div>
-                      <div className="flex items-center bg-secondary text-secondary-foreground rounded-full px-3 py-1 text-xs">
-                        <Trophy className="h-3 w-3 mr-1" />
-                        Jump ahead
-                      </div>
-                    </div>
-                    
-                    <p className="text-muted-foreground text-sm mb-4">
-                      {task.description}
-                    </p>
-                    
-                    <Button
-                      variant={task.completed ? "outline" : "default"}
-                      className={cn(
-                        "w-full",
-                        task.completed && "border-green-500 text-green-600"
-                      )}
-                      disabled={task.completed || task.disabled || (task.id === 'connect-twitter' && isConnectingTwitter)}
-                      onClick={task.action}
-                    >
-                      {task.completed ? (
-                        <span className="flex items-center">
-                          <Check className="h-4 w-4 mr-2" /> Completed
-                        </span>
-                      ) : task.id === 'connect-twitter' && isConnectingTwitter ? (
-                        <span className="flex items-center">
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Connecting...
-                        </span>
-                      ) : (
-                        task.cta
-                      )}
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </div>
       </div>

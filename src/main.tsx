@@ -52,20 +52,20 @@ const initMobileAppDetection = () => {
 
 // Initialize applications
 const initApp = async () => {
-  // Initialize Google Analytics
-  injectGoogleAnalytics();
+// Initialize Google Analytics
+injectGoogleAnalytics();
 
   // Initialize mobile app detection
   initMobileAppDetection();
 
   // Start React app
   ReactDOM.createRoot(document.getElementById("root")!).render(
-    <React.StrictMode>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </React.StrictMode>
-  );
+  <React.StrictMode>
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
+  </React.StrictMode>
+);
 };
 
 // Start initialization
