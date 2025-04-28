@@ -8,15 +8,10 @@ import React from 'react';
 export const processTextContent = (content: string): React.ReactNode => {
   if (!content) return null;
   
-  // Add console logging to debug the input content
-  console.log('Processing content:', content);
-  
   // Updated regex to handle both newline and non-newline image markdown cases
   // This handles ![](url) with optional newline before it
   const mediaMarkdownRegex = /(\n?!\[\]\(([^)]+)\))/g; 
   const parts = content.split(mediaMarkdownRegex);
-  
-  console.log('Split parts:', parts);
   
   return parts.map((part, index) => {
     // Check if this part is a captured media URL (from group 2 of the split regex)
@@ -24,21 +19,17 @@ export const processTextContent = (content: string): React.ReactNode => {
     // So, the URL is at index `i` where `i % 3 === 2`
     if (index % 3 === 2 && part) { 
       const mediaUrl = part.trim(); // This is the captured URL - trim to remove any whitespace
-      console.log('Processing media URL:', mediaUrl);
       
       // Skip if the URL is empty after trimming
       if (!mediaUrl) {
-        console.log('Empty URL after trimming, skipping');
         return null;
       }
       
       // Check for common image/video extensions to determine type
       const extension = mediaUrl.split('.').pop()?.toLowerCase();
-      console.log('Detected extension:', extension);
       
       // Determine media type
       if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension || '')) {
-        console.log('Rendering as image with extension:', extension);
         return (
           <div key={index} className="mt-2 max-w-xs sm:max-w-sm md:max-w-md"> 
             <img 
@@ -47,14 +38,12 @@ export const processTextContent = (content: string): React.ReactNode => {
               className="rounded-md object-cover w-full h-auto border border-border/20" 
               loading="lazy"
               onError={(e) => {
-                 console.warn(`Error loading image: ${mediaUrl}`);
                  e.currentTarget.style.display = 'none'; 
               }}
             />
           </div>
         );
       } else if (['mp4', 'webm', 'mov'].includes(extension || '')) {
-        console.log('Rendering as video with extension:', extension);
         return (
           <div key={index} className="mt-2 max-w-xs sm:max-w-sm md:max-w-md"> 
             <video 
@@ -63,7 +52,6 @@ export const processTextContent = (content: string): React.ReactNode => {
               preload="metadata"
               className="rounded-md w-full h-auto border border-border/20"
               onError={(e) => {
-                console.warn(`Error loading video: ${mediaUrl}`);
                 e.currentTarget.style.display = 'none'; 
               }}
             >
@@ -73,7 +61,6 @@ export const processTextContent = (content: string): React.ReactNode => {
         );
       } else {
         // Try to render as image if we can't detect extension
-        console.log('No recognized extension, attempting to render as image');
         return (
           <div key={index} className="mt-2 max-w-xs sm:max-w-sm md:max-w-md"> 
             <img 
@@ -82,7 +69,6 @@ export const processTextContent = (content: string): React.ReactNode => {
               className="rounded-md object-cover w-full h-auto border border-border/20" 
               loading="lazy"
               onError={(e) => {
-                 console.warn(`Error loading image with unknown extension: ${mediaUrl}`);
                  e.currentTarget.style.display = 'none'; 
               }}
             />
