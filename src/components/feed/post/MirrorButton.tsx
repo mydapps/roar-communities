@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Repeat2 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -8,6 +8,7 @@ import { MirrorContent, PERSONAL_FEED } from './MirrorContent';
 import { useToast } from '@/hooks/use-toast';
 import { mirrorPost } from '@/utils/api';
 import { toast } from 'sonner';
+import { restoreBodyScrolling } from '@/utils/deviceUtils';
 
 // Create a custom event for post mirroring
 export const POST_MIRRORED_EVENT = 'post-mirrored';
@@ -41,6 +42,27 @@ export const MirrorButton = ({
   const [mirroring, setMirroring] = useState(false);
   const { toast: uiToast } = useToast();
   
+  // Effect to cleanup scroll locks when drawer/sheet closes
+  useEffect(() => {
+    if (!open && mobile) {
+      // Small delay to allow animations to complete
+      const timer = setTimeout(() => {
+        restoreBodyScrolling();
+      }, 300);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [open, mobile]);
+  
+  // Ensure scrolling is restored when component unmounts
+  useEffect(() => {
+    return () => {
+      if (mobile) {
+        restoreBodyScrolling();
+      }
+    };
+  }, [mobile]);
+  
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent post navigation
     onOpenChange(true);
@@ -53,6 +75,15 @@ export const MirrorButton = ({
   
   const handleQuoteChange = (quote: string) => {
     setQuoteText(quote);
+  };
+  
+  // Custom handler for closing the drawer/sheet
+  const handleCloseModal = () => {
+    onOpenChange(false);
+    // Ensure scrolling is restored
+    if (mobile) {
+      setTimeout(restoreBodyScrolling, 100);
+    }
   };
   
   const handleMirror = async (e: React.MouseEvent) => {
@@ -125,7 +156,7 @@ export const MirrorButton = ({
       
       if (success) {
         // Close the mirror dialog first
-        onOpenChange(false);
+        handleCloseModal();
         
         // Destination text for the success message
         const destination = selectedCommunity === PERSONAL_FEED 
@@ -175,13 +206,23 @@ export const MirrorButton = ({
       });
     } finally {
       setMirroring(false);
+      // Ensure scrolling is restored
+      if (mobile) {
+        setTimeout(restoreBodyScrolling, 150);
+      }
     }
   };
   
   // Render component based on device type
   if (mobile) {
     return (
-      <Drawer open={open} onOpenChange={onOpenChange}>
+      <Drawer open={open} onOpenChange={(isOpen) => {
+        onOpenChange(isOpen);
+        // Ensure scrolling is restored when drawer is closed
+        if (!isOpen) {
+          setTimeout(restoreBodyScrolling, 150); 
+        }
+      }}>
         <DrawerTrigger asChild>
           <Button 
             variant="ghost" 
@@ -216,7 +257,10 @@ export const MirrorButton = ({
           
           <DrawerFooter className="flex-row justify-between gap-2 p-4 border-t bg-background sticky bottom-0 left-0 right-0 z-10">
             <DrawerClose asChild>
-              <Button variant="outline" onClick={(e) => e.stopPropagation()}>Cancel</Button>
+              <Button variant="outline" onClick={(e) => {
+                e.stopPropagation();
+                setTimeout(restoreBodyScrolling, 150);
+              }}>Cancel</Button>
             </DrawerClose>
             <Button 
               onClick={handleMirror}

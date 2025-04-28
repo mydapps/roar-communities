@@ -321,6 +321,39 @@ export const getPlatformType = (): string => {
   return "web";
 };
 
+/**
+ * Utility function to restore body scrolling
+ * This is particularly useful after closing modals/drawers on mobile
+ * where scroll lock might persist due to bugs in UI libraries
+ */
+export const restoreBodyScrolling = (): void => {
+  // Remove any inline styles that might be blocking scrolling
+  document.body.style.removeProperty('overflow');
+  document.body.style.removeProperty('position');
+  document.body.style.removeProperty('width');
+  document.body.style.removeProperty('height');
+  document.body.style.removeProperty('touch-action');
+  document.body.style.removeProperty('padding-right');
+  document.body.style.removeProperty('padding-top');
+  
+  // Force recalculation of layout
+  document.body.scrollTop; // Trigger reflow
+  
+  // Ensure html element is also not locked
+  document.documentElement.style.removeProperty('overflow');
+  document.documentElement.style.removeProperty('height');
+  
+  // Force proper scrollbar visibility
+  document.body.style.overflowY = 'auto';
+  
+  // Remove any backdrop or overlay elements that might have been left
+  const backdrop = document.querySelector('.drawer-backdrop') as HTMLElement;
+  if (backdrop) {
+    backdrop.style.display = 'none';
+    backdrop.style.opacity = '0';
+  }
+};
+
 export default {
   isNativeMobileApp,
   isAndroid,
@@ -329,4 +362,5 @@ export default {
   isMobileApp,
   isAndroidApp,
   isIOSApp,
+  restoreBodyScrolling,
 }; 

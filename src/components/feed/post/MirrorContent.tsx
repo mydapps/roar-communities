@@ -349,7 +349,10 @@ export const MirrorContent = ({
   return (
     <div 
       className={`flex flex-col gap-4 ${mobile ? 'pb-28' : ''} p-4 overflow-y-auto`}
-      style={{ overscrollBehavior: 'contain' }} // Improve scrolling behavior
+      style={{ 
+        overscrollBehavior: 'contain',
+        touchAction: 'manipulation' // Improve touch handling on mobile
+      }}
     >
       {/* Original post display */}
       {contentPreview}
