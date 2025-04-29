@@ -530,6 +530,28 @@ export const sellSharesPrecheck = async (communityName: string, shareQuantity: n
       shares: Number(data.shares || shareQuantity)
     };
     
+    // Handle totalSharePrice if it exists in the response
+    if (data.totalSharePrice !== undefined) {
+      result.totalSharePrice = typeof data.totalSharePrice === 'string' ? 
+        parseFloat(data.totalSharePrice) : data.totalSharePrice;
+    } else if (data.sharePrice) {
+      // Calculate totalSharePrice if not provided (price * quantity)
+      const price = typeof data.sharePrice === 'string' ? 
+        parseFloat(data.sharePrice) : data.sharePrice;
+      result.totalSharePrice = price * shareQuantity;
+    }
+    
+    // Handle totalSharePriceUsd if it exists in the response
+    if (data.totalSharePriceUsd !== undefined) {
+      result.totalSharePriceUsd = typeof data.totalSharePriceUsd === 'string' ? 
+        parseFloat(data.totalSharePriceUsd) : data.totalSharePriceUsd;
+    } else if (data.sharePriceUsd) {
+      // Calculate totalSharePriceUsd if not provided (price * quantity)
+      const priceUsd = typeof data.sharePriceUsd === 'string' ? 
+        parseFloat(data.sharePriceUsd) : data.sharePriceUsd;
+      result.totalSharePriceUsd = priceUsd * shareQuantity;
+    }
+    
     return result;
   } catch (error) {
     throw error;
