@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowUp, ArrowDown, SendHorizontal, Plus, Minus } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { CommunityPortfolioItem } from '@/utils/communityApi';
+import { Link } from 'react-router-dom';
 
 interface CommunityShareCardProps {
   community: CommunityPortfolioItem;
@@ -38,12 +39,16 @@ export const CommunityShareCard = ({
       <div className={`h-1.5 w-full ${priceDirection === 'up' ? "bg-green-500" : "bg-red-500"}`} />
       <CardContent className="p-4">
         <div className="flex items-center gap-3 mb-4">
-          <Avatar>
-            <AvatarImage src={image} alt={name} />
-            <AvatarFallback>{name ? name.charAt(0).toUpperCase() : '?'}</AvatarFallback>
-          </Avatar>
+          <Link to={`/c/${name}`}>
+            <Avatar className="cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all">
+              <AvatarImage src={image} alt={name} />
+              <AvatarFallback>{name ? name.charAt(0).toUpperCase() : '?'}</AvatarFallback>
+            </Avatar>
+          </Link>
           <div className="flex-1">
-            <div className="font-bold">{name}</div>
+            <Link to={`/c/${name}`}>
+              <div className="font-bold cursor-pointer hover:text-primary transition-colors">{name}</div>
+            </Link>
             <div className="flex items-center gap-2">
               <Badge variant="outline" className={priceDirection === 'up' ? "text-green-600" : "text-red-600"}>
                 {priceDirection === 'up' ? <ArrowUp className="h-3 w-3 mr-1" /> : <ArrowDown className="h-3 w-3 mr-1" />}
