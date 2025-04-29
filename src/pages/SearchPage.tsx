@@ -383,134 +383,124 @@ const SearchPage = () => {
                     <SearchLoadingState />
                   ) : (
                     <>
-                      <motion.div 
-                        className="space-y-2"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3 }}
-                      >
-              <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Users className="h-5 w-5 text-primary" />
-                <h2 className="text-lg font-medium">Communities</h2>
-                          </div>
-                          {communityResults.length > 0 && (
-                            <Button variant="ghost" size="sm" onClick={() => handleTabChange('communities')} className="text-primary">
-                              View All
-                </Button>
-                          )}
-              </div>
-              
-                        {communityError ? (
-                          <div className="p-4 border border-red-200 bg-red-50 rounded-md">
-                            <p className="text-red-700 text-sm">{communityError}</p>
-                          </div>
-                        ) : communityResults.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {communityResults.map((community, index) => (
-                              <motion.div
-                                key={community.name}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.3, delay: index * 0.1 }}
-                                whileHover={{ y: -5 }}
-                              >
-                                <CommunityResult community={community} />
-                              </motion.div>
-                ))}
-              </div>
-                        ) : (
-                          <EmptySearchResults type="communities" query={searchQuery} />
-                        )}
-                      </motion.div>
-                      
-                      <motion.div 
-                        className="space-y-2"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3, delay: 0.1 }}
-                      >
-              <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <MessageCircle className="h-5 w-5 text-primary" />
-                <h2 className="text-lg font-medium">Posts</h2>
-                          </div>
-                          {postResults.length > 0 && (
-                            <Button variant="ghost" size="sm" onClick={() => handleTabChange('posts')} className="text-primary">
-                              View All
-                </Button>
-                          )}
-              </div>
-              
-                        {postError ? (
-                          <div className="p-4 border border-red-200 bg-red-50 rounded-md">
-                            <p className="text-red-700 text-sm">{postError}</p>
-                          </div>
-                        ) : postResults.length > 0 ? (
-                          <div className="grid grid-cols-1 gap-4">
-                            {postResults.map((post, index) => (
-                              <motion.div
-                                key={post.id}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.3, delay: index * 0.1 }}
-                                whileHover={{ y: -5 }}
-                              >
-                                <PostSearchResult 
-                                  post={post} 
-                                  onClick={() => navigate(`/c/${post.community}/${post.code}`)} 
-                                />
-                              </motion.div>
-                ))}
-              </div>
-                        ) : (
-                          <EmptySearchResults type="posts" query={searchQuery} />
-                        )}
-                      </motion.div>
-                      
-                      <motion.div 
-                        className="space-y-2"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.3, delay: 0.2 }}
-                      >
-              <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <User className="h-5 w-5 text-primary" />
-                <h2 className="text-lg font-medium">Users</h2>
-                          </div>
-                          {userResults.length > 0 && (
-                            <Button variant="ghost" size="sm" onClick={() => handleTabChange('users')} className="text-primary">
-                              View All
-                            </Button>
-                          )}
-              </div>
-              
-                        {userError ? (
-                          <div className="p-4 border border-red-200 bg-red-50 rounded-md">
-                            <p className="text-red-700 text-sm">{userError}</p>
-                          </div>
-                        ) : userResults.length > 0 ? (
-                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                            {userResults.map((user, index) => (
-                              <motion.div
-                                key={user.id}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.3, delay: index * 0.05 }}
-                                whileHover={{ y: -5 }}
-                              >
-                                <UserResult user={user} />
-                              </motion.div>
-                ))}
-              </div>
-                        ) : (
-                          <EmptySearchResults type="users" query={searchQuery} />
-                        )}
-                      </motion.div>
+                      {/* Create an array of result sections and sort them by whether they have results */}
+                      {[
+                        {
+                          type: 'communities',
+                          hasResults: communityResults.length > 0,
+                          error: communityError,
+                          icon: <Users className="h-5 w-5 text-primary" />,
+                          title: "Communities",
+                          content: communityResults.length > 0 ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {communityResults.map((community, index) => (
+                                <motion.div
+                                  key={community.name}
+                                  initial={{ opacity: 0, y: 20 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ duration: 0.3, delay: index * 0.1 }}
+                                  whileHover={{ y: -5 }}
+                                >
+                                  <CommunityResult community={community} />
+                                </motion.div>
+                              ))}
+                            </div>
+                          ) : (
+                            <EmptySearchResults type="communities" query={searchQuery} />
+                          ),
+                          viewAllAction: () => handleTabChange('communities')
+                        },
+                        {
+                          type: 'posts',
+                          hasResults: postResults.length > 0,
+                          error: postError,
+                          icon: <MessageCircle className="h-5 w-5 text-primary" />,
+                          title: "Posts",
+                          content: postResults.length > 0 ? (
+                            <div className="grid grid-cols-1 gap-4">
+                              {postResults.map((post, index) => (
+                                <motion.div
+                                  key={post.id}
+                                  initial={{ opacity: 0, y: 20 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ duration: 0.3, delay: index * 0.1 }}
+                                  whileHover={{ y: -5 }}
+                                >
+                                  <PostSearchResult 
+                                    post={post} 
+                                    onClick={() => navigate(`/c/${post.community}/${post.code}`)} 
+                                  />
+                                </motion.div>
+                              ))}
+                            </div>
+                          ) : (
+                            <EmptySearchResults type="posts" query={searchQuery} />
+                          ),
+                          viewAllAction: () => handleTabChange('posts')
+                        },
+                        {
+                          type: 'users',
+                          hasResults: userResults.length > 0,
+                          error: userError,
+                          icon: <User className="h-5 w-5 text-primary" />,
+                          title: "Users",
+                          content: userResults.length > 0 ? (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                              {userResults.map((user, index) => (
+                                <motion.div
+                                  key={user.id}
+                                  initial={{ opacity: 0, y: 20 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ duration: 0.3, delay: index * 0.05 }}
+                                  whileHover={{ y: -5 }}
+                                >
+                                  <UserResult user={user} />
+                                </motion.div>
+                              ))}
+                            </div>
+                          ) : (
+                            <EmptySearchResults type="users" query={searchQuery} />
+                          ),
+                          viewAllAction: () => handleTabChange('users')
+                        }
+                      ]
+                        // Sort sections - put those with results first
+                        .sort((a, b) => Number(b.hasResults) - Number(a.hasResults))
+                        .map((section, sectionIndex) => (
+                          <motion.div 
+                            key={section.type}
+                            className="space-y-2"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.3, delay: sectionIndex * 0.1 }}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                {section.icon}
+                                <h2 className="text-lg font-medium">{section.title}</h2>
+                              </div>
+                              {section.hasResults && (
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  onClick={section.viewAllAction} 
+                                  className="text-primary"
+                                >
+                                  View All
+                                </Button>
+                              )}
+                            </div>
+                            
+                            {section.error ? (
+                              <div className="p-4 border border-red-200 bg-red-50 rounded-md">
+                                <p className="text-red-700 text-sm">{section.error}</p>
+                              </div>
+                            ) : section.content}
+                          </motion.div>
+                        ))}
                     </>
                   )}
-          </TabsContent>
+                </TabsContent>
           
                 <TabsContent value="communities" className="mt-0">
                   {isSearching ? (
@@ -518,11 +508,11 @@ const SearchPage = () => {
                   ) : communityError ? (
                     <div className="p-4 border border-red-200 bg-red-50 rounded-md">
                       <p className="text-red-700 text-sm">{communityError}</p>
-            </div>
+                    </div>
                   ) : communityResults.length > 0 ? (
                     <div className="space-y-4">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {communityResults.map((community, index) => (
+                        {communityResults.map((community, index) => (
                           <motion.div
                             key={community.name}
                             initial={{ opacity: 0, y: 20 }}
@@ -532,8 +522,8 @@ const SearchPage = () => {
                           >
                             <CommunityResult community={community} />
                           </motion.div>
-              ))}
-            </div>
+                        ))}
+                      </div>
                       
                       {communityPagination && communityPagination.has_next && (
                         <motion.div 
@@ -555,7 +545,7 @@ const SearchPage = () => {
                   ) : (
                     <EmptySearchResults type="communities" query={searchQuery} />
                   )}
-          </TabsContent>
+                </TabsContent>
           
                 <TabsContent value="posts" className="mt-0">
                   {isSearching ? (
@@ -563,11 +553,11 @@ const SearchPage = () => {
                   ) : postError ? (
                     <div className="p-4 border border-red-200 bg-red-50 rounded-md">
                       <p className="text-red-700 text-sm">{postError}</p>
-            </div>
+                    </div>
                   ) : postResults.length > 0 ? (
-            <div className="space-y-4">
+                    <div className="space-y-4">
                       <div className="grid grid-cols-1 gap-4">
-              {postResults.map((post, index) => (
+                        {postResults.map((post, index) => (
                           <motion.div
                             key={post.id}
                             initial={{ opacity: 0, y: 20 }}
@@ -580,8 +570,8 @@ const SearchPage = () => {
                               onClick={() => navigate(`/c/${post.community}/${post.code}`)} 
                             />
                           </motion.div>
-              ))}
-            </div>
+                        ))}
+                      </div>
                       
                       {postPagination && postPagination.has_next && (
                         <motion.div 
@@ -603,7 +593,7 @@ const SearchPage = () => {
                   ) : (
                     <EmptySearchResults type="posts" query={searchQuery} />
                   )}
-          </TabsContent>
+                </TabsContent>
           
                 <TabsContent value="users" className="mt-0">
                   {isSearching ? (
@@ -611,11 +601,11 @@ const SearchPage = () => {
                   ) : userError ? (
                     <div className="p-4 border border-red-200 bg-red-50 rounded-md">
                       <p className="text-red-700 text-sm">{userError}</p>
-            </div>
+                    </div>
                   ) : userResults.length > 0 ? (
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {userResults.map((user, index) => (
+                        {userResults.map((user, index) => (
                           <motion.div
                             key={user.id}
                             initial={{ opacity: 0, y: 20 }}
@@ -625,8 +615,8 @@ const SearchPage = () => {
                           >
                             <UserResult user={user} />
                           </motion.div>
-              ))}
-            </div>
+                        ))}
+                      </div>
                       
                       {userPagination && userPagination.has_next && (
                         <motion.div 
@@ -648,10 +638,10 @@ const SearchPage = () => {
                   ) : (
                     <EmptySearchResults type="users" query={searchQuery} />
                   )}
-          </TabsContent>
+                </TabsContent>
               </motion.div>
             </AnimatePresence>
-        </Tabs>
+          </Tabs>
         </motion.div>
       )}
     </div>
