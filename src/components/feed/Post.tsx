@@ -37,6 +37,7 @@ export interface PostProps {
     originalAvatar: string;
     originalImages?: string[];
     originalTitle?: string;
+    originalPostCode?: string;
   };
   ipfs?: string;
   avatar?: string;
@@ -181,21 +182,71 @@ export const Post = ({
   };
 
   const handlePostClick = (e: React.MouseEvent) => {
+    const targetElement = e.target as HTMLElement;
+    const isClickInsideMirror = targetElement.closest('[data-mirror-content-area="true"]');
+    
+    console.log("handlePostClick triggered");
+    console.log("Clicked Element:", targetElement);
+    console.log("Is click inside mirror area?", !!isClickInsideMirror);
+    console.log("isMirror prop:", isMirror);
+    console.log("mirrorData:", mirrorData);
+    console.log("disableNavigation:", disableNavigation);
+    console.log("Closest button:", targetElement.closest('button'));
+    console.log("Closest link:", targetElement.closest('a'));
+    console.log("Closest media element:", targetElement.closest('[data-media-element="true"]'));
+    console.log("Closest form:", targetElement.closest('form'));
+    console.log("Closest comment section:", targetElement.closest('[data-comment-section="true"]'));
+    console.log("Show comments:", showComments);
+
+    // 1. Handle navigation for mirrored post content click FIRST
+    if (isClickInsideMirror && isMirror && mirrorData?.originalPostCode) {
+      // We explicitly DO NOT check disableNavigation here, as we want this click to work
+      console.log("-> Attempting to navigate to ORIGINAL post:", mirrorData.originalPostCode);
+      const originalAuthorHandle = mirrorData.originalAuthor.split('.')[0];
+      if (mirrorData.originalCommunity) {
+        const url = `/c/${mirrorData.originalCommunity.toLowerCase().replace(/\s+/g, '-')}/${mirrorData.originalPostCode}`;
+        console.log("Navigating to URL:", url);
+        navigate(url);
+      } else if (originalAuthorHandle) {
+        const url = `/${originalAuthorHandle}/${mirrorData.originalPostCode}`;
+        console.log("Navigating to URL:", url);
+        navigate(url);
+      } else {
+        console.warn("Cannot determine original post URL fully, navigating with postCode only.");
+        const url = `/post/${mirrorData.originalPostCode}`;
+        console.log("Navigating to Fallback URL:", url);
+        navigate(url);
+      }
+      return; // Stop further execution after handling mirror click
+    }
+
+    // 2. Prevent navigation for other cases (disabled, button, link, media, form, comments)
     if (disableNavigation || 
-        (e.target as HTMLElement).closest('button') || 
-        (e.target as HTMLElement).closest('a') ||
-        (e.target as HTMLElement).closest('[data-media-element="true"]') ||
-        (e.target as HTMLElement).closest('form') ||
-        showComments) {
+        targetElement.closest('button') || 
+        targetElement.closest('a') ||
+        targetElement.closest('[data-media-element="true"]') || 
+        targetElement.closest('form') ||
+        (targetElement.closest('[data-comment-section="true"]') && showComments) || 
+        showComments
+        ) {
+      console.log("-> Preventing navigation (disabled, button, link, media, form, or comments shown)");
       return;
     }
     
+    // 3. Default navigation for the post itself (if not handled above and not prevented)
     if (postCode) {
+      console.log("-> Attempting to navigate to CURRENT post:", postCode);
       if (community) {
-        navigate(`/c/${community.toLowerCase().replace(/\s+/g, '-')}/${postCode}`);
+        const url = `/c/${community.toLowerCase().replace(/\s+/g, '-')}/${postCode}`;
+        console.log("Navigating to URL:", url);
+        navigate(url);
       } else {
-        navigate(`/${username.split('.')[0]}/${postCode}`);
+        const url = `/${username.split('.')[0]}/${postCode}`;
+        console.log("Navigating to URL:", url);
+        navigate(url);
       }
+    } else {
+      console.log("-> No postCode found, cannot navigate.");
     }
   };
 

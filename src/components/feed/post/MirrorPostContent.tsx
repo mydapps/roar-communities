@@ -14,6 +14,7 @@ interface MirrorPostContentProps {
     originalAvatar: string;
     originalImages?: string[];
     originalTitle?: string;
+    originalPostCode?: string;
   };
   onImageClick?: (imageSrc: string) => void;
 }
@@ -106,7 +107,10 @@ export const MirrorPostContent = ({ mirrorData, onImageClick }: MirrorPostConten
   };
   
   return (
-    <div className="mt-3 border rounded-md p-3 bg-muted/30 overflow-hidden">
+    <div 
+      className="mt-3 border rounded-md p-3 bg-muted/30 overflow-hidden"
+      data-mirror-content-area="true"
+    >
       <div className="flex items-start gap-2">
         <Avatar className="h-6 w-6 flex-shrink-0">
           <AvatarImage src={`https://img.dapps.co/avatar/${mirrorData.originalAvatar}.svg`} />
@@ -133,7 +137,14 @@ export const MirrorPostContent = ({ mirrorData, onImageClick }: MirrorPostConten
           )}
           
           {allMedia && allMedia.length > 0 && (
-            <div className="mt-2">
+            <div 
+              className="mt-2"
+              // Stop click propagation when clicking on the media carousel
+              onClick={(e) => {
+                e.stopPropagation();
+                console.log('Media Carousel area clicked, stopping propagation.');
+              }}
+            >
               <MediaCarousel 
                 media={allMedia} 
                 onImageClick={handleImageClick} 

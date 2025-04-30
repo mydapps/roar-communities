@@ -41,9 +41,9 @@ export const CommunityShareCard = ({
         <div className="flex items-center gap-3 mb-4">
           <Link to={`/c/${name}`}>
             <Avatar className="cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all">
-              <AvatarImage src={image} alt={name} />
-              <AvatarFallback>{name ? name.charAt(0).toUpperCase() : '?'}</AvatarFallback>
-            </Avatar>
+            <AvatarImage src={image} alt={name} />
+            <AvatarFallback>{name ? name.charAt(0).toUpperCase() : '?'}</AvatarFallback>
+          </Avatar>
           </Link>
           <div className="flex-1">
             <Link to={`/c/${name}`}>

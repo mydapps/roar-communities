@@ -367,7 +367,8 @@ const DetailedPostPage = () => {
     originalTimeAgo: post.original_created_on || '',
     originalAvatar: post.original_author_avatar || '',
     originalImages: post.original_images || [],
-    originalTitle: post.original_title || ''
+    originalTitle: post.original_title || '',
+    originalPostCode: post.original_post_code || ''
   } : undefined;
   
   return (
@@ -469,7 +470,8 @@ const DetailedPostPage = () => {
               originalTimeAgo: post.original_created_on || '',
               originalAvatar: post.original_author_avatar || '',
               originalImages: post.original_images || [],
-              originalTitle: post.original_title || ''
+              originalTitle: post.original_title || '',
+              originalPostCode: post.original_post_code || ''
             } : undefined}
             ipfs={post.ipfs}
             disableNavigation={true}

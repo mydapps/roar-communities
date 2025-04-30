@@ -159,6 +159,7 @@ export const MirrorContent = ({
         if (searchResults.length === 0 && query.length >= 2) {
           // If no results from API but we have a meaningful query, try to search client-side as fallback
           const filtered = communitiesRef.current.filter(community => 
+            community && typeof community.name === 'string' && // Check if name exists and is a string
             community.name.toLowerCase().includes(query.toLowerCase())
           );
           setFilteredCommunities(filtered);
@@ -172,6 +173,7 @@ export const MirrorContent = ({
         
         // Fallback to client-side filtering on error
         const filtered = communitiesRef.current.filter(community => 
+          community && typeof community.name === 'string' && // Check if name exists and is a string
           community.name.toLowerCase().includes(query.toLowerCase())
         );
         setFilteredCommunities(filtered);

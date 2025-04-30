@@ -536,7 +536,8 @@ const CommunityPage = () => {
                             originalTimeAgo: post.original_created_on || '',
                             originalAvatar: post.original_author_avatar || '',
                             originalImages: post.original_images || [],
-                            originalTitle: post.original_title || ''
+                            originalTitle: post.original_title || '',
+                            originalPostCode: post.original_post_code || ''
                           } : undefined}
                         ipfs={post.code || ''}
                         isLoggedIn={!!localStorage.getItem('dapps_user_id')}
@@ -805,7 +806,8 @@ const CommunityPage = () => {
                             originalTimeAgo: post.original_created_on || '',
                             originalAvatar: post.original_author_avatar || '',
                             originalImages: post.original_images || [],
-                            originalTitle: post.original_title || ''
+                            originalTitle: post.original_title || '',
+                            originalPostCode: post.original_post_code || ''
                           } : undefined}
                         ipfs={post.code || ''}
                         isLoggedIn={!!localStorage.getItem('dapps_user_id')}

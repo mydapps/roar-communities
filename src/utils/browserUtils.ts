@@ -32,12 +32,15 @@ export const setupBrowserErrorHandler = (): void => {
   
   // Also add a global error handler for uncaught errors
   window.addEventListener('error', (event) => {
+    // Check if event.message is a string before calling includes
+    const message = typeof event.message === 'string' ? event.message : '';
+
     if (
-      event.message.includes("crossbrowserName is not defined") ||
-      event.message.includes("browser is not defined") ||
-      event.message.includes("REMOTE_CONFIG_KEYS is not defined") ||
-      event.message.includes("webextApi is not defined") ||
-      event.message.includes("Cannot read properties of null (reading '1')")
+      message.includes("crossbrowserName is not defined") ||
+      message.includes("browser is not defined") ||
+      message.includes("REMOTE_CONFIG_KEYS is not defined") ||
+      message.includes("webextApi is not defined") ||
+      message.includes("Cannot read properties of null (reading '1')")
     ) {
       // Prevent the error from bubbling up
       event.preventDefault();
