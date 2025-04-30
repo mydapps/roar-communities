@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Repeat2 } from 'lucide-react';
+import { Repeat2, Loader2 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter, SheetClose } from '@/components/ui/sheet';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter, DrawerClose, DrawerTrigger } from '@/components/ui/drawer';
 import { MirrorContent, PERSONAL_FEED } from './MirrorContent';
 import { useToast } from '@/hooks/use-toast';
-import { mirrorPost } from '@/utils/api';
+import { mirrorPost, fetchCommunities, Community } from '@/utils/api';
 import { toast } from 'sonner';
 import { restoreBodyScrolling } from '@/utils/deviceUtils';
+import { NotInCommunitySheet } from '@/components/community/NotInCommunitySheet';
 
 // Create a custom event for post mirroring
 export const POST_MIRRORED_EVENT = 'post-mirrored';
@@ -41,6 +42,36 @@ export const MirrorButton = ({
   const [quoteText, setQuoteText] = useState('');
   const [mirroring, setMirroring] = useState(false);
   const { toast: uiToast } = useToast();
+  // State for community membership check sheet
+  const [notInCommunitySheetOpen, setNotInCommunitySheetOpen] = useState(false);
+  const [communityNameForSheet, setCommunityNameForSheet] = useState("");
+  const [userCommunities, setUserCommunities] = useState<Community[] | null>(null);
+  const [loadingUserCommunities, setLoadingUserCommunities] = useState(false);
+  
+  // Fetch user communities when the modal opens
+  useEffect(() => {
+    if (open && userCommunities === null) {
+      const loadUserCommunities = async () => {
+        setLoadingUserCommunities(true);
+        try {
+          // Only fetch personal communities
+          const communities = await fetchCommunities({ personal: true, limit: 500 }); // Fetch a larger limit
+          setUserCommunities(communities);
+        } catch (error) {
+          console.error("Failed to fetch user communities for mirror check:", error);
+          // Proceed without check if fetch fails, maybe log an error?
+          setUserCommunities([]); // Set to empty array to allow proceeding
+        } finally {
+          setLoadingUserCommunities(false);
+        }
+      };
+      loadUserCommunities();
+    }
+    // Reset when closed if not showing the other sheet
+    if (!open && !notInCommunitySheetOpen) {
+      setUserCommunities(null);
+    }
+  }, [open, notInCommunitySheetOpen]);
   
   // Effect to cleanup scroll locks when drawer/sheet closes
   useEffect(() => {
@@ -116,6 +147,27 @@ export const MirrorButton = ({
       });
       return;
     }
+    
+    // *** Community Membership Check ***
+    if (community && userCommunities && !loadingUserCommunities) {
+      const isMember = userCommunities.some(uc => uc.name === community);
+      if (!isMember) {
+        console.log(`User not member of source community: ${community}. Showing sheet.`);
+        setCommunityNameForSheet(community);
+        setNotInCommunitySheetOpen(true);
+        handleCloseModal(); // Close the mirror modal
+        return; // Stop the mirror process
+      }
+    }
+    // If still loading communities, prevent mirroring for now
+    if (loadingUserCommunities) {
+      uiToast({
+        title: "Checking membership...",
+        description: "Please wait while we verify community membership.",
+      });
+      return;
+    }
+    // *** End Check ***
     
     if (!postCode) {
       console.error("Missing postCode in mirror request");
@@ -216,14 +268,92 @@ export const MirrorButton = ({
   // Render component based on device type
   if (mobile) {
     return (
-      <Drawer open={open} onOpenChange={(isOpen) => {
-        onOpenChange(isOpen);
-        // Ensure scrolling is restored when drawer is closed
-        if (!isOpen) {
-          setTimeout(restoreBodyScrolling, 150); 
-        }
-      }}>
-        <DrawerTrigger asChild>
+      <>
+        <Drawer open={open} onOpenChange={(isOpen) => {
+          onOpenChange(isOpen);
+          // Ensure scrolling is restored when drawer is closed
+          if (!isOpen) {
+            setTimeout(restoreBodyScrolling, 150); 
+          }
+        }}>
+          <DrawerTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              className="gap-2 hover:text-purple-500 hover:bg-purple-500/10"
+              onClick={handleClick}
+            >
+              <Repeat2 className="h-4 w-4" />
+              <span>Mirror</span>
+            </Button>
+          </DrawerTrigger>
+          <DrawerContent className="max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+            <DrawerHeader className="border-b">
+              <DrawerTitle>Mirror Post</DrawerTitle>
+              <DrawerDescription>
+                Share this post to your feed or other communities
+              </DrawerDescription>
+            </DrawerHeader>
+            
+            <MirrorContent 
+              username={username} 
+              timeAgo={timeAgo} 
+              content={content} 
+              images={images} 
+              video={video}
+              onCommunitySelect={handleCommunitySelect}
+              onQuoteChange={handleQuoteChange}
+              selectedCommunity={selectedCommunity}
+              quoteText={quoteText}
+              sourceCommunity={community}
+            />
+            
+            <DrawerFooter className="flex-row justify-between gap-2 p-4 border-t bg-background sticky bottom-0 left-0 right-0 z-10">
+              <DrawerClose asChild>
+                <Button variant="outline" onClick={(e) => {
+                  e.stopPropagation();
+                  setTimeout(restoreBodyScrolling, 150);
+                }}>Cancel</Button>
+              </DrawerClose>
+              <Button 
+                onClick={handleMirror}
+                disabled={!selectedCommunity || mirroring || loadingUserCommunities}
+                className="gap-1.5"
+              >
+                {mirroring ? (
+                  <>
+                    <span className="animate-spin">↻</span>
+                    Mirroring...
+                  </>
+                ) : loadingUserCommunities ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Checking...
+                  </>
+                ) : (
+                  <>
+                    <Repeat2 className="h-4 w-4" />
+                    Mirror Post
+                  </>
+                )}
+              </Button>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
+
+        <NotInCommunitySheet 
+          open={notInCommunitySheetOpen}
+          onOpenChange={setNotInCommunitySheetOpen}
+          communityName={communityNameForSheet}
+        />
+      </>
+    );
+  }
+  
+  return (
+    <>
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetTrigger asChild>
           <Button 
             variant="ghost" 
             size="sm"
@@ -233,14 +363,14 @@ export const MirrorButton = ({
             <Repeat2 className="h-4 w-4" />
             <span>Mirror</span>
           </Button>
-        </DrawerTrigger>
-        <DrawerContent className="max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
-          <DrawerHeader className="border-b">
-            <DrawerTitle>Mirror Post</DrawerTitle>
-            <DrawerDescription>
+        </SheetTrigger>
+        <SheetContent side="right" className="sm:max-w-md" onClick={(e) => e.stopPropagation()}>
+          <SheetHeader>
+            <SheetTitle>Mirror Post</SheetTitle>
+            <SheetDescription>
               Share this post to your feed or other communities
-            </DrawerDescription>
-          </DrawerHeader>
+            </SheetDescription>
+          </SheetHeader>
           
           <MirrorContent 
             username={username} 
@@ -255,22 +385,24 @@ export const MirrorButton = ({
             sourceCommunity={community}
           />
           
-          <DrawerFooter className="flex-row justify-between gap-2 p-4 border-t bg-background sticky bottom-0 left-0 right-0 z-10">
-            <DrawerClose asChild>
-              <Button variant="outline" onClick={(e) => {
-                e.stopPropagation();
-                setTimeout(restoreBodyScrolling, 150);
-              }}>Cancel</Button>
-            </DrawerClose>
+          <SheetFooter className="flex-row justify-between gap-2 p-4 border-t bg-background sticky bottom-0 left-0 right-0 z-10">
+            <SheetClose asChild>
+              <Button variant="outline" onClick={(e) => e.stopPropagation()}>Cancel</Button>
+            </SheetClose>
             <Button 
               onClick={handleMirror}
-              disabled={!selectedCommunity || mirroring}
+              disabled={!selectedCommunity || mirroring || loadingUserCommunities}
               className="gap-1.5"
             >
               {mirroring ? (
                 <>
                   <span className="animate-spin">↻</span>
                   Mirroring...
+                </>
+              ) : loadingUserCommunities ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Checking...
                 </>
               ) : (
                 <>
@@ -279,69 +411,15 @@ export const MirrorButton = ({
                 </>
               )}
             </Button>
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
-    );
-  }
-  
-  return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetTrigger asChild>
-        <Button 
-          variant="ghost" 
-          size="sm"
-          className="gap-2 hover:text-purple-500 hover:bg-purple-500/10"
-          onClick={handleClick}
-        >
-          <Repeat2 className="h-4 w-4" />
-          <span>Mirror</span>
-        </Button>
-      </SheetTrigger>
-      <SheetContent side="right" className="sm:max-w-md" onClick={(e) => e.stopPropagation()}>
-        <SheetHeader>
-          <SheetTitle>Mirror Post</SheetTitle>
-          <SheetDescription>
-            Share this post to your feed or other communities
-          </SheetDescription>
-        </SheetHeader>
-        
-        <MirrorContent 
-          username={username} 
-          timeAgo={timeAgo} 
-          content={content} 
-          images={images} 
-          video={video}
-          onCommunitySelect={handleCommunitySelect}
-          onQuoteChange={handleQuoteChange}
-          selectedCommunity={selectedCommunity}
-          quoteText={quoteText}
-          sourceCommunity={community}
-        />
-        
-        <SheetFooter className="flex-row justify-between gap-2 p-4 border-t bg-background sticky bottom-0 left-0 right-0 z-10">
-          <SheetClose asChild>
-            <Button variant="outline" onClick={(e) => e.stopPropagation()}>Cancel</Button>
-          </SheetClose>
-          <Button 
-            onClick={handleMirror}
-            disabled={!selectedCommunity || mirroring}
-            className="gap-1.5"
-          >
-            {mirroring ? (
-              <>
-                <span className="animate-spin">↻</span>
-                Mirroring...
-              </>
-            ) : (
-              <>
-                <Repeat2 className="h-4 w-4" />
-                Mirror Post
-              </>
-            )}
-          </Button>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
+
+      <NotInCommunitySheet 
+        open={notInCommunitySheetOpen}
+        onOpenChange={setNotInCommunitySheetOpen}
+        communityName={communityNameForSheet}
+      />
+    </>
   );
 };

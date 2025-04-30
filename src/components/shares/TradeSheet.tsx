@@ -776,7 +776,7 @@ export const TradeSheet = ({
               {precheck?.fee && (
                 <div className="flex justify-between text-sm text-muted-foreground">
                   <span>Fee</span>
-                  <span>{precheck.fee}</span>
+                  <span>{typeof precheck.fee === 'string' ? precheck.fee.split(' ')[0] + ' ETH' : precheck.fee}</span>
                 </div>
               )}
             </div>
