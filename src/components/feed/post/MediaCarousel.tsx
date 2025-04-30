@@ -368,7 +368,7 @@ export const MediaCarousel = ({
         <>
           <VideoPlayer 
             src={item.url} 
-            poster={`${item.url}?poster=true`}
+            poster={`https://img.dapps.co/preview?url=${encodeURIComponent(item.url)}`}
             fullscreen={fullscreen}
             onClick={fullscreen ? handleVideoReady : undefined}
             onFullscreenRequest={(e) => handleVideoClick(item.url, e)}
@@ -428,7 +428,7 @@ export const MediaCarousel = ({
                 ) : (
                   <VideoPlayer 
                     src={item.url} 
-                    poster={`${item.url}?poster=true`}
+                    poster={`https://img.dapps.co/preview?url=${encodeURIComponent(item.url)}`}
                     fullscreen={fullscreen}
                     onClick={fullscreen ? handleVideoReady : undefined}
                     onFullscreenRequest={(e) => handleVideoClick(item.url, e)}
