@@ -167,17 +167,48 @@ const processTextPart = (text: string, key: number): React.ReactNode => {
     } else if (type === 'url') {
       // Skip URLs that are part of image markdown
       if (!text.substring(Math.max(0, matchIndex - 5), matchIndex).includes('](')) {
-        const url = match[0];
+        const originalUrl = match[0];
+        let finalUrl = originalUrl;
+        let isExternal = false;
+
+        try {
+          const parsedUrl = new URL(originalUrl);
+          // Check if the origin is different from the current window's origin
+          // Or if it simply starts with http/https (basic external check)
+          if (parsedUrl.origin !== window.location.origin || /^https?:\/\//.test(originalUrl)) {
+            isExternal = true;
+            if (!parsedUrl.searchParams.has('loadIn')) {
+              parsedUrl.searchParams.append('loadIn', 'defaultBrowser');
+              finalUrl = parsedUrl.toString();
+            }
+          }
+        } catch (e) {
+          // If URL parsing fails, treat it as potentially external if it starts with http/https
+          if (/^https?:\/\//.test(originalUrl)) {
+            isExternal = true;
+            // Attempt simple appending if URL object failed
+            if (!originalUrl.includes('loadIn=defaultBrowser')) {
+              if (originalUrl.includes('?')) {
+                finalUrl = `${originalUrl}&loadIn=defaultBrowser`;
+              } else {
+                finalUrl = `${originalUrl}?loadIn=defaultBrowser`;
+              }
+            }
+          }
+          // If it doesn't start with http/https and parsing failed, treat as internal/relative
+        }
+
         result.push(
           <a 
             key={`${key}-${matchIndex}`}
-            href={url}
-            target="_blank" 
-            rel="noopener noreferrer"
+            href={finalUrl}
+            target={isExternal ? "_blank" : "_self"} 
+            rel={isExternal ? "noopener noreferrer" : ""}
             onClick={(e) => e.stopPropagation()}
             className="text-primary hover:underline"
           >
-            {url}
+            {/* Optionally shorten displayed URL if needed, but keep it simple for now */}
+            {originalUrl} 
           </a>
         );
       } else {
