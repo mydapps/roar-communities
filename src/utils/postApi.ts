@@ -116,6 +116,15 @@ export interface FetchPostsOptions {
 }
 
 /**
+ * Interface for the response of hiding/unhiding a post
+ */
+export interface HidePostResponse {
+  success: boolean;
+  message: string;
+  status?: number;
+}
+
+/**
  * Setup event listener for post mirroring
  * This triggers a callback when a post is mirrored
  */
@@ -393,5 +402,54 @@ export const createPost = async (params: {
   } catch (error) {
     console.error('Error creating post:', error);
     throw error;
+  }
+};
+
+/**
+ * Hides or unhides a post via the API.
+ * @param postCode - The unique code of the post.
+ * @param action - 'hide' or 'unhide'.
+ * @returns Promise resolving to HidePostResponse.
+ */
+export const hidePost = async (
+  postCode: string, 
+  action: 'hide' | 'unhide'
+): Promise<HidePostResponse> => {
+  if (!postCode) {
+    // Return a predictable error format
+    return { success: false, message: "postCode is required to hide or unhide a post." };
+  }
+  
+  console.log(`API Call: Hiding/Unhiding post ${postCode} with action: ${action}`);
+  
+  try {
+    const headers = createAuthHeaders(); // Get headers with content-type
+    const response = await fetch('/api/hide_post', { // Use relative path for proxy
+      method: 'POST',
+      headers: headers,
+      credentials: 'include', // Include credentials (cookies)
+      body: JSON.stringify({ postCode, action }),
+    });
+
+    const responseData = await response.json();
+    console.log('API Response (hidePost):', responseData);
+
+    if (!response.ok) {
+      // Use the message from the API if available, otherwise a default
+      const errorMessage = responseData?.message || `HTTP error! status: ${response.status}`;
+      console.error("Hide Post API Error:", errorMessage, responseData);
+      return { success: false, message: errorMessage };
+    }
+
+    // Assuming the API returns HidePostResponse structure on success
+    return responseData as HidePostResponse;
+
+  } catch (error) {
+    console.error('Network or other error hiding post:', error);
+    let message = 'An unknown error occurred.';
+    if (error instanceof Error) {
+      message = error.message;
+    }
+    return { success: false, message: `Network error: ${message}` };
   }
 };

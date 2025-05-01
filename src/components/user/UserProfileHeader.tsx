@@ -175,16 +175,16 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
 
                     // 4. Render the link
                     return (
-                      <div className="flex items-center gap-1">
-                        <LinkIcon className="h-3.5 w-3.5" />
+                    <div className="flex items-center gap-1">
+                      <LinkIcon className="h-3.5 w-3.5" />
                         <a href={finalUrl} 
-                           target="_blank" 
-                           rel="noopener noreferrer"
-                           className="text-primary hover:underline"
-                        >
-                          {profile.link.replace(/^https?:\/\/(www\.)?/, '')}
-                        </a>
-                      </div>
+                         target="_blank" 
+                         rel="noopener noreferrer"
+                         className="text-primary hover:underline"
+                      >
+                        {profile.link.replace(/^https?:\/\/(www\.)?/, '')}
+                      </a>
+                    </div>
                     );
                   })()}
                   

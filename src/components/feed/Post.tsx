@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils'; // Import cn for conditional classes
 
 import { PostHeader } from './post/PostHeader';
 import { PostContent } from './post/PostContent';
@@ -11,7 +12,10 @@ import { PostFooter } from './post/PostFooter';
 import { usePostMedia } from './post/usePostMedia';
 import { CommentSection } from './post/CommentSection';
 import { fetchReplies, CommentReply } from '@/utils/commentApi';
+import { hidePost } from '@/utils/postApi';
 import { ImageViewer } from './post/ImageViewer';
+// Import the confirmation sheet
+import { HidePostConfirmationSheet } from './post/HidePostConfirmationSheet';
 
 export interface PostProps {
   username: string;
@@ -80,6 +84,12 @@ export const Post = ({
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [ipfsSheetOpen, setIpfsSheetOpen] = useState(false);
+  const [isHidden, setIsHidden] = useState(false);
+  const [isHiding, setIsHiding] = useState(false);
+  // State for the confirmation sheet
+  const [showHideConfirmation, setShowHideConfirmation] = useState(false);
+  // State for animation trigger
+  const [isAnimatingHide, setIsAnimatingHide] = useState(false);
   const isMobile = useIsMobile();
   
   const { parsedContent, allMedia, allImages: normalImages, hasMedia } = usePostMedia(content, images, video);
@@ -112,6 +122,10 @@ export const Post = ({
   }, [normalImages, isMirror, mirrorData]);
   
   const { toast } = useToast();
+  
+  // Determine if the logged-in user is the owner
+  const loggedInUserHandle = localStorage.getItem('dapps_user_handle'); 
+  const isOwner = loggedInUserHandle === username;
   
   const userIsLoggedIn = isLoggedIn !== undefined ? isLoggedIn : !!localStorage.getItem('dapps_user_id');
   
@@ -351,86 +365,168 @@ export const Post = ({
     }
   };
 
+  // --- Updated Hide/Report Handlers ---
+  // Opens the confirmation sheet
+  const handleOpenHideConfirmation = () => {
+    if (!isOwner || isHiding || isHidden) return; // Prevent opening if not owner or already hiding/hidden
+    console.log(`UI Action: Open hide confirmation for post ${postCode}`);
+    setShowHideConfirmation(true);
+  };
+
+  // Called when the user confirms the hide action in the sheet
+  const confirmHidePost = async () => {
+    if (!postCode) {
+      toast({ description: "Cannot hide post: Missing identifier.", variant: "destructive" });
+      return;
+    }
+    if (isHiding) return; // Prevent double clicks
+
+    console.log(`UI Action: Confirmed hide post ${postCode}`);
+    setIsHiding(true); // Show loading state in the sheet
+
+    try {
+      const response = await hidePost(postCode, 'hide');
+      if (response.success) {
+        // Close the modal FIRST
+        setShowHideConfirmation(false);
+        
+        // Wait briefly for modal to close, then start animation
+        setTimeout(() => {
+          setIsAnimatingHide(true);
+          toast({ description: response.message || "Post hidden successfully." });
+
+          // Wait for animation (0.3s) + small buffer before removing from DOM
+          setTimeout(() => {
+            setIsHidden(true); 
+          }, 350); // Match animation duration + buffer
+        }, 50); // Short delay after closing modal
+        
+      } else {
+        toast({ description: response.message || "Failed to hide post.", variant: "destructive" });
+        setIsHiding(false); // Reset loading state on failure
+      }
+    } catch (error) {
+      console.error("Error in confirmHidePost:", error);
+      toast({ description: "An unexpected error occurred while hiding the post.", variant: "destructive" });
+      setIsHiding(false); // Reset loading state on error
+    }
+    // Note: We don't set isHiding back to false on success because the component will unmount
+  };
+
+  const handleReportPost = () => {
+    console.log(`UI Action: Report post ${postCode}`);
+    // TODO: Implement actual reporting logic (e.g., open report modal, call API)
+    toast({ description: "Report functionality not yet implemented.", variant: "destructive" });
+  };
+  // --- End Handlers ---
+  
+  // Conditionally render null if the post is hidden
+  if (isHidden) {
+    return null;
+  }
+
   return (
-    <Card 
-      className="border border-border/40 shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden animate-scale-in"
-      onClick={handlePostClick}
-      style={{ cursor: disableNavigation ? 'default' : 'pointer' }}
-    >
-      <PostHeader 
-        username={username}
-        community={community}
-        timeAgo={timeAgo}
-        avatar={avatar}
-        ipfsHash={ipfsHash}
-        postCode={postCode}
-        onVerifyIpfs={handleVerifyIpfs}
-        ipfsSheetOpen={ipfsSheetOpen}
-        setIpfsSheetOpen={setIpfsSheetOpen}
-      />
-      
-      <PostContent 
-        content={parsedContent}
-        isMirror={isMirror}
-        mirrorData={mirrorData}
-        hasMedia={hasMedia}
-        allMedia={allMedia}
-        onImageClick={handleImageClick}
-      />
-      
-      <PostFooter
-        localRoared={hasRoared}
-        localRoarCount={localRoarCount}
-        handleRoar={handleRoar}
-        postCode={postCode}
-        mirrorSheetOpen={mirrorSheetOpen}
-        setMirrorSheetOpen={setMirrorSheetOpen}
-        username={username}
-        timeAgo={timeAgo}
-        content={content}
-        allImages={allImages}
-        video={video}
-        shareSheetOpen={shareSheetOpen}
-        setShareSheetOpen={setShareSheetOpen}
-        community={community}
-        onShareSuccess={handleShareSuccess}
-        imageViewerOpen={imageViewerOpen}
-        setImageViewerOpen={setImageViewerOpen}
-        selectedImageIndex={selectedImageIndex}
-        commentCount={commentCount}
-        onToggleComments={handleToggleComments}
-        isLoggedIn={userIsLoggedIn}
-        hideComments={hideComments}
-        avatar={avatar}
-      >
-        {showComments && !hideComments && (
-          <div onClick={(e) => e.stopPropagation()} className="w-full">
-            {loadingComments ? (
-              <div className="w-full py-4 flex justify-center">
-                <Loader2 className="w-6 h-6 text-primary animate-spin" />
-              </div>
-            ) : (
-              <CommentSection
-                postCode={postCode || ''}
-                comments={comments}
-                onAddComment={handleAddComment}
-                username={username}
-                community={community}
-              />
-            )}
-          </div>
+    <>
+      <Card 
+        className={cn(
+          "border border-border/40 shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden",
+          // Use the new animation class
+          isAnimatingHide ? "animate-collapse-out" : "animate-scale-in" 
         )}
-      </PostFooter>
-      
-      {/* Always include the image viewer, even for mirrored posts */}
-      {allImages && allImages.length > 0 && (
-        <ImageViewer 
-          images={allImages} 
-          selectedImageIndex={selectedImageIndex}
-          open={imageViewerOpen} 
-          onOpenChange={setImageViewerOpen} 
+        onClick={handlePostClick}
+        style={{ 
+          cursor: disableNavigation ? 'default' : 'pointer',
+          // Ensure animation is visible before element is removed
+          animationFillMode: isAnimatingHide ? 'forwards' : 'none' 
+        }}
+      >
+        <PostHeader 
+          username={username}
+          community={community}
+          timeAgo={timeAgo}
+          avatar={avatar}
+          ipfsHash={ipfsHash}
+          postCode={postCode}
+          onVerifyIpfs={handleVerifyIpfs}
+          ipfsSheetOpen={ipfsSheetOpen}
+          setIpfsSheetOpen={setIpfsSheetOpen}
+          // Pass the function to open the confirmation sheet
+          onHidePost={handleOpenHideConfirmation}
+          onReportPost={handleReportPost}
+          isOwner={isOwner}
         />
-      )}
-    </Card>
+        
+        <PostContent 
+          content={parsedContent}
+          isMirror={isMirror}
+          mirrorData={mirrorData}
+          hasMedia={hasMedia}
+          allMedia={allMedia}
+          onImageClick={handleImageClick}
+        />
+        
+        <PostFooter
+          localRoared={hasRoared}
+          localRoarCount={localRoarCount}
+          handleRoar={handleRoar}
+          postCode={postCode}
+          mirrorSheetOpen={mirrorSheetOpen}
+          setMirrorSheetOpen={setMirrorSheetOpen}
+          username={username}
+          timeAgo={timeAgo}
+          content={content}
+          allImages={allImages}
+          video={video}
+          shareSheetOpen={shareSheetOpen}
+          setShareSheetOpen={setShareSheetOpen}
+          community={community}
+          onShareSuccess={handleShareSuccess}
+          imageViewerOpen={imageViewerOpen}
+          setImageViewerOpen={setImageViewerOpen}
+          selectedImageIndex={selectedImageIndex}
+          commentCount={commentCount}
+          onToggleComments={handleToggleComments}
+          isLoggedIn={userIsLoggedIn}
+          hideComments={hideComments}
+          avatar={avatar}
+        >
+          {showComments && !hideComments && (
+            <div onClick={(e) => e.stopPropagation()} className="w-full">
+              {loadingComments ? (
+                <div className="w-full py-4 flex justify-center">
+                  <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                </div>
+              ) : (
+                <CommentSection
+                  postCode={postCode || ''}
+                  comments={comments}
+                  onAddComment={handleAddComment}
+                  username={username}
+                  community={community}
+                />
+              )}
+            </div>
+          )}
+        </PostFooter>
+        
+        {/* Always include the image viewer, even for mirrored posts */}
+        {allImages && allImages.length > 0 && (
+          <ImageViewer 
+            images={allImages} 
+            selectedImageIndex={selectedImageIndex}
+            open={imageViewerOpen} 
+            onOpenChange={setImageViewerOpen} 
+          />
+        )}
+      </Card>
+      
+      {/* Render the confirmation sheet */}
+      <HidePostConfirmationSheet
+        open={showHideConfirmation}
+        onOpenChange={setShowHideConfirmation}
+        onConfirm={confirmHidePost}
+        isHiding={isHiding}
+      />
+    </>
   );
 };

@@ -230,3 +230,28 @@
     }
   }
 }
+
+/* Add keyframes and class for post collapse animation */
+@keyframes collapseOut {
+  from {
+    opacity: 1;
+    transform: scaleY(1);
+    max-height: 1000px; /* Start with a large enough max-height */
+  }
+  to {
+    opacity: 0;
+    transform: scaleY(0);
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    margin-top: 0;
+    margin-bottom: 0;
+    border-width: 0;
+  }
+}
+
+.animate-collapse-out {
+  animation: collapseOut 0.3s ease-in-out forwards; /* Faster animation */
+  transform-origin: top; /* Collapse upwards */
+  overflow: hidden; 
+}
