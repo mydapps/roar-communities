@@ -86,17 +86,29 @@ export const Post = ({
   
   // Combine normal images with mirrored post images if this is a mirrored post
   const allImages = useMemo(() => {
-    if (isMirror && mirrorData?.originalImages && mirrorData.originalImages.length > 0) {
-      // Filter out any invalid URLs or duplicate images
-      const mirrorImages = mirrorData.originalImages.filter(img => 
-        img && img.trim() !== '' && img !== 'https://dapps.co/dapps.png'
-      );
-      
-      // Combine normal images (if any) with mirror images
-      return normalImages ? [...normalImages, ...mirrorImages] : mirrorImages;
+    const combinedImages = new Set<string>();
+
+    // Add normal images (already deduplicated by usePostMedia)
+    if (normalImages) {
+      normalImages.forEach(img => {
+        if (img && img.trim() !== '' && img !== 'https://dapps.co/dapps.png') {
+          combinedImages.add(img);
+        }
+      });
+    }
+
+    // Add images from mirrorData, ensuring uniqueness
+    if (isMirror && mirrorData?.originalImages) {
+      mirrorData.originalImages.forEach(img => {
+        if (img && img.trim() !== '' && img !== 'https://dapps.co/dapps.png') {
+          combinedImages.add(img); // Set handles uniqueness automatically
+        }
+      });
     }
     
-    return normalImages;
+    const uniqueImageList = Array.from(combinedImages);
+    return uniqueImageList.length > 0 ? uniqueImageList : undefined;
+
   }, [normalImages, isMirror, mirrorData]);
   
   const { toast } = useToast();

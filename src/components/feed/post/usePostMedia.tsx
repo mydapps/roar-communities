@@ -1,4 +1,3 @@
-
 import { useMemo } from 'react';
 
 export const usePostMedia = (content: string, images?: string[], video?: string) => {
@@ -49,25 +48,35 @@ export const usePostMedia = (content: string, images?: string[], video?: string)
   
   const allMedia = useMemo(() => {
     const media: { type: 'image' | 'video', url: string }[] = [];
-    
+    const uniqueUrls = new Set<string>();
+
+    const addMedia = (item: { type: 'image' | 'video', url: string }) => {
+      if (item.url && !uniqueUrls.has(item.url)) {
+        media.push(item);
+        uniqueUrls.add(item.url);
+      }
+    };
+
+    // Process props first
     mediaImages.forEach(url => {
-      media.push({ type: 'image', url });
+      addMedia({ type: 'image', url });
     });
     
     mediaVideos.forEach(url => {
-      media.push({ type: 'video', url });
+      addMedia({ type: 'video', url });
     });
     
     if (video) {
-      media.push({ type: 'video', url: video });
+      addMedia({ type: 'video', url: video });
     }
     
+    // Process parsed content media
     parsedImages.forEach(url => {
-      media.push({ type: 'image', url });
+      addMedia({ type: 'image', url });
     });
     
     parsedVideos.forEach(url => {
-      media.push({ type: 'video', url });
+      addMedia({ type: 'video', url });
     });
     
     return media.length > 0 ? media : undefined;
