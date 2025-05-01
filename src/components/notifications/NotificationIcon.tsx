@@ -97,7 +97,11 @@ const NotificationIcon: React.FC = () => {
           </div>
         ) : (
           <>
-            {notifications.slice(0, 5).map((notification) => (
+            {/* Sort notifications: unread first, then by date (implicitly handled by fetch order) */}
+            {[...notifications]
+              .sort((a, b) => (a.seen === b.seen ? 0 : a.seen ? 1 : -1)) // Sort by seen status
+              .slice(0, 5)
+              .map((notification) => (
               <NotificationItem 
                 key={notification.id}
                 notification={notification}

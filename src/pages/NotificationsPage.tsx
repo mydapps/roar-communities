@@ -110,7 +110,10 @@ const NotificationsPage: React.FC = () => {
               </div>
             ) : (
               <div className="divide-y">
-                {notifications.map((notification) => (
+                {/* Sort notifications: unread first, then by date (implicitly handled by fetch order) */}
+                {[...notifications]
+                  .sort((a, b) => (a.seen === b.seen ? 0 : a.seen ? 1 : -1)) // Sort by seen status
+                  .map((notification) => (
                   <NotificationItem 
                     key={notification.id}
                     notification={notification}

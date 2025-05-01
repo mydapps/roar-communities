@@ -2,7 +2,7 @@ import React from 'react';
 import { Notification } from '@/utils/notificationApi';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { MessageSquare, Star, Award, Bell, Users, ArrowRightCircle } from 'lucide-react';
+import { MessageSquare, Star, Award, Bell, Users, ArrowRightCircle, Repeat2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface NotificationItemProps {
@@ -24,6 +24,8 @@ const NotificationItem: React.FC<NotificationItemProps> = ({ notification, onCli
         return <Award className="h-5 w-5 text-green-500" />;
       case 'community':
         return <Users className="h-5 w-5 text-indigo-500" />;
+      case 'mirror':
+        return <Repeat2 className="h-5 w-5 text-purple-500" />;
       default:
         return <Bell className="h-5 w-5 text-primary" />;
     }

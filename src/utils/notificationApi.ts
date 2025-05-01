@@ -4,7 +4,7 @@ import { createAuthHeaders } from './apiBase';
 /**
  * Notification type enum
  */
-export type NotificationType = 'roar' | 'reply' | 'tag' | 'share' | 'reward' | 'community' | 'system';
+export type NotificationType = 'roar' | 'reply' | 'tag' | 'share' | 'reward' | 'community' | 'system' | 'mirror';
 
 /**
  * Interface for notification data
