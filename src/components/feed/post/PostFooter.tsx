@@ -33,6 +33,7 @@ interface PostFooterProps {
   onToggleComments: () => void;
   isLoggedIn?: boolean;
   hideComments?: boolean;
+  avatar?: string;
 }
 
 export const PostFooter: React.FC<PostFooterProps> = ({
@@ -58,7 +59,8 @@ export const PostFooter: React.FC<PostFooterProps> = ({
   commentCount,
   onToggleComments,
   isLoggedIn,
-  hideComments = false
+  hideComments = false,
+  avatar
 }) => {
   const location = useLocation();
   
@@ -110,6 +112,7 @@ export const PostFooter: React.FC<PostFooterProps> = ({
           postCode={postCode}
           community={community}
           onShareSuccess={onShareSuccess}
+          avatar={avatar}
         />
       </div>
       

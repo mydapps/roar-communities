@@ -401,6 +401,7 @@ export const Post = ({
         onToggleComments={handleToggleComments}
         isLoggedIn={userIsLoggedIn}
         hideComments={hideComments}
+        avatar={avatar}
       >
         {showComments && !hideComments && (
           <div onClick={(e) => e.stopPropagation()} className="w-full">
