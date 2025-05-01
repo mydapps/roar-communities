@@ -149,18 +149,44 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
                     </div>
                   )}
                   
-                  {profile.link && (
-                    <div className="flex items-center gap-1">
-                      <LinkIcon className="h-3.5 w-3.5" />
-                      <a href={profile.link.startsWith('http') ? profile.link : `https://${profile.link}`} 
-                         target="_blank" 
-                         rel="noopener noreferrer"
-                         className="text-primary hover:underline"
-                      >
-                        {profile.link.replace(/^https?:\/\/(www\.)?/, '')}
-                      </a>
-                    </div>
-                  )}
+                  {profile.link && (() => {
+                    // 1. Construct base URL, adding https:// if missing
+                    const baseUrl = profile.link.startsWith('http') ? profile.link : `https://${profile.link}`;
+                    let finalUrl = baseUrl;
+
+                    // 2. Try appending the query parameter using URL API
+                    try {
+                      const parsedUrl = new URL(baseUrl);
+                      if (!parsedUrl.searchParams.has('loadIn')) {
+                        parsedUrl.searchParams.append('loadIn', 'defaultBrowser');
+                        finalUrl = parsedUrl.toString();
+                      }
+                    } catch (e) {
+                      // 3. Fallback using string concatenation if URL parsing fails
+                      console.error("Failed to parse profile link URL:", baseUrl, e);
+                      if (!baseUrl.includes('loadIn=defaultBrowser')) {
+                        if (baseUrl.includes('?')) {
+                          finalUrl = `${baseUrl}&loadIn=defaultBrowser`;
+                        } else {
+                          finalUrl = `${baseUrl}?loadIn=defaultBrowser`;
+                        }
+                      }
+                    }
+
+                    // 4. Render the link
+                    return (
+                      <div className="flex items-center gap-1">
+                        <LinkIcon className="h-3.5 w-3.5" />
+                        <a href={finalUrl} 
+                           target="_blank" 
+                           rel="noopener noreferrer"
+                           className="text-primary hover:underline"
+                        >
+                          {profile.link.replace(/^https?:\/\/(www\.)?/, '')}
+                        </a>
+                      </div>
+                    );
+                  })()}
                   
                   {profile.profile_updated_at && (
                     <div className="flex items-center gap-1">
