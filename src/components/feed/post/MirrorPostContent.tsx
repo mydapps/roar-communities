@@ -71,25 +71,33 @@ export const MirrorPostContent = ({ mirrorData, onImageClick }: MirrorPostConten
   // Combine all media sources into a single array of media items
   const allMedia = useMemo(() => {
     const media: { type: 'image' | 'video', url: string }[] = [];
+    const uniqueUrls = new Set<string>(); // Use a Set for deduplication
+
+    const addMedia = (item: { type: 'image' | 'video', url: string }) => {
+      if (item.url && !uniqueUrls.has(item.url)) {
+        media.push(item);
+        uniqueUrls.add(item.url);
+      }
+    };
     
     // Add images from original images array
     mediaImages.forEach(url => {
-      media.push({ type: 'image', url });
+      addMedia({ type: 'image', url });
     });
     
     // Add videos from original images array
     mediaVideos.forEach(url => {
-      media.push({ type: 'video', url });
+      addMedia({ type: 'video', url });
     });
     
     // Add images parsed from markdown
     parsedImages.forEach(url => {
-      media.push({ type: 'image', url });
+      addMedia({ type: 'image', url });
     });
     
     // Add videos parsed from markdown
     parsedVideos.forEach(url => {
-      media.push({ type: 'video', url });
+      addMedia({ type: 'video', url });
     });
     
     return media.length > 0 ? media : undefined;
