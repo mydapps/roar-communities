@@ -4,6 +4,8 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Share2, Copy, CheckCircle2 } from 'lucide-react';
 import { shareToSocialMedia, SharePlatform } from '@/utils/shareUtils';
 import { useToast } from '@/hooks/use-toast';
+import { set as setNativeClipboard } from "webtonative/Clipboard";
+import { useDevice } from '@/components/providers/DeviceProvider';
 
 interface ShareContentProps {
   username: string;
@@ -38,6 +40,7 @@ export const ShareContent = ({
   const { toast } = useToast();
   const [successPlatform, setSuccessPlatform] = useState<string | null>(null);
   const [shareAnimating, setShareAnimating] = useState(false);
+  const { isMobileApp } = useDevice();
   
   const formatUsername = (name: string) => {
     return '@' + name.split('.')[0];
@@ -57,6 +60,41 @@ export const ShareContent = ({
     const shareTitle = `${formatUsername(username)}'s post on Lion's Roar`;
     const shareText = truncateText(content, 100);
     
+    // --- Native Mobile App Clipboard Handling ---
+    if (platform === 'copy' && isMobileApp === true) {
+      console.log("Using native clipboard set (detected via useDevice)");
+      try {
+        setNativeClipboard({ data: shareUrl });
+        // Manually trigger success feedback
+        setSuccessPlatform(platform);
+        setTimeout(() => {
+          toast({
+            title: "Shared successfully!",
+            description: "Link copied to clipboard!",
+            variant: "default"
+          });
+          if (onShareSuccess) {
+            onShareSuccess(platform);
+          }
+          setTimeout(() => {
+            setSuccessPlatform(null);
+            setShareAnimating(false);
+          }, 2000);
+        }, 500);
+      } catch (error) {
+        console.error("Native clipboard error:", error);
+        toast({
+          title: "Copy Failed",
+          description: "Could not copy link using native clipboard.",
+          variant: "destructive"
+        });
+        setShareAnimating(false);
+      }
+      return; // Prevent default web share logic
+    }
+    // --- End Native Handling ---
+    
+    // Default web share logic
     const success = await shareToSocialMedia(platform, {
       url: shareUrl,
       title: shareTitle,
@@ -242,7 +280,7 @@ export const ShareContent = ({
                 <CheckCircle2 className="h-4 w-4 text-[#0088cc] animate-scale-in" />
               ) : (
                 <svg width="20" height="20" viewBox="0 0 24 24" className="text-[#0088cc]">
-                  <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.05-.2-.06-.06-.17-.04-.25-.02-.11.02-1.84 1.17-5.21 3.42-.49.33-.94.5-1.35.48-.44-.02-1.3-.25-1.93-.46-.78-.26-1.39-.4-1.34-.85.03-.22.32-.45.88-.68 3.44-1.57 5.75-2.58 6.9-3.06 3.27-1.36 3.96-1.6 4.4-1.6.1 0 .32.02.45.17.13.13.18.35.14.66z" />
+                  <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.05-.2-.06-.06-.17-.04-.25-.02-.11.02-1.84 1.17-5.21 3.42-.49.33-.94.5-1.35.48-.44-.02-1.3-.25-1.93-.46-.78-.26-1.39-.4-1.34-.85.03-.22.32-.45.88-.68 3.44-1.57 5.75-2.58 6.9-3.06 3.27-1.36 3.96-1.6 4.4-1.6.1 0 .32.02.45.17.13.13.18.35.14.66z" />
                 </svg>
               )}
             </div>
