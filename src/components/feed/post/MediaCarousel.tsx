@@ -351,16 +351,21 @@ export const MediaCarousel = ({
     const item = media[0];
     if (item.type === 'image') {
       return (
-        <div onClick={() => onImageClick && onImageClick(item.url)} data-media-element="true">
-          <AspectRatio ratio={4/3} className="overflow-hidden rounded-md">
-            <div className="w-full h-full flex items-center justify-center bg-black/5">
-              <img 
-                src={item.url} 
-                alt="Post attachment" 
-                className={`w-full h-full ${fullscreen ? 'object-contain' : 'object-cover'} cursor-pointer`} 
-              />
-            </div>
-          </AspectRatio>
+        <div 
+          className="relative overflow-hidden rounded-md cursor-pointer bg-muted/30"
+          onClick={() => onImageClick && onImageClick(item.url)} 
+          data-media-element="true"
+        >
+          <img 
+            src={item.url} 
+            alt="Post media"
+            className="block w-full h-auto max-h-[550px] object-contain"
+            loading="lazy"
+            onError={(e) => {
+              console.warn(`Failed to load image: ${item.url}`);
+              (e.target as HTMLImageElement).src = 'https://via.placeholder.com/400x300?text=Image+Error'; 
+            }}
+          />
         </div>
       );
     } else {
@@ -415,16 +420,22 @@ export const MediaCarousel = ({
             <CarouselItem key={index}>
               <div className="p-1" data-media-element="true">
                 {item.type === 'image' ? (
-                  <AspectRatio ratio={4/3} className="overflow-hidden rounded-md">
-                    <div className="w-full h-full flex items-center justify-center bg-black/5">
-                      <img 
-                        src={item.url} 
-                        alt={`Post attachment ${index + 1}`} 
-                        onClick={(e) => onImageClick && onImageClick(item.url)}
-                        className={`w-full h-full ${fullscreen ? 'object-contain' : 'object-cover'} ${onImageClick ? 'cursor-pointer' : ''}`} 
-                      />
-                    </div>
-                  </AspectRatio>
+                  <div 
+                    className="relative overflow-hidden rounded-md cursor-pointer"
+                    data-media-element="true"
+                    onClick={() => onImageClick && onImageClick(item.url)}
+                  >
+                    <img 
+                      src={item.url} 
+                      alt={`Post media ${index + 1}`}
+                      className="block w-full h-auto max-h-[550px] object-contain bg-muted/30" 
+                      loading="lazy"
+                      onError={(e) => {
+                        console.warn(`Failed to load image: ${item.url}`);
+                        (e.target as HTMLImageElement).src = 'https://via.placeholder.com/400x300?text=Image+Error'; 
+                      }}
+                    />
+                  </div>
                 ) : (
                   <VideoPlayer 
                     src={item.url} 
