@@ -1,4 +1,3 @@
-
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { RefreshCw } from "lucide-react";
@@ -96,7 +95,7 @@ export function PullToRefresh({
   return (
     <div 
       ref={containerRef}
-      className={cn("overflow-auto", className)}
+      className={cn(className, "overscroll-behavior-contain")}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}

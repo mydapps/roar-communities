@@ -86,39 +86,43 @@ const MainLayout = () => {
   
   return (
     <div className={cn(
-      "min-h-screen flex flex-col bg-background",
+      // This outer div manages the overall flex column layout and minimum height
+      "min-h-screen flex flex-col bg-background", 
       isMobileAppContext ? "safe-area-inset-y" : ""
     )}>
-      {/* Navbar - visible on web, and on mobile app after logging in, but styled differently */}
-        <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+      <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
       
-      {/* Main content area - modified for proper sidebar scrolling */}
-      <div className="flex flex-1">
+      {/* This div now manages the main content row (sidebar + scrollable area) */}
+      {/* It takes remaining space (flex-1) and hides overflow for its children */}
+      <div className="flex flex-1 overflow-hidden"> 
+        {/* Sidebar (conditionally rendered) */}
         {isLoggedIn && !isMobileAppUser && (
-          <div className="hidden md:block"> 
+          // Sidebar takes fixed width, content area takes rest
+          <div className="hidden md:block flex-shrink-0 w-64 border-r border-border/40">
             <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
           </div>
         )}
         
-        <div className="flex-1 overflow-auto">
-          <PullToRefresh 
-            onRefresh={handleRefresh}
-            className="transition-all duration-300 ease-in-out h-full"
-          >
-            <main className={cn(
-              mainContentClass,
-              // Add top padding when using mobile app to account for navbar
-              isMobileAppUser ? "pt-16" : ""
-            )}>
-              <div className="container py-6 px-4 sm:px-6 max-w-5xl mx-auto animate-fade-in">
-                <Outlet />
-              </div>
-            </main>
-          </PullToRefresh>
-        </div>
-      </div>
+        {/* Make PullToRefresh the main scrollable container */}
+        {/* It needs to grow (flex-1) and handle its own vertical scroll */}
+        <PullToRefresh 
+          onRefresh={handleRefresh}
+          className="flex-1 overflow-y-auto transition-all duration-300 ease-in-out"
+        >
+          {/* Main content inside the scrollable container */}
+          <main className={cn(
+            mainContentClass, 
+            isMobileAppUser ? "pt-16" : "" // Keep mobile app top padding
+          )}>
+            <div className="container py-6 px-4 sm:px-6 max-w-5xl mx-auto animate-fade-in">
+              <Outlet />
+            </div>
+          </main>
+        </PullToRefresh>
+        
+      </div> {/* End flex-1 overflow-hidden div */}
       
-      {/* Mobile Bottom Navigation */}
+      {/* Mobile Bottom Navigation - outside the main scroll area */}
       {(isMobile || isMobileAppUser) && isLoggedIn && <MobileBottomNav />}
     </div>
   );
