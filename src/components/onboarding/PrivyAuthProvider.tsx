@@ -287,19 +287,18 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
 
   // Show global loading overlay when authentication is processing
   if (isAuthLoading) {
+    // Render ONLY the loader when loading
     return (
-      <AuthLoadingContext.Provider value={isAuthLoading}>
-        {children}
-        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50 pointer-events-none">
-          <div className="bg-background rounded-lg shadow-lg p-6 flex items-center gap-3">
-            <Loader2 className="h-5 w-5 animate-spin text-primary" />
-            <p className="text-sm font-medium">Authenticating...</p>
-          </div>
+      <div className="fixed inset-0 bg-background flex items-center justify-center z-50">
+        <div className="bg-background rounded-lg shadow-lg p-6 flex items-center gap-3">
+          <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          <p className="text-sm font-medium">Authenticating...</p>
         </div>
-      </AuthLoadingContext.Provider>
+      </div>
     );
   }
 
+  // Render the children only when not loading
   return (
     <AuthLoadingContext.Provider value={isAuthLoading}>
       {children}
