@@ -453,3 +453,122 @@ export const hidePost = async (
     return { success: false, message: `Network error: ${message}` };
   }
 };
+
+// --- Interfaces and Functions for Post Reporting/Flagging ---
+
+/**
+ * Interface for a single flag type option
+ */
+export interface FlagType {
+  id: number;
+  name: string;
+  description: string;
+}
+
+/**
+ * Interface for the API response containing flag types
+ */
+export interface FetchFlagTypesResponse {
+  success: boolean;
+  flagTypes: FlagType[];
+}
+
+/**
+ * Interface for the payload when submitting a post flag
+ */
+export interface FlagPostPayload {
+  postCode: string;
+  flagTypeId: number;
+  notes?: string;
+}
+
+/**
+ * Interface for the API response after submitting a flag
+ */
+export interface FlagPostResponse {
+  success: boolean;
+  message: string;
+  errorCode?: string; // e.g., "ALREADY_FLAGGED"
+}
+
+/**
+ * Fetches the available flag types from the API.
+ */
+export const fetchFlagTypes = async (): Promise<FetchFlagTypesResponse> => {
+  console.log("API Call: Fetching flag types");
+  try {
+    const headers = createAuthHeaders();
+    const response = await fetch('/api/flag_types', { // Use relative path
+      method: 'GET',
+      headers: headers,
+      credentials: 'include',
+    });
+
+    const responseData = await response.json();
+    console.log('API Response (fetchFlagTypes):', responseData);
+
+    if (!response.ok || !responseData.success) {
+      const errorMessage = responseData?.message || `HTTP error! status: ${response.status}`;
+      console.error("Fetch Flag Types API Error:", errorMessage, responseData);
+      // Return a standard error format
+      return { success: false, flagTypes: [] }; 
+    }
+
+    return responseData as FetchFlagTypesResponse;
+
+  } catch (error) {
+    console.error('Network or other error fetching flag types:', error);
+    let message = 'An unknown error occurred.';
+    if (error instanceof Error) {
+      message = error.message;
+    }
+    // Return a standard error format
+    return { success: false, flagTypes: [] }; 
+  }
+};
+
+/**
+ * Submits a flag for a specific post.
+ */
+export const flagPost = async (payload: FlagPostPayload): Promise<FlagPostResponse> => {
+  console.log("API Call: Flagging post", payload);
+  try {
+    const headers = createAuthHeaders();
+    const response = await fetch('/api/flag_post', { // Use relative path
+      method: 'POST',
+      headers: headers,
+      credentials: 'include',
+      body: JSON.stringify(payload),
+    });
+
+    const responseData = await response.json();
+    console.log('API Response (flagPost):', responseData);
+
+    if (!response.ok) {
+       // Use the message and potentially errorCode from the API response
+       const errorMessage = responseData?.message || `HTTP error! status: ${response.status}`;
+       const errorCode = responseData?.errorCode;
+       console.error("Flag Post API Error:", errorMessage, responseData);
+       return { success: false, message: errorMessage, errorCode: errorCode };
+    }
+    
+    // Also check the success boolean in the response body
+    if (!responseData.success) {
+      console.error("Flag Post API returned success: false", responseData);
+      return { success: false, message: responseData.message || "API indicated failure.", errorCode: responseData.errorCode };
+    }
+
+    // Assuming the API returns FlagPostResponse structure on success
+    return responseData as FlagPostResponse;
+
+  } catch (error) {
+    console.error('Network or other error flagging post:', error);
+    let message = 'An unknown error occurred.';
+    if (error instanceof Error) {
+      message = error.message;
+    }
+    return { success: false, message: `Network error: ${message}` };
+  }
+};
+
+// --- End Interfaces and Functions for Post Reporting/Flagging ---

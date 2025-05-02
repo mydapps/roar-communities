@@ -16,6 +16,8 @@ import { hidePost } from '@/utils/postApi';
 import { ImageViewer } from './post/ImageViewer';
 // Import the confirmation sheet
 import { HidePostConfirmationSheet } from './post/HidePostConfirmationSheet';
+// Import the ReportPostSheet
+import { ReportPostSheet } from './post/ReportPostSheet';
 
 export interface PostProps {
   username: string;
@@ -90,6 +92,8 @@ export const Post = ({
   const [showHideConfirmation, setShowHideConfirmation] = useState(false);
   // State for animation trigger
   const [isAnimatingHide, setIsAnimatingHide] = useState(false);
+  // State for Report Post sheet
+  const [showReportSheet, setShowReportSheet] = useState(false);
   const isMobile = useIsMobile();
   
   const { parsedContent, allMedia, allImages: normalImages, hasMedia } = usePostMedia(content, images, video);
@@ -415,8 +419,18 @@ export const Post = ({
 
   const handleReportPost = () => {
     console.log(`UI Action: Report post ${postCode}`);
-    // TODO: Implement actual reporting logic (e.g., open report modal, call API)
-    toast({ description: "Report functionality not yet implemented.", variant: "destructive" });
+    if (!postCode) {
+      toast({ description: "Cannot report post: Missing identifier.", variant: "destructive" });
+      return;
+    }
+    // Open the report sheet
+    setShowReportSheet(true); 
+  };
+
+  // Callback for successful report submission
+  const handleReportSuccess = () => {
+    console.log(`Report submitted successfully for post ${postCode}`);
+    // Optionally: Add further logic here, e.g., disable report button locally
   };
   // --- End Handlers ---
   
@@ -527,6 +541,16 @@ export const Post = ({
         onConfirm={confirmHidePost}
         isHiding={isHiding}
       />
+      
+      {/* Report Post Sheet */}
+      {postCode && (
+        <ReportPostSheet
+          open={showReportSheet}
+          onOpenChange={setShowReportSheet}
+          postCode={postCode}
+          onReportSuccess={handleReportSuccess}
+        />
+      )}
     </>
   );
 };
