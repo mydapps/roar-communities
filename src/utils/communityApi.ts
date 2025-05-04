@@ -1340,3 +1340,177 @@ export const createCommunity = async (config: CreateCommunityConfig): Promise<an
     };
   }
 };
+
+// --- ADDED: Function to update community settings (Admin) ---
+export const updateCommunityAdmin = async (communityName: string, updates: Record<string, any>) => {
+  try {
+    const token = localStorage.getItem('privy:token');
+    if (!token) {
+      throw new Error('Authentication required.');
+    }
+
+    const response = await fetch(`/api/communities/${encodeURIComponent(communityName)}/admin`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(updates),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.message || `HTTP error! Status: ${response.status}`);
+    }
+
+    return result; // Should contain { success: true, message: "..." }
+  } catch (error) {
+    console.error('Error updating community admin settings:', error);
+    // Re-throw a structured error or return a standard error format
+    return { 
+      success: false, 
+      message: error instanceof Error ? error.message : 'An unknown error occurred during update.' 
+    };
+  }
+};
+// --- END ADDED Function ---
+
+// --- Interface for Muted User Data ---
+export interface MutedUser {
+  mute_id: number;
+  uid: number;
+  reason: string;
+  muted_on: string;
+  valid_upto: string;
+  user_handle: string;
+}
+
+// --- Interface for Muted Users API Response ---
+export interface MutedUsersApiResponse {
+  success: boolean;
+  data: MutedUser[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+    has_next?: boolean; // Optional based on potential API variations
+    has_prev?: boolean; // Optional
+  };
+  message?: string; // For errors
+}
+
+// --- Interface for Mute/Unmute API Response ---
+export interface MuteActionResponse {
+  success: boolean;
+  message: string;
+}
+
+
+// --- ADDED: Function to mute a user in a community (Admin) ---
+export const muteUserInCommunity = async (
+  communityName: string, 
+  userToMute: string, 
+  reason: string, 
+  durationHours: number
+): Promise<MuteActionResponse> => {
+  try {
+    const token = localStorage.getItem('privy:token');
+    if (!token) throw new Error('Authentication required.');
+
+    const response = await fetch(`/api/communities/${encodeURIComponent(communityName)}/admin/mute`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ userToMute, reason, durationHours }),
+    });
+
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.message || `HTTP error! Status: ${response.status}`);
+    return result;
+
+  } catch (error) {
+    console.error('Error muting user:', error);
+    return { 
+      success: false, 
+      message: error instanceof Error ? error.message : 'An unknown error occurred while muting user.' 
+    };
+  }
+};
+
+// --- ADDED: Function to get muted users list (Admin) ---
+export const getMutedUsers = async (
+  communityName: string, 
+  page: number = 1, 
+  limit: number = 20
+): Promise<MutedUsersApiResponse> => {
+  try {
+    const token = localStorage.getItem('privy:token');
+    if (!token) throw new Error('Authentication required.');
+
+    const response = await fetch(`/api/communities/${encodeURIComponent(communityName)}/admin/muted-users?page=${page}&limit=${limit}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.message || `HTTP error! Status: ${response.status}`);
+    
+    // Basic validation of expected structure
+    if (!result.success || !Array.isArray(result.data) || !result.pagination) {
+      throw new Error('Invalid response structure from muted users API.');
+    }
+
+    return result;
+
+  } catch (error) {
+    console.error('Error fetching muted users:', error);
+    return { 
+      success: false, 
+      data: [],
+      pagination: { total: 0, page: 1, limit: limit, totalPages: 0 },
+      message: error instanceof Error ? error.message : 'An unknown error occurred while fetching muted users.' 
+    };
+  }
+};
+
+// --- ADDED: Function to unmute a user in a community (Admin) ---
+export const unmuteUserInCommunity = async (
+  communityName: string, 
+  userHandleToUnmute: string
+): Promise<MuteActionResponse> => {
+  try {
+    const token = localStorage.getItem('privy:token');
+    if (!token) throw new Error('Authentication required.');
+
+    const response = await fetch(`/api/communities/${encodeURIComponent(communityName)}/admin/mute/${encodeURIComponent(userHandleToUnmute)}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    const result = await response.json();
+    // DELETE might return 204 No Content on success with no body, or 200 with body
+    if (!response.ok && response.status !== 204) {
+         throw new Error(result.message || `HTTP error! Status: ${response.status}`);
+    }
+    // Ensure success is true even if body might be empty on 204
+    return { success: true, message: result.message || "User unmuted successfully." }; 
+
+  } catch (error) {
+    console.error('Error unmuting user:', error);
+    return { 
+      success: false, 
+      message: error instanceof Error ? error.message : 'An unknown error occurred while unmuting user.' 
+    };
+  }
+};
+
+
+// --- END ADDED Functions ---
