@@ -111,6 +111,14 @@ const CommunityPage = () => {
   // Fix: More robust check for user shares that defaults to previous state during loading
   const hasShares = user ? user.shares > 0 : previousHasShares;
   
+  // Extract details for easier access, provide default values
+  const details = community?.details || {};
+  const minSharePosting = details.min_share_posting ?? 0.001;
+  const minShareCommenting = details.min_share_commenting ?? 0.001;
+  const minShareReward = details.min_share_reward; // Keep null if not provided
+  const communityRules = details.rules; // Keep null if not provided
+  const bannerUrl = details.banner; // Keep null if not provided
+  
   const availableRewards = community?.rewards?.available_rewards || 0;
   console.log("Rendered with available rewards:", availableRewards);
   const hasLastDistributed = community?.rewards?.last_distributed && community.rewards.last_distributed !== null;
@@ -625,7 +633,11 @@ const CommunityPage = () => {
                         <li>Rewards are distributed on the last day of each month</li>
                         <li>60% goes to the top 3 most roared posts</li>
                         <li>40% is split among the next 7 top posts</li>
-                        <li>You must hold at least 5 shares to be eligible for rewards</li>
+                        <li>
+                          {minShareReward !== null 
+                            ? `You must hold at least ${minShareReward} shares to be eligible for rewards`
+                            : `You must hold at least 5 shares to be eligible for rewards`}
+                        </li>
                       </ul>
                     </div>
                     
@@ -710,6 +722,14 @@ const CommunityPage = () => {
                           <span className="text-muted-foreground">Total Shares</span>
                           <span>{community?.shares?.toLocaleString() || 0}</span>
                         </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Min Shares Posting</span>
+                          <span>{minSharePosting}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Min Shares Commenting</span>
+                          <span>{minShareCommenting}</span>
+                        </div>
                       </div>
                     </div>
                     
@@ -738,13 +758,17 @@ const CommunityPage = () => {
                   
                   <div className="space-y-2">
                     <h3 className="font-medium">Community Rules</h3>
-                    <ul className="space-y-2 text-sm text-muted-foreground list-disc pl-5">
-                      <li>Be respectful to all members and maintain a professional tone</li>
-                      <li>No spam, excessive self-promotion, or plagiarism</li>
-                      <li>Content should be relevant to {community?.name || id}</li>
-                      <li>Provide evidence and sources for technical claims when possible</li>
-                      <li>Abide by the community guidelines for posting and commenting</li>
-                    </ul>
+                    {communityRules ? (
+                      <div className="text-sm text-muted-foreground whitespace-pre-wrap">{communityRules}</div>
+                    ) : (
+                      <ul className="space-y-2 text-sm text-muted-foreground list-disc pl-5">
+                        <li>Be respectful to all members and maintain a professional tone</li>
+                        <li>No spam, excessive self-promotion, or plagiarism</li>
+                        <li>Content should be relevant to {community?.name || id}</li>
+                        <li>Provide evidence and sources for technical claims when possible</li>
+                        <li>Abide by the community guidelines for posting and commenting</li>
+                      </ul>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -894,7 +918,11 @@ const CommunityPage = () => {
                         <li>Rewards are distributed on the last day of each month</li>
                         <li>60% goes to the top 3 most roared posts</li>
                         <li>40% is split among the next 7 top posts</li>
-                        <li>You must hold at least 5 shares to be eligible for rewards</li>
+                        <li>
+                          {minShareReward !== null
+                            ? `You must hold at least ${minShareReward} shares to be eligible for rewards`
+                            : `You must hold at least 5 shares to be eligible for rewards`}
+                        </li>
                       </ul>
                     </div>
                     
@@ -979,6 +1007,14 @@ const CommunityPage = () => {
                           <span className="text-muted-foreground">Total Shares</span>
                           <span>{community?.shares?.toLocaleString() || 0}</span>
                         </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Min Shares Posting</span>
+                          <span>{minSharePosting}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Min Shares Commenting</span>
+                          <span>{minShareCommenting}</span>
+                        </div>
                       </div>
                     </div>
                     
@@ -1007,13 +1043,17 @@ const CommunityPage = () => {
                   
                   <div className="space-y-2">
                     <h3 className="font-medium">Community Rules</h3>
-                    <ul className="space-y-2 text-sm text-muted-foreground list-disc pl-5">
-                      <li>Be respectful to all members and maintain a professional tone</li>
-                      <li>No spam, excessive self-promotion, or plagiarism</li>
-                      <li>Content should be relevant to {community?.name || id}</li>
-                      <li>Provide evidence and sources for technical claims when possible</li>
-                      <li>Abide by the community guidelines for posting and commenting</li>
-                    </ul>
+                    {communityRules ? (
+                      <div className="text-sm text-muted-foreground whitespace-pre-wrap">{communityRules}</div>
+                    ) : (
+                      <ul className="space-y-2 text-sm text-muted-foreground list-disc pl-5">
+                        <li>Be respectful to all members and maintain a professional tone</li>
+                        <li>No spam, excessive self-promotion, or plagiarism</li>
+                        <li>Content should be relevant to {community?.name || id}</li>
+                        <li>Provide evidence and sources for technical claims when possible</li>
+                        <li>Abide by the community guidelines for posting and commenting</li>
+                      </ul>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -1038,7 +1078,7 @@ const CommunityPage = () => {
               <div className="relative">
                 <div 
                   className="h-32 w-full bg-cover bg-center" 
-                  style={{ backgroundImage: `url(${community?.image || 'https://images.unsplash.com/photo-1639322537228-f710d846310a?q=80&w=2532&auto=format&fit=crop'})` }}
+                  style={{ backgroundImage: `url(${bannerUrl || community?.image || 'https://images.unsplash.com/photo-1639322537228-f710d846310a?q=80&w=2532&auto=format&fit=crop'})` }}
                 />
                 <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-background to-transparent"></div>
                 

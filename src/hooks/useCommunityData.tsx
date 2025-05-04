@@ -49,6 +49,13 @@ export interface CommunityData {
   fees: CommunityFees;
   rewards: CommunityRewards;
   admin_fees_available: number;
+  details: {
+    banner: string | null;
+    rules: string | null;
+    min_share_posting: number | null;
+    min_share_commenting: number | null;
+    min_share_reward: number | null;
+  };
 }
 
 export interface CommunityApiResponse {
