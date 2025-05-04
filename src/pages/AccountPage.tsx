@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Card, 
   CardContent, 
@@ -14,12 +13,26 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Copy, Download, Key, LogOut, Moon, Sun, Upload } from 'lucide-react';
+import { Copy, Download, Key, LogOut, Moon, Sun, Upload, Bell, BellOff, BellRing, AlertCircle } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
+import useDeviceNotifications from '@/hooks/useDeviceNotifications';
+import { Badge } from '@/components/ui/badge';
+import PushNotificationSetup from '@/components/notifications/PushNotificationSetup';
 
 const AccountPage = () => {
   const [darkMode, setDarkMode] = useState(false);
+  
+  const {
+    isMobileApp,
+    deviceInfo,
+    isLoading: isLoadingDeviceInfo,
+    isRegistered,
+    isEnabled,
+    isTogglingStatus,
+    error: deviceError,
+    toggleNotificationStatus
+  } = useDeviceNotifications();
   
   const handleCopyAddress = () => {
     navigator.clipboard.writeText('0x1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s');
@@ -224,6 +237,59 @@ const AccountPage = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {isMobileApp && (
+                <>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor="push-notifications">Push Notifications</Label>
+                        {isMobileApp && !isRegistered && (
+                          <Badge variant="outline" className="text-yellow-600 border-yellow-600">
+                            Not Enabled
+                          </Badge>
+                        )}
+                        {isMobileApp && isRegistered && isEnabled && (
+                          <Badge variant="outline" className="text-green-600 border-green-600">
+                            Enabled
+                          </Badge>
+                        )}
+                        {isMobileApp && isRegistered && !isEnabled && (
+                          <Badge variant="outline" className="text-red-600 border-red-600">
+                            Disabled
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Receive notifications even when you're not using the app
+                      </p>
+                    </div>
+                    {isLoadingDeviceInfo ? (
+                      <div className="h-5 w-10 bg-muted animate-pulse rounded" />
+                    ) : isRegistered ? (
+                      <Switch 
+                        id="push-notifications" 
+                        checked={isEnabled}
+                        disabled={!isRegistered || isTogglingStatus}
+                        onCheckedChange={(checked) => toggleNotificationStatus(checked)}
+                      />
+                    ) : (
+                      <PushNotificationSetup variant="minimal" />
+                    )}
+                  </div>
+                  
+                  {deviceError && (
+                    <div className="p-2 bg-yellow-500/10 border border-yellow-500/30 rounded-md flex items-start gap-2 mb-2">
+                      <AlertCircle className="h-4 w-4 text-yellow-600 flex-shrink-0 mt-0.5" />
+                      <p className="text-xs text-yellow-600">
+                        There was an error checking your device notification status. Please try again.
+                      </p>
+                    </div>
+                  )}
+                  
+                  <Separator />
+                </>
+              )}
+              
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label htmlFor="roar-notifications">Roars on your posts</Label>
@@ -250,28 +316,62 @@ const AccountPage = () => {
               
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label htmlFor="reward-notifications">Reward Distributions</Label>
+                  <Label htmlFor="mention-notifications">Mentions</Label>
                   <p className="text-sm text-muted-foreground">
-                    Get notified about reward distributions
+                    Get notified when someone mentions you
                   </p>
                 </div>
-                <Switch id="reward-notifications" defaultChecked />
+                <Switch id="mention-notifications" defaultChecked />
               </div>
               
               <Separator />
               
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label htmlFor="price-notifications">Price Movements</Label>
+                  <Label htmlFor="reward-notifications">Rewards</Label>
                   <p className="text-sm text-muted-foreground">
-                    Get notified about significant price changes in your communities
+                    Get notified about community rewards and earnings
                   </p>
                 </div>
-                <Switch id="price-notifications" />
+                <Switch id="reward-notifications" defaultChecked />
               </div>
             </CardContent>
-            <CardFooter className="flex justify-end">
-              <Button>Save Preferences</Button>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>Privacy</CardTitle>
+              <CardDescription>
+                Manage your privacy settings
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="share-stats">Community Contributions</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Share your activity stats with communities you join
+                  </p>
+                </div>
+                <Switch id="share-stats" defaultChecked />
+              </div>
+              
+              <Separator />
+              
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="analytics">Analytics</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Help improve dapps.co with anonymous usage data
+                  </p>
+                </div>
+                <Switch id="analytics" defaultChecked />
+              </div>
+            </CardContent>
+            <CardFooter>
+              <p className="text-xs text-muted-foreground">
+                For more information on how we handle your data, please see our <a href="/privacy" className="underline">Privacy Policy</a>.
+              </p>
             </CardFooter>
           </Card>
         </TabsContent>

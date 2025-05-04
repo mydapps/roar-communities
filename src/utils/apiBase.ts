@@ -692,3 +692,161 @@ export const withdrawReferralEarnings = async (): Promise<ReferralWithdrawalResp
     };
   }
 };
+
+/**
+ * Interface for device notification status response
+ */
+export interface DeviceNotificationStatusResponse {
+  success: boolean;
+  isRegistered: boolean;
+  deviceId?: number;
+  enabled?: boolean;
+  deviceInfo?: {
+    type: string;
+    model: string;
+    lastActive: string;
+  };
+}
+
+/**
+ * Check if a device is registered for push notifications
+ * @param installationId The device's installation ID
+ * @returns Promise that resolves to device registration status
+ */
+export const checkDeviceNotificationStatus = async (installationId: string): Promise<DeviceNotificationStatusResponse> => {
+  try {
+    // Use relative path for proxy
+    const response = await fetch(`/api/notification-device/status?installationId=${encodeURIComponent(installationId)}`, {
+      method: 'GET',
+      credentials: 'include', // Important for cookie-based auth
+      headers: createAuthHeaders(),
+    });
+    
+    if (!response.ok) {
+      console.error('Error checking device notification status:', response.status);
+      return {
+        success: false,
+        isRegistered: false
+      };
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error checking device notification status:', error);
+    return {
+      success: false,
+      isRegistered: false
+    };
+  }
+};
+
+/**
+ * Interface for device notification registration request
+ */
+export interface DeviceNotificationRegistrationRequest {
+  installationId: string;
+  deviceType: string;
+  deviceModel: string;
+  pushToken: string;
+}
+
+/**
+ * Interface for device notification registration response
+ */
+export interface DeviceNotificationRegistrationResponse {
+  success: boolean;
+  deviceId?: number;
+  isRegistered?: boolean;
+  isNewRegistration?: boolean;
+  message?: string;
+  error?: string;
+}
+
+/**
+ * Register a device for push notifications
+ * @param data The device registration data
+ * @returns Promise that resolves to registration response
+ */
+export const registerDeviceForNotifications = async (
+  data: DeviceNotificationRegistrationRequest
+): Promise<DeviceNotificationRegistrationResponse> => {
+  try {
+    // Use relative path for proxy
+    const response = await fetch(`/api/notification-device/register`, {
+      method: 'POST',
+      credentials: 'include', // Important for cookie-based auth
+      headers: createAuthHeaders(),
+      body: JSON.stringify(data)
+    });
+    
+    if (!response.ok) {
+      console.error('Error registering device for notifications:', response.status);
+      return {
+        success: false,
+        error: `Failed to register device: HTTP ${response.status}`
+      };
+    }
+    
+    const responseData = await response.json();
+    return responseData;
+  } catch (error) {
+    console.error('Error registering device for notifications:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
+  }
+};
+
+/**
+ * Interface for toggling device notification status response
+ */
+export interface DeviceNotificationToggleResponse {
+  success: boolean;
+  isEnabled?: boolean;
+  deviceId?: number;
+  message?: string;
+  error?: string;
+}
+
+/**
+ * Toggle device notification status (enable/disable)
+ * @param deviceId The device ID to toggle
+ * @param enable Whether to enable or disable notifications
+ * @returns Promise that resolves to toggle response
+ */
+export const toggleDeviceNotifications = async (
+  deviceId: number,
+  enable: boolean
+): Promise<DeviceNotificationToggleResponse> => {
+  try {
+    // Use relative path for proxy
+    const response = await fetch(`/api/notification-device/toggle`, {
+      method: 'POST',
+      credentials: 'include', // Important for cookie-based auth
+      headers: createAuthHeaders(),
+      body: JSON.stringify({
+        deviceId,
+        enable
+      })
+    });
+    
+    if (!response.ok) {
+      console.error('Error toggling device notifications:', response.status);
+      return {
+        success: false,
+        error: `Failed to toggle notifications: HTTP ${response.status}`
+      };
+    }
+    
+    const responseData = await response.json();
+    return responseData;
+  } catch (error) {
+    console.error('Error toggling device notifications:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
+  }
+};

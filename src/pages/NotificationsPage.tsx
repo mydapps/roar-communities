@@ -1,11 +1,13 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { useNotifications } from '@/hooks/useNotifications';
 import NotificationItem from '@/components/notifications/NotificationItem';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Loader2, BellOff, Bell } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Loader2, BellOff, Bell, BellRing } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTitle } from '@/hooks/useTitle';
 import { motion } from 'framer-motion';
+import PushNotificationSetup from '@/components/notifications/PushNotificationSetup';
+import { Separator } from '@/components/ui/separator';
 
 const NotificationsPage: React.FC = () => {
   useTitle('Notifications | Dapps.co');
@@ -87,6 +89,9 @@ const NotificationsPage: React.FC = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
       >
+        {/* Push notification setup component */}
+        <PushNotificationSetup className="mb-4" />
+
         <Card>
           <CardHeader className="pb-3">
             <CardTitle>Activity Feed</CardTitle>
