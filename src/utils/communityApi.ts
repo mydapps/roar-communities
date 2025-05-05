@@ -1425,7 +1425,7 @@ export const muteUserInCommunity = async (
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
       },
-      body: JSON.stringify({ userToMute, reason, durationHours }),
+      body: JSON.stringify({ userHandleToMute: userToMute, reason, durationHours }),
     });
 
     const result = await response.json();
