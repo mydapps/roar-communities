@@ -495,24 +495,24 @@ const CommunityPage = () => {
                 />
             </TabsContent>
             <TabsContent value="members" className="animate-fade-in mt-0">
-                <Card>
-                    <CardHeader>
-                      <CardTitle>Community Members</CardTitle>
-                      <CardDescription>
-                        {community?.members_count || 0} members have purchased shares in this community
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <MembersList
-                        members={members}
-                        loading={membersLoading}
-                        hasMore={hasMoreMembers}
-                        loadMore={loadMoreMembers}
-                        ethToUsd={ethToUsd}
-                      />
-                    </CardContent>
-                  </Card>
-             </TabsContent>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Community Members</CardTitle>
+                  <CardDescription>
+                    {community?.members_count || 0} members have purchased shares in this community
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <MembersList 
+                    members={members} 
+                    loading={membersLoading} 
+                    hasMore={hasMoreMembers} 
+                    loadMore={loadMoreMembers}
+                    ethToUsd={ethToUsd}
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
             <TabsContent value="rewards" className="animate-fade-in mt-0">
                 <CommunityRewardsSection 
                   availableRewards={availableRewards}
@@ -530,7 +530,7 @@ const CommunityPage = () => {
                   minShareCommenting={minShareCommenting}
                   communityRules={communityRules}
                 />
-             </TabsContent>
+            </TabsContent>
             {isAdmin && (
               <TabsContent value="admin" className="animate-fade-in mt-0">
                   <CommunityAdminPanel 
