@@ -121,11 +121,34 @@ const processTextPart = (text: string, key: number): React.ReactNode => {
   // Sort by the start index of the match
   allMatches.sort((a, b) => a.match.index! - b.match.index!);
   
-  // Process the text with the sorted matches
+  // Filter out mentions that are part of URLs
+  const filteredMatches = allMatches.filter((current, index, array) => {
+    // If current match is a mention, check if it's contained within any URL
+    if (current.type === 'mention') {
+      const mentionIndex = current.match.index!;
+      const mentionEnd = mentionIndex + current.match[0].length;
+      
+      // Check if this @mention is inside any URL
+      return !array.some(item => {
+        if (item.type === 'url') {
+          const urlIndex = item.match.index!;
+          const urlEnd = urlIndex + item.match[0].length;
+          
+          // If the mention is completely inside the URL, filter it out
+          return urlIndex <= mentionIndex && urlEnd >= mentionEnd;
+        }
+        return false;
+      });
+    }
+    // Keep all other match types
+    return true;
+  });
+  
+  // Process the text with the filtered matches
   const result: React.ReactNode[] = [];
   let lastIndex = 0;
   
-  allMatches.forEach(({ type, match }) => {
+  filteredMatches.forEach(({ type, match }) => {
     const matchIndex = match.index!;
     const matchText = match[0];
     const matchLength = matchText.length;
