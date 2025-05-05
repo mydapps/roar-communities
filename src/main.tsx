@@ -21,7 +21,7 @@ const injectGoogleAnalytics = () => {
     // Create the first script element (gtag.js)
     const gtagScript = document.createElement('script');
     gtagScript.async = true;
-    gtagScript.src = 'https://www.googletagmanager.com/gtag/js?id=G-ZGP95X97YJ';
+    gtagScript.src = 'https://www.googletagmanager.com/gtag/js?id=G-TCYSPC0DWM';
     document.head.appendChild(gtagScript);
 
     // Create the second script element (configuration)
@@ -30,7 +30,7 @@ const injectGoogleAnalytics = () => {
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
-      gtag('config', 'G-ZGP95X97YJ', {
+      gtag('config', 'G-TCYSPC0DWM', {
         send_page_view: false,
         cookie_domain: 'auto',
         cookie_flags: 'SameSite=None;Secure'
