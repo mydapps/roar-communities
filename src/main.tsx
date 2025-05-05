@@ -11,21 +11,37 @@ setupBrowserErrorHandler();
 
 // Google Analytics implementation
 const injectGoogleAnalytics = () => {
-  // Create the first script element (gtag.js)
-  const gtagScript = document.createElement('script');
-  gtagScript.async = true;
-  gtagScript.src = 'https://www.googletagmanager.com/gtag/js?id=G-ZGP95X97YJ';
-  document.head.appendChild(gtagScript);
+  try {
+    // Check if GA already initialized to prevent duplicate initialization
+    if (typeof window !== 'undefined' && window.dataLayer) {
+      console.log('Google Analytics already initialized, skipping...');
+      return;
+    }
+    
+    // Create the first script element (gtag.js)
+    const gtagScript = document.createElement('script');
+    gtagScript.async = true;
+    gtagScript.src = 'https://www.googletagmanager.com/gtag/js?id=G-ZGP95X97YJ';
+    document.head.appendChild(gtagScript);
 
-  // Create the second script element (configuration)
-  const configScript = document.createElement('script');
-  configScript.textContent = `
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-ZGP95X97YJ');
-  `;
-  document.head.appendChild(configScript);
+    // Create the second script element (configuration)
+    const configScript = document.createElement('script');
+    configScript.textContent = `
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-ZGP95X97YJ', {
+        send_page_view: false,
+        cookie_domain: 'auto',
+        cookie_flags: 'SameSite=None;Secure'
+      });
+    `;
+    document.head.appendChild(configScript);
+    
+    console.log('Google Analytics initialization complete');
+  } catch (error) {
+    console.error('Failed to initialize Google Analytics:', error);
+  }
 };
 
 // Initialize mobile app detection

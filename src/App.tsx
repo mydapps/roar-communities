@@ -43,6 +43,33 @@ const createInvalidAuthEvent = () => {
   return new CustomEvent('dapps_auth_invalidated');
 };
 
+// Google Analytics page view tracker
+const PageViewTracker = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.gtag) {
+      // Send page_view event to Google Analytics
+      window.gtag('event', 'page_view', {
+        page_title: document.title,
+        page_location: window.location.href,
+        page_path: location.pathname + location.search
+      });
+      console.log(`GA page_view: ${location.pathname}${location.search}`);
+    }
+  }, [location]);
+
+  return null;
+};
+
+// Declare gtag function on Window interface
+declare global {
+  interface Window {
+    gtag: (...args: any[]) => void;
+    dataLayer: any[];
+  }
+}
+
 function App() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -52,6 +79,7 @@ function App() {
       <ZoomDisabledHelmet />
       <DeviceProvider>
       <PrivyAuthProvider>
+        <PageViewTracker />
         <Routes>
           {/* Public routes - accessible to everyone */}
           <Route path="/" element={<Index />} />
