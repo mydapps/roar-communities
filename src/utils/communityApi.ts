@@ -1514,3 +1514,274 @@ export const unmuteUserInCommunity = async (
 
 
 // --- END ADDED Functions ---
+
+// Interface for invitable user
+export interface InvitableUser {
+  id: number;
+  handle: string;
+  avatar: string | null;
+  invite_status: 'not_invited' | 'invited' | 'joined';
+}
+
+// Response interface for invitable followers
+export interface InvitableUsersResponse {
+  success: boolean;
+  data: InvitableUser[];
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+  message?: string;
+}
+
+// Response interface for invite action
+export interface InviteActionResponse {
+  success: boolean;
+  message: string;
+}
+
+/**
+ * Fetches followers that can be invited to a community
+ */
+export const getInvitableFollowers = async (
+  communityName: string,
+  page: number = 1,
+  limit: number = 10
+): Promise<InvitableUsersResponse> => {
+  try {
+    const isAuthenticated = await validateAuthentication();
+    if (!isAuthenticated) {
+      return {
+        success: false,
+        data: [],
+        pagination: {
+          total: 0,
+          page: 1,
+          limit: 10,
+          totalPages: 0
+        },
+        message: "Authentication required"
+      };
+    }
+    
+    const headers = createAuthHeaders();
+    const url = `/api/communities/${encodeURIComponent(communityName)}/admin/invitable-followers?page=${page}&limit=${limit}`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || "Failed to fetch invitable followers");
+    }
+    
+    return await response.json();
+  } catch (error: any) {
+    console.error("Error fetching invitable followers:", error);
+    return {
+      success: false,
+      data: [],
+      pagination: {
+        total: 0,
+        page: 1,
+        limit: 10,
+        totalPages: 0
+      },
+      message: error.message || "Failed to fetch invitable followers"
+    };
+  }
+};
+
+/**
+ * Invites a user to join a community
+ */
+export const inviteUserToCommunity = async (
+  communityName: string,
+  userHandleToInvite: string
+): Promise<InviteActionResponse> => {
+  try {
+    const isAuthenticated = await validateAuthentication();
+    if (!isAuthenticated) {
+      return {
+        success: false,
+        message: "Authentication required"
+      };
+    }
+    
+    const headers = createAuthHeaders();
+    const url = `/api/communities/${encodeURIComponent(communityName)}/admin/invites`;
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        ...headers,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ userHandleToInvite })
+    });
+    
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || "Failed to send invitation");
+    }
+    
+    return result;
+  } catch (error: any) {
+    console.error("Error inviting user to community:", error);
+    return {
+      success: false,
+      message: error.message || "Failed to send invitation"
+    };
+  }
+};
+
+// Interface for admin fees response
+export interface AdminFeesResponse {
+  success: boolean;
+  currentBalance?: {
+    totalFees: number;
+    adminFeesBalance: number;
+  };
+  pastWithdrawals?: Array<{
+    amount: number;
+    timestamp: string;
+    txHash: string;
+  }>;
+  message?: string;
+}
+
+// Interface for gas estimation response
+export interface WithdrawalGasEstimateResponse {
+  success: boolean;
+  estimatedGasCostEth?: number;
+  message?: string;
+}
+
+// Interface for withdrawal response
+export interface AdminFeesWithdrawalResponse {
+  success: boolean;
+  message: string;
+  transactionHash?: string;
+  withdrawnAmount?: number;
+}
+
+/**
+ * Fetches admin fees for a community
+ */
+export const getAdminFees = async (communityName: string): Promise<AdminFeesResponse> => {
+  try {
+    const isAuthenticated = await validateAuthentication();
+    if (!isAuthenticated) {
+      return {
+        success: false,
+        message: "Authentication required"
+      };
+    }
+    
+    const headers = createAuthHeaders();
+    const url = `/api/communities/${encodeURIComponent(communityName)}/admin/fees`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || "Failed to fetch admin fees");
+    }
+    
+    return await response.json();
+  } catch (error: any) {
+    console.error("Error fetching admin fees:", error);
+    return {
+      success: false,
+      message: error.message || "Failed to fetch admin fees"
+    };
+  }
+};
+
+/**
+ * Estimates gas fee for admin fees withdrawal
+ */
+export const estimateWithdrawalGas = async (communityName: string): Promise<WithdrawalGasEstimateResponse> => {
+  try {
+    const isAuthenticated = await validateAuthentication();
+    if (!isAuthenticated) {
+      return {
+        success: false,
+        message: "Authentication required"
+      };
+    }
+    
+    const headers = createAuthHeaders();
+    const url = `/api/communities/${encodeURIComponent(communityName)}/admin/fees/estimate-withdrawal-gas`;
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        ...headers,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({})  // Empty body since no parameters are required
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || "Failed to estimate withdrawal gas");
+    }
+    
+    return await response.json();
+  } catch (error: any) {
+    console.error("Error estimating withdrawal gas:", error);
+    return {
+      success: false,
+      message: error.message || "Failed to estimate withdrawal gas"
+    };
+  }
+};
+
+/**
+ * Withdraws admin fees for a community
+ */
+export const withdrawAdminFees = async (communityName: string): Promise<AdminFeesWithdrawalResponse> => {
+  try {
+    const isAuthenticated = await validateAuthentication();
+    if (!isAuthenticated) {
+      return {
+        success: false,
+        message: "Authentication required"
+      };
+    }
+    
+    const headers = createAuthHeaders();
+    const url = `/api/communities/${encodeURIComponent(communityName)}/admin/fees/withdraw`;
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        ...headers,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || "Failed to withdraw admin fees");
+    }
+    
+    return result;
+  } catch (error: any) {
+    console.error("Error withdrawing admin fees:", error);
+    return {
+      success: false,
+      message: error.message || "Failed to withdraw admin fees"
+    };
+  }
+};
