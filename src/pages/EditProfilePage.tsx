@@ -18,13 +18,25 @@ import {
   updateUserProfile, 
   updateUserAvatar
 } from '@/utils/userApi';
-import { Calendar, Check, Image, Link2, Loader2, MapPin, Pencil, RefreshCcw, RotateCw, Save, Upload, User, X, ArrowLeft } from 'lucide-react';
+import { Calendar, Check, Image, Link2, Loader2, MapPin, Pencil, RefreshCcw, RotateCw, Save, Upload, User, X, ArrowLeft, Trash2 } from 'lucide-react';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { MediaUploadResponse } from '@/components/ui/media-upload';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 import { Link } from 'react-router-dom';
-import { AvatarSelectionDialog } from '@/components/shared/AvatarSelectionDialog';
+// import { AvatarSelectionDialog } from '@/components/shared/AvatarSelectionDialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import * as apiBase from '@/utils/apiBase'; // Import apiBase
 
 const EditProfilePage = () => {
   const navigate = useNavigate();
@@ -44,9 +56,6 @@ const EditProfilePage = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadedImageUrl, setUploadedImageUrl] = useState('');
   
-  // Current user handle from localStorage
-  const userHandle = localStorage.getItem('dapps_user_handle');
-  
   // Add new state variables for avatar changing
   const [avatarCode, setAvatarCode] = useState('');
   const [isChangingAvatar, setIsChangingAvatar] = useState(false);
@@ -61,6 +70,15 @@ const EditProfilePage = () => {
   
   // Add new state for avatar edit
   const [showAvatarEdit, setShowAvatarEdit] = useState(false);
+  
+  // Add new state for account deletion
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deleteConfirmationInput, setDeleteConfirmationInput] = useState("");
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  
+  // Current user handle from localStorage
+  const userHandle = localStorage.getItem('dapps_user_handle');
   
   useEffect(() => {
     // Redirect if not logged in
@@ -439,6 +457,60 @@ const EditProfilePage = () => {
     xhr.open('POST', '/api/upload_media');
     xhr.withCredentials = true;
     xhr.send(formData);
+  };
+  
+  // Add function to handle account deletion
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmationInput !== 'DELETE') {
+      setDeleteError("Confirmation text is incorrect.");
+      return;
+    }
+    
+    setIsDeletingAccount(true);
+    setDeleteError(null);
+    
+    try {
+      // 1. Call the deactivation endpoint
+      const response = await fetch('/api/account/deactivate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // Credentials might be needed if cookie-based
+        },
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        toast.success(result.message || "Account deactivated successfully.");
+        
+        // 2. Perform full logout (clears storage, invalidates server session)
+        try {
+          await apiBase.logoutCurrentDevice(); 
+          console.log('Logged out from current device after deactivation.');
+        } catch (logoutError) {
+          console.error('Error during logout after deactivation:', logoutError);
+          // Optionally notify user, but proceed with navigation anyway
+          toast.warning('Could not fully clear session, but account is deactivated.');
+        }
+
+        // 3. Redirect to home page
+        // No need for setTimeout if logout clears storage and navigation happens
+        navigate('/');
+        // We might not need setIsDeleteDialogOpen(false) if we navigate away
+        
+      } else {
+        throw new Error(result.message || "Failed to deactivate account.");
+      }
+      
+    } catch (error: any) {
+      const message = error.message || "An error occurred during deactivation.";
+      console.error("Account deactivation failed:", error);
+      setDeleteError(message);
+      toast.error(message);
+    } finally {
+      setIsDeletingAccount(false);
+    }
   };
   
   if (loading) {
@@ -872,6 +944,76 @@ const EditProfilePage = () => {
                 </Button>
               </CardFooter>
             </Card>
+
+            {/* --- Delete Account Section --- */}
+            <Card className="border-destructive mt-8">
+              <CardHeader>
+                <CardTitle className="text-destructive">Danger Zone</CardTitle>
+                <CardDescription>
+                  Deactivating your account is permanent and cannot be reversed.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  All your data, posts, comments, and community interactions will be permanently deleted. 
+                  Your username will become available again. Please be absolutely sure before proceeding.
+                </p>
+                <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" className="w-full gap-1.5">
+                      <Trash2 className="h-4 w-4" />
+                      Deactivate My Account
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Confirm Account Deactivation</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action is irreversible. To confirm, please type <strong>DELETE</strong> in the box below.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    
+                    {deleteError && (
+                      <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md">
+                        {deleteError}
+                      </div>
+                    )}
+
+                    <Input
+                      type="text"
+                      placeholder="Type DELETE to confirm"
+                      value={deleteConfirmationInput}
+                      onChange={(e) => setDeleteConfirmationInput(e.target.value)}
+                      className="my-4 font-mono tracking-[0.3em] text-center placeholder:tracking-normal placeholder:text-center" // Added styling for spaced-out input
+                      maxLength={6} // Length of "DELETE"
+                    />
+                    
+                    <AlertDialogFooter>
+                      <AlertDialogCancel disabled={isDeletingAccount}>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleDeleteAccount} // We'll add this function next
+                        disabled={deleteConfirmationInput !== 'DELETE' || isDeletingAccount}
+                        className="bg-destructive hover:bg-destructive/90"
+                      >
+                        {isDeletingAccount ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Deactivating...
+                          </>
+                        ) : (
+                          <>
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Yes, Deactivate My Account
+                          </>
+                        )}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </CardContent>
+            </Card>
+            {/* --- End Delete Account Section --- */}
+
           </div>
         </div>
       </div>

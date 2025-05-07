@@ -491,9 +491,9 @@ const CommunityAdminPanel: React.FC<CommunityAdminPanelProps> = ({
         </CardTitle>
         <CardDescription>Manage your community settings, users, and earnings.</CardDescription>
       </CardHeader>
-      
+
       {/* Admin Earnings Card */}
-      <CardContent>
+          <CardContent>
         <Card className="bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-lg mb-6">
           <CardContent className="pt-6 pb-6">
             <div className="flex justify-between items-center mb-4">
@@ -504,7 +504,7 @@ const CommunityAdminPanel: React.FC<CommunityAdminPanelProps> = ({
                     <div className="flex items-center gap-2">
                       <Loader2 className="h-5 w-5 animate-spin" />
                       <span className="text-xl">Loading...</span>
-                    </div>
+            </div>
                   ) : feesError ? (
                     <span className="text-xl">Error loading data</span>
                   ) : (
@@ -551,7 +551,7 @@ const CommunityAdminPanel: React.FC<CommunityAdminPanelProps> = ({
             </div>
           </CardContent>
         </Card>
-        
+
         <Tabs defaultValue="settings" value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid grid-cols-3 w-full">
             <TabsTrigger value="settings" className="flex gap-1 items-center">
@@ -572,9 +572,9 @@ const CommunityAdminPanel: React.FC<CommunityAdminPanelProps> = ({
               <div>
                 <h3 className="text-lg font-medium mb-4">Community Visuals</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Community Image */}
+            {/* Community Image */}
                   <div className="space-y-3">
-                    <label className="text-sm font-medium">Community Image</label>
+              <label className="text-sm font-medium">Community Image</label>
                     <div className="flex items-center gap-4">
                       {adminFormState.image && (
                         <img 
@@ -583,23 +583,23 @@ const CommunityAdminPanel: React.FC<CommunityAdminPanelProps> = ({
                           className="h-24 w-24 rounded-md object-cover border shadow-sm" 
                         />
                       )}
-                      <MediaUpload
-                        onMediaUploaded={handleAdminImageUpload}
-                        disabled={isSavingAdmin}
-                        acceptedTypes="image"
-                        maxFiles={1}
-                      >
+              <MediaUpload
+                onMediaUploaded={handleAdminImageUpload}
+                disabled={isSavingAdmin}
+                acceptedTypes="image"
+                maxFiles={1}
+              >
                         <Button variant="outline" className="gap-2">
-                          <UploadCloud className="h-4 w-4" />
-                          {adminFormState.image ? 'Change Image' : 'Upload Image'}
-                        </Button>
-                      </MediaUpload>
-                    </div>
+                  <UploadCloud className="h-4 w-4" />
+                  {adminFormState.image ? 'Change Image' : 'Upload Image'}
+                </Button>
+              </MediaUpload>
+            </div>
                   </div>
                   
-                  {/* Community Banner */}
+            {/* Community Banner */}
                   <div className="space-y-3">
-                    <label className="text-sm font-medium">Community Banner</label>
+              <label className="text-sm font-medium">Community Banner</label>
                     <div className="space-y-3">
                       {adminFormState.banner && (
                         <img 
@@ -608,38 +608,38 @@ const CommunityAdminPanel: React.FC<CommunityAdminPanelProps> = ({
                           className="h-24 w-full rounded-md object-cover border shadow-sm" 
                         />
                       )}
-                      <MediaUpload
-                        onMediaUploaded={handleAdminBannerUpload}
-                        disabled={isSavingAdmin}
-                        acceptedTypes="image"
-                        maxFiles={1}
-                      >
+              <MediaUpload
+                onMediaUploaded={handleAdminBannerUpload}
+                disabled={isSavingAdmin}
+                acceptedTypes="image"
+                maxFiles={1}
+              >
                         <Button variant="outline" className="gap-2">
-                          <UploadCloud className="h-4 w-4" />
-                          {adminFormState.banner ? 'Change Banner' : 'Upload Banner'}
-                        </Button>
-                      </MediaUpload>
+                  <UploadCloud className="h-4 w-4" />
+                  {adminFormState.banner ? 'Change Banner' : 'Upload Banner'}
+                </Button>
+              </MediaUpload>
                     </div>
-                  </div>
-                </div>
-              </div>
-              
+            </div>
+          </div>
+        </div>
+
               <Separator />
               
               {/* Community Rules */}
               <div className="space-y-3">
                 <h3 className="text-lg font-medium">Community Rules</h3>
-                <Textarea
-                  id="admin-rules"
-                  name="rules"
-                  value={adminFormState.rules}
-                  onChange={handleAdminInputChange}
-                  placeholder="Enter community rules here..."
-                  className="min-h-[150px]"
-                  disabled={isSavingAdmin}
-                />
-              </div>
-              
+          <Textarea
+            id="admin-rules"
+            name="rules"
+            value={adminFormState.rules}
+            onChange={handleAdminInputChange}
+            placeholder="Enter community rules here..."
+            className="min-h-[150px]"
+            disabled={isSavingAdmin}
+          />
+        </div>
+
               <Separator />
               
               {/* Interaction Settings */}
@@ -647,86 +647,86 @@ const CommunityAdminPanel: React.FC<CommunityAdminPanelProps> = ({
                 <h3 className="text-lg font-medium mb-4">Interaction Settings</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="space-y-2">
-                    <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1">
                       <label htmlFor="min_share_posting" className="text-sm font-medium">Min Shares Posting</label>
-                      <TooltipProvider delayDuration={100}>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <HelpCircle className="h-3 w-3 text-muted-foreground" />
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className="max-w-xs">
-                            Min shares required to create a post in this community.
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                    <Input
-                      id="min_share_posting"
-                      name="min_share_posting"
-                      type="number"
-                      step="0.001"
-                      min="0.001"
-                      value={adminFormState.min_share_posting ?? ''}
-                      onChange={handleAdminInputChange}
-                      placeholder="e.g., 0.001"
-                      disabled={isSavingAdmin}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-1">
-                      <label htmlFor="min_share_commenting" className="text-sm font-medium">Min Shares Commenting</label>
-                      <TooltipProvider delayDuration={100}>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <HelpCircle className="h-3 w-3 text-muted-foreground" />
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className="max-w-xs">
-                            Min shares required to reply/comment on posts.
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                    <Input
-                      id="min_share_commenting"
-                      name="min_share_commenting"
-                      type="number"
-                      step="0.001"
-                      min="0.001"
-                      value={adminFormState.min_share_commenting ?? ''}
-                      onChange={handleAdminInputChange}
-                      placeholder="e.g., 0.001"
-                      disabled={isSavingAdmin}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-1">
-                      <label htmlFor="min_share_reward" className="text-sm font-medium">Min Shares Reward</label>
-                      <TooltipProvider delayDuration={100}>
-                        <Tooltip>
-                          <TooltipTrigger>
-                            <HelpCircle className="h-3 w-3 text-muted-foreground" />
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className="max-w-xs">
-                            Min shares required to be eligible for monthly reward distributions.
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                    <Input
-                      id="min_share_reward"
-                      name="min_share_reward"
-                      type="number"
-                      step="1"
-                      min="0.001"
-                      value={adminFormState.min_share_reward ?? ''}
-                      onChange={handleAdminInputChange}
-                      placeholder="e.g., 1"
-                      disabled={isSavingAdmin}
-                    />
-                  </div>
-                </div>
+                <TooltipProvider delayDuration={100}>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <HelpCircle className="h-3 w-3 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs">
+                      Min shares required to create a post in this community.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
-              
+              <Input
+                id="min_share_posting"
+                name="min_share_posting"
+                type="number"
+                step="0.001"
+                min="0.001"
+                value={adminFormState.min_share_posting ?? ''}
+                onChange={handleAdminInputChange}
+                placeholder="e.g., 0.001"
+                disabled={isSavingAdmin}
+              />
+            </div>
+                  <div className="space-y-2">
+              <div className="flex items-center gap-1">
+                      <label htmlFor="min_share_commenting" className="text-sm font-medium">Min Shares Commenting</label>
+                <TooltipProvider delayDuration={100}>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <HelpCircle className="h-3 w-3 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs">
+                      Min shares required to reply/comment on posts.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <Input
+                id="min_share_commenting"
+                name="min_share_commenting"
+                type="number"
+                step="0.001"
+                min="0.001"
+                value={adminFormState.min_share_commenting ?? ''}
+                onChange={handleAdminInputChange}
+                placeholder="e.g., 0.001"
+                disabled={isSavingAdmin}
+              />
+            </div>
+                  <div className="space-y-2">
+              <div className="flex items-center gap-1">
+                      <label htmlFor="min_share_reward" className="text-sm font-medium">Min Shares Reward</label>
+                <TooltipProvider delayDuration={100}>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <HelpCircle className="h-3 w-3 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-xs">
+                      Min shares required to be eligible for monthly reward distributions.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <Input
+                id="min_share_reward"
+                name="min_share_reward"
+                type="number"
+                step="1"
+                min="0.001"
+                value={adminFormState.min_share_reward ?? ''}
+                onChange={handleAdminInputChange}
+                placeholder="e.g., 1"
+                disabled={isSavingAdmin}
+              />
+            </div>
+          </div>
+        </div>
+
               {/* Save Settings Button */}
               <div className="flex justify-end pt-4">
                 {adminError && (
@@ -820,7 +820,7 @@ const CommunityAdminPanel: React.FC<CommunityAdminPanelProps> = ({
                                 <AvatarImage src={user.avatar || ''} alt={user.handle} />
                                 <AvatarFallback>{user.handle.substring(0, 2).toUpperCase()}</AvatarFallback>
                               </Avatar>
-                              <div>
+              <div>
                                 <p className="font-medium text-sm">{user.handle}</p>
                                 <div className="mt-0.5">
                                   {inviteStatus === 'not_invited' && (
@@ -838,7 +838,7 @@ const CommunityAdminPanel: React.FC<CommunityAdminPanelProps> = ({
                                       Joined
                                     </Badge>
                                   )}
-                                </div>
+              </div>
                               </div>
                             </div>
                             
@@ -860,7 +860,7 @@ const CommunityAdminPanel: React.FC<CommunityAdminPanelProps> = ({
                               )}
                               {inviteStatus === 'not_invited' ? 'Invite' : 
                                inviteStatus === 'invited' ? 'Invited' : 'Joined'}
-                            </Button>
+                </Button>
                           </li>
                         );
                       })}
@@ -891,79 +891,79 @@ const CommunityAdminPanel: React.FC<CommunityAdminPanelProps> = ({
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Search User</label>
                   <Popover open={userSearchResults.length > 0 && muteSearchQuery.length > 1}>
-                    <PopoverTrigger asChild>
-                      <div className="relative">
-                        <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                          placeholder="Search user handle..."
-                          value={muteSearchQuery}
-                          onChange={(e) => {
-                            setMuteSearchQuery(e.target.value);
-                            setSelectedUserToMute(null);
-                          }}
-                          className="pl-8"
-                        />
-                      </div>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                      <Command shouldFilter={false}>
-                        <CommandList>
-                          {isSearchingUsers && <CommandEmpty>Searching...</CommandEmpty>}
-                          {!isSearchingUsers && userSearchResults.length === 0 && debouncedMuteSearch.length > 1 && (
-                            <CommandEmpty>No users found.</CommandEmpty>
-                          )}
-                          <CommandGroup heading="Suggestions">
-                            {userSearchResults.map((user) => (
-                              <CommandItem
-                                key={user.id}
-                                value={user.handle}
-                                onSelect={() => handleUserSelect(user.handle)}
-                                className="flex items-center gap-2"
-                              >
-                                <Avatar className="h-6 w-6">
-                                  <AvatarImage src={user.avatar_url} alt={user.handle} />
-                                  <AvatarFallback>{user.handle.substring(0, 2).toUpperCase()}</AvatarFallback>
-                                </Avatar>
-                                <span>{user.handle}</span>
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
+                  <PopoverTrigger asChild>
+                    <div className="relative">
+                      <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        placeholder="Search user handle..."
+                        value={muteSearchQuery}
+                        onChange={(e) => {
+                          setMuteSearchQuery(e.target.value);
+                          setSelectedUserToMute(null);
+                        }}
+                        className="pl-8"
+                      />
+                    </div>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command shouldFilter={false}>
+                      <CommandList>
+                        {isSearchingUsers && <CommandEmpty>Searching...</CommandEmpty>}
+                        {!isSearchingUsers && userSearchResults.length === 0 && debouncedMuteSearch.length > 1 && (
+                          <CommandEmpty>No users found.</CommandEmpty>
+                        )}
+                        <CommandGroup heading="Suggestions">
+                          {userSearchResults.map((user) => (
+                            <CommandItem
+                              key={user.id}
+                              value={user.handle}
+                              onSelect={() => handleUserSelect(user.handle)}
+                              className="flex items-center gap-2"
+                            >
+                              <Avatar className="h-6 w-6">
+                                <AvatarImage src={user.avatar_url} alt={user.handle} />
+                                <AvatarFallback>{user.handle.substring(0, 2).toUpperCase()}</AvatarFallback>
+                              </Avatar>
+                              <span>{user.handle}</span>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
 
-                  {selectedUserToMute && (
+                {selectedUserToMute && (
                     <div className="mt-2">
                       <Badge variant="secondary" className="px-3 py-1 text-base">Selected: {selectedUserToMute}</Badge>
                     </div>
-                  )}
+                )}
                 </div>
-                
+
                 <div className="space-y-2">
                   <label htmlFor="muteReason" className="text-sm font-medium">Reason for Muting</label>
-                  <Textarea
+                <Textarea
                     id="muteReason"
                     placeholder="Explain why this user is being muted..."
-                    value={muteReason}
-                    onChange={(e) => setMuteReason(e.target.value)}
+                  value={muteReason}
+                  onChange={(e) => setMuteReason(e.target.value)}
                     className="min-h-[80px]"
-                    disabled={isMutingUser}
-                  />
+                  disabled={isMutingUser}
+                />
                 </div>
-                
+
                 <div className="space-y-2">
                   <label htmlFor="muteDuration" className="text-sm font-medium">Mute Duration (hours)</label>
                   <div className="flex items-center gap-3">
-                    <Input
+                  <Input
                       id="muteDuration"
-                      type="number"
-                      value={muteDurationHours}
-                      onChange={(e) => setMuteDurationHours(parseInt(e.target.value) || 0)}
-                      min="1"
-                      disabled={isMutingUser}
+                    type="number"
+                    value={muteDurationHours}
+                    onChange={(e) => setMuteDurationHours(parseInt(e.target.value) || 0)}
+                    min="1"
+                    disabled={isMutingUser}
                       className="w-32"
-                    />
+                  />
                     <div className="flex gap-2">
                       {[24, 72, 168].map(hours => (
                         <Button 
@@ -990,7 +990,7 @@ const CommunityAdminPanel: React.FC<CommunityAdminPanelProps> = ({
                     <AlertDescription>{muteError}</AlertDescription>
                   </Alert>
                 )}
-                
+
                 <Button
                   variant="destructive"
                   className="w-full gap-2 mt-2"
@@ -1001,8 +1001,8 @@ const CommunityAdminPanel: React.FC<CommunityAdminPanelProps> = ({
                   Mute {selectedUserToMute || 'User'}
                 </Button>
               </div>
-            </div>
-            
+              </div>
+
             {/* Muted Users List */}
             <div className="bg-muted/30 rounded-lg p-4">
               <div className="flex items-center justify-between mb-4">
@@ -1017,7 +1017,7 @@ const CommunityAdminPanel: React.FC<CommunityAdminPanelProps> = ({
                   <RefreshCw className="h-3 w-3" />
                   Refresh
                 </Button>
-              </div>
+                  </div>
               
               {loadingMutedUsers ? (
                 <div className="flex justify-center py-10">
@@ -1026,8 +1026,8 @@ const CommunityAdminPanel: React.FC<CommunityAdminPanelProps> = ({
               ) : mutedUsersError ? (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{mutedUsersError}</AlertDescription>
-                </Alert>
+                    <AlertDescription>{mutedUsersError}</AlertDescription>
+                  </Alert>
               ) : mutedUsers.length === 0 ? (
                 <div className="text-center py-10 bg-card rounded-md shadow-sm">
                   <Ban className="h-10 w-10 mx-auto text-muted-foreground mb-3 opacity-20" />
@@ -1039,12 +1039,12 @@ const CommunityAdminPanel: React.FC<CommunityAdminPanelProps> = ({
               ) : (
                 <div className="bg-card rounded-md shadow-sm">
                   <ul className="divide-y">
-                    {mutedUsers.map((mutedUser) => {
-                      const isUnmuting = unmutingUserHandle === mutedUser.user_handle;
-                      const muteExpires = new Date(mutedUser.valid_upto);
-                      const isExpired = muteExpires < new Date();
+                      {mutedUsers.map((mutedUser) => {
+                        const isUnmuting = unmutingUserHandle === mutedUser.user_handle;
+                        const muteExpires = new Date(mutedUser.valid_upto);
+                        const isExpired = muteExpires < new Date();
                       
-                      return (
+                        return (
                         <li key={`muted-${mutedUser.mute_id}-${mutedUser.user_handle}`} className="p-4 flex justify-between items-start hover:bg-muted/10">
                           <div>
                             <div className="flex items-center gap-2">
@@ -1064,16 +1064,16 @@ const CommunityAdminPanel: React.FC<CommunityAdminPanelProps> = ({
                             </p>
                             <p className="text-xs mt-1 flex items-center">
                               <ClockIcon className="h-3 w-3 mr-1 inline" />
-                              {isExpired ? 'Expired' : `Expires ${formatDistanceToNow(muteExpires, { addSuffix: true })}`}
-                            </p>
-                          </div>
-                          <Button
+                                {isExpired ? 'Expired' : `Expires ${formatDistanceToNow(muteExpires, { addSuffix: true })}`}
+                              </p>
+                            </div>
+                            <Button
                             variant="ghost"
-                            size="sm"
+                              size="sm"
                             className="ml-2 text-red-500 hover:text-red-700 hover:bg-red-50/50"
-                            onClick={() => handleUnmuteUser(mutedUser.user_handle)}
-                            disabled={isUnmuting}
-                          >
+                              onClick={() => handleUnmuteUser(mutedUser.user_handle)}
+                              disabled={isUnmuting}
+                            >
                             {isUnmuting ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (
@@ -1082,38 +1082,38 @@ const CommunityAdminPanel: React.FC<CommunityAdminPanelProps> = ({
                                 Unmute
                               </span>
                             )}
-                          </Button>
-                        </li>
-                      );
-                    })}
-                  </ul>
+                            </Button>
+                          </li>
+                        );
+                      })}
+                    </ul>
                   
                   {/* Pagination */}
-                  {mutedUsersPagination && mutedUsersPagination.totalPages > 1 && (
+                    {mutedUsersPagination && mutedUsersPagination.totalPages > 1 && (
                     <div className="flex justify-center items-center py-4 border-t text-sm">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={currentMutedPage <= 1 || loadingMutedUsers}
-                        onClick={() => fetchMutedUsers(currentMutedPage - 1)}
-                      >
-                        Previous
-                      </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={currentMutedPage <= 1 || loadingMutedUsers}
+                          onClick={() => fetchMutedUsers(currentMutedPage - 1)}
+                        >
+                          Previous
+                        </Button>
                       <span className="mx-4">
                         Page {currentMutedPage} of {mutedUsersPagination.totalPages}
                       </span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={currentMutedPage >= mutedUsersPagination.totalPages || loadingMutedUsers}
-                        onClick={() => fetchMutedUsers(currentMutedPage + 1)}
-                      >
-                        Next
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={currentMutedPage >= mutedUsersPagination.totalPages || loadingMutedUsers}
+                          onClick={() => fetchMutedUsers(currentMutedPage + 1)}
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    )}
+        </div>
+        )}
             </div>
           </TabsContent>
         </Tabs>
