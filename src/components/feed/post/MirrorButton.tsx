@@ -10,6 +10,7 @@ import { mirrorPost, fetchCommunities, Community } from '@/utils/api';
 import { toast } from 'sonner';
 import { restoreBodyScrolling } from '@/utils/deviceUtils';
 import { NotInCommunitySheet } from '@/components/community/NotInCommunitySheet';
+import MobileMirrorSheet, { PERSONAL_FEED_INTERNAL_IDENTIFIER } from './MobileMirrorSheet';
 
 // Create a custom event for post mirroring
 export const POST_MIRRORED_EVENT = 'post-mirrored';
@@ -50,28 +51,30 @@ export const MirrorButton = ({
   
   // Fetch user communities when the modal opens
   useEffect(() => {
-    if (open && userCommunities === null) {
+    if (open && userCommunities === null && mobile) {
       const loadUserCommunities = async () => {
         setLoadingUserCommunities(true);
         try {
-          // Only fetch personal communities
-          const communities = await fetchCommunities({ personal: true, limit: 500 }); // Fetch a larger limit
+          const communities = await fetchCommunities({ personal: true, limit: 500 });
           setUserCommunities(communities);
         } catch (error) {
-          console.error("Failed to fetch user communities for mirror check:", error);
-          // Proceed without check if fetch fails, maybe log an error?
-          setUserCommunities([]); // Set to empty array to allow proceeding
+          console.error("Failed to fetch user communities for mirror:", error);
+          setUserCommunities([]); 
+          toast.error("Could not load your communities. Mirroring to communities might be affected.");
         } finally {
           setLoadingUserCommunities(false);
         }
       };
       loadUserCommunities();
     }
-    // Reset when closed if not showing the other sheet
     if (!open && !notInCommunitySheetOpen) {
-      setUserCommunities(null);
+       // Reset when closed only if not showing the other sheet
+       // No, MobileMirrorSheet handles its own internal reset. 
+       // This component should only reset userCommunities if they are context-specific to this modal instance,
+       // but they are fetched for the mobile sheet so clearing here might be too aggressive if desktop uses them too.
+       // For now, let MobileMirrorSheet handle its reset. If desktop version uses userCommunities, then they should persist while open.
     }
-  }, [open, notInCommunitySheetOpen]);
+  }, [open, notInCommunitySheetOpen, mobile]);
   
   // Effect to cleanup scroll locks when drawer/sheet closes
   useEffect(() => {
@@ -117,19 +120,81 @@ export const MirrorButton = ({
     }
   };
   
-  const handleMirror = async (e: React.MouseEvent) => {
-    // Prevent any navigation
+  const handleMobileMirrorSubmit = async (communityTo: string, quoteTextVal: string, postCodeVal: string): Promise<boolean> => {
+    // communityTo is the community NAME or empty string for personal feed
+    // postCodeVal is passed from MobileMirrorSheet's postData
+    
+    if (!postCodeVal) {
+      console.error("Missing postCode in mobile mirror submit");
+      toast.error("Unable to mirror this post: missing post identifier");
+      return false;
+    }
+
+    // Validate that user is not trying to mirror to the same community (if source community exists)
+    if (community && communityTo === community && communityTo !== "") { // PERSONAL_FEED_INTERNAL_IDENTIFIER is internal to sheet, API expects ""
+      toast.error("You cannot mirror a post to the same community it's already in.");
+      return false;
+    }
+
+    // Community Membership Check (if applicable, less direct in new flow but good to keep if mirroring FROM community)
+    if (community && userCommunities && !loadingUserCommunities) { // `community` here is sourceCommunity
+      const isMemberOfSource = userCommunities.some(uc => uc.name === community);
+      // This check might be less relevant now as the new mobile flow doesn't directly show source community info during mirroring
+      // However, if the backend enforces that a user must be a member of the source community to mirror *from* it, it might still be needed.
+      // For now, let's assume this check is primarily for mirroring *into* a community where membership matters.
+    }
+
+    setMirroring(true); // Use this component's mirroring state for overall feedback if needed
+    try {
+      const userId = localStorage.getItem('dapps_user_id');
+      if (!userId) {
+        toast.error("You need to be logged in to mirror posts.");
+        return false;
+      }
+
+      const mirrorParams = {
+        postCode: postCodeVal,
+        communityTo: communityTo, // Already correctly formatted by MobileMirrorSheet
+        quoteText: quoteTextVal.trim() || undefined
+      };
+      
+      console.log("Sending mirror request (from MobileMirrorSheet) with params:", mirrorParams);
+      const success = await mirrorPost(mirrorParams);
+      
+      if (success) {
+        const destination = communityTo === "" 
+          ? "your personal feed" 
+          : communityTo;
+        toast.success(`Post mirrored to ${destination}!`);
+        
+        const mirroredEvent = new CustomEvent(POST_MIRRORED_EVENT, {
+          detail: {
+            originalPostCode: postCodeVal,
+            communityTo: communityTo,
+            isPersonalFeed: communityTo === ""
+          }
+        });
+        document.dispatchEvent(mirroredEvent);
+        onOpenChange(false); // Close the main button's controlled modal state
+        return true;
+      } else {
+        throw new Error('Failed to mirror post (API returned false)');
+      }
+    } catch (error: any) {
+      console.error("Error in handleMobileMirrorSubmit:", error);
+      toast.error(error.message || "Failed to mirror post.");
+      return false;
+    } finally {
+      setMirroring(false);
+    }
+  };
+
+  // Original handleMirror (for desktop Sheet with MirrorContent)
+  const handleMirrorDesktop = async (e: React.MouseEvent, currentSelectedCommunity: string | null, currentQuoteText: string) => {
     e.preventDefault();
     e.stopPropagation();
     
-    console.log("Mirror request details:", {
-      postCode,
-      selectedCommunity,
-      quoteText: quoteText.trim(),
-      sourceCommunity: community
-    });
-    
-    if (!selectedCommunity) {
+    if (!currentSelectedCommunity) {
       uiToast({
         title: "Error",
         description: "Please select where to mirror this post",
@@ -137,9 +202,7 @@ export const MirrorButton = ({
       });
       return;
     }
-    
-    // Validate that user is not trying to mirror to the same community
-    if (community && selectedCommunity === community && selectedCommunity !== PERSONAL_FEED) {
+    if (community && currentSelectedCommunity === community && currentSelectedCommunity !== PERSONAL_FEED) {
       uiToast({
         title: "Cannot Mirror",
         description: "You cannot mirror a post to the same community it's already in",
@@ -147,200 +210,80 @@ export const MirrorButton = ({
       });
       return;
     }
-    
-    // *** Community Membership Check ***
-    if (community && userCommunities && !loadingUserCommunities) {
-      const isMember = userCommunities.some(uc => uc.name === community);
-      if (!isMember) {
-        console.log(`User not member of source community: ${community}. Showing sheet.`);
-        setCommunityNameForSheet(community);
-        setNotInCommunitySheetOpen(true);
-        handleCloseModal(); // Close the mirror modal
-        return; // Stop the mirror process
-      }
-    }
-    // If still loading communities, prevent mirroring for now
     if (loadingUserCommunities) {
-      uiToast({
-        title: "Checking membership...",
-        description: "Please wait while we verify community membership.",
-      });
+      uiToast({ title: "Checking membership...", description: "Please wait while we verify community membership." });
       return;
     }
-    // *** End Check ***
-    
     if (!postCode) {
-      console.error("Missing postCode in mirror request");
-      uiToast({
-        title: "Error",
-        description: "Unable to mirror this post: missing post identifier",
-        variant: "destructive"
-      });
+      console.error("Missing postCode in desktop mirror request");
+      uiToast({ title: "Error", description: "Unable to mirror post: missing ID", variant: "destructive" });
       return;
     }
     
     setMirroring(true);
-    
     try {
       const userId = localStorage.getItem('dapps_user_id');
-      
       if (!userId) {
-        uiToast({
-          title: "Authentication Error",
-          description: "You need to be logged in to mirror posts",
-          variant: "destructive"
-        });
-        setMirroring(false);
-        return;
+        uiToast({ title: "Auth Error", description: "Login required", variant: "destructive" });
+        setMirroring(false); return;
       }
-      
-      // Using the proper parameter names as expected by the API
-      // If mirroring to personal feed, use empty string for communityTo
       const mirrorParams = {
         postCode: postCode, 
-        communityTo: selectedCommunity === PERSONAL_FEED ? "" : selectedCommunity,
-        quoteText: quoteText.trim() || undefined
+        communityTo: currentSelectedCommunity === PERSONAL_FEED ? "" : currentSelectedCommunity,
+        quoteText: currentQuoteText.trim() || undefined
       };
-      
-      console.log("Sending mirror request with params:", mirrorParams);
-      
       const success = await mirrorPost(mirrorParams);
-      
       if (success) {
-        // Close the mirror dialog first
-        handleCloseModal();
-        
-        // Destination text for the success message
-        const destination = selectedCommunity === PERSONAL_FEED 
-          ? "your feed" 
-          : selectedCommunity;
-        
-        // Then show toast notification
-        toast.success(`Post mirrored to ${destination}`, {
-          description: "Your mirrored post has been published successfully",
-          duration: 5000,
-        });
-        
-        setSelectedCommunity(null);
-        setQuoteText('');
-        
-        // Dispatch a custom event to notify that a post was mirrored
-        const mirroredEvent = new CustomEvent(POST_MIRRORED_EVENT, {
-          detail: {
-            originalPostCode: postCode,
-            communityTo: selectedCommunity === PERSONAL_FEED ? "" : selectedCommunity,
-            isPersonalFeed: selectedCommunity === PERSONAL_FEED
-          }
-        });
+        onOpenChange(false);
+        const destination = currentSelectedCommunity === PERSONAL_FEED ? "your feed" : currentSelectedCommunity;
+        toast.success(`Post mirrored to ${destination}`, { description: "Mirrored post published." });
+        const mirroredEvent = new CustomEvent(POST_MIRRORED_EVENT, { detail: { originalPostCode: postCode, communityTo: mirrorParams.communityTo, isPersonalFeed: mirrorParams.communityTo === "" } });
         document.dispatchEvent(mirroredEvent);
-      } else {
-        throw new Error('Failed to mirror post');
-      }
-    } catch (error) {
-      console.error('Error mirroring post:', error);
-      
-      // Extract the error message
-      let errorMessage = "Failed to mirror post. Please try again.";
-      
-      if (error instanceof Error) {
-        errorMessage = error.message;
-        
-        // Provide a more user-friendly message for the most common error
-        if (errorMessage.includes("Cannot mirror to the same community")) {
-          errorMessage = "You cannot mirror a post to the same community it's already in.";
-        }
-      }
-      
-      uiToast({
-        title: "Mirror Failed",
-        description: errorMessage,
-        variant: "destructive"
-      });
+      } else { throw new Error('Failed to mirror post'); }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to mirror post");
     } finally {
       setMirroring(false);
-      // Ensure scrolling is restored
-      if (mobile) {
-        setTimeout(restoreBodyScrolling, 150);
-      }
     }
   };
   
-  // Render component based on device type
+  // State for desktop version (if kept separate)
+  const [desktopSelectedCommunity, setDesktopSelectedCommunity] = useState<string | null>(null);
+  const [desktopQuoteText, setDesktopQuoteText] = useState('');
+
   if (mobile) {
+    const mobilePostData = {
+        username,
+        timeAgo,
+        content,
+        images,
+        video,
+        postCode,
+        community, // Source community name
+        // avatarUrl: pass author's avatar if available, otherwise MobileMirrorSheet will use a fallback
+    };
     return (
       <>
-      <Drawer open={open} onOpenChange={(isOpen) => {
-        onOpenChange(isOpen);
-        // Ensure scrolling is restored when drawer is closed
-        if (!isOpen) {
-          setTimeout(restoreBodyScrolling, 150); 
-        }
-      }}>
-        <DrawerTrigger asChild>
-          <Button 
+        {/* Trigger Button - can be outside or handled by parent like a feed item */}
+        {/* For this example, assuming MirrorButton itself is the trigger for its own state */}
+        <Button 
             variant="ghost" 
             size="sm"
             className="gap-2 hover:text-purple-500 hover:bg-purple-500/10"
-            onClick={handleClick}
+            onClick={handleClick} // This sets `open` to true
           >
             <Repeat2 className="h-4 w-4" />
             <span>Mirror</span>
-          </Button>
-        </DrawerTrigger>
-        <DrawerContent className="max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
-          <DrawerHeader className="border-b">
-            <DrawerTitle>Mirror Post</DrawerTitle>
-            <DrawerDescription>
-              Share this post to your feed or other communities
-            </DrawerDescription>
-          </DrawerHeader>
-          
-          <MirrorContent 
-            username={username} 
-            timeAgo={timeAgo} 
-            content={content} 
-            images={images} 
-            video={video}
-            onCommunitySelect={handleCommunitySelect}
-            onQuoteChange={handleQuoteChange}
-            selectedCommunity={selectedCommunity}
-            quoteText={quoteText}
-            sourceCommunity={community}
-          />
-          
-          <DrawerFooter className="flex-row justify-between gap-2 p-4 border-t bg-background sticky bottom-0 left-0 right-0 z-10">
-            <DrawerClose asChild>
-              <Button variant="outline" onClick={(e) => {
-                e.stopPropagation();
-                setTimeout(restoreBodyScrolling, 150);
-              }}>Cancel</Button>
-            </DrawerClose>
-            <Button 
-              onClick={handleMirror}
-                disabled={!selectedCommunity || mirroring || loadingUserCommunities}
-              className="gap-1.5"
-            >
-              {mirroring ? (
-                <>
-                  <span className="animate-spin">↻</span>
-                  Mirroring...
-                </>
-                ) : loadingUserCommunities ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Checking...
-                  </>
-              ) : (
-                <>
-                  <Repeat2 className="h-4 w-4" />
-                  Mirror Post
-                </>
-              )}
-            </Button>
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
+        </Button>
 
+        <MobileMirrorSheet 
+            open={open} 
+            onOpenChange={onOpenChange} 
+            postData={mobilePostData}
+            userCommunities={userCommunities}
+            loadingUserCommunities={loadingUserCommunities}
+            onMirrorSubmit={handleMobileMirrorSubmit}        
+        />
         <NotInCommunitySheet 
           open={notInCommunitySheetOpen}
           onOpenChange={setNotInCommunitySheetOpen}
@@ -350,9 +293,16 @@ export const MirrorButton = ({
     );
   }
   
+  // Desktop version using Sheet and MirrorContent
   return (
     <>
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={(isOpen) => {
+        onOpenChange(isOpen);
+        if (!isOpen) { // Reset desktop-specific state on close
+            setDesktopSelectedCommunity(null);
+            setDesktopQuoteText('');
+        }
+    }}>
       <SheetTrigger asChild>
         <Button 
           variant="ghost" 
@@ -378,10 +328,10 @@ export const MirrorButton = ({
           content={content} 
           images={images} 
           video={video}
-          onCommunitySelect={handleCommunitySelect}
-          onQuoteChange={handleQuoteChange}
-          selectedCommunity={selectedCommunity}
-          quoteText={quoteText}
+          onCommunitySelect={setDesktopSelectedCommunity} // Use desktop state setter
+          onQuoteChange={setDesktopQuoteText} // Use desktop state setter
+          selectedCommunity={desktopSelectedCommunity} // Pass desktop state
+          quoteText={desktopQuoteText} // Pass desktop state
           sourceCommunity={community}
         />
         
@@ -390,8 +340,8 @@ export const MirrorButton = ({
             <Button variant="outline" onClick={(e) => e.stopPropagation()}>Cancel</Button>
           </SheetClose>
           <Button 
-            onClick={handleMirror}
-              disabled={!selectedCommunity || mirroring || loadingUserCommunities}
+            onClick={(e) => handleMirrorDesktop(e, desktopSelectedCommunity, desktopQuoteText)}
+            disabled={!desktopSelectedCommunity || mirroring || loadingUserCommunities}
             className="gap-1.5"
           >
             {mirroring ? (
