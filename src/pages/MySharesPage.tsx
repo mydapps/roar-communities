@@ -14,7 +14,8 @@ import {
   ArrowDown,
   Plus,
   Minus,
-  Droplet
+  Droplet,
+  AlertTriangle
 } from 'lucide-react';
 import { toast } from "sonner";
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -33,9 +34,24 @@ import { ETHTransferSheet } from '@/components/eth/ETHTransferSheet';
 import { TradeSheet } from '@/components/shares/TradeSheet';
 import { CommunityShareCard } from '@/components/shares/CommunityShareCard';
 import { ShareTransferSheet } from '@/components/shares/ShareTransferSheet';
+import { EthMigrationSheet } from '@/components/eth/EthMigrationSheet';
 import { usePortfolio } from '@/hooks/usePortfolio';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import confetti from 'canvas-confetti';
+
+// Define interfaces for the new API responses
+interface EthMigrationCheckResponse {
+  success: boolean;
+  ethereumBalance: string;
+  baseBalance: string;
+  address: string;
+  canMigrate: boolean;
+  migrationAmount?: string; // Optional based on API, make sure to handle if null
+  estimatedGasFee?: string; // Optional
+  reason?: string | null;
+  chainId?: number;
+  message?: string; // For error cases
+}
 
 const MySharesPage = () => {
   const [depositOpen, setDepositOpen] = useState(false);
@@ -49,6 +65,13 @@ const MySharesPage = () => {
   const [loadingAction, setLoadingAction] = useState(false);
   const [precheckData, setPrecheckData] = useState<SharePrecheckResponse | null>(null);
   const isMobile = useIsMobile();
+
+  // --- ETH Migration State ---
+  const [migrationCheckData, setMigrationCheckData] = useState<EthMigrationCheckResponse | null>(null);
+  const [isLoadingMigrationCheck, setIsLoadingMigrationCheck] = useState(false);
+  const [migrationCheckError, setMigrationCheckError] = useState<string | null>(null);
+  const [isMigrationSheetOpen, setIsMigrationSheetOpen] = useState(false);
+  // We will add more state for the sheet itself (fee estimate, migration execution) later
 
   const {
     portfolioItems,
@@ -71,6 +94,9 @@ const MySharesPage = () => {
         // Always mark as not loading when finished
         setIsLoadingBalance(false);
       });
+
+    // Fetch ETH migration status
+    fetchEthMigrationStatus();
   }, []);
 
   // Development-only logging helper
@@ -209,7 +235,42 @@ const MySharesPage = () => {
     // Force refresh the wallet balance
     fetchWalletBalance(true);
     refreshPortfolio();
-    toast.success("Refreshing portfolio and balance data...");
+    // Also refresh migration status
+    fetchEthMigrationStatus();
+    toast.success("Refreshing portfolio, balance, and migration status...");
+  };
+
+  // --- ETH Migration Functions ---
+  const fetchEthMigrationStatus = async () => {
+    setIsLoadingMigrationCheck(true);
+    setMigrationCheckError(null);
+    try {
+      // Assuming apiBase.get can handle this or we use fetch directly
+      const response = await fetch("/api/check_eth_migration");
+      const data: EthMigrationCheckResponse = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to check ETH migration status");
+      }
+      
+      if (data.success) {
+        setMigrationCheckData(data);
+        if (data.canMigrate && parseFloat(data.ethereumBalance) > 0) {
+          // Optional: toast only if there's something actionable
+          // toast.info("Potential ETH on Ethereum network detected."); 
+        }
+      } else {
+        // Handle cases where data.success is false but response was ok (e.g. API handled error)
+        setMigrationCheckError(data.message || "Could not retrieve migration status.");
+      }
+    } catch (error: any) {
+      console.error("Fetch ETH migration status error:", error);
+      setMigrationCheckError(error.message || "An error occurred while checking migration status.");
+      // Don't toast an error here generally unless it's critical, 
+      // as this check runs in the background. The UI will show the prompt if needed.
+    } finally {
+      setIsLoadingMigrationCheck(false);
+    }
   };
 
   const resetState = () => {
@@ -247,6 +308,40 @@ const MySharesPage = () => {
           setSendOpen(true);
         }}
       />
+
+      {/* --- ETH Migration Prompt --- */}
+      {migrationCheckData?.canMigrate && parseFloat(migrationCheckData.ethereumBalance) > 0 && (
+        <Card className="border-yellow-500/70 bg-yellow-500/5 shadow-md animate-fade-in mb-6">
+          <CardContent className="p-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-6 w-6 text-yellow-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <h3 className="font-semibold text-yellow-800">
+                    ETH Detected on Ethereum Network
+                  </h3>
+                  <p className="text-sm text-yellow-700/90 mt-1">
+                    It appears you have {migrationCheckData.ethereumBalance} ETH on the Ethereum mainnet. 
+                    This wallet address is primarily for the Base network. Would you like to transfer these funds to Base?
+                  </p>
+                </div>
+              </div>
+              <Button 
+                variant="outline"
+                className="bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-700 border-yellow-500/50 hover:border-yellow-500/70 w-full sm:w-auto flex-shrink-0 gap-2"
+                onClick={() => setIsMigrationSheetOpen(true)}
+              >
+                <Droplet className="h-4 w-4" /> 
+                Transfer ETH to Base
+              </Button>
+            </div>
+            {migrationCheckError && (
+                <p className="text-xs text-red-600 mt-2 pl-9">Error checking migration status: {migrationCheckError}</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+      {/* --- End ETH Migration Prompt --- */}
       
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -343,7 +438,7 @@ const MySharesPage = () => {
         open={sendOpen} 
         onOpenChange={setSendOpen} 
         currentBalance={userEthBalance}
-        onTransferSuccess={fetchWalletBalance}
+        onTransferSuccess={() => fetchWalletBalance(true) }
       />
 
       <TradeSheet 
@@ -363,6 +458,18 @@ const MySharesPage = () => {
         onOpenChange={setTransferOpen}
         community={selectedCommunity}
         onTransferSuccess={handleTransferSuccess}
+      />
+
+      <EthMigrationSheet
+        open={isMigrationSheetOpen}
+        onOpenChange={setIsMigrationSheetOpen}
+        initialMigrationData={migrationCheckData}
+        onMigrationSuccess={() => {
+          toast.success('Migration successful! Refreshing data...');
+          fetchWalletBalance(true);
+          fetchEthMigrationStatus();
+          setIsMigrationSheetOpen(false);
+        }}
       />
     </div>
   );
