@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Drawer,
   DrawerContent,
@@ -69,6 +69,7 @@ const MobileMirrorSheet: React.FC<MobileMirrorSheetProps> = ({
   const [quoteText, setQuoteText] = useState('');
   const [isMirroring, setIsMirroring] = useState(false);
   const [communitySearchQuery, setCommunitySearchQuery] = useState('');
+  const quoteTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (!open) {
@@ -252,18 +253,22 @@ const MobileMirrorSheet: React.FC<MobileMirrorSheetProps> = ({
 
       case 'quote_confirm':
         return (
-          <div className="p-4 space-y-3">
+          <div className="px-4 pt-3 pb-2 flex flex-col flex-grow" style={{ height: 'calc(100% - 0px)' }}>
             <SimplifiedPostPreview />
-            <div className="text-sm">
-              Mirroring to: <span className="font-semibold text-primary">{selectedDestination?.displayName}</span>
-              {selectedDestination?.isPersonalFeed ? '' : selectedDestination?.slug ? <span className="text-muted-foreground text-xs"> (c/{selectedDestination.slug})</span> : ''}
-            </div>
             <Textarea
+              ref={quoteTextareaRef}
               placeholder="Add a quote (optional)..."
               value={quoteText}
               onChange={(e) => setQuoteText(e.target.value)}
-              className="min-h-[80px] resize-none text-sm"
-              rows={3}
+              className="min-h-[80px] text-sm mt-1 mb-2 flex-grow"
+              onFocus={() => {
+                setTimeout(() => {
+                    quoteTextareaRef.current?.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center' 
+                    });
+                }, 300);
+              }}
             />
           </div>
         );
@@ -283,7 +288,7 @@ const MobileMirrorSheet: React.FC<MobileMirrorSheetProps> = ({
   
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="max-h-[85vh] min-h-[300px] flex flex-col bg-card">
+      <DrawerContent className="max-h-[90vh] min-h-[300px] flex flex-col bg-card">
         <DrawerHeader className="text-left border-b flex-shrink-0 py-3 px-4">
           <div className="flex items-center">
             {currentStep !== 'destination' && (
@@ -294,7 +299,7 @@ const MobileMirrorSheet: React.FC<MobileMirrorSheetProps> = ({
             <div className="flex-grow">
                 <DrawerTitle className="text-base font-semibold">{getHeaderTitle()}</DrawerTitle>
             </div>
-            <DrawerClose asChild className="ml-auto -mr-1 -mt-1 h-8 w-8">
+            <DrawerClose asChild className="ml-auto -mr-1 h-8 w-8">
                 <Button variant="ghost" size="icon"><XIcon className="h-5 w-5" /></Button>
             </DrawerClose>
           </div>
