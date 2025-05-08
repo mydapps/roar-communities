@@ -58,8 +58,8 @@ const CreatePostCard = ({ onPostCreated, communityName }: CreatePostCardProps) =
       toast.error('Please enter some content or add media.');
       return false;
     }
-    
-    let fullBody = content.trim();
+      
+      let fullBody = content.trim();
     if (media.length > 0) {
       let mediaAlreadyInContent = false;
       if (content) {
@@ -70,8 +70,8 @@ const CreatePostCard = ({ onPostCreated, communityName }: CreatePostCardProps) =
             fullBody += `\n\n![](${m.url})`; 
         });
       }
-    }
-
+      }
+      
     try {
       const postData = {
         body: fullBody,
@@ -147,17 +147,17 @@ const CreatePostCard = ({ onPostCreated, communityName }: CreatePostCardProps) =
         <CardContent className="pt-4 pb-4">
           <div className="flex gap-3 items-center">
             <Avatar className="h-10 w-10 border-2 border-primary/20">
-              <AvatarImage src={userAvatar} />
+            <AvatarImage src={userAvatar} />
               <AvatarFallback>{userHandle?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
-            </Avatar>
-            <div className="flex-1">
+          </Avatar>
+          <div className="flex-1">
               <div className="w-full rounded-lg bg-muted/30 p-3 text-sm text-muted-foreground">
                 {communityName ? `Share your thoughts with ${communityName}...` : "What's on your mind?"}
-              </div>
-            </div>
+                </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </CardContent>
+    </Card>
 
       {isModalOpen && (
         <CreatePostModal

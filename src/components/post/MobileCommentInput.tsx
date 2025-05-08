@@ -274,7 +274,7 @@ export const MobileCommentInput: React.FC<MobileCommentInputProps> = ({
   const handleSubmit = async () => {
     if (!content.trim() && !uploadedMedia) return;
     if (isSubmittingRef.current) return;
-    
+
     isSubmittingRef.current = true;
     setIsSubmitting(true);
     
@@ -282,7 +282,7 @@ export const MobileCommentInput: React.FC<MobileCommentInputProps> = ({
     if (uploadedMedia && uploadedMedia.markdown) {
       finalContent += (finalContent.length > 0 ? "\n\n" : "") + uploadedMedia.markdown;
     }
-    
+
     try {
       const parentId = replyToComment?.level2ParentId || replyToComment?.id;
       if (parentId && parentId < 0) {
@@ -392,26 +392,26 @@ export const MobileCommentInput: React.FC<MobileCommentInputProps> = ({
           {isExpanded && (
             <div className="flex justify-between items-center mt-2">
                 <div className="flex gap-1">
-                    {!uploadedMedia && (
+              {!uploadedMedia && (
                         <>
-                          <MediaUpload 
-                            onMediaUploaded={handleMediaUploaded} 
-                            acceptedTypes="image"
-                            maxFiles={1}
-                          >
+                  <MediaUpload
+                    onMediaUploaded={handleMediaUploaded}
+                    acceptedTypes="image"
+                    maxFiles={1}
+                  >
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" type="button">
                                 <ImageIcon className="h-4 w-4" />
-                            </Button>
-                          </MediaUpload>
-                          <MediaUpload 
-                            onMediaUploaded={handleMediaUploaded} 
-                            acceptedTypes="video"
-                            maxFiles={1}
-                          >
+                    </Button>
+                  </MediaUpload>
+                  <MediaUpload
+                    onMediaUploaded={handleMediaUploaded}
+                    acceptedTypes="video"
+                    maxFiles={1}
+                  >
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" type="button">
                                 <VideoIcon className="h-4 w-4" />
-                            </Button>
-                          </MediaUpload>
+                    </Button>
+                  </MediaUpload>
                         </>
                     )}
                 </div>
@@ -430,7 +430,7 @@ export const MobileCommentInput: React.FC<MobileCommentInputProps> = ({
           {isExpanded && uploadedMedia && (
              <div className="mt-2 pb-1">
                  <MediaPreview media={uploadedMedia} onRemove={removeMedia} />
-             </div>
+            </div>
           )}
         </div>
       </div>

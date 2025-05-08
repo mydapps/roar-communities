@@ -266,7 +266,7 @@ export const MirrorButton = ({
       <>
         {/* Trigger Button - can be outside or handled by parent like a feed item */}
         {/* For this example, assuming MirrorButton itself is the trigger for its own state */}
-        <Button 
+          <Button 
             variant="ghost" 
             size="sm"
             className="gap-2 hover:text-purple-500 hover:bg-purple-500/10"
@@ -274,7 +274,7 @@ export const MirrorButton = ({
           >
             <Repeat2 className="h-4 w-4" />
             <span>Mirror</span>
-        </Button>
+          </Button>
 
         <MobileMirrorSheet 
             open={open} 

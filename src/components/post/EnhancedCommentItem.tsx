@@ -453,12 +453,12 @@ export const EnhancedCommentItem = ({
           {isReplying && !isMobile && (
             <form onSubmit={handleSubmitReply} className="mt-3 space-y-2">
               <div className="relative">
-                <Textarea 
+              <Textarea 
                   ref={replyInputRef}
-                  placeholder={`Reply to ${formatUsername(comment.handle)}...`}
-                  value={replyContent}
+                placeholder={`Reply to ${formatUsername(comment.handle)}...`}
+                value={replyContent}
                   onChange={handleReplyContentChange}
-                  className="min-h-[60px] text-sm"
+                className="min-h-[60px] text-sm"
                   onKeyDown={handleReplyKeyDown}
                   onBlur={(e) => {
                     if (suggestionsContainerRef.current && 

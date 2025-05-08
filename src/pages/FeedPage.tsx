@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, Fragment } from 'react';
 import { Post } from '@/components/feed/Post';
 import CreatePostCard from '@/components/feed/CreatePostCard';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -8,6 +8,10 @@ import { toast } from 'sonner';
 import { toggleRoar, fetchPosts, setupMirrorListener } from '@/utils/api';
 import { NotInCommunitySheet } from '@/components/community/NotInCommunitySheet';
 import { usePreventZoom } from '@/hooks/usePreventZoom';
+import { ProfileSuggestionModule } from '@/components/suggestions/ProfileSuggestionModule';
+
+const SUGGESTION_INTERVAL = 7;
+const MIN_POSTS_BEFORE_SUGGESTION = 3;
 
 const FeedPage = () => {
   usePreventZoom();
@@ -18,12 +22,13 @@ const FeedPage = () => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [showScrollToTop, setShowScrollToTop] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0); // Used to force refresh
+  const [refreshKey, setRefreshKey] = useState(0);
   const [activeTab, setActiveTab] = useState<string>("personal");
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadingRef = useRef<HTMLDivElement>(null);
   const [notInCommunitySheetOpen, setNotInCommunitySheetOpen] = useState(false);
   const [communityName, setCommunityName] = useState("");
+  const [showProfileSuggestionModule, setShowProfileSuggestionModule] = useState(true);
   
   const loadPosts = useCallback(async (pageNum: number, replace = false) => {
     try {
@@ -52,6 +57,7 @@ const FeedPage = () => {
   useEffect(() => {
     setLoading(true);
     setPage(1);
+    setShowProfileSuggestionModule(true);
     loadPosts(1, true);
   }, [loadPosts, refreshKey, activeTab]);
   
@@ -66,7 +72,7 @@ const FeedPage = () => {
   
   useEffect(() => {
     const cleanup = setupMirrorListener(() => {
-      setRefreshKey(prev => prev + 1); // Force a refresh
+      setRefreshKey(prev => prev + 1);
     });
     
     return cleanup;
@@ -104,7 +110,7 @@ const FeedPage = () => {
   
   const handleRefresh = () => {
     setPage(1);
-    setRefreshKey(prev => prev + 1); // Force a refresh
+    setRefreshKey(prev => prev + 1);
   };
   
   const handleNewPost = (newPost: any) => {
@@ -122,24 +128,19 @@ const FeedPage = () => {
     try {
       const response = await toggleRoar(postCode);
       
-      // Check if the error is due to not being part of the community
       if (typeof response === 'object' && 'errCode' in response && response.errCode === "004") {
         console.log('User is not part of the community:', response.community);
         setCommunityName(response.community);
         setNotInCommunitySheetOpen(true);
         
-        // Force refresh to ensure UI shows correct roar count
         setRefreshKey(prev => prev + 1);
         return;
       }
-      
-      // If successful, no need to do anything as the Post component handles the UI update
       
     } catch (error) {
       console.error("Error toggling roar:", error);
       toast.error("Error updating post. Please try again.");
       
-      // Force refresh to ensure UI shows correct roar count
       setRefreshKey(prev => prev + 1);
     }
   };
@@ -192,36 +193,65 @@ const FeedPage = () => {
       
       <div className="space-y-4 mt-6">
         {posts.length > 0 ? (
-          posts.map((post, index) => (
-            <Post
-              key={post.code ? `${post.code}-${refreshKey}` : `new-post-${index}-${Date.now()}`}
-              username={post.handle}
-              avatar={post.avatar || ''}
-              community={post.community}
-              timeAgo={post.timeAgo}
-              content={post.is_mirror === 1 ? (post.mirror_quote || '') : post.body}
-              roarCount={post.upvotes}
-              commentCount={post.reply_count}
-              shareCount={0}
-              postCode={post.code}
-              roared={post.roar === 1 || post.has_upvoted === 1}
-              onRoar={() => handleRoar(post.code)}
-              images={post.images || (post.image === 1 ? [post.image_url] : undefined)}
-              isMirror={post.is_mirror === 1}
-              mirrorData={post.is_mirror === 1 ? {
-                quote: post.mirror_quote || '',
-                originalAuthor: post.original_author || '',
-                originalCommunity: post.original_community || '',
-                originalBody: post.original_body || '',
-                originalTimeAgo: post.original_created_on || '',
-                originalAvatar: post.original_author_avatar || '',
-                originalImages: post.original_images || [],
-                originalTitle: post.original_title || '',
-                originalPostCode: post.original_post_code || ''
-              } : undefined}
-              ipfs={post.ipfs}
-            />
-          ))
+          (() => {
+            let suggestionModuleInstanceCount = 0;
+            return posts.flatMap((post, index) => {
+              const postComponent = (
+                <Post
+                  key={post.code ? `${post.code}-${refreshKey}-${activeTab}` : `new-post-${index}-${Date.now()}`}
+                  username={post.handle}
+                  avatar={post.avatar || ''}
+                  community={post.community}
+                  timeAgo={post.timeAgo}
+                  content={post.is_mirror === 1 ? (post.mirror_quote || '') : post.body}
+                  roarCount={post.upvotes}
+                  commentCount={post.reply_count}
+                  shareCount={0}
+                  postCode={post.code}
+                  roared={post.roar === 1 || post.has_upvoted === 1}
+                  onRoar={() => handleRoar(post.code)}
+                  images={post.images || (post.image === 1 ? [post.image_url] : undefined)}
+                  isMirror={post.is_mirror === 1}
+                  mirrorData={post.is_mirror === 1 ? {
+                    quote: post.mirror_quote || '',
+                    originalAuthor: post.original_author || '',
+                    originalCommunity: post.original_community || '',
+                    originalBody: post.original_body || '',
+                    originalTimeAgo: post.original_created_on || '',
+                    originalAvatar: post.original_author_avatar || '',
+                    originalImages: post.original_images || [],
+                    originalTitle: post.original_title || '',
+                    originalPostCode: post.original_post_code || ''
+                  } : undefined}
+                  ipfs={post.ipfs}
+                />
+              );
+
+              console.log(`[FeedPage] Post Index: ${index}, showProfileSuggestionModule: ${showProfileSuggestionModule}, MinMet: ${(index + 1) >= MIN_POSTS_BEFORE_SUGGESTION}, IntervalMet: ${(index + 1) % SUGGESTION_INTERVAL === 0}, InstanceCount: ${suggestionModuleInstanceCount}`);
+
+              let componentsToReturn = [postComponent];
+
+              if (
+                  showProfileSuggestionModule && 
+                  (index + 1) >= MIN_POSTS_BEFORE_SUGGESTION && 
+                  (index + 1) % SUGGESTION_INTERVAL === 0
+              ) {
+                suggestionModuleInstanceCount++;
+                console.log(`[FeedPage] RENDERING ProfileSuggestionModule at index ${index}, Instance: ${suggestionModuleInstanceCount}`);
+                componentsToReturn.push(
+                  <ProfileSuggestionModule 
+                    key={`profile-suggestions-${activeTab}-${refreshKey}-${suggestionModuleInstanceCount}`} 
+                    fetchPageNumber={suggestionModuleInstanceCount}
+                    onDismiss={() => {
+                      setShowProfileSuggestionModule(false);
+                    }}
+                    initialLimit={3} 
+                  />
+                );
+              }
+              return componentsToReturn;
+            });
+          })()
         ) : (
           !loading && !error && (
             <div className="text-center py-8 border rounded-lg bg-background/50 w-full">
