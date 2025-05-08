@@ -119,6 +119,13 @@ export const MirrorPostContent = ({ mirrorData, onImageClick }: MirrorPostConten
       className="mt-3 border rounded-md p-3 bg-muted/30 overflow-hidden"
       data-mirror-content-area="true"
     >
+      {/* Render the quote if it exists */}
+      {mirrorData.quote && (
+        <div className="text-sm italic p-2 pl-3 border-l-4 border-muted-foreground/50 my-2 mb-3 prose prose-sm max-w-none dark:prose-invert prose-p:my-1 prose-strong:font-semibold prose-em:italic">
+          {processTextContent(mirrorData.quote)}
+        </div>
+      )}
+
       <div className="flex items-start gap-2">
         <Avatar className="h-6 w-6 flex-shrink-0">
           <AvatarImage src={`https://img.dapps.co/avatar/${mirrorData.originalAvatar}.svg`} />
@@ -139,9 +146,9 @@ export const MirrorPostContent = ({ mirrorData, onImageClick }: MirrorPostConten
           )}
           
           {cleanedBody && (
-            <p className="text-sm mt-1 break-words whitespace-pre-line">
+            <div className="text-sm mt-1 break-words whitespace-pre-line prose prose-sm max-w-none dark:prose-invert prose-p:my-1 prose-strong:font-semibold prose-em:italic">
               {processTextContent(cleanedBody)}
-            </p>
+            </div>
           )}
           
           {allMedia && allMedia.length > 0 && (

@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { MentionSuggestionsList, SuggestionItem } from '@/components/mentions/MentionSuggestionsList';
 import { searchUsers, searchCommunities, SearchUserItem, SearchCommunityItem } from '@/utils/searchApi';
 import { debounce } from 'lodash';
+import { sanitizeHtml } from '@/utils/sanitizeHtml';
 
 interface EnhancedCommentItemProps {
   comment: CommentReply;
@@ -409,7 +410,9 @@ export const EnhancedCommentItem = ({
             <span className="text-muted-foreground text-xs">{comment.time_ago}</span>
           </div>
           
-          <div className="text-sm whitespace-pre-wrap break-words mt-1">
+          <div 
+            className="text-sm whitespace-pre-wrap break-words mt-1 prose prose-sm max-w-none dark:prose-invert prose-p:my-1 prose-strong:font-semibold prose-em:italic"
+          >
             {processTextContent(comment.content)}
           </div>
           
