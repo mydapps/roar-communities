@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,6 +8,9 @@ import { Link } from 'react-router-dom';
 import { processTextContent } from '@/utils/textFormatting';
 import { MediaUpload, MediaPreview, MediaUploadResponse } from '@/components/ui/media-upload';
 import { toast } from 'sonner';
+import { MentionSuggestionsList, SuggestionItem } from '@/components/mentions/MentionSuggestionsList';
+import { searchUsers, searchCommunities, SearchUserItem, SearchCommunityItem } from '@/utils/searchApi';
+import { debounce } from 'lodash';
 
 interface EnhancedCommentItemProps {
   comment: CommentReply;
@@ -21,6 +24,7 @@ interface EnhancedCommentItemProps {
   onOpenMobileReply?: (commentId: number, handle: string, avatar: string, content: string, level2ParentId?: number) => void;
   level2ParentId?: number; // Track level 2 parent ID specifically
   optimisticToRealIdMap?: Record<number, number>; // Map from optimistic IDs to real IDs
+  onInitiateMention?: (username: string) => void; // Added prop
 }
 
 export const EnhancedCommentItem = ({
@@ -34,13 +38,26 @@ export const EnhancedCommentItem = ({
   isMobile = false,
   onOpenMobileReply,
   level2ParentId,
-  optimisticToRealIdMap = {}
+  optimisticToRealIdMap = {},
+  onInitiateMention
 }: EnhancedCommentItemProps) => {
   const [isReplying, setIsReplying] = useState(false);
   const [replyContent, setReplyContent] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [meowAnimating, setMeowAnimating] = useState(false);
   const [uploadedMedia, setUploadedMedia] = useState<MediaUploadResponse | null>(null);
+  const replyInputRef = useRef<HTMLTextAreaElement>(null);
+  
+  // --- Mention State (for replies) ---
+  const [mentionType, setMentionType] = useState<'user' | 'community' | null>(null);
+  const [mentionQuery, setMentionQuery] = useState<string>('');
+  const [suggestions, setSuggestions] = useState<SuggestionItem[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
+  const [mentionLoading, setMentionLoading] = useState<boolean>(false);
+  const [activeTriggerPos, setActiveTriggerPos] = useState<number | null>(null);
+  const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
+  const suggestionsContainerRef = useRef<HTMLDivElement>(null);
+  // --- End Mention State ---
   
   const isPostAuthor = comment.handle === postAuthorHandle;
   
@@ -81,6 +98,184 @@ export const EnhancedCommentItem = ({
   const removeMedia = () => {
     setUploadedMedia(null);
   };
+  
+  // --- Mention Logic for Replies ---
+  // Helper to get cursor position and text before it (copied from MobileCommentInput)
+  const getTriggerInfo = (textarea: HTMLTextAreaElement): { trigger: '@' | '/c/' | null; query: string; startPos: number } | null => {
+    const text = textarea.value;
+    const cursorPos = textarea.selectionStart;
+    
+    const textBeforeCursor = text.substring(0, cursorPos);
+    
+    const lastAt = textBeforeCursor.lastIndexOf('@');
+    const lastSlashC = textBeforeCursor.lastIndexOf('/c/');
+    
+    let triggerPos = -1;
+    let trigger: '@' | '/c/' | null = null;
+    
+    if (lastAt > lastSlashC) {
+      triggerPos = lastAt;
+      trigger = '@';
+    } else if (lastSlashC > lastAt && lastSlashC + 2 < cursorPos) { 
+      triggerPos = lastSlashC;
+      trigger = '/c/';
+    } else if (lastSlashC === lastAt && lastAt !== -1) { 
+        triggerPos = lastAt;
+        trigger = '@';
+    }
+    
+    if (triggerPos === -1) return null;
+    
+    const triggerLength = trigger === '@' ? 1 : 3; 
+    const queryStartPos = triggerPos + triggerLength;
+    
+    if(cursorPos < queryStartPos) return null;
+
+    if (cursorPos === queryStartPos && text.charAt(queryStartPos) === ' ') {
+        return null;
+    }
+    
+    const query = text.substring(queryStartPos, cursorPos);
+    
+    if (query.match(/\s/) || query.match(/\n/)) {
+      return null;
+    }
+    
+    if (query.length < 2) {
+      return null;
+    }
+
+    return { trigger, query, startPos: triggerPos };
+  };
+
+  const fetchReplySuggestionsDebounced = useCallback(
+    debounce(async (type: 'user' | 'community', query: string) => {
+      if (query.length < 2) {
+        setShowSuggestions(false);
+        return;
+      }
+      setMentionLoading(true);
+      setSuggestions([]);
+      try {
+        let fetchedSuggestions: SuggestionItem[] = [];
+        if (type === 'user') {
+          const response = await searchUsers(query, 1, 5);
+          if (response.success && response.users) {
+            fetchedSuggestions = response.users.items.map((user: SearchUserItem) => ({
+              id: user.handle,
+              display: user.handle,
+              image: user.avatar_url,
+              type: 'user'
+            }));
+          }
+        } else { // type === 'community'
+          const response = await searchCommunities(query, 1, 5);
+          if (response.success && response.communities) {
+            // Assuming community 'name' is the correct field for mentions
+            fetchedSuggestions = response.communities.items.map((comm: SearchCommunityItem) => ({
+              id: comm.name, 
+              display: comm.name,
+              subDisplay: `c/${comm.name}`,
+              image: comm.image,
+              type: 'community'
+            }));
+          }
+        }
+        // Filter for unique suggestions before setting state
+        const uniqueSuggestions = fetchedSuggestions.filter(
+          (suggestion, index, self) =>
+            index === self.findIndex((s) => s.id === suggestion.id && s.type === suggestion.type)
+        );
+        setSuggestions(uniqueSuggestions);
+        setShowSuggestions(uniqueSuggestions.length > 0);
+      } catch (error) {
+        console.error(`Error fetching ${type} suggestions for reply:`, error);
+        setShowSuggestions(false);
+      } finally {
+        setMentionLoading(false);
+      }
+    }, 300),
+    []
+  );
+
+  const handleReplyContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const textarea = e.target;
+    setReplyContent(textarea.value);
+
+    const triggerInfo = getTriggerInfo(textarea);
+
+    if (triggerInfo) {
+      const currentMentionType = triggerInfo.trigger === '@' ? 'user' : 'community';
+      if (triggerInfo.query !== mentionQuery || currentMentionType !== mentionType) {
+        setMentionType(currentMentionType);
+        setMentionQuery(triggerInfo.query);
+        setActiveTriggerPos(triggerInfo.startPos);
+        setShowSuggestions(true);
+        fetchReplySuggestionsDebounced(currentMentionType, triggerInfo.query);
+      } else if (!showSuggestions && suggestions.length > 0) {
+         setShowSuggestions(true);
+      }
+    } else {
+      if(showSuggestions) {
+         setShowSuggestions(false);
+      }
+    }
+  };
+
+  const handleReplySuggestionSelect = (suggestion: SuggestionItem) => {
+    if (replyInputRef.current && activeTriggerPos !== null && mentionType) {
+      const currentText = replyInputRef.current.value;
+      
+      const mentionId = suggestion.id; 
+      const mentionText = mentionType === 'user' ? `@${mentionId} ` : `/c/${mentionId} `;
+      
+      const textBefore = currentText.substring(0, activeTriggerPos);
+
+      const triggerCharLength = mentionType === 'user' ? 1 : 3;
+      const endOfQueryToReplace = activeTriggerPos + triggerCharLength + mentionQuery.length;
+      const textAfter = currentText.substring(endOfQueryToReplace);
+      
+      const newText = textBefore + mentionText + textAfter;
+      setReplyContent(newText);
+      
+      const newCursorPos = activeTriggerPos + mentionText.length;
+      setTimeout(() => {
+          if(replyInputRef.current) {
+            replyInputRef.current.focus();
+            replyInputRef.current.setSelectionRange(newCursorPos, newCursorPos);
+          }
+      }, 0);
+
+      setShowSuggestions(false);
+      setMentionQuery('');
+      setMentionType(null);
+      setActiveTriggerPos(null);
+      setHighlightedIndex(-1);
+    }
+  };
+
+  // Keyboard navigation for reply suggestions
+  const handleReplyKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (showSuggestions && suggestions.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setHighlightedIndex(prev => (prev + 1) % suggestions.length);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setHighlightedIndex(prev => (prev - 1 + suggestions.length) % suggestions.length);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (highlightedIndex >= 0 && highlightedIndex < suggestions.length) {
+          handleReplySuggestionSelect(suggestions[highlightedIndex]);
+        }
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        setShowSuggestions(false);
+        setHighlightedIndex(-1);
+      }
+    }
+  };
+  // --- End Mention Logic for Replies ---
   
   const handleSubmitReply = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,6 +347,37 @@ export const EnhancedCommentItem = ({
   const formatUsername = (handle: string) => {
     return '@' + handle.split('.')[0];
   };
+
+  const handleUsernameClick = (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent navigation from Link
+    e.stopPropagation();
+
+    const usernameToMention = comment.handle.split('.')[0];
+
+    if (isReplying && !isMobile && replyInputRef.current) {
+      // Scenario A: Reply box within this item is open
+      const currentReplyContent = replyInputRef.current.value;
+      const mention = `@${usernameToMention} `;
+      // Prepend if not already there, or handle smarter insertion if desired
+      if (!currentReplyContent.startsWith(mention)) {
+        setReplyContent(mention + currentReplyContent);
+      }
+      replyInputRef.current.focus();
+      // Optionally move cursor after the mention
+      setTimeout(() => {
+        if (replyInputRef.current) {
+          replyInputRef.current.setSelectionRange(mention.length, mention.length);
+        }
+      }, 0);
+    } else {
+      // Scenario B: Call parent to handle mention
+      if (onInitiateMention) {
+        onInitiateMention(usernameToMention);
+      } else {
+        console.log("Username clicked, parent handler (onInitiateMention) not provided.");
+      }
+    }
+  };
   
   return (
     <div className={`${level > 1 ? 'ml-8 border-l-2 border-primary/10 pl-4' : ''}`}>
@@ -168,7 +394,7 @@ export const EnhancedCommentItem = ({
             <Link 
               to={`/u/${comment.handle.split('.')[0]}`}
               className="font-medium text-sm hover:underline"
-              onClick={(e) => e.stopPropagation()}
+              onClick={handleUsernameClick}
             >
               {formatUsername(comment.handle)}
             </Link>
@@ -223,12 +449,44 @@ export const EnhancedCommentItem = ({
           
           {isReplying && !isMobile && (
             <form onSubmit={handleSubmitReply} className="mt-3 space-y-2">
-              <Textarea 
-                placeholder={`Reply to ${formatUsername(comment.handle)}...`}
-                value={replyContent}
-                onChange={(e) => setReplyContent(e.target.value)}
-                className="min-h-[60px] text-sm"
-              />
+              <div className="relative">
+                <Textarea 
+                  ref={replyInputRef}
+                  placeholder={`Reply to ${formatUsername(comment.handle)}...`}
+                  value={replyContent}
+                  onChange={handleReplyContentChange}
+                  className="min-h-[60px] text-sm"
+                  onKeyDown={handleReplyKeyDown}
+                  onBlur={(e) => {
+                    if (suggestionsContainerRef.current && 
+                        !suggestionsContainerRef.current.contains(e.relatedTarget as Node | null)) {
+                      setShowSuggestions(false);
+                      setHighlightedIndex(-1);
+                    }
+                  }}
+                  onFocus={(e) => {
+                    const triggerInfo = getTriggerInfo(e.target);
+                    if (triggerInfo && triggerInfo.query === mentionQuery && mentionType) {
+                       if(suggestions.length > 0) setShowSuggestions(true);
+                    }
+                  }}
+                />
+                {showSuggestions && (
+                  <div 
+                    ref={suggestionsContainerRef}
+                    className="absolute z-10 w-full mt-1 bg-background border border-border rounded-lg shadow-lg md:w-auto md:max-w-xs"
+                  >
+                    <MentionSuggestionsList
+                      suggestions={suggestions}
+                      isLoading={mentionLoading}
+                      onSelect={handleReplySuggestionSelect}
+                      mentionType={mentionType}
+                      highlightedIndex={highlightedIndex}
+                      onItemHover={setHighlightedIndex}
+                    />
+                  </div>
+                )}
+              </div>
               
               {/* Media Upload and Preview */}
               <div className="flex items-start justify-between">
@@ -288,6 +546,7 @@ export const EnhancedCommentItem = ({
                       setIsReplying(false);
                       setReplyContent('');
                       setUploadedMedia(null);
+                      setShowSuggestions(false);
                     }}
                   className="text-xs h-8"
                 >
@@ -329,6 +588,7 @@ export const EnhancedCommentItem = ({
               onOpenMobileReply={onOpenMobileReply}
               level2ParentId={currentLevel2ParentId}
               optimisticToRealIdMap={optimisticToRealIdMap}
+              onInitiateMention={onInitiateMention}
             />
           ))}
         </div>

@@ -1,11 +1,14 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Send, X, ImageIcon, VideoIcon } from 'lucide-react';
+import { Send, X, ImageIcon, VideoIcon, Loader2, AtSign, Hash } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { MediaUpload, MediaPreview, MediaUploadResponse } from '@/components/ui/media-upload';
+import { MentionSuggestionsList, SuggestionItem } from '@/components/mentions/MentionSuggestionsList';
+import { searchUsers, searchCommunities, SearchUserItem, SearchCommunityItem } from '@/utils/searchApi';
+import { debounce } from 'lodash';
 
 interface MobileCommentInputProps {
   postCode: string;
@@ -21,6 +24,60 @@ interface MobileCommentInputProps {
   onCancel?: () => void;
 }
 
+// Helper to get cursor position and text before it
+const getTriggerInfo = (textarea: HTMLTextAreaElement): { trigger: '@' | '/c/' | null; query: string; startPos: number } | null => {
+  const text = textarea.value;
+  const cursorPos = textarea.selectionStart;
+  
+  const textBeforeCursor = text.substring(0, cursorPos);
+  
+  const lastAt = textBeforeCursor.lastIndexOf('@');
+  const lastSlashC = textBeforeCursor.lastIndexOf('/c/');
+  
+  let triggerPos = -1;
+  let trigger: '@' | '/c/' | null = null;
+  
+  if (lastAt > lastSlashC) {
+    triggerPos = lastAt;
+    trigger = '@';
+  } else if (lastSlashC > lastAt && lastSlashC + 2 < cursorPos) { // Ensure /c/ is valid trigger start
+    triggerPos = lastSlashC;
+    trigger = '/c/';
+  } else if (lastSlashC === lastAt && lastAt !== -1) { // Handle case where one might be prefix of other (less likely but possible)
+      triggerPos = lastAt;
+      trigger = '@';
+  }
+  
+  if (triggerPos === -1) return null;
+  
+  const triggerLength = trigger === '@' ? 1 : 3; // Length of '@' or '/c/'
+  const queryStartPos = triggerPos + triggerLength;
+  
+  // Ensure cursor is actually after the trigger pattern
+  if(cursorPos < queryStartPos) return null;
+
+  // Check for space immediately after trigger only if query is empty
+  if (cursorPos === queryStartPos && text.charAt(queryStartPos) === ' ') {
+      return null;
+  }
+  
+  const query = text.substring(queryStartPos, cursorPos);
+  
+  // Check if query contains newline or space 
+  if (query.match(/\s/) || query.match(/\n/)) {
+    return null;
+  }
+  
+  // Minimum query length check
+  if (query.length < 2) {
+    // Keep showing suggestions=false but don't clear type/pos yet 
+    // to allow user to continue typing
+    return null;
+  }
+
+  return { trigger, query, startPos: triggerPos };
+};
+
 export const MobileCommentInput: React.FC<MobileCommentInputProps> = ({
   postCode,
   isReplyMode = false,
@@ -35,6 +92,16 @@ export const MobileCommentInput: React.FC<MobileCommentInputProps> = ({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const navigate = useNavigate();
   const isSubmittingRef = useRef(false);
+  const suggestionContainerRef = useRef<HTMLDivElement>(null);
+
+  // --- Mention State ---
+  const [mentionType, setMentionType] = useState<'user' | 'community' | null>(null);
+  const [mentionQuery, setMentionQuery] = useState<string>('');
+  const [suggestions, setSuggestions] = useState<SuggestionItem[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
+  const [mentionLoading, setMentionLoading] = useState<boolean>(false);
+  const [activeTriggerPos, setActiveTriggerPos] = useState<number | null>(null);
+  // --- End Mention State ---
 
   // Get user info from localStorage
   const userAvatar = localStorage.getItem('dapps_user_avatar') || 'default';
@@ -50,7 +117,123 @@ export const MobileCommentInput: React.FC<MobileCommentInputProps> = ({
     if (isExpanded && inputRef.current) {
       inputRef.current.focus();
     }
+    // Close suggestions if input loses focus or collapses
+    if (!isExpanded) {
+        setShowSuggestions(false);
+    }
   }, [isExpanded]);
+
+  // --- Mention Logic ---
+  const fetchSuggestionsDebounced = useCallback(
+    debounce(async (type: 'user' | 'community', query: string) => {
+      if (query.length < 2) {
+          setShowSuggestions(false); // Hide if query becomes too short
+          return;
+      }
+      setMentionLoading(true);
+      setSuggestions([]); // Clear previous suggestions
+      try {
+        let fetchedSuggestions: SuggestionItem[] = [];
+        if (type === 'user') {
+          const response = await searchUsers(query, 1, 5);
+          if (response.success && response.users) {
+            fetchedSuggestions = response.users.items.map((user: SearchUserItem) => ({ 
+                id: user.handle, 
+                display: user.handle,
+                image: user.avatar_url,
+                type: 'user'
+            }));
+          }
+        } else { // type === 'community'
+          const response = await searchCommunities(query, 1, 5);
+          if (response.success && response.communities) {
+            fetchedSuggestions = response.communities.items.map((comm: SearchCommunityItem) => ({
+                id: comm.name, 
+                display: comm.name,
+                subDisplay: `c/${comm.name}`,
+                image: comm.image,
+                type: 'community'
+            }));
+          }
+        }
+        // Filter for unique suggestions before setting state
+        const uniqueSuggestions = fetchedSuggestions.filter(
+          (suggestion, index, self) =>
+            index === self.findIndex((s) => s.id === suggestion.id && s.type === suggestion.type)
+        );
+        setSuggestions(uniqueSuggestions);
+        setShowSuggestions(uniqueSuggestions.length > 0);
+      } catch (error) {
+        console.error(`Error fetching ${type} suggestions:`, error);
+        setShowSuggestions(false); 
+      } finally {
+        setMentionLoading(false);
+      }
+    }, 300),
+    []
+  );
+
+  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const textarea = e.target;
+    setContent(textarea.value);
+
+    const triggerInfo = getTriggerInfo(textarea);
+
+    if (triggerInfo) {
+      const currentMentionType = triggerInfo.trigger === '@' ? 'user' : 'community';
+      // Only update state and fetch if query/type actually changed
+      if (triggerInfo.query !== mentionQuery || currentMentionType !== mentionType) {
+        setMentionType(currentMentionType);
+        setMentionQuery(triggerInfo.query);
+        setActiveTriggerPos(triggerInfo.startPos);
+        setShowSuggestions(true); 
+        fetchSuggestionsDebounced(currentMentionType, triggerInfo.query);
+      } else if (!showSuggestions && suggestions.length > 0) {
+          // Re-show suggestions if user types matching previous query without closing
+          setShowSuggestions(true);
+      }
+    } else {
+      if(showSuggestions) {
+         // If no valid trigger/query at cursor, hide suggestions
+         setShowSuggestions(false);
+      }
+      // Optionally clear query/type immediately or wait for suggestions to hide
+      // setMentionQuery(''); 
+      // setMentionType(null);
+      // setActiveTriggerPos(null);
+    }
+  };
+
+  const handleSuggestionSelect = (suggestion: SuggestionItem) => {
+    if (inputRef.current && activeTriggerPos !== null && mentionType) {
+      const currentText = inputRef.current.value;
+      const currentCursorPos = inputRef.current.selectionStart;
+      
+      // Use handle for community if available for the mention text itself
+      const mentionId = suggestion.type === 'community' && suggestion.id.includes('/') ? suggestion.id.split('/')[1] : suggestion.id;
+      const mentionText = mentionType === 'user' ? `@${mentionId} ` : `/c/${mentionId} `;
+      
+      const textBefore = currentText.substring(0, activeTriggerPos);
+      const textAfter = currentText.substring(currentCursorPos);
+      
+      const newText = textBefore + mentionText + textAfter;
+      setContent(newText);
+      
+      const newCursorPos = activeTriggerPos + mentionText.length;
+      setTimeout(() => {
+          if(inputRef.current) {
+              inputRef.current.focus();
+              inputRef.current.setSelectionRange(newCursorPos, newCursorPos);
+          }
+      }, 0);
+
+      setShowSuggestions(false);
+      setMentionQuery('');
+      setMentionType(null);
+      setActiveTriggerPos(null);
+    }
+  };
+  // --- End Mention Logic ---
 
   // Handle when users click on the input area
   const handleInputClick = () => {
@@ -89,68 +272,35 @@ export const MobileCommentInput: React.FC<MobileCommentInputProps> = ({
 
   // Handle submission
   const handleSubmit = async () => {
-    if ((!content.trim() && !uploadedMedia) || isSubmitting || isSubmittingRef.current) return;
-
-    setIsSubmitting(true);
+    if (!content.trim() && !uploadedMedia) return;
+    if (isSubmittingRef.current) return;
+    
     isSubmittingRef.current = true;
+    setIsSubmitting(true);
     
     let finalContent = content.trim();
-    
-    // Add media markdown if we have uploadedMedia
-    if (uploadedMedia && uploadedMedia.url) {
-      // Ensure URL is properly formatted
-      let mediaUrl = uploadedMedia.url;
-      if (!mediaUrl.startsWith('http')) {
-        if (mediaUrl.startsWith('//')) {
-          mediaUrl = 'https:' + mediaUrl;
-        } else if (mediaUrl.startsWith('/')) {
-          mediaUrl = window.location.origin + mediaUrl;
-        }
-      }
-      
-      // Format the markdown - ensure there's proper spacing if there's already content
-      const markdown = finalContent.length > 0 ? `\n\n![](${mediaUrl})` : `![](${mediaUrl})`;
-      console.log('Adding media markdown:', markdown);
-      finalContent += markdown;
+    if (uploadedMedia && uploadedMedia.markdown) {
+      finalContent += (finalContent.length > 0 ? "\n\n" : "") + uploadedMedia.markdown;
     }
-
-    console.log('Submitting comment with final content:', finalContent);
     
     try {
-      // For level 3 comments, use the level 2 parent ID if available
       const parentId = replyToComment?.level2ParentId || replyToComment?.id;
-      
-      // Prevent replying to optimistic comments (with negative IDs)
       if (parentId && parentId < 0) {
         toast.error("Cannot reply to this comment yet. Please wait for it to be saved.");
         throw new Error("Cannot reply to an optimistic comment with ID: " + parentId);
       }
-      
       await onSubmit(finalContent, parentId);
-      
-      // Clear content first
       setContent('');
       setUploadedMedia(null);
-      
-      // Always collapse after submission
       setIsExpanded(false);
-      
-      if (onCancel && isReplyMode) {
-        onCancel();
-      }
-      
-      // toast(isReplyMode ? 'Reply posted' : 'Comment posted');
+      if (onCancel && isReplyMode) onCancel();
+      setShowSuggestions(false); // Hide suggestions on submit
     } catch (error) {
       console.error('Error posting comment:', error);
       toast.error('Failed to post your comment');
     } finally {
-      // Make sure UI state is reset regardless of success/failure
       setIsSubmitting(false);
-      
-      // Add a small delay before allowing new submissions
-      setTimeout(() => {
-        isSubmittingRef.current = false;
-      }, 500);
+      setTimeout(() => { isSubmittingRef.current = false; }, 500);
     }
   };
 
@@ -163,6 +313,7 @@ export const MobileCommentInput: React.FC<MobileCommentInputProps> = ({
     }
     setContent('');
     setUploadedMedia(null);
+    setShowSuggestions(false);
   };
 
   // Truncate comment content for reply preview
@@ -177,13 +328,24 @@ export const MobileCommentInput: React.FC<MobileCommentInputProps> = ({
     <div 
       className={cn(
         'fixed bottom-0 left-0 right-0 bg-background border-t border-border/60 transition-all duration-300 ease-in-out z-50',
-        isExpanded ? 'h-auto pt-3 px-4' : 'h-16 p-3',
-        isExpanded && uploadedMedia ? 'pb-28' : 'pb-16'
+        isExpanded ? 'h-auto pt-3' : 'h-16 p-3'
       )}
       style={{
         boxShadow: '0 -2px 10px rgba(0,0,0,0.05)'
       }}
     >
+      {/* Container for Suggestions - positioned absolutely above the input area */} 
+      <div ref={suggestionContainerRef} className="absolute bottom-full left-0 right-0 z-[60] mb-1 px-4">
+        {showSuggestions && (
+          <MentionSuggestionsList 
+            suggestions={suggestions}
+            isLoading={mentionLoading}
+            onSelect={handleSuggestionSelect}
+            mentionType={mentionType}
+          />
+        )}
+      </div>
+
       {isReplyMode && isExpanded && replyToComment && (
         <div className="text-xs text-muted-foreground mb-2 flex items-center justify-between">
           <div>
@@ -202,7 +364,7 @@ export const MobileCommentInput: React.FC<MobileCommentInputProps> = ({
       )}
       
       <div className="flex gap-3 items-start">
-        <Avatar className="h-8 w-8 mt-1">
+        <Avatar className={cn("flex-shrink-0", isExpanded ? "h-8 w-8 mt-1" : "h-8 w-8")}>
           <AvatarImage src={`https://img.dapps.co/avatar/${userAvatar}.svg`} />
           <AvatarFallback>U</AvatarFallback>
         </Avatar>
@@ -212,9 +374,10 @@ export const MobileCommentInput: React.FC<MobileCommentInputProps> = ({
             <textarea
               ref={inputRef}
               value={content}
-              onChange={(e) => setContent(e.target.value)}
+              onChange={handleContentChange}
               placeholder={isReplyMode ? `Reply to @${replyToComment?.author.split('.')[0]}...` : "Add a comment..."}
-              className="w-full min-h-[80px] p-3 rounded-lg border border-border/60 focus:border-primary focus:ring-1 focus:ring-primary/30 outline-none text-sm bg-background resize-none"
+              className="w-full min-h-[60px] max-h-[180px] p-3 rounded-lg border border-border/60 focus:border-primary focus:ring-1 focus:ring-primary/30 outline-none text-sm bg-background resize-none"
+              rows={2}
             />
           ) : (
             <div 
@@ -227,58 +390,47 @@ export const MobileCommentInput: React.FC<MobileCommentInputProps> = ({
           
           {/* Media Upload Area (only when expanded) */}
           {isExpanded && (
-            <div className="mt-2 space-y-2">
-              {/* Previews */}
-              {uploadedMedia && (
-                <div className="w-1/3 pr-2">
-                  <MediaPreview
-                    media={uploadedMedia}
-                    onRemove={removeMedia}
-                  />
+            <div className="flex justify-between items-center mt-2">
+                <div className="flex gap-1">
+                    {!uploadedMedia && (
+                        <>
+                          <MediaUpload 
+                            onMediaUploaded={handleMediaUploaded} 
+                            acceptedTypes="image"
+                            maxFiles={1}
+                          >
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" type="button">
+                                <ImageIcon className="h-4 w-4" />
+                            </Button>
+                          </MediaUpload>
+                          <MediaUpload 
+                            onMediaUploaded={handleMediaUploaded} 
+                            acceptedTypes="video"
+                            maxFiles={1}
+                          >
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" type="button">
+                                <VideoIcon className="h-4 w-4" />
+                            </Button>
+                          </MediaUpload>
+                        </>
+                    )}
                 </div>
-              )}
-              
-              {/* Upload Buttons (Icons) - Only show if no media uploaded */}
-              {!uploadedMedia && (
-                <div className="flex gap-2">
-                  <MediaUpload
-                    onMediaUploaded={handleMediaUploaded}
-                    disabled={isSubmitting || !!uploadedMedia}
-                    acceptedTypes="image"
-                    maxFiles={1}
-                  >
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" disabled={isSubmitting || !!uploadedMedia}>
-                      <ImageIcon className="h-5 w-5" />
-                    </Button>
-                  </MediaUpload>
-                  
-                  <MediaUpload
-                    onMediaUploaded={handleMediaUploaded}
-                    disabled={isSubmitting || !!uploadedMedia}
-                    acceptedTypes="video"
-                    maxFiles={1}
-                  >
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" disabled={isSubmitting || !!uploadedMedia}>
-                      <VideoIcon className="h-5 w-5" />
-                    </Button>
-                  </MediaUpload>
-                </div>
-              )}
+                <Button 
+                  onClick={handleSubmit} 
+                  disabled={(!content.trim() && !uploadedMedia) || isSubmitting}
+                  size="sm"
+                  className="gap-1.5 h-8"
+                >
+                  {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  Send
+                </Button>
             </div>
           )}
           
-          {/* Send Button */}
-          {isExpanded && (
-            <div className="absolute bottom-3 right-3">
-            <Button
-              size="sm"
-                className="h-8 w-8 rounded-full p-0"
-              onClick={handleSubmit}
-                disabled={(!content.trim() && !uploadedMedia) || isSubmitting}
-            >
-              <Send className="h-4 w-4" />
-            </Button>
-            </div>
+          {isExpanded && uploadedMedia && (
+             <div className="mt-2 pb-1">
+                 <MediaPreview media={uploadedMedia} onRemove={removeMedia} />
+             </div>
           )}
         </div>
       </div>

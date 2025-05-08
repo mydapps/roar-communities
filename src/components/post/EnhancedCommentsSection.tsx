@@ -10,6 +10,9 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { MobileReplyDrawer } from './MobileReplyDrawer';
 import { NotInCommunitySheet } from '@/components/community/NotInCommunitySheet';
 import { MediaUpload, MediaPreview, MediaUploadResponse } from '@/components/ui/media-upload';
+import { MentionSuggestionsList, SuggestionItem } from '@/components/mentions/MentionSuggestionsList';
+import { searchUsers, searchCommunities, SearchUserItem, SearchCommunityItem } from '@/utils/searchApi';
+import { debounce } from 'lodash';
 
 interface EnhancedCommentsSectionProps {
   postCode: string;
@@ -41,6 +44,36 @@ export const EnhancedCommentsSection = ({
   const [notInCommunitySheetOpen, setNotInCommunitySheetOpen] = useState(false);
   const [communityName, setCommunityName] = useState("");
   const [uploadedMedia, setUploadedMedia] = useState<MediaUploadResponse | null>(null);
+  const newCommentInputRef = useRef<HTMLTextAreaElement>(null);
+
+  const [mentionType, setMentionType] = useState<'user' | 'community' | null>(null);
+  const [mentionQuery, setMentionQuery] = useState<string>('');
+  const [suggestions, setSuggestions] = useState<SuggestionItem[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
+  const [mentionLoading, setMentionLoading] = useState<boolean>(false);
+  const [activeTriggerPos, setActiveTriggerPos] = useState<number | null>(null);
+  const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
+  const suggestionsContainerRef = useRef<HTMLDivElement>(null);
+
+  const handleInitiateMentionInNewComment = (username: string) => {
+    if (newCommentInputRef.current) {
+      const mention = `@${username} `;
+      const currentComment = newCommentInputRef.current.value;
+      // Prepend if not already there, or handle smarter insertion
+      if (!currentComment.startsWith(mention)) {
+        setNewComment(mention + currentComment);
+      }
+      newCommentInputRef.current.focus();
+      // Optionally move cursor after the mention
+      setTimeout(() => {
+        if (newCommentInputRef.current) {
+          newCommentInputRef.current.setSelectionRange(mention.length, mention.length);
+        }
+      }, 0);
+      // Ensure suggestions are closed if they were open for something else
+      setShowSuggestions(false); 
+    }
+  };
 
   const fetchComments = useCallback(async () => {
     if (!postCode) return;
@@ -150,7 +183,7 @@ export const EnhancedCommentsSection = ({
         setReplyCount(prev => prev + 1);
         setNewComment('');
         setUploadedMedia(null);
-        // toast.success('Comment added successfully');
+        setShowSuggestions(false);
       } else {
         console.error('API response missing reply_id or success=false:', response);
         toast.error('Error adding comment. Please try again.');
@@ -246,7 +279,7 @@ export const EnhancedCommentsSection = ({
         });
         
         setReplyCount(prev => prev + 1);
-        // toast.success('Reply added successfully');
+        setShowSuggestions(false);
       } else {
         console.error('API response missing reply_id or success=false:', response);
         toast.error('Error adding reply. Please try again.');
@@ -353,6 +386,178 @@ export const EnhancedCommentsSection = ({
     }
   };
 
+  const getTriggerInfo = (textarea: HTMLTextAreaElement): { trigger: '@' | '/c/' | null; query: string; startPos: number } | null => {
+    const text = textarea.value;
+    const cursorPos = textarea.selectionStart;
+    
+    const textBeforeCursor = text.substring(0, cursorPos);
+    
+    const lastAt = textBeforeCursor.lastIndexOf('@');
+    const lastSlashC = textBeforeCursor.lastIndexOf('/c/');
+    
+    let triggerPos = -1;
+    let trigger: '@' | '/c/' | null = null;
+    
+    if (lastAt > lastSlashC) {
+      triggerPos = lastAt;
+      trigger = '@';
+    } else if (lastSlashC > lastAt && lastSlashC + 2 < cursorPos) { 
+      triggerPos = lastSlashC;
+      trigger = '/c/';
+    } else if (lastSlashC === lastAt && lastAt !== -1) { 
+        triggerPos = lastAt;
+        trigger = '@';
+    }
+    
+    if (triggerPos === -1) return null;
+    
+    const triggerLength = trigger === '@' ? 1 : 3; 
+    const queryStartPos = triggerPos + triggerLength;
+    
+    if(cursorPos < queryStartPos) return null;
+
+    if (cursorPos === queryStartPos && text.charAt(queryStartPos) === ' ') {
+        return null;
+    }
+    
+    const query = text.substring(queryStartPos, cursorPos);
+    
+    if (query.match(/\s/) || query.match(/\n/)) {
+      return null;
+    }
+    
+    if (query.length < 2) {
+      return null;
+    }
+
+    return { trigger, query, startPos: triggerPos };
+  };
+
+  const fetchSuggestionsDebounced = useCallback(
+    debounce(async (type: 'user' | 'community', query: string) => {
+      if (query.length < 2) {
+        setShowSuggestions(false);
+        return;
+      }
+      setMentionLoading(true);
+      setSuggestions([]);
+      try {
+        let fetchedSuggestions: SuggestionItem[] = [];
+        if (type === 'user') {
+          const response = await searchUsers(query, 1, 5);
+          if (response.success && response.users) {
+            fetchedSuggestions = response.users.items.map((user: SearchUserItem) => ({
+              id: user.handle,
+              display: user.handle,
+              image: user.avatar_url,
+              type: 'user'
+            }));
+          }
+        } else { // type === 'community'
+          const response = await searchCommunities(query, 1, 5);
+          if (response.success && response.communities) {
+            fetchedSuggestions = response.communities.items.map((comm: SearchCommunityItem) => ({
+              id: comm.name,
+              display: comm.name,
+              subDisplay: `c/${comm.name}`,
+              image: comm.image,
+              type: 'community'
+            }));
+          }
+        }
+        const uniqueSuggestions = fetchedSuggestions.filter(
+          (suggestion, index, self) =>
+            index === self.findIndex((s) => s.id === suggestion.id && s.type === suggestion.type)
+        );
+        setSuggestions(uniqueSuggestions);
+        setShowSuggestions(uniqueSuggestions.length > 0);
+      } catch (error) {
+        console.error(`Error fetching ${type} suggestions:`, error);
+        setShowSuggestions(false);
+      } finally {
+        setMentionLoading(false);
+      }
+    }, 300),
+    []
+  );
+
+  const handleNewCommentContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const textarea = e.target;
+    setNewComment(textarea.value);
+
+    const triggerInfo = getTriggerInfo(textarea);
+
+    if (triggerInfo) {
+      const currentMentionType = triggerInfo.trigger === '@' ? 'user' : 'community';
+      if (triggerInfo.query !== mentionQuery || currentMentionType !== mentionType) {
+        setMentionType(currentMentionType);
+        setMentionQuery(triggerInfo.query);
+        setActiveTriggerPos(triggerInfo.startPos);
+        setShowSuggestions(true);
+        fetchSuggestionsDebounced(currentMentionType, triggerInfo.query);
+      } else if (!showSuggestions && suggestions.length > 0) {
+        setShowSuggestions(true);
+      }
+    } else {
+      if(showSuggestions) {
+         setShowSuggestions(false);
+      }
+    }
+  };
+
+  const handleSuggestionSelect = (suggestion: SuggestionItem) => {
+    if (newCommentInputRef.current && activeTriggerPos !== null && mentionType) {
+      const currentText = newCommentInputRef.current.value;
+      
+      const mentionId = suggestion.type === 'community' && suggestion.id.includes('/') ? suggestion.id.split('/')[1] : suggestion.id;
+      const mentionText = mentionType === 'user' ? `@${mentionId} ` : `/c/${mentionId} `;
+      
+      const textBefore = currentText.substring(0, activeTriggerPos);
+      
+      const triggerCharLength = mentionType === 'user' ? 1 : 3;
+      const endOfQueryToReplace = activeTriggerPos + triggerCharLength + mentionQuery.length;
+      const textAfter = currentText.substring(endOfQueryToReplace);
+
+      const newText = textBefore + mentionText + textAfter;
+      setNewComment(newText);
+      
+      const newCursorPos = activeTriggerPos + mentionText.length;
+      setTimeout(() => {
+          if(newCommentInputRef.current) {
+            newCommentInputRef.current.focus();
+            newCommentInputRef.current.setSelectionRange(newCursorPos, newCursorPos);
+          }
+      }, 0);
+
+      setShowSuggestions(false);
+      setMentionQuery('');
+      setMentionType(null);
+      setActiveTriggerPos(null);
+      setHighlightedIndex(-1);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (showSuggestions && suggestions.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setHighlightedIndex(prev => (prev + 1) % suggestions.length);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setHighlightedIndex(prev => (prev - 1 + suggestions.length) % suggestions.length);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (highlightedIndex >= 0 && highlightedIndex < suggestions.length) {
+          handleSuggestionSelect(suggestions[highlightedIndex]);
+        }
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        setShowSuggestions(false);
+        setHighlightedIndex(-1);
+      }
+    }
+  };
+
   return (
     <div className="space-y-8">
       <div className="space-y-4">
@@ -368,17 +573,47 @@ export const EnhancedCommentsSection = ({
                 <AvatarFallback>U</AvatarFallback>
               </Avatar>
               
-              <div className="flex-1 space-y-2">
+              <div className="flex-1 space-y-2 relative">
                 <Textarea
+                  ref={newCommentInputRef}
                   placeholder="Join the conversation..."
                   value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
+                  onChange={handleNewCommentContentChange}
                   rows={3}
                   className="resize-none"
+                  onKeyDown={handleKeyDown}
+                  onBlur={(e) => {
+                    if (suggestionsContainerRef.current && 
+                        !suggestionsContainerRef.current.contains(e.relatedTarget as Node | null)) {
+                      setShowSuggestions(false); 
+                      setHighlightedIndex(-1);
+                    }
+                  }}
+                  onFocus={(e) => {
+                    const triggerInfo = getTriggerInfo(e.target);
+                    if (triggerInfo && triggerInfo.query === mentionQuery && mentionType) {
+                       if(suggestions.length > 0) setShowSuggestions(true);
+                    }
+                  }}
                 />
                 
-                {/* Media Upload Options */}
-      <div className="flex items-center justify-between">
+                {showSuggestions && (
+                  <div 
+                    ref={suggestionsContainerRef}
+                    className="absolute z-10 w-full mt-1 md:w-auto md:max-w-xs"
+                  >
+                    <MentionSuggestionsList
+                      suggestions={suggestions}
+                      isLoading={mentionLoading}
+                      onSelect={handleSuggestionSelect}
+                      mentionType={mentionType}
+                      highlightedIndex={highlightedIndex}
+                      onItemHover={setHighlightedIndex}
+                    />
+                  </div>
+                )}
+                
+                <div className="flex items-center justify-between">
                   <div className="flex gap-2 items-center">
                     {uploadedMedia ? (
                       <div className="w-24 h-24 relative">
@@ -395,15 +630,15 @@ export const EnhancedCommentsSection = ({
                           acceptedTypes="image"
                           maxFiles={1}
                         >
-        <Button 
+                          <Button 
                             type="button" 
-          variant="ghost" 
-          size="sm" 
+                            variant="ghost" 
+                            size="sm" 
                             className="h-8 w-8 p-0"
                             disabled={submitting}
-        >
+                          >
                             <ImageIcon className="h-4 w-4" />
-        </Button>
+                          </Button>
                         </MediaUpload>
       
                         <MediaUpload
@@ -412,37 +647,28 @@ export const EnhancedCommentsSection = ({
                           acceptedTypes="video"
                           maxFiles={1}
                         >
-            <Button 
-              type="button"
+                          <Button 
+                            type="button"
                             variant="ghost" 
                             size="sm" 
                             className="h-8 w-8 p-0"
                             disabled={submitting}
-            >
+                          >
                             <VideoIcon className="h-4 w-4" />
-            </Button>
+                          </Button>
                         </MediaUpload>
                       </div>
-          )}
+                    )}
                   </div>
                   
-              <Button 
-                type="submit" 
-                    disabled={(!newComment.trim() && !uploadedMedia) || submitting}
-                className="gap-1.5"
-              >
-                {submitting ? (
-                      <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                        Posting...
-                      </>
-                ) : (
-                      <>
-                  <Send className="h-4 w-4" />
-                        Comment
-                      </>
-                )}
-              </Button>
+                  <Button 
+                    type="submit" 
+                    className="text-xs h-8 gap-1.5"
+                    disabled={submitting || (!newComment.trim() && !uploadedMedia)}
+                    onClick={() => handleSubmitComment()}
+                  >
+                    {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  </Button>
                 </div>
               </div>
             </div>
@@ -474,21 +700,24 @@ export const EnhancedCommentsSection = ({
                   <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
                   Refresh
                 </Button>
-        </div>
+              </div>
       
               <div className="space-y-6 divide-y divide-border/20">
-          {replies.map(reply => (
-            <div key={reply.id} className="pt-6 first:pt-0">
-              <EnhancedCommentItem 
-                comment={reply}
-                postAuthorHandle={postAuthorHandle}
-                onMeowChange={handleMeowChange}
-                onReply={handleReplyToComment}
-                      isMobile={false}
-              />
-            </div>
-          ))}
-        </div>
+                {replies.map(reply => (
+                  <div key={reply.id} className="pt-6 first:pt-0">
+                    <EnhancedCommentItem 
+                      comment={reply}
+                      postAuthorHandle={postAuthorHandle}
+                      onMeowChange={handleMeowChange}
+                      onReply={handleReplyToComment}
+                      isAuthorReplying={reply.handle === postAuthorHandle}
+                      isMobile={isMobile}
+                      onOpenMobileReply={(id, handle, avatar, content) => openReplyDrawer(id, handle, avatar, content, false)}
+                      onInitiateMention={handleInitiateMentionInNewComment}
+                    />
+                  </div>
+                ))}
+              </div>
             </>
           )}
         </div>
