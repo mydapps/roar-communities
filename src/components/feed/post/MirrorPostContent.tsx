@@ -1,8 +1,8 @@
 import React, { useMemo } from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { MediaCarousel } from './MediaCarousel';
 import { processTextContent } from '@/utils/textFormatting';
+import { sanitizeHtml } from '@/utils/sanitizeHtml';
 
 interface MirrorPostContentProps {
   mirrorData: {
@@ -19,44 +19,86 @@ interface MirrorPostContentProps {
   onImageClick?: (imageSrc: string) => void;
 }
 
+// Define the regex for linkification using a single template literal
+const MENTION_OR_URL_REGEX_MIRROR = new RegExp(
+  `(\\b(?:https?://|www\\.)[^\\s<>()"\\]*[^\\s<>()"\\.,!?:;'])|(?<![\\w\\/@\\.])(@([a-zA-Z0-9_\\-]+(?:\\.[a-zA-Z0-9_\\-]+)*))|(?<![\\w\\/])(\\/c\\/([a-zA-Z0-9_\\-]+))|(\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b)`,
+  'g'
+);
+
 export const MirrorPostContent = ({ mirrorData, onImageClick }: MirrorPostContentProps) => {
   const formatUsername = (name: string) => {
     return '@' + name.split('.')[0];
   };
   
-  // Process and clean the original body content to remove markdown image/video tags
-  const [cleanedBody, parsedImages, parsedVideos] = useMemo(() => {
-    const mediaRegex = /!\[\]\((https:\/\/[^)]+)\)/g;
-    const mediaUrls: string[] = [];
+  const [bodyHtmlToRender, parsedImagesFromMarkdown, parsedVideosFromMarkdown] = useMemo(() => {
+    const mediaRegex = /!\[\]\((https:\/\/[^)]+)\)/g; 
+    const mediaUrlsFromMarkdown: string[] = [];
     let matches;
     
-    while ((matches = mediaRegex.exec(mirrorData.originalBody)) !== null) {
-      mediaUrls.push(matches[1]);
+    const sanitizedOriginalBody = sanitizeHtml(mirrorData.originalBody);
+
+    let tempSanitizedBodyForMediaExtraction = sanitizedOriginalBody;
+    while ((matches = mediaRegex.exec(tempSanitizedBodyForMediaExtraction)) !== null) {
+      mediaUrlsFromMarkdown.push(matches[1]);
     }
     
-    const cleanedContent = mirrorData.originalBody.replace(mediaRegex, '').trim();
+    const contentForLinkification = sanitizedOriginalBody.replace(mediaRegex, '').trim();
     
     const extractedImages: string[] = [];
     const extractedVideos: string[] = [];
-    
-    mediaUrls.forEach(url => {
+    mediaUrlsFromMarkdown.forEach(url => {
       if (url.match(/\.(mp4|webm|ogg|mov)$/i) || url.includes('/video/')) {
         extractedVideos.push(url);
       } else {
         extractedImages.push(url);
       }
     });
+
+    let finalHtml = '';
+    let lastIndex = 0;
+    contentForLinkification.replace(MENTION_OR_URL_REGEX_MIRROR, (match: string, 
+      url: string | undefined, 
+      userMentionFull: string | undefined, 
+      _userMentionInner: string | undefined, 
+      communityMentionFull: string | undefined, 
+      _communityMentionInner: string | undefined, 
+      email: string | undefined, 
+      offset: number,
+      _fullString: string // Add fullString to match expected signature for .replace with function
+    ): string => {
+      finalHtml += contentForLinkification.substring(lastIndex, offset);
+      if (url) {
+        let linkHref = url;
+        if (url.startsWith('www.') && !url.startsWith('http://') && !url.startsWith('https://')) {
+          linkHref = 'http://' + url;
+        }
+        if (linkHref.includes('?')) {
+          linkHref += '&loadIn=defaultBrowser';
+        } else {
+          linkHref += '?loadIn=defaultBrowser';
+        }
+        finalHtml += `<a href="${linkHref}" target="_blank" rel="noopener noreferrer ugc" class="text-primary hover:underline">${url}</a>`;
+      } else if (email) {
+        finalHtml += email;
+      } else if (userMentionFull) {
+        const usernameForUrl = userMentionFull.substring(1).split('.')[0];
+        finalHtml += `<a href="/u/${usernameForUrl}" class="text-primary hover:underline">${userMentionFull}</a>`;
+      } else if (communityMentionFull) {
+        const communityName = communityMentionFull.substring(3);
+        finalHtml += `<a href="/c/${communityName}" class="text-primary hover:underline">${communityMentionFull}</a>`;
+      }
+      lastIndex = offset + match.length;
+      return match; 
+    });
+    finalHtml += contentForLinkification.substring(lastIndex);
     
-    return [cleanedContent, extractedImages, extractedVideos];
+    return [finalHtml, extractedImages, extractedVideos];
   }, [mirrorData.originalBody]);
   
-  // Process original images array to separate videos and images
-  const [mediaImages, mediaVideos] = useMemo(() => {
+  const [mediaImagesFromProps, mediaVideosFromProps] = useMemo(() => {
     if (!mirrorData.originalImages || mirrorData.originalImages.length === 0) return [[], []];
-    
     const imgArray: string[] = [];
     const vidArray: string[] = [];
-    
     mirrorData.originalImages.forEach(url => {
       if (url.match(/\.(mp4|webm|ogg|mov)$/i) || url.includes('/video/')) {
         vidArray.push(url);
@@ -64,52 +106,29 @@ export const MirrorPostContent = ({ mirrorData, onImageClick }: MirrorPostConten
         imgArray.push(url);
       }
     });
-    
     return [imgArray, vidArray];
   }, [mirrorData.originalImages]);
-  
-  // Combine all media sources into a single array of media items
+
   const allMedia = useMemo(() => {
     const media: { type: 'image' | 'video', url: string }[] = [];
-    const uniqueUrls = new Set<string>(); // Use a Set for deduplication
-
-    const addMedia = (item: { type: 'image' | 'video', url: string }) => {
+    const uniqueUrls = new Set<string>();
+    const addMediaItem = (item: { type: 'image' | 'video', url: string }) => {
       if (item.url && !uniqueUrls.has(item.url)) {
         media.push(item);
         uniqueUrls.add(item.url);
       }
     };
-    
-    // Add images from original images array
-    mediaImages.forEach(url => {
-      addMedia({ type: 'image', url });
-    });
-    
-    // Add videos from original images array
-    mediaVideos.forEach(url => {
-      addMedia({ type: 'video', url });
-    });
-    
-    // Add images parsed from markdown
-    parsedImages.forEach(url => {
-      addMedia({ type: 'image', url });
-    });
-    
-    // Add videos parsed from markdown
-    parsedVideos.forEach(url => {
-      addMedia({ type: 'video', url });
-    });
-    
+    mediaImagesFromProps.forEach(url => addMediaItem({ type: 'image', url }));
+    mediaVideosFromProps.forEach(url => addMediaItem({ type: 'video', url }));
+    parsedImagesFromMarkdown.forEach(url => addMediaItem({ type: 'image', url })); 
+    parsedVideosFromMarkdown.forEach(url => addMediaItem({ type: 'video', url }));
     return media.length > 0 ? media : undefined;
-  }, [mediaImages, mediaVideos, parsedImages, parsedVideos]);
-  
-  // Replace the handleImageClick function
+  }, [mediaImagesFromProps, mediaVideosFromProps, parsedImagesFromMarkdown, parsedVideosFromMarkdown]);
+
   const handleImageClick = (imageSrc: string) => {
     if (onImageClick) {
-      // Use the parent's image click handler if provided
       onImageClick(imageSrc);
     } else {
-      // Fallback to opening in a new tab if no handler provided
       window.open(imageSrc, '_blank');
     }
   };
@@ -145,10 +164,11 @@ export const MirrorPostContent = ({ mirrorData, onImageClick }: MirrorPostConten
             <p className="text-sm font-semibold mt-1 break-words">{mirrorData.originalTitle}</p>
           )}
           
-          {cleanedBody && (
-            <div className="text-sm mt-1 break-words whitespace-pre-line prose prose-sm max-w-none dark:prose-invert prose-p:my-1 prose-strong:font-semibold prose-em:italic">
-              {processTextContent(cleanedBody)}
-            </div>
+          {bodyHtmlToRender && (
+            <div 
+              className="text-sm mt-1 break-words whitespace-pre-line prose prose-sm max-w-none dark:prose-invert prose-p:my-1 prose-strong:font-semibold prose-em:italic"
+              dangerouslySetInnerHTML={{ __html: bodyHtmlToRender }}
+            />
           )}
           
           {allMedia && allMedia.length > 0 && (
