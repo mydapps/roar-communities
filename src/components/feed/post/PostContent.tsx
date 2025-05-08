@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { CardContent } from '@/components/ui/card';
 import { MediaCarousel } from './MediaCarousel';
 import { MirrorPostContent } from './MirrorPostContent';
 import { sanitizeHtml } from '@/utils/sanitizeHtml';
+import { LinkPreviewCard, LinkPreviewData } from './LinkPreviewCard';
+import { YoutubeEmbed } from './YoutubeEmbed';
+import { Loader2 } from 'lucide-react';
 // Link component is not used if we are generating <a> tags directly in the string.
 // import { Link } from 'react-router-dom'; 
 
@@ -35,6 +38,117 @@ export const PostContent: React.FC<PostContentProps> = ({
   const initialSanitizedContent = sanitizeHtml(content);
   let finalHtml = '';
   let lastIndex = 0;
+
+  // --- STATE FOR URL PREVIEW/EMBED ---
+  const [firstUrl, setFirstUrl] = useState<string | null>(null);
+  const [previewData, setPreviewData] = useState<LinkPreviewData | null>(null);
+  const [youtubeVideoId, setYoutubeVideoId] = useState<string | null>(null);
+  const [isLoadingPreview, setIsLoadingPreview] = useState<boolean>(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  // --- END STATE ---
+
+  // Effect to find the first URL in the content
+  useEffect(() => {
+    // Reset states when content changes before finding new URL
+    setFirstUrl(null);
+    setPreviewData(null);
+    setYoutubeVideoId(null);
+    setIsLoadingPreview(false);
+    setPreviewError(null);
+
+    if (content) { // Use original content to find the URL before sanitization for linkification
+      const urlRegex = /(\b(?:https?:\/\/|www\.)[^s<>()"]*[^s<>()"\.!,?:;'\]\[)|b(?:https?:\/\/|www\.)[^s<>()"]*[^s<>()"\.!,?:;'\"\`*{}])/i;
+      const match = content.match(urlRegex);
+      if (match && match[0]) {
+        let detectedUrl = match[0];
+        // If it starts with www. but no scheme, prepend http:// for consistency in processing
+        if (detectedUrl.startsWith('www.') && !detectedUrl.startsWith('http')) {
+          detectedUrl = 'http://' + detectedUrl;
+        }
+        setFirstUrl(detectedUrl);
+      }
+    }
+  }, [content]); // Re-run when raw content changes
+
+  // Effect to fetch preview or identify YouTube video
+  useEffect(() => {
+    if (!firstUrl) {
+      setPreviewData(null); // Clear previous preview if no URL
+      setYoutubeVideoId(null); // Clear previous youtubeId if no URL
+      return;
+    }
+
+    // 1. Check for YouTube Link (including Shorts)
+    const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+    const youtubeMatch = firstUrl.match(youtubeRegex);
+
+    if (youtubeMatch && youtubeMatch[1]) {
+      setYoutubeVideoId(youtubeMatch[1]);
+      setPreviewData(null); // Ensure no stale preview data
+      setIsLoadingPreview(false);
+      return;
+    }
+
+    // 2. If not YouTube, fetch general link preview
+    setYoutubeVideoId(null); // Ensure no stale youtube id
+    setIsLoadingPreview(true);
+    setPreviewError(null);
+    setPreviewData(null); // Clear previous data
+
+    const fetchPreview = async () => {
+      try {
+        // Simulate API call - replace with actual fetch
+        // const response = await fetch(`/api/get_link_preview?url=${encodeURIComponent(firstUrl)}`);\n        // if (!response.ok) throw new Error('Failed to fetch preview');\n        // const data: LinkPreviewData | { success: false; error: string } = await response.json();
+        
+        // MOCK API RESPONSE FOR NOW
+        console.log(`[Mock API] Fetching preview for: ${firstUrl}`);
+        await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate network delay
+        let data: LinkPreviewData | { success: false; error: string };
+
+        // Example: youtu.be links don't give good previews, so let's skip for them if not caught by YT embed logic
+        if (firstUrl.includes('youtu.be/') || firstUrl.includes('youtube.com/shorts/')) {
+            data = { success: false, error: 'Direct YouTube links are embedded; previews are skipped for shorteners/specific paths unless general fetch is desired.' };
+        } else if (firstUrl.includes('example.com/success')) { // Test success
+           data = {
+              success: true,
+              title: 'Fetched Example Page Title',
+              description: 'This is a compelling description of the example page, making you want to click.',
+              image: 'https://via.placeholder.com/500x300.png?text=Example+Preview+Image',
+              siteName: 'Example.com',
+              url: firstUrl
+            };
+        } else if (firstUrl.includes('example.com/failure')) { // Test failure
+            data = { success: false, error: 'Could not retrieve preview from example.com/failure.' };
+        } else { // Default mock for other URLs
+            data = {
+              success: true,
+              title: `Preview for ${firstUrl.substring(0,50)}...`,
+              description: `This is a generic preview for the link. It might contain some initial text from the page. Visit the link to learn more!`,
+              image: undefined, // No image for generic
+              siteName: new URL(firstUrl).hostname,
+              url: firstUrl
+            };
+        }
+        // END MOCK
+
+        if (data.success) {
+          setPreviewData(data as LinkPreviewData);
+        } else {
+          const errorResult = data as { success: false; error: string };
+          setPreviewError(errorResult.error || 'Could not fetch link preview.');
+          console.warn('Preview fetch error:', errorResult.error);
+        }
+      } catch (err: any) {
+        setPreviewError(err.message || 'An unexpected error occurred during preview fetch.');
+        console.error('Preview fetch exception:', err);
+      } finally {
+        setIsLoadingPreview(false);
+      }
+    };
+
+    fetchPreview();
+
+  }, [firstUrl]); // Re-run when firstUrl changes
 
   // Regex to find: 
   // 1. URLs (absolute with http/https or starting with www)
@@ -103,6 +217,27 @@ export const PostContent: React.FC<PostContentProps> = ({
           dangerouslySetInnerHTML={{ __html: finalHtml }}
         />
       )}
+      
+      {/* URL Preview and YouTube Embed Section */}
+      <div className="mt-3">
+        {isLoadingPreview && (
+          <div className="flex items-center justify-center p-4 border rounded-md bg-muted/30">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            <span className="ml-2 text-sm text-muted-foreground">Fetching link preview...</span>
+          </div>
+        )}
+        {!isLoadingPreview && youtubeVideoId && (
+          <YoutubeEmbed videoId={youtubeVideoId} />
+        )}
+        {!isLoadingPreview && !youtubeVideoId && previewData && (
+          <LinkPreviewCard preview={previewData} />
+        )}
+        {!isLoadingPreview && !youtubeVideoId && !previewData && previewError && (
+          <div className="text-xs text-muted-foreground p-2 border rounded-md bg-destructive/10">
+            Could not load preview: {previewError.length > 100 ? previewError.substring(0,97) + '...': previewError}
+          </div>
+        )}
+      </div>
       
       {isMirror && mirrorData && (
         <MirrorPostContent 
