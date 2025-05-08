@@ -57,7 +57,7 @@ export const PostContent: React.FC<PostContentProps> = ({
     setPreviewError(null);
 
     if (content) { // Use original content to find the URL before sanitization for linkification
-      const urlRegex = /(\b(?:https?:\/\/|www\.)[^s<>()"]*[^s<>()"\.!,?:;'\]\[)|b(?:https?:\/\/|www\.)[^s<>()"]*[^s<>()"\.!,?:;'\"\`*{}])/i;
+      const urlRegex = /\b(?:https?:\/\/|www\.)[^\s<>()"]*[^\s<>()"\.,!?:;']/i;
       const match = content.match(urlRegex);
       if (match && match[0]) {
         let detectedUrl = match[0];
@@ -97,39 +97,26 @@ export const PostContent: React.FC<PostContentProps> = ({
 
     const fetchPreview = async () => {
       try {
-        // Simulate API call - replace with actual fetch
-        // const response = await fetch(`/api/get_link_preview?url=${encodeURIComponent(firstUrl)}`);\n        // if (!response.ok) throw new Error('Failed to fetch preview');\n        // const data: LinkPreviewData | { success: false; error: string } = await response.json();
-        
-        // MOCK API RESPONSE FOR NOW
-        console.log(`[Mock API] Fetching preview for: ${firstUrl}`);
-        await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate network delay
-        let data: LinkPreviewData | { success: false; error: string };
+        const encodedUrl = encodeURIComponent(firstUrl);
+        console.log('[PostContent] Fetching preview for URL:', firstUrl, 'Encoded:', encodedUrl);
 
-        // Example: youtu.be links don't give good previews, so let's skip for them if not caught by YT embed logic
-        if (firstUrl.includes('youtu.be/') || firstUrl.includes('youtube.com/shorts/')) {
-            data = { success: false, error: 'Direct YouTube links are embedded; previews are skipped for shorteners/specific paths unless general fetch is desired.' };
-        } else if (firstUrl.includes('example.com/success')) { // Test success
-           data = {
-              success: true,
-              title: 'Fetched Example Page Title',
-              description: 'This is a compelling description of the example page, making you want to click.',
-              image: 'https://via.placeholder.com/500x300.png?text=Example+Preview+Image',
-              siteName: 'Example.com',
-              url: firstUrl
-            };
-        } else if (firstUrl.includes('example.com/failure')) { // Test failure
-            data = { success: false, error: 'Could not retrieve preview from example.com/failure.' };
-        } else { // Default mock for other URLs
-            data = {
-              success: true,
-              title: `Preview for ${firstUrl.substring(0,50)}...`,
-              description: `This is a generic preview for the link. It might contain some initial text from the page. Visit the link to learn more!`,
-              image: undefined, // No image for generic
-              siteName: new URL(firstUrl).hostname,
-              url: firstUrl
-            };
+        const response = await fetch(`/api/get_link_preview?url=${encodedUrl}`);
+        console.log('[PostContent] Response status:', response.status, 'Status text:', response.statusText);
+
+        if (!response.ok) {
+          let errorData = { error: `Failed to fetch preview. Status: ${response.status} ${response.statusText}` };
+          try {
+            errorData = await response.json();
+            console.log('[PostContent] Error data from API:', errorData);
+          } catch (jsonError) {
+            console.error('[PostContent] Could not parse error response as JSON:', jsonError);
+            // Use the already prepared error message if JSON parsing fails
+          }
+          throw new Error(errorData?.error || `Failed to fetch preview. Status: ${response.status}`);
         }
-        // END MOCK
+        
+        const data: LinkPreviewData | { success: false; error: string } = await response.json();
+        console.log('[PostContent] Data from API:', data);
 
         if (data.success) {
           setPreviewData(data as LinkPreviewData);
@@ -140,7 +127,7 @@ export const PostContent: React.FC<PostContentProps> = ({
         }
       } catch (err: any) {
         setPreviewError(err.message || 'An unexpected error occurred during preview fetch.');
-        console.error('Preview fetch exception:', err);
+        console.error('[PostContent] Preview fetch exception:', err, 'URL attempted:', firstUrl);
       } finally {
         setIsLoadingPreview(false);
       }
