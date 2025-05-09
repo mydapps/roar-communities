@@ -4,6 +4,7 @@ import { useResponsive } from '@/hooks/use-mobile';
 import { useToast } from '@/hooks/use-toast';
 import { usePreventZoom } from '@/hooks/usePreventZoom';
 import { Helmet } from 'react-helmet-async';
+import { sanitizeHtml } from '@/utils/sanitizeHtml';
 
 // UI Components
 import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator, BreadcrumbPage } from '@/components/ui/breadcrumb';
@@ -308,6 +309,17 @@ const MemoizedCommentWithReplies = memo(({
 });
 MemoizedCommentWithReplies.displayName = 'MemoizedCommentWithReplies';
 
+// Helper function to get plain text and truncate
+const getPlainText = (htmlString: string | undefined, maxLength?: number): string => {
+  if (!htmlString) return '';
+  const doc = new DOMParser().parseFromString(sanitizeHtml(htmlString), 'text/html');
+  let text = doc.body.textContent || "";
+  if (maxLength && text.length > maxLength) {
+    text = text.substring(0, maxLength - 3) + '...';
+  }
+  return text.trim();
+};
+
 const PostPage = () => {
   usePreventZoom();
   
@@ -514,10 +526,18 @@ const PostPage = () => {
     return '@' + name.split('.')[0];
   };
   
-  const truncateTitle = (content: string, maxLength = 30) => {
-    if (content.length <= maxLength) return content;
-    return content.substring(0, maxLength) + '...';
+  const truncateTitle = (content: string | undefined, maxLength = 30): string => {
+    const plainText = getPlainText(content);
+    if (!plainText) return '';
+    if (plainText.length > maxLength) {
+      return plainText.substring(0, maxLength - 3) + '...';
+    }
+    return plainText;
   };
+  
+  const pageTitle = post ? `${truncateTitle(post.content, 50)} - Roar` : 'Post - Roar';
+  const metaDescription = post ? getPlainText(post.content, 160) : 'View the post and comments on Roar.';
+  const metaTitle = post ? getPlainText(post.content, 70) : 'Roar Post';
   
   if (loading) {
     return <div className="space-y-6 animate-fade-in">
@@ -558,12 +578,12 @@ const PostPage = () => {
   return <div className="max-w-full overflow-x-hidden animate-fade-in">
       {/* SEO Metadata */}
       <Helmet>
-        <title>{postMetadata.title}</title>
-        <meta name="description" content={postMetadata.description} />
+        <title>{pageTitle}</title>
+        <meta name="description" content={metaDescription} />
         
         {/* OpenGraph Tags */}
-        <meta property="og:title" content={postMetadata.title} />
-        <meta property="og:description" content={postMetadata.description} />
+        <meta property="og:title" content={metaTitle} />
+        <meta property="og:description" content={metaDescription} />
         <meta property="og:image" content={postMetadata.imageUrl} />
         <meta property="og:url" content={postMetadata.url} />
         <meta property="og:type" content="article" />
@@ -576,8 +596,8 @@ const PostPage = () => {
         
         {/* Twitter Card Tags */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={postMetadata.title} />
-        <meta name="twitter:description" content={postMetadata.description} />
+        <meta name="twitter:title" content={metaTitle} />
+        <meta name="twitter:description" content={metaDescription} />
         <meta name="twitter:image" content={postMetadata.imageUrl} />
         
         {/* Additional Meta Tags */}

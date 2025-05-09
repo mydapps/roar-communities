@@ -385,6 +385,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
 
   const toggleBold = () => editorInstanceRef.current?.chain().focus().toggleBold().run();
   const toggleItalic = () => editorInstanceRef.current?.chain().focus().toggleItalic().run();
+  const toggleUnderline = () => editorInstanceRef.current?.chain().focus().toggleUnderline().run();
 
   const renderFormattingToolbar = () => (
     <div className="flex items-center gap-1 p-2 border-b border-border bg-background rounded-t-md">
@@ -405,11 +406,10 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
         <ItalicIcon className="h-4 w-4" />
       </Button>
       <Button 
-        variant="ghost"
+        variant={editorInstanceRef.current?.isActive('underline') ? 'secondary' : 'ghost'}
         size="icon" 
-        onClick={() => console.warn('Underline needs Tiptap extension')} 
-        title="Underline (Not Implemented)"
-        disabled
+        onClick={toggleUnderline}
+        title="Underline"
       >
         <UnderlineIcon className="h-4 w-4" />
       </Button>

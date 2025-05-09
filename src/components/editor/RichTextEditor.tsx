@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useEditor, EditorContent, Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import Underline from '@tiptap/extension-underline'; // Added Underline import
 // import Image from '@tiptap/extension-image'; // Removed Image extension
 // import Placeholder from '@tiptap/extension-placeholder'; 
 import { cn } from '@/lib/utils';
@@ -46,6 +47,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         orderedList: false,
         paragraph: {},
       }),
+      Underline, // Added Underline extension
       // Image.configure({ ... }) // Removed Image extension config
       // Add the mention plugin if options are provided
       ...(mentionPluginOptions ? [getMentionsPlugin({
@@ -103,8 +105,9 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     // Pass editor to mention plugin AFTER editor is created, if options exist
     // This is a workaround for the chicken-and-egg problem mentioned above.
     // The plugin itself needs to be designed to receive/use the editor instance post-initialization if needed this way.
-    if (editor && mentionPluginOptions && getMentionsPlugin({}).name === 'mentions') { // Check if plugin exists
-        const plugin = editor.extensionManager.extensions.find(ext => ext.name === 'mentions');
+    if (editor && mentionPluginOptions) {
+        const mentionPluginInstance = getMentionsPlugin(mentionPluginOptions); // Get instance with proper options
+        const plugin = editor.extensionManager.extensions.find(ext => ext.name === mentionPluginInstance.name);
         if (plugin && plugin.options) {
             // This is conceptual: Tiptap plugins don't typically have their options updated this way post-init.
             // The ideal way is for the plugin to access `this.editor` internally when it needs it.
