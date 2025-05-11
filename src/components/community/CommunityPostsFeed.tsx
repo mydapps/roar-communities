@@ -10,6 +10,8 @@ interface CommunityPostsFeedProps {
   loadingElementRef: React.LegacyRef<HTMLDivElement> | undefined;
   handleRoar: (postCode: string) => Promise<void>;
   isLoggedIn: boolean;
+  isAdmin: boolean;
+  onPostUpdated: (postCode: string, newPinnedStatus: boolean) => void;
 }
 
 const CommunityPostsFeed: React.FC<CommunityPostsFeedProps> = ({ 
@@ -18,7 +20,9 @@ const CommunityPostsFeed: React.FC<CommunityPostsFeedProps> = ({
   hasMore,
   loadingElementRef,
   handleRoar,
-  isLoggedIn
+  isLoggedIn,
+  isAdmin,
+  onPostUpdated
 }) => {
   return (
     <div className="space-y-6">
@@ -43,7 +47,7 @@ const CommunityPostsFeed: React.FC<CommunityPostsFeedProps> = ({
               postCode={post.code || ''}
               avatar={post.avatar || ''}
               roared={post.roar === 1}
-              onRoar={() => post.code ? handleRoar(post.code) : null}
+              onRoar={() => post.code ? handleRoar(post.code) : Promise.resolve()}
               isMirror={post.is_mirror === 1}
               mirrorData={post.is_mirror === 1 ? {
                 quote: post.mirror_quote || '',
@@ -59,6 +63,9 @@ const CommunityPostsFeed: React.FC<CommunityPostsFeedProps> = ({
               ipfs={post.code || ''}
               isLoggedIn={isLoggedIn}
               hideComments={false} // Keep comments visible on community feed
+              isAdmin={isAdmin}
+              isPinned={!!post.pinned}
+              onPostUpdated={onPostUpdated}
             />
           ))}
           

@@ -31,7 +31,7 @@ export const MirrorPostContent = ({ mirrorData, onImageClick }: MirrorPostConten
   };
   
   const [bodyHtmlToRender, parsedImagesFromMarkdown, parsedVideosFromMarkdown] = useMemo(() => {
-    const mediaRegex = /!\[\]\((https:\/\/[^)]+)\)/g; 
+    const mediaRegex = /!\[\]\((https:\/\/[^)]+)\)/g;
     const mediaUrlsFromMarkdown: string[] = [];
     let matches;
     
@@ -53,7 +53,7 @@ export const MirrorPostContent = ({ mirrorData, onImageClick }: MirrorPostConten
         extractedImages.push(url);
       }
     });
-
+    
     let finalHtml = '';
     let lastIndex = 0;
     contentForLinkification.replace(MENTION_OR_URL_REGEX_MIRROR, (match: string, 
@@ -108,7 +108,7 @@ export const MirrorPostContent = ({ mirrorData, onImageClick }: MirrorPostConten
     });
     return [imgArray, vidArray];
   }, [mirrorData.originalImages]);
-
+  
   const allMedia = useMemo(() => {
     const media: { type: 'image' | 'video', url: string }[] = [];
     const uniqueUrls = new Set<string>();
@@ -124,7 +124,7 @@ export const MirrorPostContent = ({ mirrorData, onImageClick }: MirrorPostConten
     parsedVideosFromMarkdown.forEach(url => addMediaItem({ type: 'video', url }));
     return media.length > 0 ? media : undefined;
   }, [mediaImagesFromProps, mediaVideosFromProps, parsedImagesFromMarkdown, parsedVideosFromMarkdown]);
-
+  
   const handleImageClick = (imageSrc: string) => {
     if (onImageClick) {
       onImageClick(imageSrc);

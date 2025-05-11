@@ -572,3 +572,85 @@ export const flagPost = async (payload: FlagPostPayload): Promise<FlagPostRespon
 };
 
 // --- End Interfaces and Functions for Post Reporting/Flagging ---
+
+/**
+ * Pin or unpin a post in a community.
+ */
+export const pinCommunityPost = async (params: {
+  postCode: string;
+  action: 'pin' | 'unpin';
+}): Promise<{ success: boolean; message: string; pinned?: 0 | 1; errorCode?: string }> => {
+  const { postCode, action } = params;
+  try {
+    const response = await fetch('/api/pin_post', {
+      method: 'POST',
+      headers: {
+        ...createAuthHeaders(), // Spread existing auth headers
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ postCode, action }),
+      credentials: 'include',
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      // Use error message from API if available, otherwise a default
+      throw new Error(data.message || `API error: ${response.status}`);
+    }
+    
+    // Assuming data contains { success: boolean, message: string, pinned?: 0 | 1, errorCode?: string }
+    return data;
+
+  } catch (error: any) {
+    console.error('Error in pinCommunityPost:', error);
+    // Return a failed promise compatible with the expected structure
+    return {
+      success: false,
+      message: error.message || 'Failed to update post pin status. Please try again.',
+    };
+  }
+};
+
+/**
+ * Hide a post from the user's feed (logical deletion for the user).
+ */
+export const hidePostFromUser = async (postCode: string): Promise<HidePostResponse> => {
+  if (!postCode) {
+    // Return a predictable error format
+    return { success: false, message: "postCode is required to hide a post." };
+  }
+  
+  console.log(`API Call: Hiding post ${postCode} from user's feed`);
+  
+  try {
+    const headers = createAuthHeaders(); // Get headers with content-type
+    const response = await fetch('/api/hide_post_from_user', { // Use relative path for proxy
+      method: 'POST',
+      headers: headers,
+      credentials: 'include', // Include credentials (cookies)
+      body: JSON.stringify({ postCode }),
+    });
+
+    const responseData = await response.json();
+    console.log('API Response (hidePostFromUser):', responseData);
+
+    if (!response.ok) {
+      // Use the message from the API if available, otherwise a default
+      const errorMessage = responseData?.message || `HTTP error! status: ${response.status}`;
+      console.error("Hide Post API Error:", errorMessage, responseData);
+      return { success: false, message: errorMessage };
+    }
+
+    // Assuming the API returns HidePostResponse structure on success
+    return responseData as HidePostResponse;
+
+  } catch (error) {
+    console.error('Network or other error hiding post from user:', error);
+    let message = 'An unknown error occurred.';
+    if (error instanceof Error) {
+      message = error.message;
+    }
+    return { success: false, message: `Network error: ${message}` };
+  }
+};

@@ -53,36 +53,42 @@ export const useCommunityPosts = (communityName: string | undefined) => {
   const loadingElementRef = useRef<HTMLDivElement | null>(null);
   const isFetchingRef = useRef<boolean>(false);
   
-  const fetchPosts = useCallback(async (pageToFetch: number) => {
-    if (loading || !communityName) return;
-      setLoading(true);
+  const fetchPosts = useCallback(async (pageToFetch: number, limit: number = 10) => {
+    if (isFetchingRef.current && pageToFetch !== 1) return;
+    if (!communityName) {
+        setPosts([]);
+        setHasMore(false);
+        return;
+    }
+
+    isFetchingRef.current = true;
+    if(pageToFetch === 1) setLoading(true);
       setError(null);
+    
     try {
-      // Use relative proxy path
-      const url = `/api/fetch_posts?c=${encodeURIComponent(communityName)}&page=${pageToFetch}`;
+      const url = `/api/fetch_posts?c=${encodeURIComponent(communityName)}&page=${pageToFetch}&limit=${limit}`;
       const response = await fetch(url, {
           method: 'GET',
-        credentials: 'include' // Add credentials
+          credentials: 'include'
       });
 
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
       const data = await response.json();
-      // Assuming API returns an array directly under a 'posts' key, or just the array
       const fetchedPosts = Array.isArray(data) ? data : (data.posts || []); 
+      
       setPosts(prev => pageToFetch === 1 ? fetchedPosts : [...prev, ...fetchedPosts]);
-      // Determine hasMore based on whether fewer posts than requested were returned
-      // Or if the API provides explicit pagination info (adjust as needed)
-      setHasMore(fetchedPosts.length === 10); // Assuming limit is 10
+      setHasMore(fetchedPosts.length === limit);
       currentPage.current = pageToFetch;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
       console.error("Failed to fetch community posts:", err);
     } finally {
       setLoading(false);
+      isFetchingRef.current = false;
     }
-  }, [communityName, loading]);
+  }, [communityName]);
 
   // Set up intersection observer for infinite scrolling
   useEffect(() => {
@@ -139,28 +145,26 @@ export const useCommunityPosts = (communityName: string | undefined) => {
   }, [loadingElementRef.current]);
 
   useEffect(() => {
-    // Reset and fetch first page when community name changes
-    console.log("Community name changed, resetting posts:", communityName);
     setPosts([]);
     currentPage.current = 1;
     setHasMore(true);
     isFetchingRef.current = false;
-    
     if (communityName) {
       fetchPosts(1);
     }
-  }, [communityName]);
+  }, [communityName, fetchPosts]);
 
   const loadMore = useCallback(() => {
     if (loading || !hasMore || isFetchingRef.current) {
-      console.log("Cannot load more:", { loading, hasMore, isFetching: isFetchingRef.current });
       return;
     }
-    
-    console.log("Loading more posts, page:", currentPage.current + 1);
     const nextPage = currentPage.current + 1;
     fetchPosts(nextPage);
   }, [loading, hasMore, fetchPosts]);
+
+  const refetch = useCallback(() => {
+    fetchPosts(1);
+  }, [fetchPosts]);
 
   return { 
     posts, 
@@ -168,6 +172,8 @@ export const useCommunityPosts = (communityName: string | undefined) => {
     error, 
     hasMore, 
     loadMore,
-    loadingElementRef
+    loadingElementRef,
+    fetchPosts,
+    refetch
   };
 };

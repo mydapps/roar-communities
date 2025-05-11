@@ -137,9 +137,29 @@ const CommunityPage = () => {
   
   const { members, loading: membersLoading, hasMore: hasMoreMembers, loadMore: loadMoreMembers } = useCommunityMembers(id);
   
-  const { posts, loading: postsLoading, hasMore: hasMorePosts, loadMore: loadMorePosts, loadingElementRef } = useCommunityPosts(id);
+  const { posts, loading: postsLoading, error: postsError, hasMore: hasMorePosts, loadMore: loadMorePosts, loadingElementRef, fetchPosts } = useCommunityPosts(id);
   
-  const allPosts = [...localPosts, ...posts];
+  const allPosts = useMemo(() => {
+    const combined = [...localPosts, ...posts];
+    const uniquePostCodes = new Set<string>();
+    return combined
+      .filter(post => {
+        if (!post.code || uniquePostCodes.has(post.code)) {
+          return false;
+        }
+        uniquePostCodes.add(post.code);
+        return true;
+      })
+      .sort((a, b) => {
+        const aIsPinned = a.pinned === 1;
+        const bIsPinned = b.pinned === 1;
+        if (aIsPinned && !bIsPinned) return -1;
+        if (!aIsPinned && bIsPinned) return 1;
+        // Add secondary sort by date if available (e.g., by post.created_on_timestamp)
+        // Assuming posts are already somewhat sorted by time from the API for simplicity here
+        return 0; 
+      });
+  }, [localPosts, posts]);
   
   // --- Data Extraction (safe to do early, handle potential undefined) ---
   const community = communityData?.community;
@@ -355,11 +375,25 @@ const CommunityPage = () => {
     }
   }, []);
   
-  const handlePostCreated = useCallback((newPost: Partial<CommunityPost>) => {
-    console.log("New post created:", newPost);
+  const handlePostCreated = (newPost: Partial<CommunityPost>) => {
+    // Add to localPosts, or refetch posts if pinned status might change order significantly
     setLocalPosts(prev => [newPost, ...prev]);
-    toast.success("Post created successfully!");
-  }, []);
+    // Optionally, if new posts could be pinned by default or affect pinned sorting:
+    // refetchPosts(); 
+  };
+
+  const handlePostUpdated = (postCode: string, newPinnedStatus: boolean) => {
+    const updateAndSortPosts = (postsList: Partial<CommunityPost>[]) => 
+      postsList.map(p => 
+        p.code === postCode ? { ...p, pinned: newPinnedStatus ? 1 : 0 } : p // Ensure pinned is 0 or 1
+      // Sorting is now handled by useMemo for allPosts
+      );
+
+    setLocalPosts(prevLocalPosts => updateAndSortPosts(prevLocalPosts));
+    if (fetchPosts) {
+        fetchPosts(1); // Call fetchPosts(1) to refetch and re-sort
+    }
+  };
   
   // Prepare initial data for admin panel - MOVED UP
   const defaultRulesText = useMemo(() => `• Be respectful to all members and maintain a professional tone
@@ -485,13 +519,18 @@ const CommunityPage = () => {
             
              {/* Replace inline posts rendering with CommunityPostsFeed component */} 
             <TabsContent value="posts" className="animate-fade-in mt-0">
+              <div className="mb-6">
+                <CreatePostCard onPostCreated={handlePostCreated} communityName={community?.name} />
+              </div>
                 <CommunityPostsFeed 
                   posts={allPosts}
                   loading={postsLoading}
                   hasMore={hasMorePosts}
                   loadingElementRef={loadingElementRef}
                   handleRoar={handleRoar}
-                  isLoggedIn={!!localStorage.getItem('dapps_user_id')} // Pass login status
+                isLoggedIn={!!user}
+                isAdmin={isAdmin}
+                onPostUpdated={handlePostUpdated}
                 />
             </TabsContent>
             <TabsContent value="members" className="animate-fade-in mt-0">

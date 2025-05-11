@@ -223,7 +223,7 @@ export const PostContent: React.FC<PostContentProps> = ({
           <div className="text-xs text-muted-foreground p-2 border rounded-md bg-destructive/10">
             Could not load preview: {previewError.length > 100 ? previewError.substring(0,97) + '...': previewError}
           </div>
-        )}
+      )}
       </div>
       
       {isMirror && mirrorData && (

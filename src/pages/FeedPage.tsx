@@ -197,34 +197,34 @@ const FeedPage = () => {
             let suggestionModuleInstanceCount = 0;
             return posts.flatMap((post, index) => {
               const postComponent = (
-                <Post
+            <Post
                   key={post.code ? `${post.code}-${refreshKey}-${activeTab}` : `new-post-${index}-${Date.now()}`}
-                  username={post.handle}
-                  avatar={post.avatar || ''}
-                  community={post.community}
-                  timeAgo={post.timeAgo}
-                  content={post.is_mirror === 1 ? (post.mirror_quote || '') : post.body}
-                  roarCount={post.upvotes}
-                  commentCount={post.reply_count}
-                  shareCount={0}
-                  postCode={post.code}
-                  roared={post.roar === 1 || post.has_upvoted === 1}
-                  onRoar={() => handleRoar(post.code)}
-                  images={post.images || (post.image === 1 ? [post.image_url] : undefined)}
-                  isMirror={post.is_mirror === 1}
-                  mirrorData={post.is_mirror === 1 ? {
-                    quote: post.mirror_quote || '',
-                    originalAuthor: post.original_author || '',
-                    originalCommunity: post.original_community || '',
-                    originalBody: post.original_body || '',
-                    originalTimeAgo: post.original_created_on || '',
-                    originalAvatar: post.original_author_avatar || '',
-                    originalImages: post.original_images || [],
-                    originalTitle: post.original_title || '',
-                    originalPostCode: post.original_post_code || ''
-                  } : undefined}
-                  ipfs={post.ipfs}
-                />
+              username={post.handle}
+              avatar={post.avatar || ''}
+              community={post.community}
+              timeAgo={post.timeAgo}
+              content={post.is_mirror === 1 ? (post.mirror_quote || '') : post.body}
+              roarCount={post.upvotes}
+              commentCount={post.reply_count}
+              shareCount={0}
+              postCode={post.code}
+              roared={post.roar === 1 || post.has_upvoted === 1}
+              onRoar={() => handleRoar(post.code)}
+              images={post.images || (post.image === 1 ? [post.image_url] : undefined)}
+              isMirror={post.is_mirror === 1}
+              mirrorData={post.is_mirror === 1 ? {
+                quote: post.mirror_quote || '',
+                originalAuthor: post.original_author || '',
+                originalCommunity: post.original_community || '',
+                originalBody: post.original_body || '',
+                originalTimeAgo: post.original_created_on || '',
+                originalAvatar: post.original_author_avatar || '',
+                originalImages: post.original_images || [],
+                originalTitle: post.original_title || '',
+                originalPostCode: post.original_post_code || ''
+              } : undefined}
+              ipfs={post.ipfs}
+            />
               );
 
               console.log(`[FeedPage] Post Index: ${index}, showProfileSuggestionModule: ${showProfileSuggestionModule}, MinMet: ${(index + 1) >= MIN_POSTS_BEFORE_SUGGESTION}, IntervalMet: ${(index + 1) % SUGGESTION_INTERVAL === 0}, InstanceCount: ${suggestionModuleInstanceCount}`);

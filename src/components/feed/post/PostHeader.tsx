@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, EyeOff, AlertTriangle, Loader2 } from 'lucide-react';
+import { MoreHorizontal, EyeOff, AlertTriangle, Loader2, Pin, PinOff } from 'lucide-react';
 
 interface PostHeaderProps {
   username: string;
@@ -28,6 +28,9 @@ interface PostHeaderProps {
   onHidePost?: () => void;
   onReportPost?: () => void;
   isOwner?: boolean;
+  isAdmin?: boolean;
+  isPinned?: boolean;
+  onTogglePin?: () => void;
 }
 
 export const PostHeader: React.FC<PostHeaderProps> = ({
@@ -43,6 +46,9 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
   onHidePost,
   onReportPost,
   isOwner = false,
+  isAdmin = false,
+  isPinned = false,
+  onTogglePin,
 }) => {
   const navigate = useNavigate();
 
@@ -147,6 +153,19 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
                   <span>Hide this post</span>
                 </DropdownMenuItem>
               )}
+              {isAdmin && onTogglePin && (
+                <>
+                  {isOwner && onHidePost && <DropdownMenuSeparator />}
+                  <DropdownMenuItem 
+                    onSelect={onTogglePin}
+                    className="cursor-pointer"
+                  >
+                    {isPinned ? <PinOff className="mr-2 h-4 w-4" /> : <Pin className="mr-2 h-4 w-4" />}
+                    <span>{isPinned ? "Unpin Post" : "Pin Post"}</span>
+                  </DropdownMenuItem>
+                </>
+              )}
+              {((isOwner && onHidePost) || (isAdmin && onTogglePin)) && onReportPost && <DropdownMenuSeparator />}
               {onReportPost && (
                 <DropdownMenuItem onSelect={onReportPost} className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10">
                   <AlertTriangle className="mr-2 h-4 w-4" />

@@ -12,12 +12,13 @@ import { PostFooter } from './post/PostFooter';
 import { usePostMedia } from './post/usePostMedia';
 import { CommentSection } from './post/CommentSection';
 import { fetchReplies, CommentReply } from '@/utils/commentApi';
-import { hidePost } from '@/utils/postApi';
+import { hidePost, pinCommunityPost } from '@/utils/postApi';
 import { ImageViewer } from './post/ImageViewer';
 // Import the confirmation sheet
 import { HidePostConfirmationSheet } from './post/HidePostConfirmationSheet';
 // Import the ReportPostSheet
 import { ReportPostSheet } from './post/ReportPostSheet';
+import { PinPostConfirmationModal } from './post/PinPostConfirmationModal';
 
 export interface PostProps {
   username: string;
@@ -50,6 +51,9 @@ export interface PostProps {
   hideComments?: boolean;
   isLoggedIn?: boolean;
   onToggleComments?: () => void;
+  isAdmin?: boolean;
+  isPinned?: boolean;
+  onPostUpdated?: (postCode: string, newPinnedStatus: boolean) => void;
 }
 
 export const Post = ({ 
@@ -72,7 +76,10 @@ export const Post = ({
   avatar,
   hideComments = false,
   isLoggedIn,
-  onToggleComments
+  onToggleComments,
+  isAdmin = false,
+  isPinned = false,
+  onPostUpdated,
 }: PostProps) => {
   const navigate = useNavigate();
   const [localRoared, setLocalRoared] = useState(roared);
@@ -94,6 +101,8 @@ export const Post = ({
   const [isAnimatingHide, setIsAnimatingHide] = useState(false);
   // State for Report Post sheet
   const [showReportSheet, setShowReportSheet] = useState(false);
+  const [isPinModalOpen, setIsPinModalOpen] = useState(false);
+  const [currentIsPinned, setCurrentIsPinned] = useState(isPinned);
   const isMobile = useIsMobile();
   
   const { parsedContent, allMedia, allImages: normalImages, hasMedia } = usePostMedia(content, images, video);
@@ -138,7 +147,8 @@ export const Post = ({
   useEffect(() => {
     setHasRoared(roared);
     setLocalRoarCount(roarCount);
-  }, [roared, roarCount]);
+    setCurrentIsPinned(isPinned);
+  }, [roared, roarCount, isPinned]);
 
   const handleRoar = async () => {
     if (!userIsLoggedIn) {
@@ -434,6 +444,40 @@ export const Post = ({
   };
   // --- End Handlers ---
   
+  // Pin modal toggle handler
+  const handleTogglePin = () => {
+    if (isAdmin) {
+      setIsPinModalOpen(true);
+    }
+  };
+
+  // Handler for the pin/unpin confirmation
+  const handleConfirmPinUnpin = async (action: 'pin' | 'unpin') => {
+    if (!postCode) {
+      throw new Error("Post code is missing.");
+    }
+    try {
+      const response = await pinCommunityPost({ postCode, action });
+      if (response.success) {
+        // Call onSuccess which is now part of this component's logic
+        toast.success(response.message || `Post successfully ${action}ned.`);
+        const newPinnedStatus = action === 'pin';
+        setCurrentIsPinned(newPinnedStatus); // Update local state immediately
+        if (onPostUpdated) {
+          onPostUpdated(postCode, newPinnedStatus);
+        }
+        setIsPinModalOpen(false); // Close modal on success
+      } else {
+        throw new Error(response.message || `Failed to ${action} post.`);
+      }
+    } catch (error: any) {
+      console.error(`Failed to ${action} post:`, error);
+      // Re-throw to be caught by modal for display, but also toast here for general feedback
+      toast.error(error.message || `Failed to ${action} post. Please try again.`);
+      throw error; 
+    }
+  };
+  
   // Conditionally render null if the post is hidden
   if (isHidden) {
     return null;
@@ -464,10 +508,12 @@ export const Post = ({
           onVerifyIpfs={handleVerifyIpfs}
           ipfsSheetOpen={ipfsSheetOpen}
           setIpfsSheetOpen={setIpfsSheetOpen}
-          // Pass the function to open the confirmation sheet
-          onHidePost={handleOpenHideConfirmation}
+          onHidePost={isOwner ? handleOpenHideConfirmation : undefined}
           onReportPost={handleReportPost}
           isOwner={isOwner}
+          isAdmin={isAdmin}
+          isPinned={currentIsPinned}
+          onTogglePin={isAdmin ? handleTogglePin : undefined}
         />
         
         <PostContent 
@@ -549,6 +595,18 @@ export const Post = ({
           onOpenChange={setShowReportSheet}
           postCode={postCode}
           onReportSuccess={handleReportSuccess}
+        />
+      )}
+      {/* Pin Post Confirmation Modal */}
+      {postCode && (
+        <PinPostConfirmationModal
+          isOpen={isPinModalOpen}
+          onOpenChange={setIsPinModalOpen}
+          postCode={postCode}
+          isCurrentlyPinned={currentIsPinned}
+          communityName={community}
+          onConfirmPinUnpin={handleConfirmPinUnpin}
+          onSuccess={() => { /* OnSuccess is now handled within handleConfirmPinUnpin itself */ }}
         />
       )}
     </>
