@@ -1,6 +1,7 @@
 import { toast } from 'sonner';
 import { createAuthHeaders, validateAuthentication } from './apiBase';
 import { FlagType } from './postApi'; // Import FlagType if needed, or redefine if specific structure
+import axios from 'axios';
 
 /**
  * Interface for community data
@@ -600,7 +601,9 @@ export const sellSharesConfirm = async (communityName: string, shareQuantity: nu
 
 // Development-only logging helper
 const debugLog = (message: string, ...args: any[]) => {
-  // Removed console.log
+  if (import.meta.env.DEV) { // Only log in development
+    console.log(`[CommunityAPI] ${message}`, ...args);
+  }
 };
 
 // Add a wallet balance cache variable at the top of the file
@@ -1405,7 +1408,7 @@ export interface MutedUsersApiResponse {
 // --- Interface for Mute/Unmute API Response ---
 export interface MuteActionResponse {
   success: boolean;
-  message: string;
+  message?: string;
 }
 
 
@@ -1931,5 +1934,45 @@ export const hidePostAndWarn = async (
       message = error.message;
     }
     return { success: false, message: message, error: message };
+  }
+};
+
+// Interface for warning details data
+export interface WarningDetailsData {
+  warning_details: string | null;
+  post_body: string;
+  warning_count: number;
+  flag_type_name: string;
+  flag_type_description: string;
+}
+
+// Interface for the warning details API response
+export interface WarningDetailsResponse {
+  success: boolean;
+  data?: WarningDetailsData;
+  message?: string;
+}
+
+/**
+ * Fetches details for a specific post warning.
+ */
+export const getWarningDetails = async (communityName: string, postCode: string): Promise<WarningDetailsResponse> => {
+  try {
+    debugLog(`Fetching warning details for post ${postCode} in community ${communityName}`);
+    const response = await fetch(`/communities/${communityName}/warning/${postCode}/details`);
+    debugLog(`Warning details response for ${postCode}:`, response.data);
+    if (response.data && response.data.success) {
+      return response.data;
+    } else {
+      // Handle cases where success is false but still a 2xx response
+      return { success: false, message: response.data?.message || 'Failed to fetch warning details.' };
+    }
+  } catch (error) {
+    console.error(`Error fetching warning details for post ${postCode}:`, error);
+    // Attempt to parse error response body if available
+    if (axios.isAxiosError(error) && error.response?.data) {
+      return { success: false, message: error.response.data.message || 'An unexpected error occurred.' };
+    }
+    return { success: false, message: 'An unexpected network error occurred.' };
   }
 };

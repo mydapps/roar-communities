@@ -35,6 +35,7 @@ import TermsOfServicePage from '@/pages/TermsOfServicePage';
 import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
 import TransactionHistoryPage from '@/pages/TransactionHistoryPage';
 import AccountInactivePage from '@/pages/AccountInactivePage';
+import PostWarningPage from '@/pages/PostWarningPage';
 
 // Lazy loaded components
 const LazyMySharesPage = lazy(() => import('@/pages/MySharesPage'));
