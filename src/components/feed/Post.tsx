@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Loader2 } from 'lucide-react';
-import { cn } from '@/lib/utils'; // Import cn for conditional classes
+import { cn } from '@/lib/utils';
 
 import { PostHeader } from './post/PostHeader';
 import { PostContent } from './post/PostContent';
@@ -14,11 +14,10 @@ import { CommentSection } from './post/CommentSection';
 import { fetchReplies, CommentReply } from '@/utils/commentApi';
 import { hidePost, pinCommunityPost } from '@/utils/postApi';
 import { ImageViewer } from './post/ImageViewer';
-// Import the confirmation sheet
 import { HidePostConfirmationSheet } from './post/HidePostConfirmationSheet';
-// Import the ReportPostSheet
 import { ReportPostSheet } from './post/ReportPostSheet';
 import { PinPostConfirmationModal } from './post/PinPostConfirmationModal';
+import { HideWarnModal } from '@/components/admin/HideWarnModal';
 
 export interface PostProps {
   username: string;
@@ -95,23 +94,19 @@ export const Post = ({
   const [ipfsSheetOpen, setIpfsSheetOpen] = useState(false);
   const [isHidden, setIsHidden] = useState(false);
   const [isHiding, setIsHiding] = useState(false);
-  // State for the confirmation sheet
   const [showHideConfirmation, setShowHideConfirmation] = useState(false);
-  // State for animation trigger
   const [isAnimatingHide, setIsAnimatingHide] = useState(false);
-  // State for Report Post sheet
   const [showReportSheet, setShowReportSheet] = useState(false);
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
   const [currentIsPinned, setCurrentIsPinned] = useState(isPinned);
+  const [showHideWarnModal, setShowHideWarnModal] = useState(false);
   const isMobile = useIsMobile();
   
   const { parsedContent, allMedia, allImages: normalImages, hasMedia } = usePostMedia(content, images, video);
   
-  // Combine normal images with mirrored post images if this is a mirrored post
   const allImages = useMemo(() => {
     const combinedImages = new Set<string>();
 
-    // Add normal images (already deduplicated by usePostMedia)
     if (normalImages) {
       normalImages.forEach(img => {
         if (img && img.trim() !== '' && img !== 'https://dapps.co/dapps.png') {
@@ -120,11 +115,10 @@ export const Post = ({
       });
     }
 
-    // Add images from mirrorData, ensuring uniqueness
     if (isMirror && mirrorData?.originalImages) {
       mirrorData.originalImages.forEach(img => {
         if (img && img.trim() !== '' && img !== 'https://dapps.co/dapps.png') {
-          combinedImages.add(img); // Set handles uniqueness automatically
+          combinedImages.add(img);
         }
       });
     }
@@ -136,11 +130,12 @@ export const Post = ({
   
   const { toast } = useToast();
   
-  // Determine if the logged-in user is the owner
   const loggedInUserHandle = localStorage.getItem('dapps_user_handle'); 
   const isOwner = loggedInUserHandle === username;
   
-  const userIsLoggedIn = isLoggedIn !== undefined ? isLoggedIn : !!localStorage.getItem('dapps_user_id');
+  const userIsLoggedIn = useMemo(() => {
+    return !!localStorage.getItem('dapps_user_id'); 
+  }, []);
   
   const ipfsHash = ipfs || postCode || `Qm${Array.from({length: 44}, () => Math.floor(Math.random() * 16).toString(16)).join('')}`;
 
@@ -167,12 +162,10 @@ export const Post = ({
     }
     
     if (postCode) {
-      // Update local UI state
       const newRoaredState = !hasRoared;
       setHasRoared(newRoaredState);
       setLocalRoarCount(prev => newRoaredState ? prev + 1 : prev - 1);
       
-      // Call parent callback which will handle the API call
       if (onRoar) {
         onRoar();
       }
@@ -201,21 +194,12 @@ export const Post = ({
         setSelectedImageIndex(index);
         setImageViewerOpen(true);
       } else {
-        // Fallback for cases where the image isn't found in allImages
-        // This should not happen with our fixes, but as a safety measure
         console.warn("Image clicked but not found in allImages:", imageSrc);
         
-        // Create a temporary array with just this image and show it
         setSelectedImageIndex(0);
-        // Update allImages temporarily to include this image
-        // We don't actually modify allImages since it's derived from useMemo
-        const tempImages = [imageSrc];
-        // Show the image viewer
         setImageViewerOpen(true);
       }
     } else if (imageSrc) {
-      // No allImages array, but we have an image source
-      // Create a temporary array with just this image
       setSelectedImageIndex(0);
       setImageViewerOpen(true);
     }
@@ -238,9 +222,7 @@ export const Post = ({
     console.log("Closest comment section:", targetElement.closest('[data-comment-section="true"]'));
     console.log("Show comments:", showComments);
 
-    // 1. Handle navigation for mirrored post content click FIRST
     if (isClickInsideMirror && isMirror && mirrorData?.originalPostCode) {
-      // We explicitly DO NOT check disableNavigation here, as we want this click to work
       console.log("-> Attempting to navigate to ORIGINAL post:", mirrorData.originalPostCode);
       const originalAuthorHandle = mirrorData.originalAuthor.split('.')[0];
       if (mirrorData.originalCommunity) {
@@ -257,10 +239,9 @@ export const Post = ({
         console.log("Navigating to Fallback URL:", url);
         navigate(url);
       }
-      return; // Stop further execution after handling mirror click
+      return;
     }
 
-    // 2. Prevent navigation for other cases (disabled, button, link, media, form, comments)
     if (disableNavigation || 
         targetElement.closest('button') || 
         targetElement.closest('a') ||
@@ -273,7 +254,6 @@ export const Post = ({
       return;
     }
     
-    // 3. Default navigation for the post itself (if not handled above and not prevented)
     if (postCode) {
       console.log("-> Attempting to navigate to CURRENT post:", postCode);
       if (community) {
@@ -334,7 +314,6 @@ export const Post = ({
       
       setComments(prev => [...prev, newComment]);
     } else {
-      // If we received a complete CommentReply object
       setComments(prev => [...prev, commentOrText]);
     }
   };
@@ -347,7 +326,7 @@ export const Post = ({
         variant: "destructive",
         action: <button 
           className="bg-primary text-white px-3 py-1 rounded text-xs"
-          onClick={() => navigate('/index')}
+          onClick={() => navigate('/login')}
         >
           Login
         </button>
@@ -357,7 +336,6 @@ export const Post = ({
     
     setShowComments(!showComments);
     
-    // Call the external handler if provided (to focus comment inputs)
     if (onToggleComments) {
       onToggleComments();
     }
@@ -379,52 +357,45 @@ export const Post = ({
     }
   };
 
-  // --- Updated Hide/Report Handlers ---
-  // Opens the confirmation sheet
   const handleOpenHideConfirmation = () => {
-    if (!isOwner || isHiding || isHidden) return; // Prevent opening if not owner or already hiding/hidden
+    if (!isOwner || isHiding || isHidden) return;
     console.log(`UI Action: Open hide confirmation for post ${postCode}`);
     setShowHideConfirmation(true);
   };
 
-  // Called when the user confirms the hide action in the sheet
   const confirmHidePost = async () => {
     if (!postCode) {
       toast({ description: "Cannot hide post: Missing identifier.", variant: "destructive" });
       return;
     }
-    if (isHiding) return; // Prevent double clicks
+    if (isHiding) return;
 
     console.log(`UI Action: Confirmed hide post ${postCode}`);
-    setIsHiding(true); // Show loading state in the sheet
+    setIsHiding(true);
 
     try {
       const response = await hidePost(postCode, 'hide');
       if (response.success) {
-        // Close the modal FIRST
         setShowHideConfirmation(false);
         
-        // Wait briefly for modal to close, then start animation
         setTimeout(() => {
           setIsAnimatingHide(true);
           toast({ description: response.message || "Post hidden successfully." });
 
-          // Wait for animation (0.3s) + small buffer before removing from DOM
           setTimeout(() => {
             setIsHidden(true); 
-          }, 350); // Match animation duration + buffer
-        }, 50); // Short delay after closing modal
+          }, 350);
+        }, 50);
         
       } else {
         toast({ description: response.message || "Failed to hide post.", variant: "destructive" });
-        setIsHiding(false); // Reset loading state on failure
+        setIsHiding(false);
       }
     } catch (error) {
       console.error("Error in confirmHidePost:", error);
       toast({ description: "An unexpected error occurred while hiding the post.", variant: "destructive" });
-      setIsHiding(false); // Reset loading state on error
+      setIsHiding(false);
     }
-    // Note: We don't set isHiding back to false on success because the component will unmount
   };
 
   const handleReportPost = () => {
@@ -433,25 +404,19 @@ export const Post = ({
       toast({ description: "Cannot report post: Missing identifier.", variant: "destructive" });
       return;
     }
-    // Open the report sheet
     setShowReportSheet(true); 
   };
 
-  // Callback for successful report submission
   const handleReportSuccess = () => {
     console.log(`Report submitted successfully for post ${postCode}`);
-    // Optionally: Add further logic here, e.g., disable report button locally
   };
-  // --- End Handlers ---
-  
-  // Pin modal toggle handler
+
   const handleTogglePin = () => {
     if (isAdmin) {
       setIsPinModalOpen(true);
     }
   };
 
-  // Handler for the pin/unpin confirmation
   const handleConfirmPinUnpin = async (action: 'pin' | 'unpin') => {
     if (!postCode) {
       throw new Error("Post code is missing.");
@@ -459,26 +424,39 @@ export const Post = ({
     try {
       const response = await pinCommunityPost({ postCode, action });
       if (response.success) {
-        // Call onSuccess which is now part of this component's logic
-        toast.success(response.message || `Post successfully ${action}ned.`);
+        toast({ description: response.message || `Post successfully ${action}ned.` });
         const newPinnedStatus = action === 'pin';
-        setCurrentIsPinned(newPinnedStatus); // Update local state immediately
+        setCurrentIsPinned(newPinnedStatus);
         if (onPostUpdated) {
           onPostUpdated(postCode, newPinnedStatus);
         }
-        setIsPinModalOpen(false); // Close modal on success
+        setIsPinModalOpen(false);
       } else {
         throw new Error(response.message || `Failed to ${action} post.`);
       }
     } catch (error: any) {
       console.error(`Failed to ${action} post:`, error);
-      // Re-throw to be caught by modal for display, but also toast here for general feedback
-      toast.error(error.message || `Failed to ${action} post. Please try again.`);
+      toast({ description: error.message || `Failed to ${action} post. Please try again.`, variant: "destructive" });
       throw error; 
     }
   };
   
-  // Conditionally render null if the post is hidden
+  const handleOpenHideWarnModal = () => {
+    if (!isAdmin || isOwner || !postCode || !community) return;
+    console.log(`UI Action: Open hide/warn modal for post ${postCode} in ${community}`);
+    setShowHideWarnModal(true);
+  };
+
+  const handleHideWarnSuccess = () => {
+    console.log(`Post ${postCode} hidden and warning issued by admin.`);
+    setTimeout(() => {
+      setIsAnimatingHide(true);
+      setTimeout(() => {
+        setIsHidden(true); 
+      }, 350);
+    }, 50); 
+  };
+  
   if (isHidden) {
     return null;
   }
@@ -488,13 +466,11 @@ export const Post = ({
       <Card 
         className={cn(
           "border border-border/40 shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden",
-          // Use the new animation class
           isAnimatingHide ? "animate-collapse-out" : "animate-scale-in" 
         )}
         onClick={handlePostClick}
         style={{ 
           cursor: disableNavigation ? 'default' : 'pointer',
-          // Ensure animation is visible before element is removed
           animationFillMode: isAnimatingHide ? 'forwards' : 'none' 
         }}
       >
@@ -514,6 +490,7 @@ export const Post = ({
           isAdmin={isAdmin}
           isPinned={currentIsPinned}
           onTogglePin={isAdmin ? handleTogglePin : undefined}
+          onAdminHideWarn={isAdmin && !isOwner ? handleOpenHideWarnModal : undefined}
         />
         
         <PostContent 
@@ -569,7 +546,6 @@ export const Post = ({
           )}
         </PostFooter>
         
-        {/* Always include the image viewer, even for mirrored posts */}
         {allImages && allImages.length > 0 && (
           <ImageViewer 
             images={allImages} 
@@ -580,7 +556,6 @@ export const Post = ({
         )}
       </Card>
       
-      {/* Render the confirmation sheet */}
       <HidePostConfirmationSheet
         open={showHideConfirmation}
         onOpenChange={setShowHideConfirmation}
@@ -588,7 +563,6 @@ export const Post = ({
         isHiding={isHiding}
       />
       
-      {/* Report Post Sheet */}
       {postCode && (
         <ReportPostSheet
           open={showReportSheet}
@@ -597,8 +571,7 @@ export const Post = ({
           onReportSuccess={handleReportSuccess}
         />
       )}
-      {/* Pin Post Confirmation Modal */}
-      {postCode && (
+      {postCode && community && (
         <PinPostConfirmationModal
           isOpen={isPinModalOpen}
           onOpenChange={setIsPinModalOpen}
@@ -606,7 +579,17 @@ export const Post = ({
           isCurrentlyPinned={currentIsPinned}
           communityName={community}
           onConfirmPinUnpin={handleConfirmPinUnpin}
-          onSuccess={() => { /* OnSuccess is now handled within handleConfirmPinUnpin itself */ }}
+          onSuccess={() => {}}
+        />
+      )}
+
+      {postCode && community && (
+        <HideWarnModal
+          open={showHideWarnModal}
+          onOpenChange={setShowHideWarnModal}
+          postCode={postCode}
+          communityName={community}
+          onSuccess={handleHideWarnSuccess}
         />
       )}
     </>

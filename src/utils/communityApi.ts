@@ -1,5 +1,6 @@
 import { toast } from 'sonner';
 import { createAuthHeaders, validateAuthentication } from './apiBase';
+import { FlagType } from './postApi'; // Import FlagType if needed, or redefine if specific structure
 
 /**
  * Interface for community data
@@ -1859,5 +1860,76 @@ export const getTransactions = async (
     }
     toast.error(message);
     return null; // Return null to indicate failure
+  }
+};
+
+/**
+ * Interface for the hide post and warn API response
+ */
+export interface HideWarnResponse {
+  success: boolean;
+  message: string;
+  error?: string;
+}
+
+/**
+ * Hides a post and optionally warns the user (Admin Action).
+ * @param communityName - The name or handle of the community.
+ * @param postCode - The unique code of the post to hide.
+ * @param flagTypeId - The ID of the reason for hiding (from /api/flag_types).
+ * @param warningDetails - Optional text details for the warning.
+ * @returns Promise resolving to HideWarnResponse.
+ */
+export const hidePostAndWarn = async (
+  communityName: string,
+  postCode: string,
+  flagTypeId: number,
+  warningDetails?: string
+): Promise<HideWarnResponse> => {
+  console.log(`API Call: Admin hiding post ${postCode} in community ${communityName}`);
+  try {
+    // Ensure authentication (uses validateAuthentication which checks cookies)
+    if (!(await validateAuthentication())) {
+      return { success: false, message: "Authentication required.", error: "Not authenticated" };
+    }
+
+    const headers = createAuthHeaders(); // Get headers with content-type and auth
+    const url = `/api/communities/${encodeURIComponent(communityName)}/admin/posts/${encodeURIComponent(postCode)}/hide-warn`;
+    
+    const payload: { flagTypeId: number; warningDetails?: string } = { flagTypeId };
+    if (warningDetails && warningDetails.trim() !== '') {
+      payload.warningDetails = warningDetails.trim();
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: headers,
+      credentials: 'include', 
+      body: JSON.stringify(payload),
+    });
+
+    const responseData: HideWarnResponse = await response.json();
+    console.log('API Response (hidePostAndWarn):', responseData);
+
+    if (!response.ok || !responseData.success) {
+      const errorMessage = responseData?.message || `HTTP error! status: ${response.status}`;
+      console.error("Hide Post & Warn API Error:", errorMessage, responseData);
+      // Return the structured error from the API
+      return { 
+        success: false, 
+        message: errorMessage, 
+        error: responseData?.error || errorMessage 
+      };
+    }
+
+    return responseData; // Return the successful response data
+
+  } catch (error) {
+    console.error('Network or other error hiding post and warning:', error);
+    let message = 'An unknown error occurred while hiding the post.';
+    if (error instanceof Error) {
+      message = error.message;
+    }
+    return { success: false, message: message, error: message };
   }
 };

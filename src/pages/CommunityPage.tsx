@@ -519,9 +519,6 @@ const CommunityPage = () => {
             
              {/* Replace inline posts rendering with CommunityPostsFeed component */} 
             <TabsContent value="posts" className="animate-fade-in mt-0">
-              <div className="mb-6">
-                <CreatePostCard onPostCreated={handlePostCreated} communityName={community?.name} />
-              </div>
                 <CommunityPostsFeed 
                   posts={allPosts}
                   loading={postsLoading}

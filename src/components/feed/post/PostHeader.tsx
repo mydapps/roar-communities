@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, EyeOff, AlertTriangle, Loader2, Pin, PinOff } from 'lucide-react';
+import { MoreHorizontal, EyeOff, AlertTriangle, Loader2, Pin, PinOff, ShieldAlert } from 'lucide-react';
 
 interface PostHeaderProps {
   username: string;
@@ -31,6 +31,7 @@ interface PostHeaderProps {
   isAdmin?: boolean;
   isPinned?: boolean;
   onTogglePin?: () => void;
+  onAdminHideWarn?: () => void;
 }
 
 export const PostHeader: React.FC<PostHeaderProps> = ({
@@ -49,6 +50,7 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
   isAdmin = false,
   isPinned = false,
   onTogglePin,
+  onAdminHideWarn,
 }) => {
   const navigate = useNavigate();
 
@@ -165,7 +167,19 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
                   </DropdownMenuItem>
                 </>
               )}
-              {((isOwner && onHidePost) || (isAdmin && onTogglePin)) && onReportPost && <DropdownMenuSeparator />}
+              {isAdmin && !isOwner && onAdminHideWarn && (
+                <>
+                  {((isOwner && onHidePost) || (isAdmin && onTogglePin)) && <DropdownMenuSeparator />}
+                  <DropdownMenuItem 
+                    onSelect={onAdminHideWarn} 
+                    className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
+                  >
+                    <ShieldAlert className="mr-2 h-4 w-4" />
+                    <span>Hide & Warn User</span>
+                  </DropdownMenuItem>
+                </>
+              )}
+              {( (isOwner && onHidePost) || (isAdmin && onTogglePin) || (isAdmin && !isOwner && onAdminHideWarn) ) && onReportPost && <DropdownMenuSeparator />}
               {onReportPost && (
                 <DropdownMenuItem onSelect={onReportPost} className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10">
                   <AlertTriangle className="mr-2 h-4 w-4" />
