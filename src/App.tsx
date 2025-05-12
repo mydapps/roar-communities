@@ -34,6 +34,7 @@ import DeviceProvider from '@/components/providers/DeviceProvider';
 import TermsOfServicePage from '@/pages/TermsOfServicePage';
 import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
 import TransactionHistoryPage from '@/pages/TransactionHistoryPage';
+import AccountInactivePage from '@/pages/AccountInactivePage';
 
 // Lazy loaded components
 const LazyMySharesPage = lazy(() => import('@/pages/MySharesPage'));
@@ -82,7 +83,7 @@ function App() {
       <PrivyAuthProvider>
         <PageViewTracker />
         <Routes>
-          {/* Public routes - accessible to everyone */}
+          {/* Public routes - accessible outside MainLayout */}
           <Route path="/" element={<Index />} />
           <Route path="/index" element={<Index />} />
           <Route path="/invite/:code" element={<Index />} />
@@ -90,8 +91,9 @@ function App() {
           <Route path="avatar-handle" element={<AvatarHandlePage />} />
           <Route path="login" element={<LoginPage />} />
           <Route path="/auth-test" element={<AuthTestPage />} />
-            <Route path="/terms" element={<TermsOfServicePage />} />
-            <Route path="/privacy" element={<PrivacyPolicyPage />} />
+          <Route path="/terms" element={<TermsOfServicePage />} />
+          <Route path="/privacy" element={<PrivacyPolicyPage />} />
+          <Route path="/account-inactive" element={<AccountInactivePage />} />
           
           {/* Mixed access routes with MainLayout */}
           <Route element={<MainLayout />}>

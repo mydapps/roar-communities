@@ -144,6 +144,19 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
             
             console.log('[Auth] Received data from /privy_auth:', JSON.stringify(data, null, 2));
             
+            // Check for inactive account status FIRST
+            if (data.success === false && data.accountStatus === 'inactive') {
+              console.warn('[Auth] Account is inactive. Redirecting to inactive page.');
+              toast.error(data.message || 'Your account is inactive.');
+              navigate('/account-inactive', { replace: true });
+              // Important: Stop further processing
+              setAuthProcessed(true);
+              setIsAuthLoading(false);
+              setAuthRequestInProgress(false);
+              return; 
+            }
+            
+            // Original success path
             if (data.success) {
               // --- VALIDATE RESPONSE DATA ---
               if (!data.userId) {
@@ -235,40 +248,48 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
               return; // Important: Exit after handling success
               
             } else {
-              toast.error('Authentication failed: ' + (data.message || 'Unknown error'));
+              // Handle other non-inactive failures (e.g., validation errors from API)
+              toast.error('Authentication failed: ' + (data.message || 'Unknown server error'));
             }
           } else {
-            // Handle HTTP errors (4xx, 5xx) more robustly
+            // Handle HTTP errors (4xx, 5xx)
             let errorBody = '';
-            // Define a type for potential error JSON
-            interface ApiError { message?: string; error?: string; }
+            interface ApiError { success?: boolean; accountStatus?: string; message?: string; error?: string; }
             let errorData: ApiError = {}; 
             try {
-              // Try reading the response body as text first
               errorBody = await response.text();
-              // Attempt to parse as JSON only if it looks like JSON
               if (errorBody && errorBody.startsWith('{') && errorBody.endsWith('}')) {
                  errorData = JSON.parse(errorBody);
               }
             } catch (parseError) {
-              // Ignore errors during text reading or JSON parsing
               console.error('Error reading/parsing error response body:', parseError);
             }
             
+            // SPECIFIC CHECK: Handle 403 for inactive accounts
+            if (response.status === 403 && errorData.accountStatus === 'inactive') {
+              console.warn('[Auth] Account is inactive (detected via 403). Redirecting to inactive page.');
+              toast.error(errorData.message || 'Your account is inactive.');
+              navigate('/account-inactive', { replace: true });
+              // Important: Stop further processing for this specific case
+              setAuthProcessed(true);
+              setIsAuthLoading(false);
+              setAuthRequestInProgress(false);
+              return; 
+            }
+
+            // Generic error handling for other non-OK responses
             console.error(`Authentication failed with status: ${response.status}`, {
               status: response.status,
               statusText: response.statusText,
-              errorBody: errorBody, // Log the raw text body
-              parsedJson: errorData // Log the parsed JSON (if successful)
+              errorBody: errorBody,
+              parsedJson: errorData 
             });
             
-            // Show a more informative error if possible
-            // Now accessing .message and .error is type-safe
             const message = errorData.message || errorData.error || errorBody || 'Please try again.';
             toast.error(`Authentication failed (${response.status}): ${message}`);
           }
           
-          // Mark auth as processed to prevent loops (Only reached if response.ok was false or data.success was false)
+          // Mark auth as processed if flow reaches here (indicates a failure other than inactive account)
           setAuthProcessed(true);
           setIsAuthLoading(false);
           setAuthRequestInProgress(false);
