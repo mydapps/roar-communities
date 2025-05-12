@@ -109,98 +109,51 @@ function App() {
                 <FeedPage />
               </ProtectedRoute>
             } />
-            <Route path="communities" element={
-              <ProtectedRoute>
-                <CommunitiesPage />
-              </ProtectedRoute>
-            } />
-            <Route path="c/:id" element={
-              <ProtectedRoute>
-                <CommunityPage />
-              </ProtectedRoute>
-            } />
-            <Route path="create-community" element={
-              <ProtectedRoute>
-                <CreateCommunityPage />
-              </ProtectedRoute>
-            } />
-            <Route path="u/:handle" element={
-              <ProtectedRoute>
-                <UserProfilePage />
-              </ProtectedRoute>
-            } />
-            <Route path="edit-profile" element={
-              <ProtectedRoute>
-                <EditProfilePage />
-              </ProtectedRoute>
-            } />
+            <Route path="communities" element={<CommunitiesPage />} />
+            <Route path="c/:id" element={<CommunityPage />} />
+            <Route path="create-community" element={<CreateCommunityPage />} />
+            <Route path="u/:handle" element={<UserProfilePage />} />
+            <Route path="edit-profile" element={<EditProfilePage />} />
             <Route path="my-shares" element={
-              <ProtectedRoute>
-                <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>}>
-                  <LazyMySharesPage />
-                </Suspense>
-              </ProtectedRoute>
+              <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>}>
+                <LazyMySharesPage />
+              </Suspense>
             } />
-            <Route path="wallet" element={
-              <ProtectedRoute>
-                <WalletPage />
-              </ProtectedRoute>
-            } />
-            <Route path="account" element={
-              <ProtectedRoute>
-                <AccountPage />
-              </ProtectedRoute>
-            } />
-            <Route path="search" element={
-              <ProtectedRoute>
-                <SearchPage />
-              </ProtectedRoute>
-            } />
+            <Route path="wallet" element={<WalletPage />} />
+            <Route path="account" element={<AccountPage />} />
+            <Route path="search" element={<SearchPage />} />
             <Route path="referral" element={
-              <ProtectedRoute>
-                <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>}>
-                  <LazyReferralPage />
-                </Suspense>
-              </ProtectedRoute>
+              <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>}>
+                <LazyReferralPage />
+              </Suspense>
             } />
-            <Route path="notifications" element={
-              <ProtectedRoute>
-                <NotificationsPage />
-              </ProtectedRoute>
-            } />
-            <Route path="roar-farming" element={
-              <ProtectedRoute>
-                <RoarFarmingPage />
-              </ProtectedRoute>
-            } />
-            <Route path="boosters" element={
-              <ProtectedRoute>
-                <BoosterPage />
-              </ProtectedRoute>
-            } />
+            <Route path="notifications" element={<NotificationsPage />} />
+            <Route path="roar-farming" element={<RoarFarmingPage />} />
+            <Route path="boosters" element={<BoosterPage />} />
             <Route path="successful-onboarding" element={
-              <ProtectedRoute>
-                {localStorage.getItem('dapps_show_onboarding') === '1' ? (
-                  <SuccessfulOnboarding />
-                ) : (
-                  <Navigate to="/feed" replace />
-                )}
-              </ProtectedRoute>
+              localStorage.getItem('dapps_show_onboarding') === '1' ? (
+                <SuccessfulOnboarding />
+              ) : (
+                <Navigate to="/feed" replace />
+              )
             } />
-            <Route path="follow-suggestions" element={
-              <ProtectedRoute>
-                <FollowSuggestionsPage />
-              </ProtectedRoute>
-            } />
+            <Route path="follow-suggestions" element={<FollowSuggestionsPage />} />
             
             {/* Add Transaction History Route */}
             <Route path="transactions" element={
               <ProtectedRoute>
                 <TransactionHistoryPage />
+              </ProtectedRoute>
+            } />
+
+            {/* Add Post Warning Route */}
+            <Route path="/c/:communityName/warning/:postCode" element={
+              <ProtectedRoute>
+                <PostWarningPage />
               </ProtectedRoute>
             } />
             

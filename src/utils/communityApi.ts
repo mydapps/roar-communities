@@ -1959,20 +1959,51 @@ export interface WarningDetailsResponse {
 export const getWarningDetails = async (communityName: string, postCode: string): Promise<WarningDetailsResponse> => {
   try {
     debugLog(`Fetching warning details for post ${postCode} in community ${communityName}`);
-    const response = await fetch(`/communities/${communityName}/warning/${postCode}/details`);
-    debugLog(`Warning details response for ${postCode}:`, response.data);
-    if (response.data && response.data.success) {
-      return response.data;
+    
+    // Ensure authentication
+    if (!(await validateAuthentication())) {
+      toast.error("Authentication required to view warning details.");
+      return { success: false, message: "Authentication required." };
+    }
+
+    const headers = createAuthHeaders(false); // Create headers, no Content-Type needed for GET
+    const apiUrl = `/api/communities/${encodeURIComponent(communityName)}/warning/${encodeURIComponent(postCode)}/details`;
+
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: headers,
+      credentials: 'include', // Important for cookie-based auth
+    });
+
+    let responseData: WarningDetailsResponse;
+    try {
+      responseData = await response.json();
+    } catch (parseError) {
+      console.error(`Error parsing JSON response from ${apiUrl}:`, parseError);
+      // If parsing fails, but we got a non-OK http status, prioritize that.
+      if (!response.ok) {
+        return { success: false, message: `Server error: ${response.status} ${response.statusText}` };
+      }
+      return { success: false, message: 'Failed to parse server response.' };
+    }
+    
+    debugLog(`Warning details response for ${postCode}:`, responseData);
+
+    if (response.ok && responseData.success) {
+      return responseData;
     } else {
-      // Handle cases where success is false but still a 2xx response
-      return { success: false, message: response.data?.message || 'Failed to fetch warning details.' };
+      // Use message from API if available, otherwise construct one
+      const errorMessage = responseData?.message || `Failed to fetch warning details. Status: ${response.status}`;
+      console.error(`API error from ${apiUrl}:`, errorMessage, responseData);
+      return { success: false, message: errorMessage };
     }
   } catch (error) {
-    console.error(`Error fetching warning details for post ${postCode}:`, error);
-    // Attempt to parse error response body if available
-    if (axios.isAxiosError(error) && error.response?.data) {
-      return { success: false, message: error.response.data.message || 'An unexpected error occurred.' };
+    console.error(`Network or other error fetching warning details for post ${postCode}:`, error);
+    let message = 'An unexpected network error occurred while fetching warning details.';
+    if (error instanceof Error) {
+      message = error.message; // Keep original error message if it's an Error instance
     }
-    return { success: false, message: 'An unexpected network error occurred.' };
+    // It's good to return a structured response even for catch-all errors
+    return { success: false, message: message };
   }
 };
