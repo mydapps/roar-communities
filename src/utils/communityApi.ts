@@ -1785,3 +1785,79 @@ export const withdrawAdminFees = async (communityName: string): Promise<AdminFee
     };
   }
 };
+
+/**
+ * Interface for a single transaction item
+ */
+export interface Transaction {
+  id: number;
+  type_code: string;
+  type_description: string;
+  name: string;
+  txn_hash: string | null;
+  amount: number;
+  created_on: string; // ISO 8601 format
+  status: string;
+}
+
+/**
+ * Interface for the pagination part of the transactions response
+ */
+export interface TransactionPagination {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+/**
+ * Interface for the full /api/transactions response
+ */
+export interface TransactionsResponse {
+  success: boolean;
+  transactions: Transaction[];
+  pagination: TransactionPagination;
+  message?: string; // Optional error message
+}
+
+/**
+ * Fetches the user's transaction history with pagination.
+ * @param page - The page number to fetch (default: 1).
+ * @param limit - The number of transactions per page (default: 20).
+ * @returns Promise resolving to TransactionsResponse or null on error.
+ */
+export const getTransactions = async (
+  page: number = 1,
+  limit: number = 20
+): Promise<TransactionsResponse | null> => {
+  console.log(`API Call: Fetching transactions - Page: ${page}, Limit: ${limit}`);
+  try {
+    const headers = createAuthHeaders(); // Get headers with auth if needed
+    const response = await fetch(`/api/transactions?page=${page}&limit=${limit}`, {
+      method: 'GET',
+      headers: headers,
+      credentials: 'include',
+    });
+
+    const responseData: TransactionsResponse = await response.json();
+    console.log('API Response (getTransactions):', responseData);
+
+    if (!response.ok || !responseData.success) {
+      const errorMessage = responseData?.message || `HTTP error! status: ${response.status}`;
+      console.error("Fetch Transactions API Error:", errorMessage, responseData);
+      toast.error(errorMessage || 'Failed to fetch transaction history.');
+      return null; // Return null to indicate failure
+    }
+
+    return responseData; // Return the successful response data
+
+  } catch (error) {
+    console.error('Network or other error fetching transactions:', error);
+    let message = 'An unknown error occurred while fetching transactions.';
+    if (error instanceof Error) {
+      message = error.message;
+    }
+    toast.error(message);
+    return null; // Return null to indicate failure
+  }
+};

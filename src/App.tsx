@@ -33,6 +33,7 @@ import FollowSuggestionsPage from '@/pages/FollowSuggestionsPage';
 import DeviceProvider from '@/components/providers/DeviceProvider';
 import TermsOfServicePage from '@/pages/TermsOfServicePage';
 import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
+import TransactionHistoryPage from '@/pages/TransactionHistoryPage';
 
 // Lazy loaded components
 const LazyMySharesPage = lazy(() => import('@/pages/MySharesPage'));
@@ -190,6 +191,13 @@ function App() {
             <Route path="follow-suggestions" element={
               <ProtectedRoute>
                 <FollowSuggestionsPage />
+              </ProtectedRoute>
+            } />
+            
+            {/* Add Transaction History Route */}
+            <Route path="transactions" element={
+              <ProtectedRoute>
+                <TransactionHistoryPage />
               </ProtectedRoute>
             } />
             
