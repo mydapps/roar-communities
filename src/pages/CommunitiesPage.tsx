@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -49,6 +49,19 @@ const CommunitiesPage = () => {
   
   // State for active tab
   const [activeTab, setActiveTab] = useState('popular');
+  
+  // Effect to disable pull-to-refresh on this page
+  useEffect(() => {
+    const originalStyle = document.body.style.overscrollBehaviorY;
+    document.body.style.overscrollBehaviorY = 'contain';
+    console.log('[CommunitiesPage] Applied overscroll-behavior-y: contain to body');
+
+    // Cleanup function to restore original style on unmount
+    return () => {
+      document.body.style.overscrollBehaviorY = originalStyle;
+      console.log('[CommunitiesPage] Restored original overscroll-behavior-y to body');
+    };
+  }, []); // Empty dependency array ensures this runs only on mount and unmount
   
   // Fetch popular communities (default)
   const {
@@ -312,68 +325,61 @@ const CommunitiesPage = () => {
   const { communities: currentCommunities, isLoading, isRefreshing, loadMoreRef } = getActiveTabData();
 
   return (
-    <div className="px-4 pt-16 pb-6 space-y-6 pb-20">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h1 className="text-2xl md:text-3xl font-bold">Communities</h1>
-        
-        <div className="w-full md:w-auto flex items-center gap-2">
-          <div className="w-full md:w-64 relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Search communities..."
-              className="pl-9 pr-4 py-6 bg-background"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={handleRefresh}
-            className="h-12 w-12 flex-shrink-0"
-          >
-            <RefreshCw className="h-5 w-5" />
+    <div className="container max-w-6xl mx-auto px-4 py-6">
+      {/* Page Header */}
+      <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
+        <h1 className="text-3xl font-bold">Communities</h1>
+        <div className="flex gap-2">
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline"><Filter className="h-4 w-4 mr-2" /> Filters</Button>
+            </DialogTrigger>
+            <DialogContent>
+              {/* Add Filter Dialog Content Here */}
+            </DialogContent>
+          </Dialog>
+          <Button asChild>
+            <Link to="/create-community">
+              <Plus className="h-4 w-4 mr-2" /> Create Community
+            </Link>
           </Button>
-
-          <Link to="/create-community" className="hidden md:block">
-            <Button
-              variant="default"
-              className="h-12 bg-[#31bcc3] hover:bg-[#31bcc3]/90 text-white"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Create Community
-            </Button>
-          </Link>
         </div>
       </div>
-      
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="mb-6">
-        <div 
-          className="relative overflow-x-auto pb-2 scrollbar-hide no-scrollbar overscroll-behavior-x-contain"
-          style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
-          onTouchStart={(e) => e.stopPropagation()}
-        >
+
+      {/* Search Input */}
+      <div className="relative mb-6">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          type="search"
+          placeholder="Search communities..."
+          className="pl-10"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+      </div>
+
+      {/* Tabs for filtering */}
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="mb-4">
+        <div className="relative overflow-x-auto pb-2 scrollbar-hide overscroll-x-contain touch-action-pan-x [-webkit-overflow-scrolling:touch]">
           <TabsList className="inline-flex w-auto min-w-full whitespace-nowrap">
             <TabsTrigger value="popular" className="flex items-center gap-1.5 flex-shrink-0">
-              <TrendingUp className="h-3.5 w-3.5" />
+              <TrendingUp className="h-4 w-4" />
               <span>Popular</span>
             </TabsTrigger>
             <TabsTrigger value="my" className="flex items-center gap-1.5 flex-shrink-0">
-              <User className="h-3.5 w-3.5" />
+              <User className="h-4 w-4" />
               <span>My communities</span>
             </TabsTrigger>
             <TabsTrigger value="trending" className="flex items-center gap-1.5 flex-shrink-0">
-              <Search className="h-3.5 w-3.5" />
+              <Search className="h-4 w-4" />
               <span>Trending</span>
             </TabsTrigger>
             <TabsTrigger value="newest" className="flex items-center gap-1.5 flex-shrink-0">
-              <Clock className="h-3.5 w-3.5" />
+              <Clock className="h-4 w-4" />
               <span>Newest</span>
             </TabsTrigger>
             <TabsTrigger value="most-rewards" className="flex items-center gap-1.5 flex-shrink-0">
-              <Gift className="h-3.5 w-3.5" />
+              <Gift className="h-4 w-4" />
               <span>Most Rewards</span>
             </TabsTrigger>
           </TabsList>

@@ -24,6 +24,15 @@ const MainLayout = () => {
     /^\/[\w-]+\/[\w-]+$/.test(location.pathname) ||    // user post: /handle/postId
     /^\/post\/[\w-]+$/.test(location.pathname);        // generic post: /post/postId
   
+  // Determine if we are on the communities page
+  const isOnCommunitiesPage = location.pathname === '/communities';
+  
+  // Determine if pull-to-refresh should be disabled for the current page
+  const disablePullToRefresh = 
+    location.pathname === '/communities' || 
+    location.pathname === '/feed' || 
+    /^\/c\/[^/]+$/.test(location.pathname); // Matches /c/communityId or /c/communityName
+  
   useEffect(() => {
     // Check if user is logged in
     const userId = localStorage.getItem('dapps_user_id');
@@ -103,22 +112,37 @@ const MainLayout = () => {
           </div>
         )}
         
-        {/* Make PullToRefresh the main scrollable container */}
-        {/* It needs to grow (flex-1) and handle its own vertical scroll */}
-        <PullToRefresh 
-          onRefresh={handleRefresh}
-          className="flex-1 overflow-y-auto transition-all duration-300 ease-in-out"
-        >
-          {/* Main content inside the scrollable container */}
-          <main className={cn(
-            mainContentClass, 
-            isMobileAppUser ? "pt-16" : "" // Keep mobile app top padding
-          )}>
-            <div className="container py-6 px-4 sm:px-6 max-w-5xl mx-auto animate-fade-in">
-              <Outlet />
-            </div>
-          </main>
-        </PullToRefresh>
+        {/* Conditionally render PullToRefresh or a simple div */}
+        {disablePullToRefresh ? (
+          // Render simple div on pages where pull-to-refresh is disabled
+          <div 
+            className="flex-1 overflow-y-auto transition-all duration-300 ease-in-out"
+          >
+            <main className={cn(
+              mainContentClass, 
+              isMobileAppUser ? "pt-16" : "" // Keep mobile app top padding
+            )}>
+              <div className="container py-6 px-4 sm:px-6 max-w-5xl mx-auto animate-fade-in">
+                <Outlet />
+              </div>
+            </main>
+          </div>
+        ) : (
+          // Render PullToRefresh on other pages
+          <PullToRefresh 
+            onRefresh={handleRefresh}
+            className="flex-1 overflow-y-auto transition-all duration-300 ease-in-out"
+          >
+            <main className={cn(
+              mainContentClass, 
+              isMobileAppUser ? "pt-16" : "" // Keep mobile app top padding
+            )}>
+              <div className="container py-6 px-4 sm:px-6 max-w-5xl mx-auto animate-fade-in">
+                <Outlet />
+              </div>
+            </main>
+          </PullToRefresh>
+        )}
         
       </div> {/* End flex-1 overflow-hidden div */}
       
