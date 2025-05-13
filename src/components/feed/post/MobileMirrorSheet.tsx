@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Check, ChevronLeft, Loader2, Repeat2, Search, Users, User as UserIcon, XIcon } from 'lucide-react';
 import { toast } from 'sonner';
+import { sanitizeHtml } from '@/utils/sanitizeHtml';
 
 // Assuming Community type from API has at least: name: string, image?: string, handle?: string (optional slug)
 interface ApiCommunityType {
@@ -158,21 +159,29 @@ const MobileMirrorSheet: React.FC<MobileMirrorSheetProps> = ({
     })); 
   }, [userCommunities, communitySearchQuery]);
 
-  const SimplifiedPostPreview = () => (
-    <div className="border rounded-lg p-3 mb-3 bg-muted/30 text-sm">
-        <div className="flex items-center mb-1.5">
-            <Avatar className="h-7 w-7 mr-2 flex-shrink-0">
-                <AvatarImage src={postData.avatarUrl || undefined} alt={postData.username} />
-                <AvatarFallback>{postData.username.substring(0,1).toUpperCase()}</AvatarFallback>
-            </Avatar>
-            <div className="flex-grow min-w-0">
-                <p className="font-medium text-xs truncate">{postData.username}</p>
-                <p className="text-xs text-muted-foreground">Original post</p>
-            </div>
-        </div>
-        <p className="text-[13px] leading-snug line-clamp-3 break-words">{postData.content}</p>
-    </div>
-  );
+  const SimplifiedPostPreview = () => {
+    const sanitizedContent = sanitizeHtml(postData.content);
+    return (
+      <div className="border rounded-lg p-3 mb-3 bg-muted/30 text-sm">
+          <div className="flex items-center mb-1.5">
+              <Avatar className="h-7 w-7 mr-2 flex-shrink-0">
+                  <AvatarImage src={postData.avatarUrl || undefined} alt={postData.username} />
+                  <AvatarFallback>{postData.username.substring(0,1).toUpperCase()}</AvatarFallback>
+              </Avatar>
+              <div className="flex-grow min-w-0">
+                  <p className="font-medium text-xs truncate">{postData.username}</p>
+                  <p className="text-xs text-muted-foreground">Original post</p>
+              </div>
+          </div>
+          {sanitizedContent && (
+            <div 
+              className="text-[13px] leading-snug line-clamp-3 break-words prose prose-xs max-w-none dark:prose-invert prose-p:my-0.5 prose-strong:font-semibold prose-em:italic"
+              dangerouslySetInnerHTML={{ __html: sanitizedContent }}
+            />
+          )}
+      </div>
+    );
+  };
 
   const renderStepContent = () => {
     switch (currentStep) {

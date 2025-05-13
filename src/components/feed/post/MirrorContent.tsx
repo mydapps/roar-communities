@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { fetchCommunities, Community } from '@/utils/api';
 import { Badge } from '@/components/ui/badge';
 import { debounce } from '@/utils/helpers';
+import { sanitizeHtml } from '@/utils/sanitizeHtml';
 
 // Special value for mirroring to personal feed
 export const PERSONAL_FEED = "MY_FEED";
@@ -320,18 +321,20 @@ export const MirrorContent = ({
   
   // Memoize the content preview
   const contentPreview = useMemo(() => {
-    const maxPreviewLength = 150;
-    const truncatedContent = content.length > maxPreviewLength 
-      ? `${content.substring(0, maxPreviewLength)}...` 
-      : content;
-    
+    const sanitizedPreviewHtml = sanitizeHtml(content);
+
     return (
       <div className="rounded-md border p-3 bg-muted/30">
         <div className="flex items-center mb-2">
           <div className="font-medium">@{username}</div>
           <div className="text-xs text-muted-foreground ml-2">{timeAgo}</div>
         </div>
-        <p className="text-sm">{truncatedContent}</p>
+        {sanitizedPreviewHtml && (
+          <div
+            className="text-sm prose prose-sm max-w-none dark:prose-invert prose-p:my-1 prose-strong:font-semibold prose-em:italic"
+            dangerouslySetInnerHTML={{ __html: sanitizedPreviewHtml }}
+          />
+        )}
         {images && images.length > 0 && (
           <div className="mt-2">
             <Badge variant="outline" className="text-xs">
