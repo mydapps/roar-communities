@@ -31,6 +31,7 @@ const MainLayout = () => {
   const disablePullToRefresh = 
     location.pathname === '/communities' || 
     location.pathname === '/feed' || 
+    location.pathname === '/boosters' || // Add /boosters page
     /^\/c\/[^/]+$/.test(location.pathname); // Matches /c/communityId or /c/communityName
   
   useEffect(() => {
