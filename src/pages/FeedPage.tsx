@@ -157,6 +157,12 @@ const FeedPage = () => {
     setError(null);
   };
   
+  // Memoize the onDismiss handler
+  const handleDismissSuggestionModule = useCallback(() => {
+    setShowProfileSuggestionModule(false);
+    console.log('[FeedPage] ProfileSuggestionModule dismissed by user.');
+  }, []); // Empty dependency array as setShowProfileSuggestionModule is stable
+
   return (
     <div className="max-w-2xl mx-auto pt-8 pb-20 px-4">
       <div className="mb-6">
@@ -242,10 +248,8 @@ const FeedPage = () => {
                   <ProfileSuggestionModule 
                     key={`profile-suggestions-${activeTab}-${refreshKey}-${suggestionModuleInstanceCount}`} 
                     fetchPageNumber={suggestionModuleInstanceCount}
-                    onDismiss={() => {
-                      setShowProfileSuggestionModule(false);
-                    }}
-                    initialLimit={3} 
+                    onDismiss={handleDismissSuggestionModule} // Use the memoized handler
+                    initialLimit={8} // Changed from 3 to 8
                   />
                 );
               }

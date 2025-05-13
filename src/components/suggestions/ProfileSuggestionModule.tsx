@@ -22,7 +22,7 @@ interface ProfileSuggestionResponse {
   error?: string;
 }
 
-export const ProfileSuggestionModule: React.FC<ProfileSuggestionModuleProps> = ({ 
+export const ProfileSuggestionModule = React.memo<ProfileSuggestionModuleProps>(({ 
   onDismiss, 
   initialLimit = 3, 
   fetchPageNumber = 1 // Default to page 1 if not provided
@@ -201,4 +201,6 @@ export const ProfileSuggestionModule: React.FC<ProfileSuggestionModuleProps> = (
       )}
     </div>
   );
-}; 
+});
+
+ProfileSuggestionModule.displayName = 'ProfileSuggestionModule'; 
