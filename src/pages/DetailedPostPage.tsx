@@ -24,6 +24,15 @@ import { createReply, type CommentReply } from '@/utils/commentApi';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePreventZoom } from '@/hooks/usePreventZoom';
 import { NotInCommunitySheet } from '@/components/community/NotInCommunitySheet';
+import { sanitizeHtml } from '@/utils/sanitizeHtml';
+
+// Helper function to convert HTML to plain text
+const getPlainText = (htmlString: string | undefined | null): string => {
+  if (!htmlString) return '';
+  const sanitized = sanitizeHtml(htmlString);
+  const doc = new DOMParser().parseFromString(sanitized, 'text/html');
+  return doc.body.textContent || "";
+};
 
 const DetailedPostPage = () => {
   usePreventZoom();
@@ -310,7 +319,7 @@ const DetailedPostPage = () => {
           </div>
           <h2 className="text-2xl font-bold mb-2">Post Not Found</h2>
           <p className="text-muted-foreground mb-6">
-            {error || `The post you're looking for doesn't exist or has been removed.`}
+            {error || `The post you\'re looking for doesn\'t exist or has been removed.`}
           </p>
           <Button onClick={goBack}>Go Back</Button>
         </div>
@@ -320,30 +329,37 @@ const DetailedPostPage = () => {
   
   const truncateText = (text: string, maxLength = 40) => {
     if (!text || text.trim() === "") return "No content";
-    return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+    const plainText = getPlainText(text);
+    return plainText.length > maxLength ? plainText.substring(0, maxLength) + '...' : plainText;
   };
   
-  const getBestContentForDisplay = () => {
-    if (post.body && post.body.trim() !== "") {
-      return post.body;
+  const getBestContentForDisplay = (): string => {
+    const plainTitle = getPlainText(post.title);
+    const plainBody = getPlainText(post.body);
+
+    if (plainBody && plainBody.trim() !== "") {
+      return plainBody;
     }
-    if (post.title && post.title.trim() !== "") {
-      return post.title;
+    if (plainTitle && plainTitle.trim() !== "") {
+      return plainTitle;
     }
     return "No content";
   };
   
-  const displayTitle = post.title && post.title.trim() !== "" 
-    ? post.title 
-    : post.body.length > 50 
-      ? post.body.substring(0, 50) + '...' 
-      : post.body || "Untitled Post";
+  const plainPostTitle = getPlainText(post.title);
+  const plainPostBody = getPlainText(post.body);
+
+  const displayTitle = plainPostTitle && plainPostTitle.trim() !== "" 
+    ? (plainPostTitle.length > 70 ? plainPostTitle.substring(0, 67) + '...' : plainPostTitle)
+    : plainPostBody.length > 70 
+      ? plainPostBody.substring(0, 67) + '...' 
+      : (plainPostBody || "Untitled Post");
   
-  const metaDescription = post.title
-    ? `${post.title} - Posted by ${post.author.handle}`
-    : post.body.length > 150 
-      ? post.body.substring(0, 150) + '...' 
-      : post.body;
+  const metaDescription = plainPostTitle && plainPostTitle.trim() !== ""
+    ? `${plainPostTitle.substring(0,150)}${plainPostTitle.length > 150 ? '...' : ''} - Posted by ${post.author.handle}`
+    : plainPostBody.length > 160 
+      ? plainPostBody.substring(0, 157) + '...' 
+      : (plainPostBody || 'View post on dapps.co');
   
   const ogImage = post.featured_image || (post.images && post.images.length > 0 && post.images[0] !== 'https://dapps.co/dapps.png' ? post.images[0] : '');
   
@@ -439,7 +455,7 @@ const DetailedPostPage = () => {
               ) : null}
               
               <BreadcrumbItem className="max-w-[200px] truncate">
-                <BreadcrumbPage className="truncate">{truncateText(getBestContentForDisplay())}</BreadcrumbPage>
+                <BreadcrumbPage className="truncate">{truncateText(getBestContentForDisplay(), 30)}</BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
