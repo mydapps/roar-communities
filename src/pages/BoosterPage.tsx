@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Gift, Twitter, Users, Medal, Calendar, Clock, Link as LinkIcon, CheckCircle2, LucideIcon, Trophy, Rocket, Zap, Share2, MessageCircle, Award, ArrowRight, RefreshCw, ChevronRight, UserPlus, User, Gem, Target, Loader2, Lock, X, Info, Bell, Globe } from 'lucide-react';
+import { Sparkles, Gift, Twitter, Users, Medal, Calendar, Clock, Link as LinkIcon, CheckCircle2, LucideIcon, Trophy, Rocket, Zap, Share2, MessageCircle, Award, ArrowRight, RefreshCw, ChevronRight, UserPlus, User, Gem, Target, Loader2, Lock, X, Info, Bell, Globe, ThumbsUp, MessageSquareText, HandHeart } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -180,21 +180,6 @@ const mockFetchBoosterData = async (): Promise<BoosterData> => {
         action_url: "/share/twitter"
       },
       {
-        id: "quote_tweet",
-        type: "regular" as const,
-        title: "Quote Tweet",
-        description: "Quote tweet a Roar announcement post",
-        boost: 0.5,
-        completed: false,
-        icon: "MessageCircle",
-        refresh: {
-          type: "weekly",
-          next_available: null
-        },
-        prerequisites: ["connect_twitter"],
-        action_url: "/share/quote-tweet"
-      },
-      {
         id: "daily_check_in",
         type: "regular" as const,
         title: "Daily Check-in",
@@ -262,6 +247,47 @@ const mockFetchBoosterData = async (): Promise<BoosterData> => {
           target: 10
         },
         icon: "ThumbsUp",
+        prerequisites: [],
+        action_url: "/feed"
+      },
+      {
+        id: "daily_upvote_streak",
+        type: "regular" as const,
+        title: "Daily Upvote Streak",
+        description: "Roar at posts daily to build a streak and earn bigger boosts",
+        boost: 0.5,
+        completed: false,
+        icon: "UpvoteStreak",
+        refresh: { type: "daily", next_available: null },
+        streak: { current: 0, max_achieved: 0, multiplier: { threshold: 1, boost: 0.25 } },
+        prerequisites: [],
+        action_url: "/feed"
+      },
+      {
+        id: "daily_comment_streak",
+        type: "regular" as const,
+        title: "Daily Comment Streak",
+        description: "Comment useful things on 5 posts daily to build a streak and earn bigger boosts",
+        boost: 0.5,
+        completed: false,
+        icon: "CommentStreak",
+        progress: { current: 0, target: 5 },
+        refresh: { type: "daily", next_available: null },
+        streak: { current: 0, max_achieved: 0, multiplier: { threshold: 1, boost: 0.25 } },
+        prerequisites: [],
+        action_url: "/feed"
+      },
+      {
+        id: "daily_follow_streak",
+        type: "regular" as const,
+        title: "Daily Follow Streak",
+        description: "Follow 5 new people daily to build a streak and earn bigger boosts",
+        boost: 0.5,
+        completed: false,
+        icon: "FollowStreak",
+        progress: { current: 0, target: 5 },
+        refresh: { type: "daily", next_available: null },
+        streak: { current: 0, max_achieved: 0, multiplier: { threshold: 1, boost: 0.25 } },
         prerequisites: [],
         action_url: "/feed"
       }
@@ -358,7 +384,7 @@ const getIconComponent = (iconName: string): React.ReactNode => {
     Users: Users,
     Trophy: Trophy,
     TrendingUp: Trophy,
-    ThumbsUp: CheckCircle2,
+    ThumbsUp: ThumbsUp,
     Share2: Share2,
     Rocket: Rocket,
     RefreshCw: RefreshCw,
@@ -374,7 +400,10 @@ const getIconComponent = (iconName: string): React.ReactNode => {
     User: User,
     Bell: Bell,
     Target: Target,
-    Award: Award
+    Award: Award,
+    UpvoteStreak: HandHeart,
+    CommentStreak: MessageSquareText,
+    FollowStreak: UserPlus
   };
 
   const IconComponent = icons[iconName] || Sparkles;
@@ -1118,70 +1147,88 @@ const BoosterPage: React.FC = () => {
   
   // Map booster types to icons
   const mapBoosterTypeToIcon = (type: string): string => {
-    const iconMap: Record<string, string> = {
-      'twitter_connect': 'Twitter',
-      'create_community': 'Users',
-      'complete_profile': 'User',
-      'join_5_communities': 'Users',
-      'invite_10_friends': 'UserPlus',
-      'invite_20_friends': 'UserPlus',
-      'community_builder': 'Users',
-      'content_king': 'Award',
-      // Regular boosters
-      'daily_tweet': 'Twitter',
-      'daily_quote_tweet': 'MessageCircle',
-      'daily_checkin': 'Calendar',
-      'post_streak': 'PenTool',
-      'roar_streak': 'Zap'
-    };
-    
-    return iconMap[type] || 'Sparkles';
+    switch (type) {
+      case 'twitter_connect': return 'Twitter';
+      case 'create_community': return 'Users';
+      case 'complete_profile': return 'User';
+      case 'join_5_communities': return 'Users';
+      case 'invite_10_friends': return 'UserPlus';
+      case 'join_discord': return 'MessageCircle';
+      case 'enable_notifications': return 'Bell';
+      case 'refer_friends': return 'UserPlus';
+      case 'daily_tweet': return 'Share2';
+      case 'daily_check_in': return 'Calendar';
+      case 'share_community': return 'Share2';
+      case 'first_post': return 'PenTool';
+      case 'buy_shares': return 'TrendingUp';
+      case 'engage_posts': return 'ThumbsUp';
+      case 'daily_upvote_streak': return 'UpvoteStreak';
+      case 'daily_comment_streak': return 'CommentStreak';
+      case 'daily_follow_streak': return 'FollowStreak';
+      default: return 'Sparkles';
+    }
   };
   
   // Get booster descriptions
   const getBoosterDescription = (type: string): string => {
-    const descriptionMap: Record<string, string> = {
-      'daily_tweet': 'Tweet about Roar once a day to earn this booster',
-      'daily_quote_tweet': 'Quote tweet a Roar post to earn this booster',
-      'daily_checkin': 'Log in every day to build a streak and increase your boost',
-      'post_streak': 'Post content daily to build a streak and earn bigger boosts',
-      'roar_streak': 'Roar at posts daily to build a streak and earn bigger boosts'
-    };
-    
-    return descriptionMap[type] || 'Complete this action to earn a booster';
+    switch (type) {
+      case 'twitter_connect': return 'Connect your Twitter account for a boost.';
+      case 'create_community': return 'Start your own community.';
+      case 'complete_profile': return 'Complete your profile details.';
+      case 'join_5_communities': return 'Become a member of 5 communities.';
+      case 'invite_10_friends': return 'Invite 10 friends to join.';
+      case 'join_discord': return 'Join our Discord server.';
+      case 'enable_notifications': return 'Enable push notifications.';
+      case 'refer_friends': return 'Refer friends to earn boosts.';
+      case 'daily_tweet': return 'Tweet about us daily.';
+      case 'daily_check_in': return 'Check in daily for rewards.';
+      case 'share_community': return 'Share a community you like.';
+      case 'first_post': return 'Make your first post.';
+      case 'buy_shares': return 'Buy shares in a community.';
+      case 'post_streak': return 'Create a new post daily to claim this booster';
+      case 'roar_streak': return 'Roar to a post daily to claim this booster';
+      case 'engage_posts': return 'Engage with posts in your feed.';
+      case 'daily_upvote_streak': return 'Roar at posts daily to build a streak and earn bigger boosts';
+      case 'daily_comment_streak': return 'Comment useful things on 5 posts daily to build a streak and earn bigger boosts';
+      case 'daily_follow_streak': return 'Follow 5 new people daily to build a streak and earn bigger boosts';
+      default: return 'Unlock this booster for more rewards!';
+    }
   };
   
   // Get next streak boost increment
   const getNextStreamBoostIncrement = (type: string): number => {
-    const boostMap: Record<string, number> = {
-      'daily_checkin': 0.1,  // +0.1x per day
-      'post_streak': 0.25,   // +0.25x per day
-      'roar_streak': 0.25    // +0.25x per day
-    };
-    
-    return boostMap[type] || 0.1;
+    switch (type) {
+      case 'daily_check_in': return 0.1;
+      case 'daily_tweet': return 0.15;
+      case 'daily_upvote_streak': return 0.25;
+      case 'daily_comment_streak': return 0.25;
+      case 'daily_follow_streak': return 0.25;
+      default: return 0.1;
+    }
   };
   
   // Get action URL for each booster type
   const getActionUrl = (type: string): string => {
-    const urlMap: Record<string, string> = {
-      'twitter_connect': '/connect/twitter',
-      'create_community': '/create-community',
-      'complete_profile': '/edit-profile',
-      'join_5_communities': '/communities',
-      'invite_10_friends': '/referral',
-      'invite_20_friends': '/referral',
-      'community_builder': '/create-community',
-      'content_king': '/communities',
-      // Regular boosters
-      'daily_tweet': '/share/twitter',
-      'daily_quote_tweet': '/feed',
-      'daily_checkin': '/check-in', 
-      'post_streak': '/feed',
-      'roar_streak': '/feed'
-    };
-    
-    return urlMap[type] || '/feed';
+    switch (type) {
+      case 'twitter_connect': return '/connect/twitter';
+      case 'create_community': return '/create-community';
+      case 'complete_profile': return '/edit-profile';
+      case 'join_5_communities': return '/communities';
+      case 'invite_10_friends': return '/referral';
+      case 'join_discord': return 'https://discord.gg/yourserver';
+      case 'enable_notifications': return '/notifications/settings';
+      case 'refer_friends': return '/referral';
+      case 'daily_tweet': return '/share/twitter';
+      case 'daily_check_in': return '/check-in';
+      case 'share_community': return '/communities';
+      case 'first_post': return '/feed';
+      case 'buy_shares': return '/communities';
+      case 'engage_posts': return '/feed';
+      case 'daily_upvote_streak': return '/feed';
+      case 'daily_comment_streak': return '/feed';
+      case 'daily_follow_streak': return '/feed';
+      default: return '/';
+    }
   };
   
   // Function to fetch API booster data for modal
@@ -1242,7 +1289,16 @@ const BoosterPage: React.FC = () => {
       
       // Check if this is a regular or golden booster
       const boosterType = boosterId;
-      const regularBoosterTypes = ['daily_tweet', 'daily_quote_tweet', 'daily_checkin', 'post_streak', 'roar_streak'];
+      // Add the new regular booster IDs to this list
+      const regularBoosterTypes = [
+        'daily_tweet', 
+        'daily_checkin', 
+        'post_streak', 
+        'roar_streak', 
+        'daily_upvote_streak', 
+        'daily_comment_streak', 
+        'daily_follow_streak'
+      ];
       
       if (regularBoosterTypes.includes(boosterType)) {
         // It's a regular booster

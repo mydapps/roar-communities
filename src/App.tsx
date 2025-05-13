@@ -92,8 +92,8 @@ function App() {
           <Route path="avatar-handle" element={<AvatarHandlePage />} />
           <Route path="login" element={<LoginPage />} />
           <Route path="/auth-test" element={<AuthTestPage />} />
-          <Route path="/terms" element={<TermsOfServicePage />} />
-          <Route path="/privacy" element={<PrivacyPolicyPage />} />
+            <Route path="/terms" element={<TermsOfServicePage />} />
+            <Route path="/privacy" element={<PrivacyPolicyPage />} />
           <Route path="/account-inactive" element={<AccountInactivePage />} />
           
           {/* Mixed access routes with MainLayout */}
@@ -115,30 +115,30 @@ function App() {
             <Route path="u/:handle" element={<UserProfilePage />} />
             <Route path="edit-profile" element={<EditProfilePage />} />
             <Route path="my-shares" element={
-              <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>}>
-                <LazyMySharesPage />
-              </Suspense>
+                <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>}>
+                  <LazyMySharesPage />
+                </Suspense>
             } />
             <Route path="wallet" element={<WalletPage />} />
             <Route path="account" element={<AccountPage />} />
             <Route path="search" element={<SearchPage />} />
             <Route path="referral" element={
-              <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>}>
-                <LazyReferralPage />
-              </Suspense>
+                <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>}>
+                  <LazyReferralPage />
+                </Suspense>
             } />
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="roar-farming" element={<RoarFarmingPage />} />
             <Route path="boosters" element={<BoosterPage />} />
             <Route path="successful-onboarding" element={
               localStorage.getItem('dapps_show_onboarding') === '1' ? (
-                <SuccessfulOnboarding />
-              ) : (
-                <Navigate to="/feed" replace />
+                  <SuccessfulOnboarding />
+                ) : (
+                  <Navigate to="/feed" replace />
               )
             } />
             <Route path="follow-suggestions" element={<FollowSuggestionsPage />} />

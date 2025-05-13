@@ -410,7 +410,7 @@ export const Post = ({
   const handleReportSuccess = () => {
     console.log(`Report submitted successfully for post ${postCode}`);
   };
-
+  
   const handleTogglePin = () => {
     if (isAdmin) {
       setIsPinModalOpen(true);
