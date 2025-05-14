@@ -325,7 +325,7 @@ const CommunitiesPage = () => {
   const { communities: currentCommunities, isLoading, isRefreshing, loadMoreRef } = getActiveTabData();
 
   return (
-    <div className="container max-w-6xl mx-auto px-4 py-6">
+    <div className={`container max-w-6xl mx-auto px-4 pt-12 ${isMobile ? 'pb-24' : 'pb-10'}`}>
       {/* Page Header */}
       <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
         <h1 className="text-3xl font-bold">Communities</h1>
@@ -470,7 +470,7 @@ const CommunitiesPage = () => {
       {/* Mobile FAB for creating community */}
       <Link 
         to="/create-community" 
-        className="md:hidden fixed bottom-20 right-4 z-50"
+        className="md:hidden fixed bottom-28 right-4 z-50"
       >
         <Button 
           size="icon" 
