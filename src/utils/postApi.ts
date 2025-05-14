@@ -113,6 +113,7 @@ export interface FetchPostsOptions {
   personal?: boolean;
   trending?: boolean;
   global?: boolean;
+  limit?: number;
 }
 
 /**
@@ -137,7 +138,7 @@ export const setupMirrorListener = (callback: () => void) => {
  */
 export const fetchPosts = async (options: FetchPostsOptions): Promise<Post[]> => {
   try {
-    const { page, personal, trending, global } = options;
+    const { page, personal, trending, global, limit } = options;
     
     // Construct API URL based on options
     let url = `/api/fetch_posts?page=${page}`;
@@ -149,6 +150,9 @@ export const fetchPosts = async (options: FetchPostsOptions): Promise<Post[]> =>
     }
     if (global) {
       url += '&global=1';
+    }
+    if (limit && limit > 0) {
+      url += `&limit=${limit}`;
     }
     
     console.log(`Fetching posts from: ${url}`);

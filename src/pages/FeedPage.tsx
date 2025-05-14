@@ -12,6 +12,7 @@ import { ProfileSuggestionModule } from '@/components/suggestions/ProfileSuggest
 
 const SUGGESTION_INTERVAL = 7;
 const MIN_POSTS_BEFORE_SUGGESTION = 3;
+const POSTS_PER_PAGE = 10;
 
 const FeedPage = () => {
   usePreventZoom();
@@ -29,37 +30,68 @@ const FeedPage = () => {
   const [notInCommunitySheetOpen, setNotInCommunitySheetOpen] = useState(false);
   const [communityName, setCommunityName] = useState("");
   const [showProfileSuggestionModule, setShowProfileSuggestionModule] = useState(true);
+  const requestInFlight = useRef(false);
   
-  const loadPosts = useCallback(async (pageNum: number, replace = false) => {
+  const loadPosts = useCallback(async (pageNum: number, replacePosts = false) => {
+    if (requestInFlight.current && !replacePosts) {
+      console.log('[FeedPage] loadPosts bailed: request already in flight and not a replace operation.');
+      return;
+    }
+
+    console.log(`[FeedPage] loadPosts called: pageNum=${pageNum}, replacePosts=${replacePosts}`);
+    requestInFlight.current = true;
+    setLoading(true);
+    setError(null);
+
     try {
       const fetchedPosts = await fetchPosts({ 
         page: pageNum,
+        limit: POSTS_PER_PAGE,
         personal: activeTab === "personal",
         trending: activeTab === "trending",
         global: activeTab === "global"
       });
+      console.log(`[FeedPage] Fetched ${fetchedPosts.length} posts for page ${pageNum}.`);
       
-      if (replace) {
-        setPosts(fetchedPosts);
-      } else {
-        setPosts(prev => [...prev, ...fetchedPosts]);
-      }
+      setPosts(prevPosts => {
+        if (replacePosts) {
+          console.log('[FeedPage] Replacing posts.');
+          return fetchedPosts;
+        } else {
+          const existingCodes = new Set(prevPosts.map(p => p.code));
+          const newUniquePosts = fetchedPosts.filter(p => !existingCodes.has(p.code));
+          if (newUniquePosts.length === 0 && fetchedPosts.length > 0) {
+              console.log('[FeedPage] Fetched posts were all duplicates or already present.');
+          }
+          console.log(`[FeedPage] Appending ${newUniquePosts.length} new unique posts to ${prevPosts.length} existing ones.`);
+          return [...prevPosts, ...newUniquePosts];
+        }
+      });
       
-      setHasMore(fetchedPosts.length > 0);
+      const newHasMore = fetchedPosts.length === POSTS_PER_PAGE;
+      console.log(`[FeedPage] Setting hasMore to: ${newHasMore}`);
+      setHasMore(newHasMore);
+
     } catch (err) {
-      console.error('Error loading posts:', err);
+      console.error('[FeedPage] Error loading posts:', err);
       setError('Failed to load posts. Please try again.');
+      setHasMore(false);
     } finally {
+      requestInFlight.current = false;
       setLoading(false);
+      console.log('[FeedPage] loadPosts finished.');
     }
-  }, [activeTab]);
+  }, [activeTab, setPosts, setLoading, setError, setHasMore]);
   
   useEffect(() => {
-    setLoading(true);
-    setPage(1);
-    setShowProfileSuggestionModule(true);
-    loadPosts(1, true);
-  }, [loadPosts, refreshKey, activeTab]);
+    console.log(`[FeedPage] useEffect for page/tab/refreshKey change: page=${page}, activeTab=${activeTab}, refreshKey=${refreshKey}`);
+    if (page === 1) {
+      setShowProfileSuggestionModule(true);
+      loadPosts(1, true);
+    } else {
+      loadPosts(page, false);
+    }
+  }, [page, activeTab, refreshKey, loadPosts]);
   
   useEffect(() => {
     const handleScroll = () => {
@@ -86,8 +118,8 @@ const FeedPage = () => {
     const handleObserver = (entries: IntersectionObserverEntry[]) => {
       const [entry] = entries;
       if (entry?.isIntersecting && hasMore && !loading) {
+        console.log('[FeedPage] Observer triggered: preparing to load next page.');
         setPage(prev => prev + 1);
-        loadPosts(page + 1);
       }
     };
     
@@ -106,7 +138,7 @@ const FeedPage = () => {
         observerRef.current.disconnect();
       }
     };
-  }, [hasMore, loading, page, loadPosts]);
+  }, [hasMore, loading]);
   
   const handleRefresh = () => {
     setPage(1);
@@ -157,11 +189,10 @@ const FeedPage = () => {
     setError(null);
   };
   
-  // Memoize the onDismiss handler
   const handleDismissSuggestionModule = useCallback(() => {
     setShowProfileSuggestionModule(false);
     console.log('[FeedPage] ProfileSuggestionModule dismissed by user.');
-  }, []); // Empty dependency array as setShowProfileSuggestionModule is stable
+  }, []);
 
   return (
     <div className="max-w-2xl mx-auto pt-8 pb-20 px-4">
@@ -248,8 +279,8 @@ const FeedPage = () => {
                   <ProfileSuggestionModule 
                     key={`profile-suggestions-${activeTab}-${refreshKey}-${suggestionModuleInstanceCount}`} 
                     fetchPageNumber={suggestionModuleInstanceCount}
-                    onDismiss={handleDismissSuggestionModule} // Use the memoized handler
-                    initialLimit={8} // Changed from 3 to 8
+                    onDismiss={handleDismissSuggestionModule}
+                    initialLimit={8}
                   />
                 );
               }
