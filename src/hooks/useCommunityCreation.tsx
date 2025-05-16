@@ -130,7 +130,7 @@ export const useCommunityCreation = () => {
   const [transactionStep, setTransactionStep] = useState<'initialize' | 'confirm' | 'complete'>('initialize');
   const [transactionData, setTransactionData] = useState<TransactionData | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
-  const [advancedTypeId, setAdvancedTypeId] = useState<string | null>(null);
+  const [advancedCommunityTypeForAPI, setAdvancedCommunityTypeForAPI] = useState<string | null>(null);
   const [advancedTypeGasEstimate, setAdvancedTypeGasEstimate] = useState<AdvancedTypeGasEstimate | null>(null);
   const [isCreatingCommunity, setIsCreatingCommunity] = useState(false);
   const [communityCreated, setCommunityCreated] = useState(false);
@@ -417,14 +417,14 @@ export const useCommunityCreation = () => {
         throw new Error(data.message || data.error || 'Failed to initialize community type');
       }
       
-      // Save the advanced community type ID for later use
-      const advancedTypeId = data.communityType?.id?.toString();
-      if (advancedTypeId) {
-        setAdvancedTypeId(advancedTypeId);
-        console.log('Set advanced community type ID:', advancedTypeId);
+      // Save the advanced community type for later use in API calls
+      const actualCommunityTypeFromResponse = data.communityType?.type?.toString();
+      if (actualCommunityTypeFromResponse) {
+        setAdvancedCommunityTypeForAPI(actualCommunityTypeFromResponse);
+        console.log('Set advanced community type for API:', actualCommunityTypeFromResponse);
       } else {
-        console.error('Missing community type ID in response:', data);
-        throw new Error('Failed to get community type ID from response');
+        console.error('Missing community type property in response:', data);
+        throw new Error('Failed to get community type for API from response');
       }
       
       return true;
@@ -433,7 +433,7 @@ export const useCommunityCreation = () => {
       toast.error(error instanceof Error ? error.message : 'Failed to initialize community type');
       return false;
     }
-  }, [state.advancedConfig, setAdvancedTypeId]);
+  }, [state.advancedConfig, setAdvancedCommunityTypeForAPI]);
 
   const validateCommunityCreation = async () => {
     if (!validateForm()) {
@@ -444,13 +444,13 @@ export const useCommunityCreation = () => {
     setTransactionStep('initialize');
     
     try {
-      // For advanced type, use the ID returned from initialize_community_type
+      // For advanced type, use the type returned from initialize_community_type
       // Otherwise use general (0) or niche (1)
-      const typeValue = state.communityType === 'general' 
-        ? '0' 
-        : state.communityType === 'niche' 
-          ? '1' 
-          : advancedTypeId || '2'; // Fallback to '2' if for some reason we don't have the ID
+      const typeValue = state.communityType === 'general'
+        ? '0'
+        : state.communityType === 'niche'
+          ? '1'
+          : advancedCommunityTypeForAPI || '2'; // Fallback to '2' if for some reason we don't have the type
       
       console.log('Validation request payload:', {
         communityName: state.name,
@@ -552,13 +552,13 @@ export const useCommunityCreation = () => {
     setTransactionStep('confirm');
     
     try {
-      // For advanced type, use the ID returned from initialize_community_type
+      // For advanced type, use the type returned from initialize_community_type
       // Otherwise use general (0) or niche (1)
-      const typeValue = state.communityType === 'general' 
-        ? '0' 
-        : state.communityType === 'niche' 
-          ? '1' 
-          : advancedTypeId || '2'; // Fallback to '2' if missing
+      const typeValue = state.communityType === 'general'
+        ? '0'
+        : state.communityType === 'niche'
+          ? '1'
+          : advancedCommunityTypeForAPI || '2'; // Fallback to '2' if missing
       
       console.log('Confirmation request payload:', {
         communityName: state.name,
@@ -630,7 +630,7 @@ export const useCommunityCreation = () => {
   const handleCreateCommunity = async (): Promise<void> => {
     console.log('handleCreateCommunity called, current step:', step);
     console.log('communityType:', state.communityType);
-    console.log('advancedTypeId:', advancedTypeId);
+    console.log('advancedCommunityTypeForAPI:', advancedCommunityTypeForAPI);
     
     // For advanced community type, we need to check if the advanced type has been created
     if (state.communityType === 'advanced') {
@@ -645,9 +645,9 @@ export const useCommunityCreation = () => {
         return;
       }
       
-      // Check if we have an advanced type ID (meaning it was created)
-      if (advancedTypeId) {
-        console.log('Advanced type ID exists:', advancedTypeId);
+      // Check if we have an advanced community type (meaning it was created and its type stored)
+      if (advancedCommunityTypeForAPI) {
+        console.log('Advanced community type for API exists:', advancedCommunityTypeForAPI);
         // Continue with community creation
         const isValid = await validateCommunityCreation();
         if (isValid) {
@@ -721,7 +721,7 @@ export const useCommunityCreation = () => {
         description: state.description,
         logoFile: null, // Replace with actual state if needed
         bannerFile: null, // Replace with actual state if needed
-        communityTypeId: advancedTypeId || null,
+        communityTypeId: advancedCommunityTypeForAPI || null,
         isPrivate: false, // Replace with actual state if needed
         // Only include discord webhook if it exists
         discordWebhook: undefined // Replace with actual state if needed
@@ -794,7 +794,7 @@ export const useCommunityCreation = () => {
     transactionStep,
     transactionData,
     txHash,
-    advancedTypeId,
+    advancedCommunityTypeForAPI,
     advancedTypeGasEstimate,
     updateField,
     updateAdvancedConfig,
