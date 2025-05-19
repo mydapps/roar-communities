@@ -20,7 +20,6 @@ import {
 } from '@/utils/userApi';
 import { Calendar, Check, Image, Link2, Loader2, MapPin, Pencil, RefreshCcw, RotateCw, Save, Upload, User, X, ArrowLeft, Trash2 } from 'lucide-react';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
-import { MediaUploadResponse } from '@/components/ui/media-upload';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 import { Link } from 'react-router-dom';
@@ -36,7 +35,24 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import * as apiBase from '@/utils/apiBase'; // Import apiBase
+
+// Define MediaUploadResponse interface locally as it's not available from apiBase
+// This should match the one in src/components/ui/media-upload.tsx
+export interface MediaUploadResponse {
+  success: boolean;
+  url: string;
+  type: 'image' | 'video'; // Assuming background is image only, but keeping general
+  originalUrl: string;
+  displayUrl: string;
+  markdown: string;
+  isProcessing: boolean;
+  fileInfo?: {
+    name: string;
+    originalName: string;
+    size: number;
+    type: string;
+  };
+}
 
 const EditProfilePage = () => {
   const navigate = useNavigate();
@@ -71,239 +87,193 @@ const EditProfilePage = () => {
   // Add new state for avatar edit
   const [showAvatarEdit, setShowAvatarEdit] = useState(false);
   
-  // Add new state for account deletion
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [deleteConfirmationInput, setDeleteConfirmationInput] = useState("");
-  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-  
   // Current user handle from localStorage
   const userHandle = localStorage.getItem('dapps_user_handle');
   
   useEffect(() => {
-    // Redirect if not logged in
     if (!userHandle) {
       toast.error('You must be logged in to edit your profile');
       navigate('/');
       return;
     }
-    
     fetchUserProfile();
   }, [userHandle, navigate]);
   
-  useEffect(() => {
-    if (profile) {
-      // Extract the avatar code from the URL or use default
-      const avatarUrl = profile.avatar_url;
-      // Extract just the code part without .svg
-      const match = avatarUrl.match(/\/avatar\/(.+?)(\.svg)?$/);
-      if (match && match[1]) {
-        setAvatarCode(match[1]);
-      }
-    }
-  }, [profile]);
-  
-  // Add new useEffect to generate gallery avatars
-  useEffect(() => {
-    if (showAvatarGallery) {
-      // Generate a set of random avatars for the gallery
-      const avatars = Array.from({ length: 9 }, () => 
-        Math.random().toString(36).substring(2, 11)
-      );
-      setGalleryAvatars(avatars);
-    }
-  }, [showAvatarGallery]);
-  
-  const fetchUserProfile = async () => {
-    try {
+  const fetchUserProfile = useCallback(async () => {
+    if (!userHandle) return;
       setLoading(true);
       setError(null);
-      
-      const response = await getUserProfile(userHandle || '');
-      
+    try {
+      const response = await getUserProfile(userHandle);
       if (response.success && response.user) {
         setProfile(response.user);
-        // Initialize form data
         setFormData({
           background_image: response.user.background_image || '',
           age: response.user.age || undefined,
           location: response.user.location || '',
           link: response.user.link || '',
-          answer: response.user.answer || ''
+          answer: response.user.answer || '',
         });
+        setAvatarCode(response.user.avatar_url || '');
       } else {
-        setError('Failed to fetch user profile');
-      }
-    } catch (error) {
-      let message = 'Failed to load user profile';
-      if (error instanceof Error) {
-        message = error.message;
-      }
+        const message = (response as any).message || 'Failed to fetch profile';
       setError(message);
       toast.error(message);
+      }
+    } catch (err: any) {
+      setError(err.message || 'An unexpected error occurred');
+      toast.error(err.message || 'An unexpected error occurred');
     } finally {
       setLoading(false);
     }
-  };
+  }, [userHandle]);
   
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    
-    // Handle age as a number
-    if (name === 'age') {
-      // Only update if value is a number or empty
-      if (value === '' || !isNaN(Number(value))) {
-        setFormData(prev => ({
-          ...prev,
-          [name]: value === '' ? undefined : Number(value)
-        }));
-      }
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    }
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
-  
-  const uploadBackgroundImage = async (file: File) => {
-    if (!file) return;
-    
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast.error('Only image files are supported for background');
-      return;
-    }
-    
-    // Validate file size (10MB limit)
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error('File size exceeds the 10MB limit');
-      return;
-    }
-    
-    try {
-      setUploadingBackground(true);
-      setUploadProgress(10);
-      
-      // Create form data
+
+  const handleMediaUpload = (url: string) => {
+    setFormData(prev => ({ ...prev, background_image: url }));
+    setUploadedImageUrl(url);
+    setUploadingBackground(false);
+    setUploadProgress(0);
+    toast.success('Background image uploaded and set!');
+  };
+
+  const handleUploadError = (errorMessage: string) => {
+    toast.error(errorMessage);
+    setUploadingBackground(false);
+    setUploadProgress(0);
+  };
+
+  const handleUploadProgress = (progress: number) => {
+    setUploadProgress(progress);
+  };
+
+  const triggerFileInput = () => {
+    document.getElementById('background-upload-input')?.click();
+  };
+
+  // New function to handle background image upload using XMLHttpRequest
+  const uploadProfileBackground = async (
+    file: File,
+    onProgress: (progress: number) => void
+  ): Promise<MediaUploadResponse> => {
+    return new Promise((resolve, reject) => {
       const formData = new FormData();
       formData.append('media', file);
       
-      // Track upload with XMLHttpRequest for progress
       const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/api/upload_media', true); // Ensure this endpoint is correct
+      xhr.withCredentials = true; // If cookies/sessions are needed
       
-      // Set up a promise to handle the response
-      const uploadPromise = new Promise<MediaUploadResponse>((resolve, reject) => {
-        xhr.upload.addEventListener('progress', (event) => {
+      xhr.upload.onprogress = (event) => {
           if (event.lengthComputable) {
-            const percentComplete = Math.round((event.loaded / event.total) * 90) + 10;
-            setUploadProgress(percentComplete);
+          const percentComplete = Math.round((event.loaded / event.total) * 100);
+          onProgress(percentComplete);
           }
-        });
+      };
         
         xhr.onload = () => {
           if (xhr.status >= 200 && xhr.status < 300) {
-            setUploadProgress(100);
             try {
-              const response = JSON.parse(xhr.responseText);
-              resolve({
-                success: true,
-                url: response.url,
-                type: 'image',
-                originalUrl: response.url,
-                displayUrl: response.url,
-                markdown: response.markdown,
-                isProcessing: false
-              });
+            const response = JSON.parse(xhr.responseText) as MediaUploadResponse;
+            if (response.success) {
+              resolve(response);
+            } else {
+              reject(new Error((response as any).message || 'Upload failed after processing.'));
+            }
             } catch (e) {
-              reject(new Error('Invalid response format'));
+            reject(new Error('Failed to parse upload response.'));
             }
           } else {
+          try {
+            const errorResponse = JSON.parse(xhr.responseText);
+            reject(new Error(errorResponse.error || errorResponse.message || `Upload failed with status: ${xhr.status}`));
+          } catch (e) {
             reject(new Error(`Upload failed with status: ${xhr.status}`));
           }
+        }
         };
         
-        xhr.onerror = () => reject(new Error('Network error during upload'));
-        xhr.onabort = () => reject(new Error('Upload aborted'));
-      });
-      
-      // Send the request
-      xhr.open('POST', '/api/upload_media');
-      xhr.withCredentials = true; // Important for cookie-based auth
-      
-      // No longer need to set the API key - HttpOnly cookies will handle auth
+      xhr.onerror = () => {
+        reject(new Error('Network error during upload.'));
+      };
       
       xhr.send(formData);
-      
-      // Wait for upload to complete
-      const result = await uploadPromise;
-      
-      // Update form data with new URL
-      if (result.success && result.url) {
-        setFormData(prev => ({
-          ...prev,
-          background_image: result.url
-        }));
-        toast.success('Background image uploaded successfully');
-      }
-    } catch (error) {
-      toast.error('Failed to upload image: ' + (error instanceof Error ? error.message : 'Unknown error'));
-    } finally {
-      setUploadingBackground(false);
+    });
+  };
+
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setUploadingBackground(true);
       setUploadProgress(0);
+      try {
+        // Use the new uploadProfileBackground function
+        const response = await uploadProfileBackground(file, handleUploadProgress);
+        // response here is MediaUploadResponse
+        if (response.success && response.url) {
+          handleMediaUpload(response.url);
+        } else {
+          // This case should ideally be handled by the reject in uploadProfileBackground
+          handleUploadError( (response as any).message || "Upload failed after processing.");
+    }
+      } catch (error: any) {
+        handleUploadError(error.message || "Upload failed");
+      }
     }
   };
   
-  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      uploadBackgroundImage(file);
+  const saveAvatar = async () => {
+    if (!avatarCode) {
+      toast.error('No avatar selected.');
+      return;
+    }
+    setIsSavingAvatar(true);
+    try {
+      const response = await updateUserAvatar(avatarCode);
+      if (response.success) {
+        toast.success('Avatar updated successfully!');
+        if (profile && response.avatar_url) {
+          setProfile(prevProfile => ({ ...prevProfile!, avatar_url: response.avatar_url! }));
+        }
+        setShowAvatarEdit(false);
+      } else {
+        toast.error(response.message || 'Failed to update avatar.');
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'An error occurred while updating avatar.');
+    } finally {
+      setIsSavingAvatar(false);
     }
   };
-  
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
-  
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    const file = e.dataTransfer.files?.[0];
-    if (file) {
-      uploadBackgroundImage(file);
-    }
+
+  const generateMoreGalleryAvatars = () => {
+    const newAvatars = Array.from({ length: 9 }, () => 
+      Math.random().toString(36).substring(2, 11)
+    );
+    setGalleryAvatars(newAvatars);
   };
   
   const saveProfile = async () => {
     try {
       setSaving(true);
-      
-      // Make sure we're only sending fields that were actually changed
       const changedData: UpdateProfileParams = {};
-      
       if (profile?.background_image !== formData.background_image) {
         changedData.background_image = formData.background_image;
       }
-      
       if (profile?.age !== formData.age) {
         changedData.age = formData.age;
       }
-      
       if (profile?.location !== formData.location) {
         changedData.location = formData.location;
       }
-      
-      // Handle link field - only send it if it's non-empty or explicitly set to null
       if (profile?.link !== formData.link) {
-        // If link was cleared, set it to null instead of empty string
         if (formData.link === '') {
           changedData.link = null;
         } else if (formData.link) {
-          // Ensure URL has a protocol
           let url = formData.link;
           if (url && !url.match(/^https?:\/\//)) {
             url = 'https://' + url;
@@ -311,205 +281,27 @@ const EditProfilePage = () => {
           changedData.link = url;
         }
       }
-      
       if (profile?.answer !== formData.answer) {
         changedData.answer = formData.answer;
       }
-      
-      // Only make the API call if at least one field was changed
       if (Object.keys(changedData).length > 0) {
         const response = await updateUserProfile(changedData);
-        
         if (response.success) {
           toast.success("Profile updated successfully");
           setProfile(response.user);
-          
-          // Wait a moment before redirecting
           setTimeout(() => {
             navigate(`/u/${userHandle}`);
           }, 1500);
         } else {
-          toast.error("Failed to update profile");
+          toast.error((response as any).message || "Failed to update profile");
         }
       } else {
-        // No changes to save
         toast.info("No changes detected");
       }
-    } catch (error) {
-      let message = "Failed to update profile";
-      if (error instanceof Error) {
-        message = error.message;
-      }
-      toast.error(message);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update profile");
     } finally {
       setSaving(false);
-    }
-  };
-  
-  // Add a function to generate a random avatar
-  const generateNewAvatar = () => {
-    // Generate a random string for the avatar
-    const randomStr = Math.random().toString(36).substring(2, 11);
-    setAvatarCode(randomStr);
-  };
-
-  // Add a function to save the avatar
-  const saveAvatar = async () => {
-    try {
-      setIsSavingAvatar(true);
-      const response = await updateUserAvatar(avatarCode);
-      
-      if (response.success) {
-        toast.success("Avatar updated successfully");
-        
-        // Update profile with new avatar URL if provided
-        if (response.avatar_url && profile) {
-          setProfile({
-            ...profile,
-            avatar_url: response.avatar_url
-          });
-          
-          // Update the avatar in localStorage
-          localStorage.setItem('dapps_user_avatar', avatarCode);
-          
-          // Dispatch a custom event to notify other components (like Navbar) of the avatar change
-          const avatarChangeEvent = new CustomEvent('avatar_updated', {
-            detail: { 
-              avatarCode: avatarCode,
-              avatarUrl: response.avatar_url
-            }
-          });
-          window.dispatchEvent(avatarChangeEvent);
-        }
-        
-        // Close the avatar change mode
-        setIsChangingAvatar(false);
-        setShowAvatarEdit(false);
-      } else {
-        toast.error(response.message || "Failed to update avatar");
-      }
-    } catch (error) {
-      let message = "Failed to update avatar";
-      if (error instanceof Error) {
-        message = error.message;
-      }
-      toast.error(message);
-    } finally {
-      setIsSavingAvatar(false);
-    }
-  };
-  
-  // Add function to generate more gallery avatars
-  const generateMoreGalleryAvatars = () => {
-    const avatars = Array.from({ length: 9 }, () => 
-      Math.random().toString(36).substring(2, 11)
-    );
-    setGalleryAvatars(avatars);
-  };
-  
-  // Add function to select an avatar from the gallery
-  const selectAvatarFromGallery = (code: string) => {
-    setAvatarCode(code);
-    setShowAvatarGallery(false);
-  };
-  
-  const handleBannerUpload = (file: File) => {
-    if (!file) return;
-    
-    const formData = new FormData();
-    formData.append('media', file);
-    formData.append('type', 'banner');
-
-    const xhr = new XMLHttpRequest();
-
-    xhr.upload.onprogress = (event) => {
-      if (event.lengthComputable) {
-        const percent = Math.round((event.loaded / event.total) * 100);
-      }
-    };
-
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        try {
-          const response = JSON.parse(xhr.responseText);
-          if (response.success && response.url) {
-            setFormData(prev => ({
-              ...prev,
-              background_image: response.url
-            }));
-            toast.success('Banner updated successfully!');
-          } else {
-            toast.error(response.message || 'Banner upload failed.');
-          }
-        } catch (e) {
-          toast.error('Failed to parse banner upload response.');
-        }
-      } else {
-        toast.error(`Banner upload failed: ${xhr.statusText || xhr.status}`);
-      }
-    };
-
-    xhr.onerror = () => {
-      toast.error('Banner upload failed due to network error.');
-    };
-
-    console.log("Sending banner upload request to /api/upload_media");
-    xhr.open('POST', '/api/upload_media');
-    xhr.withCredentials = true;
-    xhr.send(formData);
-  };
-  
-  // Add function to handle account deletion
-  const handleDeleteAccount = async () => {
-    if (deleteConfirmationInput !== 'DELETE') {
-      setDeleteError("Confirmation text is incorrect.");
-      return;
-    }
-    
-    setIsDeletingAccount(true);
-    setDeleteError(null);
-    
-    try {
-      // 1. Call the deactivation endpoint
-      const response = await fetch('/api/account/deactivate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // Credentials might be needed if cookie-based
-        },
-      });
-      
-      const result = await response.json();
-      
-      if (response.ok && result.success) {
-        toast.success(result.message || "Account deactivated successfully.");
-        
-        // 2. Perform full logout (clears storage, invalidates server session)
-        try {
-          await apiBase.logoutCurrentDevice(); 
-          console.log('Logged out from current device after deactivation.');
-        } catch (logoutError) {
-          console.error('Error during logout after deactivation:', logoutError);
-          // Optionally notify user, but proceed with navigation anyway
-          toast.warning('Could not fully clear session, but account is deactivated.');
-        }
-
-        // 3. Redirect to home page
-        // No need for setTimeout if logout clears storage and navigation happens
-        navigate('/');
-        // We might not need setIsDeleteDialogOpen(false) if we navigate away
-        
-      } else {
-        throw new Error(result.message || "Failed to deactivate account.");
-      }
-      
-    } catch (error: any) {
-      const message = error.message || "An error occurred during deactivation.";
-      console.error("Account deactivation failed:", error);
-      setDeleteError(message);
-      toast.error(message);
-    } finally {
-      setIsDeletingAccount(false);
     }
   };
   
@@ -539,38 +331,52 @@ const EditProfilePage = () => {
   }
   
   if (!profile) {
-    return null;
+    return null; // Or some other placeholder/error state
   }
   
   return (
     <>
       <Helmet>
-        <title>Edit Profile | Roar Communities</title>
+        <title>Edit Profile - {profile.handle}</title>
+        <meta name="description" content={`Edit your Roar profile, ${profile.handle}. Update your avatar, background, bio, and more.`} />
       </Helmet>
       
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-background text-foreground">
       <div className="container max-w-4xl mx-auto py-10 px-4">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-          <div>
-            <h1 className="text-3xl font-bold">Edit Profile</h1>
-            <p className="text-muted-foreground">Customize your profile and settings</p>
+          <div className="flex items-center mb-8">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="mr-3">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="text-3xl font-bold tracking-tight">Edit Profile</h1>
           </div>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Sidebar */}
-          <div className="md:col-span-1">
+
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <TabsList className="grid w-full grid-cols-2 sticky top-0 z-10 bg-background/80 backdrop-blur-sm py-2 px-2 rounded-lg shadow-sm border border-border/30">
+              <TabsTrigger value="profile">Profile Details</TabsTrigger>
+              <TabsTrigger value="avatar">Avatar & Appearance</TabsTrigger>
+            </TabsList>
+
+            <AnimatePresence mode="wait">
+              {activeTab === 'avatar' && (
+                <motion.div
+                  key="avatar-tab"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                >
             <Card>
-              <CardHeader className="pb-3">
-                <CardTitle>Profile Preview</CardTitle>
+                    <CardHeader>
+                      <CardTitle>Avatar & Appearance</CardTitle>
                 <CardDescription>
-                  How others will see your profile
+                        Customize your public avatar and background image.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4 flex flex-col items-center text-center">
                 <div className="w-24 h-24 relative group">
                   <Avatar className="w-24 h-24">
                     <AvatarImage 
-                      src={`https://img.dapps.co/avatar/${avatarCode}.svg`} 
+                            src={`https://img.dapps.co/avatar/${avatarCode || (profile?.avatar_url)}.svg`}
                       alt={profile.handle} 
                     />
                     <AvatarFallback className="text-2xl font-semibold bg-gradient-to-br from-primary/90 to-primary/50 text-white">
@@ -598,59 +404,24 @@ const EditProfilePage = () => {
                 </Button>
                 
                 {showAvatarEdit && (
-                  <Card className="mt-2 w-full">
-                    <CardContent className="pt-4">
-                      <div className="grid grid-cols-3 gap-2">
+                        <Card className="w-full p-4 mt-4 border-primary/20 shadow-sm bg-muted/20">
+                          <CardContent className="pt-0">
+                            <CardDescription className="text-xs mb-3 text-center">
+                              Select a new avatar below or generate more options.
+                            </CardDescription>
+                            <div className="grid grid-cols-3 gap-3">
                         {galleryAvatars.map((code) => (
-                          <div
-                            key={code}
+                                <AspectRatio ratio={1} key={code}>
+                                  <button
+                                    onClick={() => setAvatarCode(code)}
                             className={clsx(
-                              'relative',
-                              'group',
-                              'aspect-square',
-                              'rounded-lg',
-                              'overflow-hidden',
-                              {
-                                'ring-2': code === avatarCode,
-                                'ring-primary': code === avatarCode,
-                                'ring-offset-2': code === avatarCode
-                              }
-                            )}
-                            onClick={() => {
-                              setAvatarCode(code);
-                              setShowAvatarGallery(false);
-                            }}
-                          >
-                            <Avatar className="h-full w-full">
-                              <AvatarImage src={`https://img.dapps.co/avatar/${code}.svg`} alt={profile.handle} />
-                              <AvatarFallback className="text-2xl font-semibold bg-gradient-to-br from-primary/90 to-primary/50 text-white">
-                                {profile.handle.substring(0, 2).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className={clsx(
-                              'absolute',
-                              'inset-0',
-                              'flex',
-                              'items-center',
-                              'justify-center',
-                              'opacity-0',
-                              'group-hover:opacity-100',
-                              'transition-opacity',
-                              {
-                                'bg-primary/60': code === avatarCode,
-                                'bg-black/40': code !== avatarCode
-                              }
-                            )}>
-                              <Check className={clsx(
-                                'w-4',
-                                'h-4',
-                                {
-                                  'text-white': code === avatarCode,
-                                  'text-white/80': code !== avatarCode
-                                }
-                              )} />
-                            </div>
-                          </div>
+                                      "rounded-md overflow-hidden border-2 transition-all duration-150 ease-in-out flex items-center justify-center bg-background hover:border-primary focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:outline-none",
+                                      avatarCode === code ? "border-primary scale-105 shadow-lg" : "border-muted/50"
+                                    )}
+                                  >
+                                    <img src={`https://img.dapps.co/avatar/${code}.svg`} alt={`Avatar ${code}`} className="w-full h-full object-cover" />
+                                  </button>
+                                </AspectRatio>
                         ))}
                       </div>
                       <div className="mt-4 flex flex-wrap justify-between gap-2">
@@ -685,71 +456,9 @@ const EditProfilePage = () => {
                     </CardContent>
                   </Card>
                 )}
-                
-                <div>
-                  <h3 className="text-xl font-bold">@{profile.handle}</h3>
-                  
-                  {profile.is_founding_user && (
-                    <Badge className="bg-gradient-to-r from-orange-500 to-amber-500 text-white mt-1">
-                      OG Member
-                    </Badge>
-                  )}
-                  
-                  <div className="mt-3 text-sm flex flex-col gap-1.5">
-                    {formData.location && (
-                      <div className="flex items-center justify-center gap-1">
-                        <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span>{formData.location}</span>
-                      </div>
-                    )}
-                    
-                    {formData.link && formData.link !== '' && (
-                      <div className="flex items-center justify-center gap-1">
-                        <Link2 className="h-3.5 w-3.5 text-muted-foreground" />
-                        <a 
-                          href={formData.link.match(/^https?:\/\//) ? formData.link : `https://${formData.link}`} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-primary hover:underline truncate max-w-[180px]"
-                        >
-                          {formData.link.replace(/^https?:\/\//, '')}
-                        </a>
-                      </div>
-                    )}
-                    
-                    {formData.age && (
-                      <div className="flex items-center justify-center gap-1">
-                        <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span>{formData.age} years old</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                {formData.answer && (
-                  <div className="mt-2 pt-4 border-t w-full">
-                    <p className="text-xs font-medium text-muted-foreground mb-1">
-                      Why did the chicken cross the road?
-                    </p>
-                    <p className="text-sm">{formData.answer}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-          
-          {/* Main content */}
-          <div className="md:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Edit Profile Information</CardTitle>
-                <CardDescription>
-                  Update your profile details and customize your appearance
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
+                      <Separator className="my-6" />                 
                 {/* Background Image */}
-                <div className="space-y-3">
+                      <div className="space-y-3 w-full text-left">
                   <div className="flex items-baseline justify-between">
                     <Label htmlFor="background_image" className="text-base">
                       Background Image
@@ -765,157 +474,123 @@ const EditProfilePage = () => {
                       </Button>
                     )}
                   </div>
-                  
-                  <div
-                    className="border border-dashed rounded-md overflow-hidden bg-muted/30 relative"
-                    onDragOver={handleDragOver}
-                    onDrop={handleDrop}
-                  >
-                    {formData.background_image ? (
-                      <div className="relative">
-                        <AspectRatio ratio={3/1}>
+                        <AspectRatio ratio={16 / 9} className="bg-muted rounded-md overflow-hidden border border-dashed">
+                          {uploadingBackground ? (
+                            <div className="flex flex-col items-center justify-center h-full">
+                              <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
+                              <p className="text-sm text-muted-foreground">Uploading: {uploadProgress}%</p>
+                            </div>
+                          ) : formData.background_image ? (
                           <img 
                             src={formData.background_image} 
-                            alt="Background Preview" 
-                            className="w-full h-full object-cover"
-                          />
-                        </AspectRatio>
-                        <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => document.getElementById('background-upload')?.click()}
-                            className="shadow-md"
-                          >
-                            <Pencil className="h-3.5 w-3.5 mr-1.5" />
-                            Change Background
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <AspectRatio ratio={3/1}>
-                        <div className="flex flex-col items-center justify-center h-full">
-                          <input
-                            id="background-upload"
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={handleFileInputChange}
-                          />
-                          <Button
-                            variant="ghost"
-                            size="lg"
-                            className="text-muted-foreground"
-                            onClick={() => document.getElementById('background-upload')?.click()}
-                          >
-                            <Image className="h-6 w-6 mr-2" />
-                            <div className="flex flex-col items-start">
-                              <span>Upload Background Image</span>
-                              <span className="text-xs font-normal">Drag & drop or click to browse</span>
+                              alt="Profile background" 
+                              className="object-cover w-full h-full"
+                            />
+                          ) : (
+                            <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                              <Image className="h-12 w-12 mb-2 opacity-50" />
+                              <p>No background image</p>
+                              <p className="text-xs">Recommended: 1500x500px</p>
                             </div>
+                          )}
+                        </AspectRatio>
+                        <Input 
+                          id="background-upload-input"
+                            type="file"
+                          accept="image/png, image/jpeg, image/gif, image/webp"
+                          onChange={handleFileSelect}
+                            className="hidden"
+                          />
+                          <Button
+                          variant="outline" 
+                          onClick={triggerFileInput} 
+                          disabled={uploadingBackground}
+                          className="w-full gap-1.5"
+                        >
+                          {uploadingBackground ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Upload className="h-4 w-4" />
+                          )}
+                          Upload Background Image
                           </Button>
-                        </div>
-                      </AspectRatio>
-                    )}
-                    
-                    {uploadingBackground && (
-                      <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center text-white">
-                        <Loader2 className="h-8 w-8 animate-spin mb-2" />
-                        <p className="text-sm">Uploading... {uploadProgress}%</p>
+                        {uploadedImageUrl && (
+                          <p className="text-xs text-muted-foreground">
+                            New background set. Save changes to apply.
+                          </p>
+                        )}
                       </div>
-                    )}
-                    
-                    <input
-                      id="background-upload"
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleFileInputChange}
-                    />
-                  </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
+
+              {activeTab === 'profile' && (
+                <motion.div
+                  key="profile-tab"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Profile Details</CardTitle>
+                      <CardDescription>
+                        Update your public information. This will be visible on your profile.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      <div className="grid gap-2">
+                        <Label htmlFor="handle">Handle</Label>
+                        <Input id="handle" value={profile.handle} disabled />
                   <p className="text-xs text-muted-foreground">
-                    Recommended size: 1500x500px. Max size: 10MB. JPG or PNG format.
+                          Your unique handle cannot be changed.
                   </p>
                 </div>
                 
-                {/* Profile Details */}
-                <div className="grid gap-5">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    <div className="space-y-2">
-                      <Label htmlFor="location" className="text-base">
-                        <div className="flex items-center gap-1.5">
-                          <MapPin className="h-4 w-4 text-muted-foreground" />
-                          Location
-                        </div>
-                      </Label>
+                      <div className="grid gap-2">
+                        <Label htmlFor="location">Location (Optional)</Label>
                       <Input
                         id="location"
                         name="location"
-                        placeholder="City, Country"
                         value={formData.location || ''}
                         onChange={handleInputChange}
+                          placeholder="e.g., Earth" 
                       />
                     </div>
                     
-                    <div className="space-y-2">
-                      <Label htmlFor="age" className="text-base">
-                        <div className="flex items-center gap-1.5">
-                          <Calendar className="h-4 w-4 text-muted-foreground" />
-                          Age
-                        </div>
-                      </Label>
-                      <Input
-                        id="age"
-                        name="age"
-                        type="number"
-                        min="13"
-                        max="120"
-                        placeholder="Your age"
-                        value={formData.age || ''}
-                        onChange={handleInputChange}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="link" className="text-base">
-                      <div className="flex items-center gap-1.5">
-                        <Link2 className="h-4 w-4 text-muted-foreground" />
-                        Website or Social Link
-                      </div>
-                    </Label>
+                      <div className="grid gap-2">
+                        <Label htmlFor="link">Link (Optional)</Label>
+                        <div className="relative">
+                          <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="link"
                       name="link"
-                      placeholder="example.com or https://example.com"
                       value={formData.link || ''}
                       onChange={handleInputChange}
+                            placeholder="yourwebsite.com"
+                            className="pl-10"
                     />
+                        </div>
                     <p className="text-xs text-muted-foreground">
-                      Enter your website URL (leave empty if you don't have one)
+                          A link to your personal website, social media, or other relevant page.
                     </p>
                   </div>
                   
-                  <Separator />
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="answer" className="text-base">
-                      <div className="flex flex-col space-y-1">
-                        <span>Why did the chicken cross the road?</span>
-                        <span className="text-xs text-muted-foreground">
-                          This answer will be shown on your profile as a personal touch
-                        </span>
-                      </div>
-                    </Label>
+                      <div className="grid gap-2">
+                        <Label htmlFor="answer">Why did the chicken cross the road? (Optional)</Label>
                     <Textarea
                       id="answer"
                       name="answer"
-                      placeholder="Your answer..."
                       value={formData.answer || ''}
                       onChange={handleInputChange}
-                      className="min-h-[120px]"
+                          placeholder="To get to the other side... or something funnier!"
+                          className="min-h-[80px]"
                     />
-                  </div>
+                        <p className="text-xs text-muted-foreground">
+                          A fun, optional field for your profile.
+                        </p>
                 </div>
               </CardContent>
               <CardFooter className="flex justify-between">
@@ -944,77 +619,10 @@ const EditProfilePage = () => {
                 </Button>
               </CardFooter>
             </Card>
-
-            {/* --- Delete Account Section --- */}
-            <Card className="border-destructive mt-8">
-              <CardHeader>
-                <CardTitle className="text-destructive">Danger Zone</CardTitle>
-                <CardDescription>
-                  Deactivating your account is permanent and cannot be reversed.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
-                  All your data, posts, comments, and community interactions will be permanently deleted. 
-                  Your username will become available again. Please be absolutely sure before proceeding.
-                </p>
-                <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive" className="w-full gap-1.5">
-                      <Trash2 className="h-4 w-4" />
-                      Deactivate My Account
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Confirm Account Deactivation</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This action is irreversible. To confirm, please type <strong>DELETE</strong> in the box below.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    
-                    {deleteError && (
-                      <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md">
-                        {deleteError}
-                      </div>
+                </motion.div>
                     )}
-
-                    <Input
-                      type="text"
-                      placeholder="Type DELETE to confirm"
-                      value={deleteConfirmationInput}
-                      onChange={(e) => setDeleteConfirmationInput(e.target.value)}
-                      className="my-4 font-mono tracking-[0.3em] text-center placeholder:tracking-normal placeholder:text-center" // Added styling for spaced-out input
-                      maxLength={6} // Length of "DELETE"
-                    />
-                    
-                    <AlertDialogFooter>
-                      <AlertDialogCancel disabled={isDeletingAccount}>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={handleDeleteAccount} // We'll add this function next
-                        disabled={deleteConfirmationInput !== 'DELETE' || isDeletingAccount}
-                        className="bg-destructive hover:bg-destructive/90"
-                      >
-                        {isDeletingAccount ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Deactivating...
-                          </>
-                        ) : (
-                          <>
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Yes, Deactivate My Account
-                          </>
-                        )}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </CardContent>
-            </Card>
-            {/* --- End Delete Account Section --- */}
-
-          </div>
+            </AnimatePresence>
+          </Tabs>
         </div>
       </div>
     </>

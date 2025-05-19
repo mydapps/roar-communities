@@ -40,6 +40,7 @@ import PostWarningPage from '@/pages/PostWarningPage';
 // Lazy loaded components
 const LazyMySharesPage = lazy(() => import('@/pages/MySharesPage'));
 const LazyReferralPage = lazy(() => import('@/pages/ReferralPage'));
+const LazySettingsPage = lazy(() => import('@/pages/SettingsPage'));
 
 // Invalid auth event handler
 const createInvalidAuthEvent = () => {
@@ -147,6 +148,17 @@ function App() {
             <Route path="transactions" element={
               <ProtectedRoute>
                 <TransactionHistoryPage />
+              </ProtectedRoute>
+            } />
+
+            {/* Add Settings Page Route */}
+            <Route path="settings" element={
+              <ProtectedRoute>
+                <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>}>
+                  <LazySettingsPage />
+                </Suspense>
               </ProtectedRoute>
             } />
 

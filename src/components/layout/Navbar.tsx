@@ -313,6 +313,12 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
+                    <Link to="/settings" className="cursor-pointer flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      <span>Settings</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
                     <Link to="/referral" className="cursor-pointer flex items-center gap-2">
                       <Gift className="h-4 w-4 text-primary" />
                       <span className="text-primary font-medium">Share the Love</span>

@@ -180,11 +180,20 @@ export const Post = ({
   };
 
   const handleVerifyIpfs = () => {
-    console.log(`Verifying IPFS hash: ${ipfsHash}`);
-    toast({
-      title: "IPFS Verification",
-      description: `Verifying content with IPFS hash: ${ipfsHash}`,
-    });
+    if (ipfsHash) {
+      const url = `https://ipfs.dapps.co/ipfs/${ipfsHash}?loadIn=defaultBrowser`;
+      window.open(url, '_blank', 'noopener,noreferrer');
+      toast({
+        title: "IPFS Verification",
+        description: `Opening IPFS content for hash: ${ipfsHash}`,
+      });
+    } else {
+      toast({
+        title: "IPFS Hash Missing",
+        description: "Cannot verify content as IPFS hash is not available.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleImageClick = (imageSrc: string) => {
