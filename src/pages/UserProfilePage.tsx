@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -11,6 +11,7 @@ import { UserPosts } from '@/components/user/UserPosts';
 import { UserReplies } from '@/components/user/UserReplies';
 import { UserProfile } from '@/utils/userApi';
 import { useIsMobile } from '@/hooks/use-mobile';
+import UserListDialog from '@/components/dialogs/UserListDialog';
 
 const UserProfilePage = () => {
   const { handle = '' } = useParams<{ handle: string }>();
@@ -28,7 +29,27 @@ const UserProfilePage = () => {
   
   const [activeTab, setActiveTab] = useState('posts');
   const isMobile = useIsMobile();
-  
+  const [currentUserHandle, setCurrentUserHandle] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Fetch current user handle from storage once on mount
+    const storedHandle = localStorage.getItem('dapps_user_handle');
+    setCurrentUserHandle(storedHandle);
+  }, []);
+
+  const [isUserListDialogOpen, setIsUserListDialogOpen] = useState(false);
+  const [currentUserListType, setCurrentUserListType] = useState<'followers' | 'following' | null>(null);
+
+  const openUserListDialog = (type: 'followers' | 'following') => {
+    setCurrentUserListType(type);
+    setIsUserListDialogOpen(true);
+  };
+
+  const closeUserListDialog = () => {
+    setIsUserListDialogOpen(false);
+    setCurrentUserListType(null);
+  };
+
   const handleProfileUpdated = (updatedProfile: UserProfile) => {
     refreshProfile();
   };
@@ -95,6 +116,8 @@ const UserProfilePage = () => {
             onFollow={handleFollow}
             onUnfollow={handleUnfollow}
             onEdit={handleEditProfile}
+            onOpenFollowers={() => openUserListDialog('followers')}
+            onOpenFollowing={() => openUserListDialog('following')}
           />
           
           {/* Main content */}
@@ -147,6 +170,17 @@ const UserProfilePage = () => {
           </div>
         </div>
       ) : null}
+
+      {/* User List Dialog */}
+      {currentUserListType && (
+        <UserListDialog 
+          userHandle={handle} 
+          listType={currentUserListType}
+          isOpen={isUserListDialogOpen}
+          onClose={closeUserListDialog}
+          loggedInUserHandle={currentUserHandle}
+        />
+      )}
     </>
   );
 };

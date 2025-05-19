@@ -13,6 +13,8 @@ interface UserProfileHeaderProps {
   onFollow: () => void;
   onUnfollow: () => void;
   onEdit: () => void;
+  onOpenFollowers: () => void;
+  onOpenFollowing: () => void;
 }
 
 const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
@@ -20,7 +22,9 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
   isOwnProfile,
   onFollow,
   onUnfollow,
-  onEdit
+  onEdit,
+  onOpenFollowers,
+  onOpenFollowing
 }) => {
   const defaultBgImage = 'https://images.unsplash.com/photo-1614850715649-1d0106293bd1?q=80&w=2670&auto=format&fit=crop';
   const bgImage = profile.background_image || defaultBgImage;
@@ -122,11 +126,23 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
                 
                 {/* Stats */}
                 <div className="flex flex-wrap gap-x-8 gap-y-2 text-sm font-medium justify-center md:justify-start">
-                  <div className="flex items-center gap-1 hover:text-primary transition-colors">
+                  <div 
+                    className="flex items-center gap-1 hover:text-primary transition-colors cursor-pointer"
+                    onClick={onOpenFollowers}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => e.key === 'Enter' && onOpenFollowers()}
+                  >
                     <span className="font-semibold">{profile.followers.toLocaleString()}</span>
                     <span className="text-muted-foreground">Followers</span>
                   </div>
-                  <div className="flex items-center gap-1 hover:text-primary transition-colors">
+                  <div 
+                    className="flex items-center gap-1 hover:text-primary transition-colors cursor-pointer"
+                    onClick={onOpenFollowing}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => e.key === 'Enter' && onOpenFollowing()}
+                  >
                     <span className="font-semibold">{profile.followings.toLocaleString()}</span>
                     <span className="text-muted-foreground">Following</span>
                   </div>
