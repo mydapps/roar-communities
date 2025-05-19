@@ -1,8 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
+import { PollData } from '@/utils/postApi';
 
 export interface PostImage {
   url: string;
+}
+
+export interface PollOptionDisplay {
+  text: string;
+  imageUrl?: string;
 }
 
 export interface CommunityPost {
@@ -41,6 +47,8 @@ export interface CommunityPost {
   original_author_avatar?: string;
   original_images?: string[];
   original_title?: string;
+  is_poll?: boolean;
+  poll_data?: PollData | null;
 }
 
 export const useCommunityPosts = (communityName: string | undefined) => {

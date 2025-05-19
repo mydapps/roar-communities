@@ -493,6 +493,8 @@ const DetailedPostPage = () => {
             disableNavigation={true}
             hideComments={true}
             isLoggedIn={isLoggedIn}
+            is_poll={post.is_poll || false}
+            poll_data={post.poll_data || null}
           />
         </div>
       )}

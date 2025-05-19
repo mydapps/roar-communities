@@ -49,7 +49,7 @@ const UserProfilePage = () => {
     setIsUserListDialogOpen(false);
     setCurrentUserListType(null);
   };
-
+  
   const handleProfileUpdated = (updatedProfile: UserProfile) => {
     refreshProfile();
   };

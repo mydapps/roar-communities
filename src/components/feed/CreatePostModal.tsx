@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter, DrawerClose } from '@/components/ui/drawer';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { XIcon, SendIcon, ImageIcon, VideoIcon, UsersIcon, BoldIcon, ItalicIcon, UnderlineIcon, Loader2 } from 'lucide-react';
+import { XIcon, SendIcon, ImageIcon, VideoIcon, UsersIcon, BoldIcon, ItalicIcon, UnderlineIcon, Loader2, BarChartBigIcon, Trash2Icon, ImagePlusIcon, AlertTriangleIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { CommunitySelector } from './CommunitySelector';
@@ -13,6 +13,8 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { RichTextEditor } from '@/components/editor/RichTextEditor';
 import { Editor } from '@tiptap/react';
+import { Input } from '@/components/ui/input';
+import { v4 as uuidv4 } from 'uuid';
 
 // --- NEW IMPORTS FOR MENTIONS ---
 import { MentionSuggestionsList, SuggestionItem } from '@/components/mentions/MentionSuggestionsList';
@@ -81,13 +83,36 @@ async function uploadFileUtil(file: File): Promise<MediaUploadResponse> {
   }
 }
 
+// --- POLL FEATURE TYPES ---
+interface PollOptionInput {
+  id: string;
+  text: string;
+  imageFile?: File | null;
+  imageUrl?: string | null;
+  imagePreviewUrl?: string | null; // For local preview before upload completes
+  isUploadingImage?: boolean;
+  imageUploadError?: string | null;
+}
+
+export interface CreatePostPayload {
+  body: string; // This will be the poll question if is_poll is true
+  community?: string;
+  media?: MediaUploadResponse[]; // For regular posts with media attachments, not for poll option images
+  is_poll?: boolean;
+  poll_options?: Array<{
+    text: string;
+    imageUrl?: string; // Only include if image is successfully uploaded
+  }>;
+}
+// --- END POLL FEATURE TYPES ---
+
 interface CreatePostModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   userAvatarUrl: string;
   userHandle: string;
   communityName?: string;
-  onPostSubmit: (content: string, community: string | undefined, media: MediaUploadResponse[]) => Promise<boolean>;
+  onPostSubmit: (payload: CreatePostPayload) => Promise<boolean>; // Updated signature
   initialContent?: string;
 }
 
@@ -101,14 +126,21 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   initialContent = '',
 }) => {
   const isMobile = useIsMobile();
-  const [content, setContent] = useState(initialContent);
+  const [content, setContent] = useState(initialContent); // This will be the poll question if poll is active
   const [selectedCommunity, setSelectedCommunity] = useState(communityName || '');
   const [showCommunitySelector, setShowCommunitySelector] = useState(false);
-  const [uploadedMedia, setUploadedMedia] = useState<MediaUploadResponse[]>([]);
+  const [uploadedMedia, setUploadedMedia] = useState<MediaUploadResponse[]>([]); // For regular post media
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const editorInstanceRef = useRef<Editor | null>(null);
   const [isPasting, setIsPasting] = useState(false);
+
+  // --- POLL STATE ---
+  const [isPollMode, setIsPollMode] = useState(false);
+  const [pollOptions, setPollOptions] = useState<PollOptionInput[]>([]);
+  const [pollError, setPollError] = useState<string | null>(null);
+  const pollOptionImageUploadRefs = useRef<Record<string, HTMLInputElement>>({}); // To trigger file inputs
+  // --- END POLL STATE ---
 
   // --- NEW STATE FOR MENTIONS ---
   const [mentionState, setMentionState] = useState<MentionState>({
@@ -144,11 +176,14 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
         selectedIndex: 0,
         triggerPos: null,
       });
+      setIsPollMode(false); // Reset poll mode on open
+      setPollOptions([]);    // Clear poll options
+      setPollError(null);    // Clear poll errors
     } else {
         // Optional: Clear editor content when modal closes if desired
         // editorInstanceRef.current?.commands.clearContent();
     }
-  }, [open, initialContent, communityName, editorInstanceRef.current]);
+  }, [open, initialContent, communityName]); // Removed editorInstanceRef.current from deps as it can cause issues. Manage focus separately if needed.
 
   const handleContentChange = (htmlContent: string) => {
     setContent(htmlContent);
@@ -356,28 +391,186 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
     setTimeout(() => editorInstanceRef.current?.commands.focus(), 50);
   };
 
+  // --- POLL LOGIC FUNCTIONS ---
+  const handleTogglePollMode = () => {
+    const newPollMode = !isPollMode;
+    setIsPollMode(newPollMode);
+    if (newPollMode) {
+      initializePollOptions();
+      setUploadedMedia([]); // Clear regular media when switching to poll mode
+      setError(null); // Clear general errors
+    } else {
+      setPollOptions([]);
+      setPollError(null);
+    }
+  };
+
+  const initializePollOptions = () => {
+    setPollOptions([
+      { id: uuidv4(), text: '', imageFile: null, imageUrl: null, imagePreviewUrl: null, isUploadingImage: false, imageUploadError: null },
+      { id: uuidv4(), text: '', imageFile: null, imageUrl: null, imagePreviewUrl: null, isUploadingImage: false, imageUploadError: null },
+    ]);
+    setPollError(null);
+  };
+
+  const handleAddPollOption = () => {
+    if (pollOptions.length < 4) {
+      setPollOptions(prev => [...prev, { id: uuidv4(), text: '', imageFile: null, imageUrl: null, imagePreviewUrl: null, isUploadingImage: false, imageUploadError: null }]);
+      setPollError(null);
+    }
+  };
+
+  const handleRemovePollOption = (optionId: string) => {
+    if (pollOptions.length > 2) {
+      setPollOptions(prev => prev.filter(opt => opt.id !== optionId));
+      setPollError(null);
+    }
+  };
+
+  const handlePollOptionTextChange = (optionId: string, newText: string) => {
+    setPollOptions(prev => prev.map(opt => opt.id === optionId ? { ...opt, text: newText } : opt));
+  };
+
+  const handlePollOptionImageSelected = async (optionId: string, file: File) => {
+    if (!file.type.startsWith('image/')) {
+      toast.error('Only image files are allowed for poll options.');
+      setPollOptions(prev => prev.map(opt => opt.id === optionId ? { ...opt, imageUploadError: 'Only images allowed.' } : opt));
+      return;
+    }
+
+    setPollOptions(prev => prev.map(opt => opt.id === optionId ? {
+      ...opt, 
+      imageFile: file, 
+      imagePreviewUrl: URL.createObjectURL(file),
+      isUploadingImage: true, 
+      imageUploadError: null,
+      imageUrl: null // Clear previous imageUrl if re-uploading
+    } : opt));
+
+    try {
+      const uploadResponse = await uploadFileUtil(file);
+      // If uploadFileUtil resolves without error, it means success
+      // uploadFileUtil should throw an error if response.success is false or HTTP fails
+      setPollOptions(prev => prev.map(opt => opt.id === optionId ? {
+        ...opt, 
+        imageUrl: uploadResponse.url, // Assuming url is always present on success from uploadFileUtil
+        isUploadingImage: false,
+        imageFile: null
+      } : opt));
+      toast.success(`Image added to option.`);
+    } catch (uploadError: any) {
+      console.error('Poll option image upload error:', uploadError);
+      const errorMessage = uploadError.message || 'Image upload failed.';
+      setPollOptions(prev => prev.map(opt => opt.id === optionId ? {
+        ...opt, 
+        isUploadingImage: false, 
+        imageUploadError: errorMessage,
+        imagePreviewUrl: null
+      } : opt));
+      toast.error(errorMessage);
+    }
+  };
+
+  const validatePoll = (): boolean => {
+    if (pollOptions.length < 2) {
+      setPollError('Polls require at least 2 options.');
+      return false;
+    }
+    if (pollOptions.length > 4) {
+      setPollError('Polls can have a maximum of 4 options.');
+      return false;
+    }
+    if (pollOptions.some(opt => !opt.text.trim() && !opt.imageUrl)) {
+      setPollError('Each poll option must have either text or an image.');
+      return false;
+    }
+    // Image consistency: if one has an image, all must have an image.
+    const hasAnyImage = pollOptions.some(opt => opt.imageUrl);
+    if (hasAnyImage && pollOptions.some(opt => !opt.imageUrl)) {
+      setPollError('If one poll option has an image, all options must have successfully uploaded images.');
+      return false;
+    }
+    if (pollOptions.some(opt => opt.isUploadingImage)) {
+        setPollError('Please wait for all images to finish uploading.');
+        return false;
+    }
+
+    setPollError(null);
+    return true;
+  };
+
+  // --- END POLL LOGIC FUNCTIONS ---
+
   const handleSubmit = async () => {
     const currentHtmlContent = editorInstanceRef.current?.getHTML() || '';
     const currentTextContent = editorInstanceRef.current?.getText() || '';
-    const isEmpty = !currentTextContent.trim();
     
-    // Use the full uploadedMedia array now
-    if (isEmpty && uploadedMedia.length === 0) { 
-      setError('Please write something or add media to your post.');
+    if (!isPollMode && !currentTextContent.trim() && uploadedMedia.length === 0) {
+      setError('Please enter some content or add media.');
       return;
     }
+    if (isPollMode && !currentTextContent.trim()) {
+        setError('Please enter a question for your poll.');
+        return;
+    }
+
     setIsSubmitting(true);
     setError(null);
-    try {
-      // Pass the HTML content and the full media array
-      // The receiving function (handleModalPostSubmit in CreatePostCard) needs to handle formatting
-      const success = await onPostSubmit(currentHtmlContent, selectedCommunity || undefined, uploadedMedia);
-      if (success) {
-        onOpenChange(false); 
+    setPollError(null);
+
+    let payload: CreatePostPayload;
+
+    if (isPollMode) {
+      if (!validatePoll()) {
+        setIsSubmitting(false);
+        // pollError is already set by validatePoll
+        return;
       }
-    } catch (e: any) {
-      setError(e.message || 'Failed to create post.');
-      toast.error(e.message || 'Failed to create post.');
+      const pollOptionsPayload = pollOptions.map(opt => ({
+        text: opt.text.trim(),
+        ...(opt.imageUrl && { imageUrl: opt.imageUrl }),
+      }));
+
+      payload = {
+        body: currentHtmlContent, // Poll question from rich text editor
+        community: selectedCommunity || undefined,
+        is_poll: true,
+        poll_options: pollOptionsPayload,
+        media: [] // No separate media attachments for polls
+      };
+    } else {
+      // For regular posts, media URLs are often appended to the body by the parent or here.
+      // The current onPostSubmit in CreatePostCard handles media URL appending. 
+      // So, we just pass the raw body and the media array separately.
+      payload = {
+        body: currentHtmlContent,
+        community: selectedCommunity || undefined,
+        media: uploadedMedia,
+        is_poll: false,
+      };
+    }
+    
+    console.log('Submitting post payload:', payload); // Added console log for debugging
+
+    try {
+      const success = await onPostSubmit(payload);
+      if (success) {
+        onOpenChange(false); // Close modal on successful submission
+        // Reset states for next time (though useEffect on 'open' also does this)
+        setContent('');
+        if(editorInstanceRef.current) editorInstanceRef.current.commands.clearContent();
+        setUploadedMedia([]);
+        setSelectedCommunity(communityName || '');
+        setIsPollMode(false);
+        setPollOptions([]);
+        setPollError(null);
+      } else {
+        // Error handling might be done by onPostSubmit or here if it returns a specific error signal
+        // setError('Failed to create post. Please try again.'); // Generic error if not more specific
+      }
+    } catch (submissionError: any) {
+      console.error('Post submission error:', submissionError);
+      setError(submissionError.message || 'An unexpected error occurred during submission.');
     } finally {
       setIsSubmitting(false);
     }
@@ -417,26 +610,51 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   );
 
   const renderActionToolbar = () => (
-    <div className="flex items-center justify-between p-2 border-t border-border">
-      <div className="flex items-center gap-1">
-        <MediaUpload onMediaUploaded={handleMediaUploaded} acceptedTypes="image" maxFiles={5} disabled={isPasting || isSubmitting}>
-          <Button variant="ghost" size="icon" title="Upload Image" disabled={isPasting || isSubmitting}>
+    <div className="flex items-center gap-2 p-2">
+      {/* Image Upload for regular posts */}
+      <MediaUpload 
+        onMediaUploaded={handleMediaUploaded} 
+        acceptedTypes="image"
+        maxFiles={10}
+        disabled={isPollMode || uploadedMedia.some(m => m.type === 'video') || uploadedMedia.length >= 10}
+      >
+        <Button variant="ghost" size="icon" title="Add Image to Post" 
+                disabled={isPollMode || uploadedMedia.some(m => m.type === 'video') || uploadedMedia.length >= 10}
+        >
             <ImageIcon className="h-5 w-5" />
           </Button>
         </MediaUpload>
-        <MediaUpload onMediaUploaded={handleMediaUploaded} acceptedTypes="video" maxFiles={1} disabled={isPasting || isSubmitting}>
-          <Button variant="ghost" size="icon" title="Upload Video" disabled={isPasting || isSubmitting}>
+
+      {/* Video Upload for regular posts */}
+      <MediaUpload 
+        onMediaUploaded={handleMediaUploaded}
+        acceptedTypes="video"
+        maxFiles={1}
+        disabled={isPollMode || uploadedMedia.some(m => m.type === 'image') || uploadedMedia.length > 0}
+      >
+        <Button variant="ghost" size="icon" title="Add Video to Post" 
+                disabled={isPollMode || uploadedMedia.some(m => m.type === 'image') || uploadedMedia.length > 0}
+        >
             <VideoIcon className="h-5 w-5" />
           </Button>
         </MediaUpload>
-      </div>
+      
+      {/* Poll Icon with a dot */}
+      <Button variant="ghost" size="icon" onClick={handleTogglePollMode} title={isPollMode ? "Switch to Standard Post" : "Create a Poll"} className={cn("relative", isPollMode && "bg-primary/10 text-primary")}>
+        <BarChartBigIcon className="h-5 w-5" />
+        {!isPollMode && (
+          <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-primary ring-2 ring-background" />
+        )}
+      </Button>
+      
+      <div className="flex-grow" /> {/* Spacer */}
+      {isSubmitting && <Loader2 className="h-5 w-5 animate-spin text-primary" />}
       <Button 
         onClick={handleSubmit} 
-        disabled={isPasting || isSubmitting || ( !(editorInstanceRef.current?.getText().trim()) && uploadedMedia.length === 0 )}
-        className="gap-2"
+        disabled={isSubmitting || (!isPollMode && !editorInstanceRef.current?.getText().trim() && uploadedMedia.length === 0) || (isPollMode && !editorInstanceRef.current?.getText().trim())}
+        className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-6"
       >
-        {isPasting || isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <SendIcon className="h-4 w-4" />}
-        {isPasting ? 'Uploading...' : isSubmitting ? 'Posting...' : 'Post'}
+        Post <SendIcon className="ml-2 h-4 w-4" />
       </Button>
     </div>
   );
@@ -473,50 +691,132 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   };
   // --- END: Prominent Community Display/Selector Trigger ---
 
+  const renderPollCreator = () => {
+    if (!isPollMode) return null;
+    return (
+      <div className="p-4 border-t space-y-4">
+        <h3 className="text-sm font-medium text-muted-foreground">Poll Options (min 2, max 4)</h3>
+        {pollOptions.map((option, index) => (
+          <div key={option.id} className="flex items-start gap-2 p-2 border rounded-md bg-background">
+            <span className="text-sm font-medium pt-2">{index + 1}.</span>
+            <div className="flex-grow space-y-2">
+                <Input 
+                    type="text"
+                    placeholder={`Option ${index + 1}`}
+                    value={option.text}
+                    onChange={(e) => handlePollOptionTextChange(option.id, e.target.value)}
+                    className="text-sm"
+                    maxLength={100} // Example max length
+                    disabled={option.isUploadingImage}
+                />
+                {option.imagePreviewUrl && (
+                    <div className="relative w-32 h-32 border rounded overflow-hidden">
+                        <img src={option.imagePreviewUrl} alt={`Preview option ${index + 1}`} className="object-cover w-full h-full" />
+                        {option.isUploadingImage && (
+                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                <Loader2 className="h-6 w-6 animate-spin text-white" />
+                            </div>
+                        )}
+                    </div>
+                )}
+                {option.imageUrl && !option.imagePreviewUrl && ( // Show uploaded image if no longer previewing (e.g. after successful upload)
+                    <div className="w-32 h-32 border rounded overflow-hidden">
+                        <img src={option.imageUrl} alt={`Poll option ${index + 1}`} className="object-cover w-full h-full" />
+                    </div>
+                )}
+                {option.imageUploadError && (
+                    <p className="text-xs text-red-500 flex items-center"><AlertTriangleIcon className="h-4 w-4 mr-1" />{option.imageUploadError}</p>
+                )}
+                <input 
+                    type="file"
+                    accept="image/*"
+                    ref={el => { if (el) pollOptionImageUploadRefs.current[option.id] = el; }}
+                    onChange={(e) => e.target.files && e.target.files[0] && handlePollOptionImageSelected(option.id, e.target.files[0])}
+                    className="hidden"
+                    disabled={option.isUploadingImage}
+                />
+            </div>
+            <div className="flex flex-col space-y-1 items-center pt-1">
+                <Button 
+                    variant="outline" size="icon" 
+                    onClick={() => pollOptionImageUploadRefs.current[option.id]?.click()} 
+                    title={option.imageUrl ? "Change Image" : "Add Image"}
+                    disabled={option.isUploadingImage || pollOptions.some(o => o.isUploadingImage && o.id !== option.id)} // Disable if any other image is uploading for simplicity
+                >
+                    <ImagePlusIcon className="h-4 w-4" />
+                </Button>
+                {pollOptions.length > 2 && (
+                    <Button variant="ghost" size="icon" onClick={() => handleRemovePollOption(option.id)} title="Remove Option" className="text-muted-foreground hover:text-destructive">
+                        <Trash2Icon className="h-4 w-4" />
+                    </Button>
+                )}
+            </div>
+          </div>
+        ))}
+        {pollOptions.length < 4 && (
+          <Button variant="outline" onClick={handleAddPollOption} className="w-full mt-2">
+            Add Option ({pollOptions.length}/4)
+          </Button>
+        )}
+        {pollError && (
+          <Alert variant="destructive" className="mt-2">
+            <AlertTriangleIcon className="h-4 w-4" />
+            <AlertDescription>{pollError}</AlertDescription>
+          </Alert>
+        )}
+        <p className="text-xs text-muted-foreground mt-2">
+          The content you write above will be the poll question. Images in polls: if one option has an image, all options must have an image.
+        </p>
+      </div>
+    );
+  };
+
+  // This is the main content rendering function, previously named ModalContent in my plan,
+  // but named PostCreationForm in the actual code.
   const PostCreationForm = (
-    <div className={cn("flex flex-col", isMobile ? "h-full" : "max-h-[80vh]")}>
+    // Main container for the modal content. Use h-full for drawer, max-h for dialog.
+    <div className={cn("flex flex-col", isMobile ? "h-full" : "md:min-h-[450px] md:max-h-[90vh]")}>
       {!isMobile && (
-        <DialogHeader className="p-4 border-b">
+        <DialogHeader className="p-4 border-b flex-shrink-0"> {/* flex-shrink-0 to prevent header from shrinking */}
           <DialogTitle className="text-lg font-semibold flex items-center">
-            <Avatar className="h-8 w-8 mr-2">
-              <AvatarImage src={userAvatarUrl} />
-              <AvatarFallback>{userHandle?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
-            </Avatar>
-            Create Post
+            {isPollMode ? "Create Poll" : "Create Post"} {/* Dynamic Title */}
           </DialogTitle>
-           <DialogClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-            <XIcon className="h-4 w-4" />
-            <span className="sr-only">Close</span>
-          </DialogClose>
         </DialogHeader>
       )}
       
-      {renderProminentCommunitySelector()}
+      {renderProminentCommunitySelector()} {/* This is also flex-shrink-0 implicitly or explicitly if needed */}
+      
+      {/* Formatting toolbar should be outside the scrollable content if it applies to fixed editor above poll options*/}
+      {!isPollMode && renderFormattingToolbar()} {/* Show only if not poll mode, or if you want it for poll Q too */}
 
-      {renderFormattingToolbar()}
+      {/* Scrollable area for editor, poll options, and media previews */}
+      <div className={cn("flex-grow p-1 overflow-y-auto custom-scrollbar", {
+        "pb-[calc(env(safe-area-inset-bottom)_+_70px)]": isMobile, // Padding for mobile toolbar + some space
+      })} style={{ WebkitOverflowScrolling: 'touch' }}>
+        {/* Container for Editor + Poll Options */}
+        <div className="p-4"> 
+          <div className="flex-1 min-w-0"> {/* This div might not strictly need flex-1/min-w-0 if it's the sole child now, but harmless */}
+            <RichTextEditor
+              onEditorCreated={(editor) => { editorInstanceRef.current = editor; }}
+              content={content} // This is the state variable for editor content
+              onChange={handleContentChange} // This updates the content state variable
+              placeholder={isPollMode ? "Ask a question for your poll..." : "What's on your mind?"}
+              onPastedFile={handlePastedFile}
+              mentionPluginOptions={{
+                  onStateChange: handleMentionStateChange,
+              }}
+              className="min-h-[120px] text-base mb-3" // mb-3 to give some space before poll options start
+            />
+            {/* Poll Creator UI - now part of this scrollable column */}
+            {isPollMode && renderPollCreator()}
+          </div>
+        </div>
       
-      <div className={cn("flex-grow p-1 overflow-y-auto relative", isMobile ? "" : "custom-scrollbar")} style={{ WebkitOverflowScrolling: 'touch' }}>
-        <RichTextEditor
-            onEditorCreated={(editor) => { editorInstanceRef.current = editor; }}
-            content={content}
-            onChange={handleContentChange}
-            placeholder={selectedCommunity ? `Share with ${selectedCommunity}...` : "What\'s happening?"}
-            onPastedFile={handlePastedFile}
-            // --- PASS MENTION PLUGIN CONFIG ---
-            mentionPluginOptions={{
-                onStateChange: handleMentionStateChange,
-                // We will need to pass fetchSuggestions or similar if plugin handles fetching
-            }}
-            // --- END PASS MENTION PLUGIN CONFIG ---
-        />
-      </div>
-      
-      {/* --- Media Preview Section (Show ALL media) --- */} 
-      {uploadedMedia.length > 0 && (
-        <div className="p-2 border-t max-h-[150px] overflow-y-auto custom-scrollbar flex-shrink-0">
-          <p className="text-xs text-muted-foreground mb-1">Attached media:</p>
+        {/* Regular Media Preview Section (not for poll mode) */}
+        {!isPollMode && uploadedMedia.length > 0 && (
+          <div className="px-4 pb-2">
+            <h4 className="text-xs font-medium text-muted-foreground mb-2">Attached Media:</h4>
           <div className="flex flex-wrap gap-2">
-            {/* Iterate over the full uploadedMedia array */}
             {uploadedMedia.map((media) => (
               <div key={media.url} className="relative w-20 h-20"> 
                 <MediaPreview media={media} onRemove={() => removeMedia(media.url)} />
@@ -526,13 +826,20 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
         </div>
       )}
 
-      {/* --- RENDER MENTION SUGGESTIONS --- */}
+        {error && (
+          <Alert variant="destructive" className="m-2 rounded-md text-xs">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+      </div>
+      
+      {/* Mention suggestions list - ensure its positioning works with the new layout */}
       {mentionState.show && mentionState.items.length > 0 && (
          <div 
             ref={suggestionsListRef}
-            className="absolute z-50" // Will need dynamic styling for position
+            className="absolute z-50" // Review positioning carefully
             style={isMobile ? 
-                { bottom: 'calc(env(safe-area-inset-bottom, 0px) + 60px)', /* Above action toolbar roughly */
+                { bottom: 'calc(env(safe-area-inset-bottom, 0px) + 60px)', 
                   left: '10px', right: '10px', maxHeight: '150px' } : 
                 (mentionState.position.visible ? 
                     { top: mentionState.position.top, left: mentionState.position.left, maxHeight: '200px', width: '250px' } : 
@@ -550,14 +857,16 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
             />
         </div>
       )}
-      {/* --- END RENDER MENTION SUGGESTIONS --- */}
 
-      {error && (
-        <Alert variant="destructive" className="m-2 mt-0 rounded-md text-xs">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-      {renderActionToolbar()}
+      {/* Action Toolbar at the bottom - should be outside the scrollable div and always visible */}
+      <div className={cn(
+        "border-t flex-shrink-0 bg-background z-10",
+        isMobile ? "fixed bottom-0 left-0 right-0" : "mt-auto" // Fixed for mobile, mt-auto for desktop
+      )}>
+        {/* Formatting toolbar was moved above scrollable area, or could be here if preferred for poll Q too */}
+        {/* {!isPollMode && renderFormattingToolbar()} */}
+        {renderActionToolbar()} {/* Contains Post button */}
+      </div>
     </div>
   );
 
@@ -597,9 +906,9 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
               <Button 
                 size="sm" 
                 onClick={handleSubmit} 
-                disabled={isPasting || isSubmitting || ( !(editorInstanceRef.current?.getText().trim()) && uploadedMedia.length === 0 )}
+                disabled={isSubmitting || (!isPollMode && !editorInstanceRef.current?.getText().trim() && uploadedMedia.length === 0) || (isPollMode && !editorInstanceRef.current?.getText().trim())}
                 className="h-8 px-3 text-sm">
-                 {isPasting ? 'Uploading...' : isSubmitting ? 'Posting...' : 'Post'}
+                 {isSubmitting ? 'Posting...' : 'Post'}
               </Button>
             </DrawerHeader>
             {PostCreationForm} 

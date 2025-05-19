@@ -9,6 +9,10 @@ import { Loader2 } from 'lucide-react';
 // Link component is not used if we are generating <a> tags directly in the string.
 // import { Link } from 'react-router-dom'; 
 
+// Import PollDisplay and PollData
+import { PollDisplay } from '@/components/polls/PollDisplay';
+import { PollData } from '@/utils/postApi';
+
 interface PostContentProps {
   content: string;
   isMirror: boolean;
@@ -25,6 +29,12 @@ interface PostContentProps {
   hasMedia: boolean;
   allMedia?: { type: 'image' | 'video', url: string }[];
   onImageClick: (imageSrc: string) => void;
+
+  // New props for polls
+  is_poll?: boolean;
+  poll_data?: PollData | null;
+  postCode?: string; // Required by PollDisplay
+  onVoteOnPoll?: (optionId: number) => Promise<void>; // Required by PollDisplay
 }
 
 export const PostContent: React.FC<PostContentProps> = ({
@@ -33,8 +43,29 @@ export const PostContent: React.FC<PostContentProps> = ({
   mirrorData,
   hasMedia,
   allMedia,
-  onImageClick
+  onImageClick,
+  // Destructure new props
+  is_poll = false,
+  poll_data = null,
+  postCode,
+  onVoteOnPoll,
 }) => {
+  // If it's a poll, render PollDisplay and return early.
+  if (is_poll && poll_data && postCode && onVoteOnPoll) {
+    return (
+      <CardContent className="pb-3">
+        <PollDisplay 
+          pollQuestion={content} // Post.body is the question
+          pollData={poll_data}
+          postCode={postCode}
+          onVote={onVoteOnPoll}
+          className="my-0" // Adjust margin/padding if needed, default PollDisplay has my-3
+        />
+      </CardContent>
+    );
+  }
+
+  // Existing logic for non-poll posts continues below
   const initialSanitizedContent = sanitizeHtml(content);
   let finalHtml = '';
   let lastIndex = 0;

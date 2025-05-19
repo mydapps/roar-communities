@@ -12,7 +12,8 @@ import { PostFooter } from './post/PostFooter';
 import { usePostMedia } from './post/usePostMedia';
 import { CommentSection } from './post/CommentSection';
 import { fetchReplies, CommentReply } from '@/utils/commentApi';
-import { hidePost, pinCommunityPost } from '@/utils/postApi';
+import { hidePost, pinCommunityPost, PollData } from '@/utils/postApi';
+import { voteOnPoll } from '@/utils/pollApi';
 import { ImageViewer } from './post/ImageViewer';
 import { HidePostConfirmationSheet } from './post/HidePostConfirmationSheet';
 import { ReportPostSheet } from './post/ReportPostSheet';
@@ -53,6 +54,8 @@ export interface PostProps {
   isAdmin?: boolean;
   isPinned?: boolean;
   onPostUpdated?: (postCode: string, newPinnedStatus: boolean) => void;
+  is_poll?: boolean;
+  poll_data?: PollData | null;
 }
 
 export const Post = ({ 
@@ -79,6 +82,8 @@ export const Post = ({
   isAdmin = false,
   isPinned = false,
   onPostUpdated,
+  is_poll = false,
+  poll_data = null,
 }: PostProps) => {
   const navigate = useNavigate();
   const [localRoared, setLocalRoared] = useState(roared);
@@ -101,6 +106,8 @@ export const Post = ({
   const [currentIsPinned, setCurrentIsPinned] = useState(isPinned);
   const [showHideWarnModal, setShowHideWarnModal] = useState(false);
   const isMobile = useIsMobile();
+  
+  const [currentPollData, setCurrentPollData] = useState<PollData | null>(poll_data);
   
   const { parsedContent, allMedia, allImages: normalImages, hasMedia } = usePostMedia(content, images, video);
   
@@ -143,7 +150,8 @@ export const Post = ({
     setHasRoared(roared);
     setLocalRoarCount(roarCount);
     setCurrentIsPinned(isPinned);
-  }, [roared, roarCount, isPinned]);
+    setCurrentPollData(poll_data);
+  }, [roared, roarCount, isPinned, poll_data]);
 
   const handleRoar = async () => {
     if (!userIsLoggedIn) {
@@ -466,7 +474,92 @@ export const Post = ({
     }, 50); 
   };
   
-  if (isHidden) {
+  const handleVoteOnPoll = async (optionId: number) => {
+    if (!postCode || !currentPollData || !currentPollData.is_active) {
+      console.warn("Voting not allowed: conditions not met (no postCode, no pollData, or poll inactive).");
+      toast({
+        title: "Vote Not Allowed",
+        description: "This poll is not active or an error occurred.",
+        variant: "default",
+      });
+      return;
+    }
+
+    try {
+      const response = await voteOnPoll(postCode, optionId);
+
+      if (response.success && typeof response.chosen_option_id !== 'undefined') {
+        setCurrentPollData(prevPollData => {
+          if (!prevPollData) return null;
+
+          const previousVoteMade = prevPollData.user_has_voted;
+          const previousOptionId = prevPollData.chosen_option_id;
+          let newTotalVotes = prevPollData.total_votes;
+
+          const newOptions = prevPollData.options.map(opt => {
+            let newVoteCount = opt.vote_count;
+
+            if (previousVoteMade && opt.option_id === previousOptionId && opt.option_id !== response.chosen_option_id) {
+              // This option was the previous vote, but not the new one. Decrement.
+              newVoteCount = Math.max(0, newVoteCount - 1);
+            } else if (opt.option_id === response.chosen_option_id) {
+              // This option is the new vote.
+              if (!previousVoteMade || opt.option_id !== previousOptionId) {
+                // Increment if it's a new vote overall, or if it's a changed vote (to a different option).
+                // This prevents double-incrementing if the user clicks the already-voted option (which shouldn't happen if PollDisplay disables it, but good for safety).
+                newVoteCount = newVoteCount + 1;
+              }
+              // If previousVoteMade was true AND opt.option_id === previousOptionId (i.e. clicking the same option again),
+              // the count remains unchanged by this block, correctly reflecting no change in votes for that option.
+            }
+            return { ...opt, vote_count: newVoteCount };
+          });
+          
+          if (!previousVoteMade) {
+            // If it's a brand new vote (user hadn't voted before)
+            newTotalVotes = newTotalVotes + 1;
+          } else if (previousVoteMade && previousOptionId !== response.chosen_option_id) {
+            // If user changed their vote from one option to another, total votes remain the same.
+            // No change to newTotalVotes needed here.
+          }
+          // If user clicks the same option they already voted for:
+          // PollDisplay.tsx allows initiating the vote. The API call is made.
+          // `previousVoteMade` is true. `previousOptionId` === `response.chosen_option_id`.
+          // In this scenario, vote counts for options won't change based on the new logic.
+          // `newTotalVotes` also won't change. This seems correct.
+
+          return {
+            ...prevPollData,
+            options: newOptions.map(opt => ({
+              ...opt,
+              percentage: newTotalVotes > 0 ? (opt.vote_count / newTotalVotes) * 100 : 0,
+            })),
+            total_votes: newTotalVotes,
+            user_has_voted: true,
+            chosen_option_id: response.chosen_option_id,
+          };
+        });
+
+        toast({
+          title: "Vote Cast!",
+          description: response.message || "Your vote has been recorded.",
+        });
+      } else {
+        // API returned success: false or missing chosen_option_id
+        throw new Error(response.message || "Failed to record vote. Please try again.");
+      }
+    } catch (error: any) {
+      console.error("Error in handleVoteOnPoll:", error);
+      toast({
+        title: "Vote Failed",
+        description: error.message || "Could not record your vote due to an unexpected error.",
+        variant: "destructive",
+      });
+      // Optionally, revert any optimistic UI updates if you implemented them
+    }
+  };
+  
+  if (isHidden && !isAnimatingHide) {
     return null;
   }
 
@@ -509,6 +602,10 @@ export const Post = ({
           hasMedia={hasMedia}
           allMedia={allMedia}
           onImageClick={handleImageClick}
+          is_poll={is_poll}
+          poll_data={currentPollData}
+          postCode={postCode}
+          onVoteOnPoll={handleVoteOnPoll}
         />
         
         <PostFooter

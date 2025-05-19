@@ -256,11 +256,12 @@ const FeedPage = () => {
                 originalBody: post.original_body || '',
                 originalTimeAgo: post.original_created_on || '',
                 originalAvatar: post.original_author_avatar || '',
-                originalImages: post.original_images || [],
-                originalTitle: post.original_title || '',
-                originalPostCode: post.original_post_code || ''
+                originalImages: post.original_images || (post.original_image === 1 ? [post.original_image_url] : []),
+                originalPostCode: post.original_post_code
               } : undefined}
               ipfs={post.ipfs}
+              is_poll={Boolean(post.is_poll)}
+              poll_data={post.poll_data || null}
             />
               );
 
