@@ -122,7 +122,7 @@ export const TransactionListItem: React.FC<TransactionListItemProps> = ({ transa
             </div>
             {transaction.txn_hash && (
               <a
-                href={`${BASESCAN_URL}${transaction.txn_hash}&loadIn=defaultBrowser`}
+                href={`${BASESCAN_URL}${transaction.txn_hash}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center space-x-1 hover:text-primary hover:underline"

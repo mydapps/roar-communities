@@ -8,7 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { CommunityPortfolioItem, SharePrecheckResponse, buySharesPrecheck, sellSharesPrecheck, buySharesConfirm, sellSharesConfirm } from '@/utils/communityApi';
 import { toast } from 'sonner';
-import { Loader2, ArrowRight, Info, Plus, Minus, Check, PartyPopper } from 'lucide-react';
+import { Loader2, ArrowRight, Info, Plus, Minus, Check, PartyPopper, ExternalLink } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useDebounce } from '@/hooks/useDebounce';
 import confetti from 'canvas-confetti';
@@ -55,6 +55,7 @@ export const TradeSheet = ({
   const [totalUsdValue, setTotalUsdValue] = useState("0");
   const [errorMessage, setErrorMessage] = useState("");
   const [successVisible, setSuccessVisible] = useState(false);
+  const [transactionHash, setTransactionHash] = useState<string | null>(null);
   const [currentETHBalance, setCurrentETHBalance] = useState(userEthBalance);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
   
@@ -404,6 +405,7 @@ export const TradeSheet = ({
       // Set that an operation is in progress and ensure we stay on the confirm step
       setOperationInProgress(true);
       setStep('confirm'); // Explicitly set step to confirm to ensure it stays there
+      setTransactionHash(null); // Reset transaction hash at the start of a new confirmation
       
       if (action === 'buy') {
         // If there's a callback provided by parent, use it
@@ -432,6 +434,7 @@ export const TradeSheet = ({
               setStep('confirm');
               setSuccessVisible(true);
               setOperationInProgress(false);
+              if (result.transactionHash) setTransactionHash(result.transactionHash); // Store txHash
               
               // Show the confetti animation
               triggerSuccessAnimation();
@@ -477,6 +480,7 @@ export const TradeSheet = ({
               setStep('confirm');
               setSuccessVisible(true);
               setOperationInProgress(false);
+              if (result.transactionHash) setTransactionHash(result.transactionHash); // Store txHash
               
               // Show the confetti animation
               triggerSuccessAnimation();
@@ -594,6 +598,18 @@ export const TradeSheet = ({
                 ? `You've successfully purchased ${shareQuantity} shares of ${community?.community}!` 
                 : `You've successfully sold ${shareQuantity} shares of ${community?.community}!`}
             </p>
+            {transactionHash && (
+              <div className="mt-3">
+                <a 
+                  href={`https://basescan.org/tx/${transactionHash}`}
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-sm text-green-700 hover:text-green-800 underline inline-flex items-center"
+                >
+                  View on Basescan <ExternalLink className="h-3.5 w-3.5 ml-1" />
+                </a>
+              </div>
+            )}
             <div className="mt-4">
               <Button onClick={() => onOpenChange(false)}>Done</Button>
             </div>
