@@ -5,6 +5,8 @@ export interface VoteResponse {
   success: boolean;
   message: string;
   chosen_option_id?: number; // Only present on successful vote
+  errCode?: string; // Added for error responses
+  community?: string; // Added for error responses, e.g., POLL_COMMUNITY_ACCESS_DENIED
 }
 
 /**
@@ -44,6 +46,8 @@ export const voteOnPoll = async (
       return {
         success: false,
         message: errorMessage,
+        errCode: responseData?.errCode, // Propagate errCode
+        community: responseData?.community, // Propagate community
       };
     }
     
@@ -52,7 +56,9 @@ export const voteOnPoll = async (
         console.warn("Vote on Poll API returned success:false in body:", responseData);
         return {
             success: false,
-            message: responseData.message || "Vote was not recorded successfully by the server."
+            message: responseData.message || "Vote was not recorded successfully by the server.",
+            errCode: responseData?.errCode, // Propagate errCode
+            community: responseData?.community, // Propagate community
         };
     }
 

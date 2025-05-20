@@ -19,6 +19,7 @@ import { HidePostConfirmationSheet } from './post/HidePostConfirmationSheet';
 import { ReportPostSheet } from './post/ReportPostSheet';
 import { PinPostConfirmationModal } from './post/PinPostConfirmationModal';
 import { HideWarnModal } from '@/components/admin/HideWarnModal';
+import { NotInCommunitySheet } from '@/components/community/NotInCommunitySheet';
 
 export interface PostProps {
   username: string;
@@ -105,6 +106,8 @@ export const Post = ({
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
   const [currentIsPinned, setCurrentIsPinned] = useState(isPinned);
   const [showHideWarnModal, setShowHideWarnModal] = useState(false);
+  const [notInCommunitySheetOpen, setNotInCommunitySheetOpen] = useState(false);
+  const [sheetCommunityName, setSheetCommunityName] = useState("");
   const isMobile = useIsMobile();
   
   const [currentPollData, setCurrentPollData] = useState<PollData | null>(poll_data);
@@ -546,16 +549,25 @@ export const Post = ({
         });
       } else {
         // API returned success: false or missing chosen_option_id
-        throw new Error(response.message || "Failed to record vote. Please try again.");
+        if (response && response.errCode === "POLL_COMMUNITY_ACCESS_DENIED" && response.community) {
+          setSheetCommunityName(response.community);
+          setNotInCommunitySheetOpen(true);
+        } else {
+          throw new Error(response.message || "Failed to record vote. Please try again.");
+        }
       }
     } catch (error: any) {
       console.error("Error in handleVoteOnPoll:", error);
-      toast({
-        title: "Vote Failed",
-        description: error.message || "Could not record your vote due to an unexpected error.",
-        variant: "destructive",
-      });
-      // Optionally, revert any optimistic UI updates if you implemented them
+      if (error && error.errCode === "POLL_COMMUNITY_ACCESS_DENIED" && error.community) {
+        setSheetCommunityName(error.community);
+        setNotInCommunitySheetOpen(true);
+      } else {
+        toast({
+          title: "Vote Failed",
+          description: error.message || "Could not record your vote due to an unexpected error.",
+          variant: "destructive",
+        });
+      }
     }
   };
   
@@ -698,6 +710,12 @@ export const Post = ({
           onSuccess={handleHideWarnSuccess}
         />
       )}
+
+      <NotInCommunitySheet 
+        open={notInCommunitySheetOpen}
+        onOpenChange={setNotInCommunitySheetOpen}
+        communityName={sheetCommunityName}
+      />
     </>
   );
 };

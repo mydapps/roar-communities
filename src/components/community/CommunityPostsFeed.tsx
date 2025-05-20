@@ -66,6 +66,8 @@ const CommunityPostsFeed: React.FC<CommunityPostsFeedProps> = ({
               isAdmin={isAdmin}
               isPinned={!!post.pinned}
               onPostUpdated={onPostUpdated}
+              is_poll={post.is_poll}
+              poll_data={post.poll_data}
             />
           ))}
           
