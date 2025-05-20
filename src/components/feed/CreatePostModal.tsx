@@ -796,21 +796,21 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
         {/* Container for Editor + Poll Options */}
         <div className="p-4"> 
           <div className="flex-1 min-w-0"> {/* This div might not strictly need flex-1/min-w-0 if it's the sole child now, but harmless */}
-            <RichTextEditor
-              onEditorCreated={(editor) => { editorInstanceRef.current = editor; }}
+        <RichTextEditor
+            onEditorCreated={(editor) => { editorInstanceRef.current = editor; }}
               content={content} // This is the state variable for editor content
               onChange={handleContentChange} // This updates the content state variable
               placeholder={isPollMode ? "Ask a question for your poll..." : "What's on your mind?"}
-              onPastedFile={handlePastedFile}
-              mentionPluginOptions={{
-                  onStateChange: handleMentionStateChange,
-              }}
+            onPastedFile={handlePastedFile}
+            mentionPluginOptions={{
+                onStateChange: handleMentionStateChange,
+            }}
               className="min-h-[120px] text-base mb-3" // mb-3 to give some space before poll options start
-            />
+        />
             {/* Poll Creator UI - now part of this scrollable column */}
             {isPollMode && renderPollCreator()}
           </div>
-        </div>
+      </div>
       
         {/* Regular Media Preview Section (not for poll mode) */}
         {!isPollMode && uploadedMedia.length > 0 && (

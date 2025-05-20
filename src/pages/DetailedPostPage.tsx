@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertTriangle, Lock, MessageSquare } from 'lucide-react';
+import { AlertTriangle, Lock, MessageSquare, ChevronLeft } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
@@ -334,16 +334,17 @@ const DetailedPostPage = () => {
   };
   
   const getBestContentForDisplay = (): string => {
-    const plainTitle = getPlainText(post.title);
-    const plainBody = getPlainText(post.body);
-
-    if (plainBody && plainBody.trim() !== "") {
-      return plainBody;
+    if (post?.is_mirror && originalPost?.body) {
+      return originalPost.body;
     }
-    if (plainTitle && plainTitle.trim() !== "") {
-      return plainTitle;
+    return post?.body || "";
+  };
+  
+  const getBestImagesForDisplay = (): string[] | undefined => {
+    if (post?.is_mirror && originalPost?.images && originalPost.images.length > 0) {
+      return originalPost.images;
     }
-    return "No content";
+    return post?.images;
   };
   
   const plainPostTitle = getPlainText(post.title);
@@ -375,16 +376,20 @@ const DetailedPostPage = () => {
     return window.location.href;
   };
   
-  const mirrorData = post.is_mirror === 1 ? {
-    quote: post.mirror_quote || '',
-    originalAuthor: post.original_author || '',
-    originalCommunity: post.original_community || '',
-    originalBody: post.original_body || '',
-    originalTimeAgo: post.original_created_on || '',
-    originalAvatar: post.original_author_avatar || '',
-    originalImages: post.original_images || [],
-    originalTitle: post.original_title || '',
-    originalPostCode: post.original_post_code || ''
+  // Determine if the current user is the author of the post
+  const currentUserHandle = localStorage.getItem('dapps_user_handle');
+  const isAuthor = post.author?.handle === currentUserHandle;
+  
+  const mirrorDataForPost = post.is_mirror && originalPost ? {
+    quote: post.mirror_quote || "",
+    originalAuthor: originalPost.author,
+    originalCommunity: originalPost.community,
+    originalBody: originalPost.body,
+    originalTimeAgo: originalPost.created_on, // The Post component might need to format this
+    originalAvatar: originalPost.author_avatar,
+    originalImages: originalPost.images,
+    originalTitle: originalPost.title,
+    originalPostCode: originalPost.code,
   } : undefined;
   
   return (
@@ -416,88 +421,76 @@ const DetailedPostPage = () => {
         <link rel="icon" href="https://dapps.co/favicon.ico" />
       </Helmet>
       
-      <div className="mb-8 mt-4">
-        <ScrollArea className="w-full">
+      <div className="flex items-center justify-between mb-2 px-2 md:px-0">
+        <Button variant="outline" size="sm" onClick={goBack} className="md:hidden">
+          <ChevronLeft className="h-4 w-4 mr-1" /> Back
+        </Button>
+        <div className="hidden md:block">
           <Breadcrumb>
-            <BreadcrumbList className="flex-nowrap whitespace-nowrap overflow-hidden">
+            <BreadcrumbList>
               <BreadcrumbItem>
                 <BreadcrumbLink asChild>
-                  <Link to="/feed" onClick={(e) => e.stopPropagation()}>Feed</Link>
+                  <Link to="/">Home</Link>
                 </BreadcrumbLink>
               </BreadcrumbItem>
+              {post.community && (
+                <>
+                  <BreadcrumbSeparator />
+                  <BreadcrumbItem>
+                    <BreadcrumbLink asChild>
+                      <Link to={`/c/${post.community}`}>{post.community}</Link>
+                    </BreadcrumbLink>
+                  </BreadcrumbItem>
+                </>
+              )}
+              {(handle && !post.community) && (
+                 <>
+                   <BreadcrumbSeparator />
+                   <BreadcrumbItem>
+                     <BreadcrumbLink asChild>
+                       <Link to={`/${handle}`}>{handle}</Link>
+                     </BreadcrumbLink>
+                   </BreadcrumbItem>
+                 </>
+              )}
               <BreadcrumbSeparator />
-              
-              {post?.community ? (
-                <>
-                  <BreadcrumbItem>
-                    <BreadcrumbLink asChild>
-                      <Link to={`/c/${post.community}`} onClick={(e) => e.stopPropagation()}>
-                        {post.community}
-                      </Link>
-                    </BreadcrumbLink>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator />
-                </>
-              ) : post?.author && post.author.handle ? (
-                <>
-                  <BreadcrumbItem>
-                    <BreadcrumbLink asChild>
-                      <Link 
-                        to={`/u/${post.author.handle.split('.')[0]}`}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {post.author.handle.split('.')[0]}
-                      </Link>
-                    </BreadcrumbLink>
-                  </BreadcrumbItem>
-                  <BreadcrumbSeparator />
-                </>
-              ) : null}
-              
-              <BreadcrumbItem className="max-w-[200px] truncate">
-                <BreadcrumbPage className="truncate">{truncateText(getBestContentForDisplay(), 30)}</BreadcrumbPage>
+              <BreadcrumbItem>
+                <BreadcrumbPage>
+                  {truncateText(post.title || getPlainText(post.body) || post.code, isMobile ? 20 : 30)}
+                </BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
-        </ScrollArea>
+        </div>
       </div>
       
-      {post && (
-        <div className="mb-8">
-          <Post
-            username={post.author?.handle || (post.handle || '')}
-            avatar={post.author?.avatar || (post.avatar || '')}
-            community={post.community || undefined}
-            timeAgo={post.timeAgo || ''} 
-            content={post.body}
-            roarCount={post.upvotes}
-            commentCount={replyCount}
-            shareCount={0}
-            postCode={post.code}
-            roared={post.has_upvoted}
-            onRoar={handleRoar}
-            images={post.images?.filter(img => img !== 'https://dapps.co/dapps.png')}
-            isMirror={post.is_mirror === 1}
-            mirrorData={post.is_mirror === 1 ? {
-              quote: post.mirror_quote || '',
-              originalAuthor: post.original_author || '',
-              originalCommunity: post.original_community || '',
-              originalBody: post.original_body || '',
-              originalTimeAgo: post.original_created_on || '',
-              originalAvatar: post.original_author_avatar || '',
-              originalImages: post.original_images || [],
-              originalTitle: post.original_title || '',
-              originalPostCode: post.original_post_code || ''
-            } : undefined}
-            ipfs={post.ipfs}
-            disableNavigation={true}
-            hideComments={true}
-            isLoggedIn={isLoggedIn}
-            is_poll={post.is_poll || false}
-            poll_data={post.poll_data || null}
-          />
-        </div>
-      )}
+      <div className="mb-8">
+        <Post
+          username={post.author?.handle || post.handle || 'Unknown'}
+          community={post.community}
+          timeAgo={post.timeAgo}
+          content={post.body}
+          roarCount={post.upvotes || 0}
+          commentCount={replyCount}
+          shareCount={0}
+          images={post.images}
+          video={undefined}
+          disableNavigation={true}
+          postCode={post.code}
+          roared={post.has_upvoted}
+          onRoar={handleRoar}
+          isMirror={!!post.is_mirror}
+          mirrorData={mirrorDataForPost}
+          ipfs={post.ipfs}
+          avatar={post.author?.avatar || post.avatar}
+          hideComments={true}
+          isLoggedIn={isLoggedIn}
+          isAdmin={false}
+          isPinned={!!post.pinned}
+          is_poll={post.is_poll}
+          poll_data={post.poll_data}
+        />
+      </div>
       
       {post && isLoggedIn ? (
         <>

@@ -368,17 +368,17 @@ interface CreatePostServiceParams {
 export const createPost = async (params: CreatePostServiceParams): Promise<CreatePostResponse> => {
   try {
     const { body, community, media, is_poll, poll_options } = params;
-
+    
     console.log('Creating post with params:', params);
     
     const requestBody: any = {
       body: body.trim()
     };
-
+    
     if (community) {
       requestBody.community = community;
     }
-
+    
     if (media && media.length > 0) {
       requestBody.media = media.map(m => ({
         url: m.url,
@@ -395,22 +395,22 @@ export const createPost = async (params: CreatePostServiceParams): Promise<Creat
         imageUrl: opt.imageUrl
       }));
     }
-
+    
     console.log('Constructed request payload for /api/create_post:', JSON.stringify(requestBody));
-
+    
     const response = await fetch(`/api/create_post`, {
       method: 'POST',
       headers: createAuthHeaders(),
       body: JSON.stringify(requestBody),
       credentials: 'include'
     });
-
+    
     console.log(`Response status: ${response.status}`);
-
+    
     const contentType = response.headers.get("content-type");
     let data;
     if (contentType && contentType.indexOf("application/json") !== -1) {
-        data = await response.json();
+      data = await response.json();
     } else {
         const textResponse = await response.text();
         console.error('Non-JSON response from create_post:', textResponse);
@@ -419,7 +419,7 @@ export const createPost = async (params: CreatePostServiceParams): Promise<Creat
             data = JSON.parse(textResponse); 
         } catch (e) {
             // If it's not JSON and not a 2xx, it's an error
-            if (!response.ok) {
+      if (!response.ok) {
                 toast.error(`Failed to create post: ${textResponse || response.statusText}`);
                 return {
                     status: 'ERROR',
@@ -466,12 +466,12 @@ export const createPost = async (params: CreatePostServiceParams): Promise<Creat
       const errorText = data.message || JSON.stringify(data) || response.statusText;
       console.error('Failed to create post (HTTP error):', errorText);
       toast.error(`Failed to create post: ${errorText}`);
-      return {
-        status: 'ERROR',
+        return {
+          status: 'ERROR',
         message: `Error ${response.status}: ${errorText}`,
         communityName: '', 
         postCode: '' 
-      };
+        };
     }
   } catch (error) {
     console.error('Error creating post (catch block):', error);
