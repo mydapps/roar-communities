@@ -114,7 +114,10 @@ const EditProfilePage = () => {
           link: response.user.link || '',
           answer: response.user.answer || '',
         });
-        setAvatarCode(response.user.avatar_url || '');
+        const fetchedAvatarCode = response.user.avatar_url || '';
+        setAvatarCode(fetchedAvatarCode);
+        console.log('EditProfilePage: Profile fetched successfully. User:', response.user);
+        console.log('EditProfilePage: Initial avatarCode set to:', fetchedAvatarCode);
       } else {
         const message = (response as any).message || 'Failed to fetch profile';
       setError(message);
@@ -307,33 +310,47 @@ const EditProfilePage = () => {
   
   if (loading) {
     return (
-      <div className="container max-w-4xl mx-auto py-20 px-4">
-        <div className="flex flex-col items-center justify-center space-y-4">
-          <Loader2 className="h-10 w-10 animate-spin text-primary" />
-          <p className="text-lg font-medium">Loading your profile...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
   }
   
   if (error) {
     return (
-      <div className="container max-w-4xl mx-auto py-10 px-4">
-        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-6 text-center">
-          <h1 className="text-2xl font-bold text-destructive mb-4">Error</h1>
-          <p className="text-destructive/90 mb-4">{error}</p>
-          <Button variant="outline" onClick={() => navigate(-1)}>
-            Go Back
-          </Button>
-        </div>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-destructive/10 text-destructive-foreground p-4">
+        <X className="h-12 w-12 mb-4" />
+        <h2 className="text-2xl font-semibold mb-2">Error Loading Profile</h2>
+        <p className="text-center mb-4">{error}</p>
+        <Button onClick={fetchUserProfile} variant="destructive">
+          <RefreshCcw className="mr-2 h-4 w-4" /> Try Again
+        </Button>
       </div>
     );
   }
   
   if (!profile) {
-    return null; // Or some other placeholder/error state
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <p>No profile data found.</p>
+      </div>
+    );
   }
   
+  // Determine avatar source for rendering
+  console.log('EditProfilePage render: profile?.avatar_url =', profile?.avatar_url, ', avatarCode state =', avatarCode);
+  const currentAvatarIdentifier = avatarCode || profile?.avatar_url;
+  let avatarImgSrc;
+  if (currentAvatarIdentifier && currentAvatarIdentifier.startsWith('http')) {
+    avatarImgSrc = currentAvatarIdentifier; // It's already a full URL
+  } else if (currentAvatarIdentifier) {
+    // It's an identifier/code, construct the full URL
+    avatarImgSrc = `https://img.dapps.co/avatar/${currentAvatarIdentifier}.svg`;
+  } else {
+    avatarImgSrc = `https://img.dapps.co/avatar/default.svg`; // Fallback to default.svg
+  }
+  console.log('EditProfilePage render: Final AvatarImage src computed as:', avatarImgSrc);
+
   return (
     <>
       <Helmet>
@@ -341,8 +358,8 @@ const EditProfilePage = () => {
         <meta name="description" content={`Edit your Roar profile, ${profile.handle}. Update your avatar, background, bio, and more.`} />
       </Helmet>
       
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-background text-foreground">
-      <div className="container max-w-4xl mx-auto py-10 px-4">
+      <div className="min-h-screen bg-transparent text-foreground p-4 md:p-8">
+        <div className="container max-w-4xl mx-auto py-10 px-4">
           <div className="flex items-center mb-8">
             <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="mr-3">
               <ArrowLeft className="h-5 w-5" />
@@ -376,7 +393,7 @@ const EditProfilePage = () => {
                 <div className="w-24 h-24 relative group">
                   <Avatar className="w-24 h-24">
                     <AvatarImage 
-                            src={`https://img.dapps.co/avatar/${avatarCode || (profile?.avatar_url)}.svg`}
+                            src={avatarImgSrc}
                       alt={profile.handle} 
                     />
                     <AvatarFallback className="text-2xl font-semibold bg-gradient-to-br from-primary/90 to-primary/50 text-white">
