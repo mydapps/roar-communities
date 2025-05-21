@@ -222,6 +222,9 @@ export const UserPosts: React.FC<UserPostsProps> = ({ handle }) => {
               originalImages: post.original_images || [],
               originalTitle: post.original_title || ''
             } : undefined}
+            // Pass poll data
+            is_poll={post.is_poll}
+            poll_data={post.poll_data}
           />
         );
       })}

@@ -1,4 +1,5 @@
 import { createAuthHeaders } from './apiBase';
+import { PollData } from './postApi';
 
 // User profile interface
 export interface UserCommunity {
@@ -217,6 +218,9 @@ export interface UserPost {
   original_multiple_images?: number;
   original_images?: string[];
   original_has_video?: number;
+  // Poll-related fields
+  is_poll?: boolean;
+  poll_data?: PollData | null;
 }
 
 export interface UserPostsResponse {
@@ -254,6 +258,7 @@ export const getUserPosts = async (
     const data = await response.json();
     
     // Process the response to ensure mirror-related fields are properly formatted
+    // AND to map poll data if available
     if (data.success && data.posts) {
       data.posts = data.posts.map((post: any) => {
         return {
@@ -266,6 +271,10 @@ export const getUserPosts = async (
           original_image: typeof post.original_image === 'boolean' ? (post.original_image ? 1 : 0) : post.original_image,
           original_multiple_images: typeof post.original_multiple_images === 'boolean' ? (post.original_multiple_images ? 1 : 0) : post.original_multiple_images,
           original_has_video: typeof post.original_has_video === 'boolean' ? (post.original_has_video ? 1 : 0) : post.original_has_video,
+          
+          // Explicitly map poll data
+          is_poll: post.is_poll || post.isPoll || false, // Check for is_poll or isPoll, default to false
+          poll_data: post.poll_data || post.pollData || null // Check for poll_data or pollData, default to null
         };
       });
     }
