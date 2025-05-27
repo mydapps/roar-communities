@@ -6,6 +6,7 @@ import { shareToSocialMedia, SharePlatform } from '@/utils/shareUtils';
 import { useToast } from '@/hooks/use-toast';
 import { set as setNativeClipboard } from "webtonative/Clipboard";
 import { useDevice } from '@/components/providers/DeviceProvider';
+import sanitizeHtml from 'sanitize-html';
 
 interface ShareContentProps {
   username: string;
@@ -28,7 +29,7 @@ const truncateText = (text: string, maxLength: number = 100) => {
 export const ShareContent = ({ 
   username, 
   timeAgo, 
-  content, 
+  content,
   images, 
   video, 
   postCode,
@@ -48,17 +49,23 @@ export const ShareContent = ({
   
   const getShareUrl = () => {
     const baseUrl = window.location.origin;
-    if (community && postCode) {
-      return `${baseUrl}/c/${community.toLowerCase().replace(/\s+/g, '-')}/${postCode}`;
+    if (postCode) {
+      return `${baseUrl}/post/${postCode}`;
     }
-    return window.location.href;
+    console.warn("[ShareContent] postCode is missing, cannot generate a direct post URL.");
+    return baseUrl; 
   };
   
   const handleShare = async (platform: SharePlatform) => {
     setShareAnimating(true);
     const shareUrl = getShareUrl();
-    const shareTitle = `${formatUsername(username)}'s post on Lion's Roar`;
-    const shareText = truncateText(content, 100);
+    const shareTitle = `${formatUsername(username)}'s post on Roar Communities`;
+
+    const plainTextContent = sanitizeHtml(content, {
+      allowedTags: [],
+      allowedAttributes: {},
+    });
+    const shareText = truncateText(plainTextContent.trim(), 150);
     
     // --- Native Mobile App Clipboard Handling ---
     if (platform === 'copy' && isMobileApp === true) {
@@ -141,6 +148,12 @@ export const ShareContent = ({
     return `https://api.dicebear.com/7.x/personas/svg?seed=${username}`;
   };
   
+  // Prepare plain text for the preview within the share sheet
+  const plainTextForPreview = sanitizeHtml(content, {
+    allowedTags: [],
+    allowedAttributes: {},
+  });
+
   return (
     <>
       <div className="p-4 border-b">
@@ -155,7 +168,9 @@ export const ShareContent = ({
               <span className="text-muted-foreground text-sm mx-1">·</span>
               <span className="text-muted-foreground text-sm">{timeAgo}</span>
             </div>
-            <p className="text-sm mt-1">{truncateText(content, 150)}</p>
+            <p className="text-sm mt-1 break-words line-clamp-3">
+              {truncateText(plainTextForPreview.trim(), 150)}
+            </p>
           </div>
         </div>
         
