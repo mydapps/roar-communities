@@ -29,7 +29,7 @@ const truncateText = (text: string, maxLength: number = 100) => {
 export const ShareContent = ({ 
   username, 
   timeAgo, 
-  content,
+  content, 
   images, 
   video, 
   postCode,
@@ -153,7 +153,7 @@ export const ShareContent = ({
     allowedTags: [],
     allowedAttributes: {},
   });
-
+  
   return (
     <>
       <div className="p-4 border-b">

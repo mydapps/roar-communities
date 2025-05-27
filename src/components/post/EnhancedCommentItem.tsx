@@ -320,7 +320,7 @@ export const EnhancedCommentItem = ({
     { category: Categories.FLAGS, name: 'Flags' },
   ];
   // --- End Custom Emoji Config ---
-
+  
   const handleSubmitReply = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -565,30 +565,30 @@ export const EnhancedCommentItem = ({
               {uploadedMedia && (
                 <div className="mt-2">
                   <MediaPreview media={uploadedMedia} onRemove={removeMedia} />
-                </div>
+                    </div>
               )}
               {/* Container for media buttons and submit button */}
               <div className="flex items-center justify-between pt-2">
                 {/* Container for media icons + emoji icon */}
                 <div className="flex items-center space-x-1">
-                  <MediaUpload
-                    onMediaUploaded={handleMediaUploaded}
-                    acceptedTypes="image"
+                      <MediaUpload
+                        onMediaUploaded={handleMediaUploaded}
+                        acceptedTypes="image"
                     disabled={!!uploadedMedia || isSending}
-                  >
+                      >
                     <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700 h-8 w-8 disabled:opacity-50" disabled={!!uploadedMedia || isSending} title="Upload Image">
                       <ImageIcon className="h-4 w-4" />
-                    </Button>
-                  </MediaUpload>
-                  <MediaUpload
-                    onMediaUploaded={handleMediaUploaded}
-                    acceptedTypes="video"
+                        </Button>
+                      </MediaUpload>
+                      <MediaUpload
+                        onMediaUploaded={handleMediaUploaded}
+                        acceptedTypes="video"
                     disabled={!!uploadedMedia || isSending}
-                  >
+                      >
                     <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700 h-8 w-8 disabled:opacity-50" disabled={!!uploadedMedia || isSending} title="Upload Video">
                       <VideoIcon className="h-4 w-4" />
-                    </Button>
-                  </MediaUpload>
+                        </Button>
+                      </MediaUpload>
                   <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
                     <PopoverTrigger asChild>
                       <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700 h-8 w-8" disabled={isSending} title="Add Emoji">

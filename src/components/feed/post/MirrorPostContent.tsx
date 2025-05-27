@@ -30,7 +30,7 @@ export const MirrorPostContent = ({ mirrorData, onImageClick }: MirrorPostConten
   const processedOriginalHtmlBody = useMemo(() => {
     return processRichTextForDisplayingPosts(mirrorData.originalBody);
   }, [mirrorData.originalBody]);
-
+  
   // Media from mirrorData.originalImages (e.g., attachments) will be handled by MediaCarousel.
   // Media embedded in markdown in originalBody is now rendered by processTextContent.
   const mediaForCarousel = useMemo(() => {

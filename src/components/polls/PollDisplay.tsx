@@ -123,13 +123,13 @@ export const PollDisplay: React.FC<PollDisplayProps> = ({
                 <div className="flex items-center justify-between flex-grow">
                   <span className={cn(
                     "font-semibold break-words",
-                    showResults && isChosenOption ? "text-primary-foreground dark:text-white" : "text-card-foreground dark:text-slate-100",
+                    showResults && isChosenOption ? "text-black" : "text-card-foreground dark:text-slate-100",
                     option.imageUrl ? "text-sm sm:text-base" : "text-base sm:text-lg"
                   )}>
                     {option.text}
                   </span>
                   {showResults && isChosenOption && (
-                     <CheckCircle2 className="h-5 w-5 text-primary-foreground dark:text-white ml-2 flex-shrink-0" />
+                     <CheckCircle2 className="h-5 w-5 text-black ml-2 flex-shrink-0" />
                   )}
                 </div>
 
@@ -143,7 +143,7 @@ export const PollDisplay: React.FC<PollDisplayProps> = ({
                     </span>
                     <span className={cn(
                       "font-bold text-lg sm:text-xl",
-                      isChosenOption ? "text-primary-foreground dark:text-white" : "text-card-foreground dark:text-slate-100"
+                      isChosenOption ? "text-black" : "text-card-foreground dark:text-slate-100"
                     )}>
                       {displayPercentage}%
                     </span>

@@ -556,7 +556,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
     // This regex handles <br>, <br/>, <br />, and whitespace between them.
     const brRegex = /(<br\s*\/?>\s*){3,}/gi;
     currentHtmlContent = currentHtmlContent.replace(brRegex, '<br><br>');
-
+    
     if (!isPollMode && !currentTextContent.trim() && uploadedMedia.length === 0) {
       setError('Please enter some content or add media.');
       return;

@@ -186,7 +186,7 @@ export const EnhancedCommentsSection = ({
       if (response.success && response.reply_id) {
         const newReply: CommentReply = {
           id: response.reply_id,
-          uid: 0, 
+          uid: 0,
           handle: response.handle || localStorage.getItem('dapps_user_handle') || 'you',
           avatar_url: response.avatar_url || localStorage.getItem('dapps_user_avatar') || 'default',
           content: finalContent,
@@ -538,72 +538,72 @@ export const EnhancedCommentsSection = ({
     <div className="space-y-8">
       <div className="space-y-4">
         <h2 className="text-lg font-medium">Comments ({replyCount})</h2>
-        <form onSubmit={handleSubmitComment} className="space-y-4">
-          <div className="flex gap-3">
-            <Avatar className="h-10 w-10 mt-1">
-              <AvatarImage 
-                src={`https://img.dapps.co/avatar/${localStorage.getItem('dapps_user_avatar') || 'default'}.svg`} 
-              />
-              <AvatarFallback>U</AvatarFallback>
-            </Avatar>
-            <div className="flex-1 space-y-2 relative">
-              <Textarea
-                ref={newCommentInputRef}
-                placeholder="Join the conversation..."
-                value={newComment}
-                onChange={handleNewCommentContentChange}
-                rows={3}
-                className="resize-none"
-                onKeyDown={handleKeyDown}
-                onBlur={(e) => {
-                  if (suggestionsContainerRef.current && 
-                      !suggestionsContainerRef.current.contains(e.relatedTarget as Node | null)) {
-                    setShowSuggestions(false); 
-                    setHighlightedIndex(-1);
-                  }
-                }}
-                onFocus={(e) => {
-                  const triggerInfo = getTriggerInfo(e.target);
-                  if (triggerInfo && triggerInfo.query === mentionQuery && mentionType) {
-                     if(suggestions.length > 0) setShowSuggestions(true);
-                  }
-                }}
-              />
-              {showSuggestions && (
-                <div 
-                  ref={suggestionsContainerRef}
-                  className="absolute z-10 w-full mt-1 md:w-auto md:max-w-xs"
-                >
-                  <MentionSuggestionsList
-                    suggestions={suggestions}
-                    isLoading={mentionLoading}
-                    onSelect={handleSuggestionSelect}
-                    mentionType={mentionType}
-                    highlightedIndex={highlightedIndex}
-                    onItemHover={setHighlightedIndex}
-                  />
-                </div>
-              )}
+          <form onSubmit={handleSubmitComment} className="space-y-4">
+            <div className="flex gap-3">
+              <Avatar className="h-10 w-10 mt-1">
+                <AvatarImage 
+                  src={`https://img.dapps.co/avatar/${localStorage.getItem('dapps_user_avatar') || 'default'}.svg`} 
+                />
+                <AvatarFallback>U</AvatarFallback>
+              </Avatar>
+              <div className="flex-1 space-y-2 relative">
+                <Textarea
+                  ref={newCommentInputRef}
+                  placeholder="Join the conversation..."
+                  value={newComment}
+                  onChange={handleNewCommentContentChange}
+                  rows={3}
+                  className="resize-none"
+                  onKeyDown={handleKeyDown}
+                  onBlur={(e) => {
+                    if (suggestionsContainerRef.current && 
+                        !suggestionsContainerRef.current.contains(e.relatedTarget as Node | null)) {
+                      setShowSuggestions(false); 
+                      setHighlightedIndex(-1);
+                    }
+                  }}
+                  onFocus={(e) => {
+                    const triggerInfo = getTriggerInfo(e.target);
+                    if (triggerInfo && triggerInfo.query === mentionQuery && mentionType) {
+                       if(suggestions.length > 0) setShowSuggestions(true);
+                    }
+                  }}
+                />
+                {showSuggestions && (
+                  <div 
+                    ref={suggestionsContainerRef}
+                    className="absolute z-10 w-full mt-1 md:w-auto md:max-w-xs"
+                  >
+                    <MentionSuggestionsList
+                      suggestions={suggestions}
+                      isLoading={mentionLoading}
+                      onSelect={handleSuggestionSelect}
+                      mentionType={mentionType}
+                      highlightedIndex={highlightedIndex}
+                      onItemHover={setHighlightedIndex}
+                    />
+                  </div>
+                )}
               <div className="flex items-center justify-between pt-2">
                 <div className="flex items-center space-x-2">
-                  <MediaUpload
-                    onMediaUploaded={handleMediaUploaded}
-                    acceptedTypes="image"
+                        <MediaUpload
+                          onMediaUploaded={handleMediaUploaded}
+                          acceptedTypes="image"
                     disabled={!!uploadedMedia || submitting}
-                  >
+                        >
                     <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700" disabled={!!uploadedMedia || submitting} title="Upload Image">
                       <ImageIcon className="h-5 w-5" />
-                    </Button>
-                  </MediaUpload>
-                  <MediaUpload
-                    onMediaUploaded={handleMediaUploaded}
-                    acceptedTypes="video"
+        </Button>
+                        </MediaUpload>
+                        <MediaUpload
+                          onMediaUploaded={handleMediaUploaded}
+                          acceptedTypes="video"
                     disabled={!!uploadedMedia || submitting}
-                  >
+                        >
                     <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700" disabled={!!uploadedMedia || submitting} title="Upload Video">
                       <VideoIcon className="h-5 w-5" />
-                    </Button>
-                  </MediaUpload>
+            </Button>
+                        </MediaUpload>
                   <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
                     <PopoverTrigger asChild>
                       <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700" disabled={submitting} title="Add Emoji">
@@ -621,69 +621,69 @@ export const EnhancedCommentsSection = ({
                       />
                     </PopoverContent>
                   </Popover>
-                </div>
-                <Button 
-                  type="submit" 
-                  className="text-xs h-8 gap-1.5"
-                  disabled={submitting || (!newComment.trim() && !uploadedMedia)}
+                  </div>
+              <Button 
+                type="submit" 
+                    className="text-xs h-8 gap-1.5"
+                    disabled={submitting || (!newComment.trim() && !uploadedMedia)}
                   onClick={handleSubmitComment}
-                >
-                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              >
+                    {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                   Reply
-                </Button>
+              </Button>
               </div>
               {uploadedMedia && (
                 <div className="mt-3">
                   <MediaPreview media={uploadedMedia} onRemove={removeMedia} />
                 </div>
               )}
+              </div>
             </div>
-          </div>
-        </form>
-        {loading && replies.length === 0 && (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        )}
-        {!loading && replies.length === 0 && (
-          <div className="text-center py-8 bg-muted/20 rounded-lg border border-border/40">
-            <p className="text-muted-foreground">No comments yet. Be the first to comment!</p>
-          </div>
-        )}
-        {replies.length > 0 && (
-          <>
-            <div className="flex items-center justify-between pt-4">
-              <h3 className="text-sm font-medium">Recent Comments</h3>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={fetchComments} 
-                disabled={loading}
-                className="h-8 text-xs gap-1"
-              >
-                <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
-                Refresh
-              </Button>
+          </form>
+          {loading && replies.length === 0 && (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
-            <div className="space-y-6 divide-y divide-border/20">
-              {replies.map(reply => (
-                <div key={reply.id} className="pt-6 first:pt-0">
-                  <EnhancedCommentItem 
-                    comment={reply}
-                    postAuthorHandle={postAuthorHandle}
-                    onMeowChange={handleMeowChange}
-                    onReply={handleReplyToComment}
-                    isAuthorReplying={reply.handle === postAuthorHandle}
-                    isMobile={isMobile}
-                    onOpenMobileReply={(id, handle, avatar, content) => openReplyDrawer(id, handle, avatar, content, false)}
-                    onInitiateMention={handleInitiateMentionInNewComment}
-                  />
-                </div>
-              ))}
+          )}
+          {!loading && replies.length === 0 && (
+            <div className="text-center py-8 bg-muted/20 rounded-lg border border-border/40">
+              <p className="text-muted-foreground">No comments yet. Be the first to comment!</p>
             </div>
-          </>
-        )}
-      </div>
+          )}
+          {replies.length > 0 && (
+            <>
+              <div className="flex items-center justify-between pt-4">
+                <h3 className="text-sm font-medium">Recent Comments</h3>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={fetchComments} 
+                  disabled={loading}
+                  className="h-8 text-xs gap-1"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+        </div>
+              <div className="space-y-6 divide-y divide-border/20">
+          {replies.map(reply => (
+            <div key={reply.id} className="pt-6 first:pt-0">
+              <EnhancedCommentItem 
+                comment={reply}
+                postAuthorHandle={postAuthorHandle}
+                onMeowChange={handleMeowChange}
+                onReply={handleReplyToComment}
+                      isAuthorReplying={reply.handle === postAuthorHandle}
+                      isMobile={isMobile}
+                      onOpenMobileReply={(id, handle, avatar, content) => openReplyDrawer(id, handle, avatar, content, false)}
+                      onInitiateMention={handleInitiateMentionInNewComment}
+              />
+            </div>
+          ))}
+        </div>
+            </>
+          )}
+        </div>
       {isMobile && (
         <MobileReplyDrawer 
           open={drawerOpen}
