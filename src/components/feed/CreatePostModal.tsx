@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter, DrawerClose } from '@/components/ui/drawer';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { XIcon, SendIcon, ImageIcon, VideoIcon, UsersIcon, BoldIcon, ItalicIcon, UnderlineIcon, Loader2, BarChartBigIcon, Trash2Icon, ImagePlusIcon, AlertTriangleIcon } from 'lucide-react';
+import { XIcon, SendIcon, ImageIcon, VideoIcon, UsersIcon, BoldIcon, ItalicIcon, UnderlineIcon, Loader2, BarChartBigIcon, Trash2Icon, ImagePlusIcon, AlertTriangleIcon, Smile } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { CommunitySelector } from './CommunitySelector';
@@ -15,6 +15,12 @@ import { RichTextEditor } from '@/components/editor/RichTextEditor';
 import { Editor } from '@tiptap/react';
 import { Input } from '@/components/ui/input';
 import { v4 as uuidv4 } from 'uuid';
+import EmojiPicker, { EmojiClickData, EmojiStyle, Categories } from 'emoji-picker-react';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 // --- NEW IMPORTS FOR MENTIONS ---
 import { MentionSuggestionsList, SuggestionItem } from '@/components/mentions/MentionSuggestionsList';
@@ -134,6 +140,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const editorInstanceRef = useRef<Editor | null>(null);
   const [isPasting, setIsPasting] = useState(false);
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
 
   // --- POLL STATE ---
   const [isPollMode, setIsPollMode] = useState(false);
@@ -155,6 +162,41 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   });
   const suggestionsListRef = useRef<HTMLDivElement>(null);
   // --- END NEW STATE FOR MENTIONS ---
+
+  // --- Start Emoji Config ---
+  const customEmojisConfig = [
+    { id: 'angry', names: ['angry'], imgUrl: '/emojis/angry.png' },
+    { id: 'bitcoin', names: ['bitcoin'], imgUrl: '/emojis/bitcoin.png' },
+    { id: 'cool', names: ['cool'], imgUrl: '/emojis/cool.png' },
+    { id: 'ethereum', names: ['ethereum'], imgUrl: '/emojis/ethereum.png' },
+    { id: 'happy', names: ['happy'], imgUrl: '/emojis/happy.png' },
+    { id: 'mindblown', names: ['mindblown'], imgUrl: '/emojis/mindblown.png' },
+    { id: 'party', names: ['party'], imgUrl: '/emojis/party.png' },
+    { id: 'sad', names: ['sad'], imgUrl: '/emojis/sad.png' },
+    { id: 'scared', names: ['scared'], imgUrl: '/emojis/scared.png' },
+    { id: 'sleepy', names: ['sleepy'], imgUrl: '/emojis/sleepy.png' },
+    { id: 'solana', names: ['solana'], imgUrl: '/emojis/solana.png' },
+    { id: 'thinking', names: ['thinking'], imgUrl: '/emojis/thinking.png' },
+    { id: 'angelic', names: ['angelic'], imgUrl: '/emojis/angelic.png' },
+    { id: 'devilish', names: ['devilish'], imgUrl: '/emojis/devilish.png' },
+    { id: 'inlove', names: ['inlove'], imgUrl: '/emojis/inlove.png' },
+    { id: 'pleading', names: ['pleading'], imgUrl: '/emojis/pleading.png' },
+    { id: 'surprised', names: ['surprised'], imgUrl: '/emojis/surprised.png' },
+  ];
+
+  const emojiPickerCategoryConfig = [
+    { category: Categories.SUGGESTED, name: 'Suggested' },
+    { category: Categories.CUSTOM, name: 'Roar Emojis' },
+    { category: Categories.SMILEYS_PEOPLE, name: 'Smileys & People' },
+    { category: Categories.ANIMALS_NATURE, name: 'Animals & Nature' },
+    { category: Categories.FOOD_DRINK, name: 'Food & Drink' },
+    { category: Categories.TRAVEL_PLACES, name: 'Travel & Places' },
+    { category: Categories.ACTIVITIES, name: 'Activities' },
+    { category: Categories.OBJECTS, name: 'Objects' },
+    { category: Categories.SYMBOLS, name: 'Symbols' },
+    { category: Categories.FLAGS, name: 'Flags' },
+  ];
+  // --- End Emoji Config ---
 
   useEffect(() => {
     if (open) {
@@ -580,6 +622,19 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const toggleItalic = () => editorInstanceRef.current?.chain().focus().toggleItalic().run();
   const toggleUnderline = () => editorInstanceRef.current?.chain().focus().toggleUnderline().run();
 
+  const onEmojiClickCreatePost = (emojiData: EmojiClickData) => {
+    if (editorInstanceRef.current) {
+      let emojiToInsert = '';
+      if (emojiData.isCustom) {
+        emojiToInsert = `:${emojiData.emoji}:`; 
+      } else {
+        emojiToInsert = emojiData.emoji;
+      }
+      editorInstanceRef.current.chain().focus().insertContent(emojiToInsert).run();
+      setIsEmojiPickerOpen(false);
+    }
+  };
+
   const renderFormattingToolbar = () => (
     <div className="flex items-center gap-1 p-2 border-b border-border bg-background rounded-t-md">
       <Button 
@@ -606,6 +661,29 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
       >
         <UnderlineIcon className="h-4 w-4" />
       </Button>
+      {/* Emoji Picker Button */}
+      <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
+        <PopoverTrigger asChild>
+          <Button 
+            variant='ghost' // Keep consistent with other toolbar buttons
+            size="icon" 
+            onClick={() => setIsEmojiPickerOpen(prev => !prev)} // Toggle open state
+            title="Add Emoji"
+          >
+            <Smile className="h-4 w-4" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0 border-0 z-[100]" side="top" align="start">
+          <EmojiPicker
+            onEmojiClick={onEmojiClickCreatePost}
+            autoFocusSearch={false}
+            emojiStyle={EmojiStyle.NATIVE}
+            height={350}
+            customEmojis={customEmojisConfig}
+            categories={emojiPickerCategoryConfig}
+          />
+        </PopoverContent>
+      </Popover>
     </div>
   );
 

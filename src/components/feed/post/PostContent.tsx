@@ -2,10 +2,10 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { CardContent } from '@/components/ui/card';
 import { MediaCarousel } from './MediaCarousel';
 import { MirrorPostContent } from './MirrorPostContent';
-import { sanitizeHtml } from '@/utils/sanitizeHtml';
 import { LinkPreviewCard, LinkPreviewData } from './LinkPreviewCard';
 import { YoutubeEmbed } from './YoutubeEmbed';
 import { Loader2 } from 'lucide-react';
+import { processRichTextForDisplayingPosts } from '@/utils/textFormatting';
 // Link component is not used if we are generating <a> tags directly in the string.
 // import { Link } from 'react-router-dom'; 
 
@@ -75,10 +75,7 @@ export const PostContent: React.FC<PostContentProps> = ({
   const [previewError, setPreviewError] = useState<string | null>(null);
   // --- END STATE ---
 
-  // Determine the text that might contain a quote for a mirror, or the main content for a regular post.
-  // For mirrors, `content` prop is the mirror's own body/quote.
-  // For regular posts, `content` is the post body.
-  const contentToProcessForLinks = content; 
+  const contentToProcess = content; // Use the main content prop
 
   useEffect(() => {
     setFirstUrl(null);
@@ -87,9 +84,9 @@ export const PostContent: React.FC<PostContentProps> = ({
     setIsLoadingPreview(false);
     setPreviewError(null);
 
-    if (contentToProcessForLinks) {
+    if (contentToProcess) {
       const urlRegex = /\b(?:https?:\/\/|www\.)[^\s<>()"]*[^\s<>()"\.,!?:;']/i;
-      const match = contentToProcessForLinks.match(urlRegex);
+      const match = contentToProcess.match(urlRegex);
       if (match && match[0]) {
         let detectedUrl = match[0];
         if (detectedUrl.startsWith('www.') && !detectedUrl.startsWith('http')) {
@@ -98,7 +95,7 @@ export const PostContent: React.FC<PostContentProps> = ({
         setFirstUrl(detectedUrl);
       }
     }
-  }, [contentToProcessForLinks]);
+  }, [contentToProcess]);
 
   useEffect(() => {
     if (!firstUrl) {
@@ -165,69 +162,15 @@ export const PostContent: React.FC<PostContentProps> = ({
 
   }, [firstUrl]); // Re-run when firstUrl changes
 
-  // Regex to find: 
-  // 1. URLs (absolute with http/https or starting with www)
-  // 2. User mentions (@username or @username.suffix) NOT preceded by URL-like characters or within an email-like structure.
-  // 3. Community mentions (/c/communityname) NOT preceded by URL-like characters.
-  // 4. Email addresses
-  const MENTION_OR_URL_REGEX = new RegExp(
-    '(\\b(?:https?:\/\/|www\\.)[^\\s<>()\"]*[^\\s<>()\"\\.,!?:;\'])' + // Group 1: Full URL (improved, includes www, excludes trailing punctuation, handles parentheses better)
-    '|(?<![\\w\\/@\\.])(@([a-zA-Z0-9_\\-]+(?:\\.[a-zA-Z0-9_\\-]+)*))' + // Group 2 for full @mention, Group 3 for username part
-    '|(?<![\\w\\/])(\\/c\\/([a-zA-Z0-9_\\-]+))' + // Group 4 for full /c/mention, Group 5 for community name part
-    '|(\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b)', // Group 6: Email addresses
-    'g'
-  );
-  
-  // Using replace with a function to build the new string with segments
-  const initialSanitizedContent = sanitizeHtml(contentToProcessForLinks);
-  let finalHtml = '';
-  let lastIndex = 0;
-
-  initialSanitizedContent.replace(MENTION_OR_URL_REGEX, (match, 
-    url, userMentionFull, _userMentionInner, communityMentionFull, _communityMentionInner, email, offset
-  ) => {
-    finalHtml += initialSanitizedContent.substring(lastIndex, offset);
-
-    if (url) {
-      let linkHref = url;
-      // Prepend http:// if URL starts with www. and doesn't have a scheme
-      if (url.startsWith('www.') && !url.startsWith('http://') && !url.startsWith('https://')) {
-        linkHref = 'http://' + url;
-      }
-
-      // Append loadIn=defaultBrowser parameter
-      if (linkHref.includes('?')) {
-        linkHref += '&loadIn=defaultBrowser';
-      } else {
-        linkHref += '?loadIn=defaultBrowser';
-      }
-      finalHtml += `<a href="${linkHref}" target="_blank" rel="noopener noreferrer ugc" class="text-primary hover:underline">${url}</a>`;
-    } else if (email) {
-      // If it's an email, just append it as is (or mailto: link if desired, but problem statement was about @ in URLs vs mentions)
-      // For now, rendering as plain text to prevent @ in email being a user link.
-      finalHtml += email;
-    } else if (userMentionFull) {
-      const usernameForUrl = userMentionFull.substring(1).split('.')[0]; // Remove '@' and .suffix for URL
-      finalHtml += `<a href="/u/${usernameForUrl}" class="text-primary hover:underline">${userMentionFull}</a>`;
-    } else if (communityMentionFull) {
-      const communityName = communityMentionFull.substring(3); // Remove '/c/'
-      finalHtml += `<a href="/c/${communityName}" class="text-primary hover:underline">${communityMentionFull}</a>`;
-    }
-    
-    lastIndex = offset + match.length;
-    return match; // Necessary for .replace() with a function, but we build finalHtml manually
-  });
-
-  // Append any remaining text after the last match
-  finalHtml += initialSanitizedContent.substring(lastIndex);
+  const processedHtmlBody = processRichTextForDisplayingPosts(contentToProcess);
 
   return (
     <CardContent className="pb-3">
       {/* Render the processed quote (mirror's own body) or regular post body */}
-      {finalHtml && (
+      {processedHtmlBody && (
         <div 
           className="text-sm mt-2 break-words prose prose-sm max-w-none dark:prose-invert prose-p:my-2 prose-strong:font-semibold prose-em:italic"
-          dangerouslySetInnerHTML={{ __html: finalHtml }}
+          dangerouslySetInnerHTML={{ __html: processedHtmlBody }}
         />
       )}
       

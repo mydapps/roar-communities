@@ -1,4 +1,5 @@
 import React from 'react';
+import sanitizeHtml from 'sanitize-html';
 
 /**
  * Process text content to convert mentions, community references, URLs, and media markdown to interactive elements
@@ -83,6 +84,81 @@ export const processTextContent = (content: string): React.ReactNode => {
       return null;
     }
   });
+};
+
+// --- NEW: List of custom emojis for processing ---
+const CUSTOM_EMOJI_LIST: { name: string; url: string }[] = [
+  { name: 'angry', url: '/emojis/angry.png' },
+  { name: 'bitcoin', url: '/emojis/bitcoin.png' },
+  { name: 'cool', url: '/emojis/cool.png' },
+  { name: 'ethereum', url: '/emojis/ethereum.png' },
+  { name: 'happy', url: '/emojis/happy.png' },
+  { name: 'mindblown', url: '/emojis/mindblown.png' },
+  { name: 'party', url: '/emojis/party.png' },
+  { name: 'sad', url: '/emojis/sad.png' },
+  { name: 'scared', url: '/emojis/scared.png' },
+  { name: 'sleepy', url: '/emojis/sleepy.png' },
+  { name: 'solana', url: '/emojis/solana.png' },
+  { name: 'thinking', url: '/emojis/thinking.png' },
+  { name: 'angelic', url: '/emojis/angelic.png' },
+  { name: 'devilish', url: '/emojis/devilish.png' },
+  { name: 'inlove', url: '/emojis/inlove.png' },
+  { name: 'pleading', url: '/emojis/pleading.png' },
+  { name: 'surprised', url: '/emojis/surprised.png' },
+];
+
+// --- NEW: Sanitization options for rich post content ---
+const POST_SANITIZATION_OPTIONS: sanitizeHtml.IOptions = {
+  allowedTags: [
+    'p', 'br', 'strong', 'em', 'u', 'b', 'i', 'a', 'ul', 'ol', 'li', 'blockquote', 'span',
+    'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 
+    'img' 
+  ],
+  allowedAttributes: {
+    'a': ['href', 'target', 'rel', 'class'],
+    'span': ['class'], 
+    'img': ['src', 'alt', 'class', 'style', 'width', 'height'],
+    'p': ['class'], 'ul': ['class'], 'ol': ['class'], 'li': ['class'], 'blockquote': ['class'],
+    'strong': ['class'], 'em': ['class'], 'u': ['class'], 'b': ['class'], 'i': ['class'],
+    'h1': ['class'], 'h2': ['class'], 'h3': ['class'], 'h4': ['class'], 'h5': ['class'], 'h6': ['class'],
+  },
+  exclusiveFilter: function(frame) {
+    if (frame.tag === 'img') {
+        const src = frame.attribs.src;
+        if (src && (src.startsWith('javascript:') || src.startsWith('data:'))) {
+            return true; // Remove the tag
+        }
+        if (src && src.startsWith('/emojis/')) {
+            return false; // Keep our emoji images
+        }
+        // For other images that Tiptap might embed (e.g., if it allows image uploads directly in editor without our MediaUpload)
+        // We might want to ensure they are from allowed domains or remove them if source is suspicious.
+        // For now, this filter primarily ensures safety of our emojis and blocks obviously malicious src.
+        // If Tiptap itself embeds images from other sources and they are already sanitized/trusted, this might be okay.
+        // If Tiptap just puts any URL, then we should be more strict here or ensure Tiptap is configured not to allow arbitrary image URLs.
+        // Example: if (src && !src.startsWith('https://your-trusted-cdn.com')) return true;
+    }
+    return false; 
+  }
+};
+
+// --- NEW: Function to process rich HTML content for posts ---
+export const processRichTextForDisplayingPosts = (htmlContent: string | null | undefined): string => {
+  if (!htmlContent || typeof htmlContent !== 'string') return '';
+
+  let sanitizedContent = sanitizeHtml(htmlContent, POST_SANITIZATION_OPTIONS);
+
+  const emojiCodeRegex = /(?<!<[^>]{0,256})(?<![a-zA-Z0-9]):([a-zA-Z0-9_]+?):/g;
+  
+sanitizedContent = sanitizedContent.replace(emojiCodeRegex, (match, emojiId) => {
+    const customEmoji = CUSTOM_EMOJI_LIST.find(e => e.name === emojiId);
+    if (customEmoji) {
+      return `<img src="${customEmoji.url}" alt=":${emojiId}:" class="inline-block h-5 w-5 align-middle mx-px" />`;
+    } 
+    return match; 
+  });
+
+  return sanitizedContent;
 };
 
 /**
@@ -193,17 +269,20 @@ const processTextPart = (text: string, key: number): React.ReactNode => {
       );
     } else if (type === 'emoji') {
       const emojiId = match[1];
-      result.push(
-        <img 
-          key={`${key}-${matchIndex}`}
-          src={`/emojis/${emojiId}.png`}
-          alt={emojiId}
-          className="inline-block h-5 w-5 mx-0.5 align-middle"
-          onError={(e) => {
-            (e.target as HTMLImageElement).style.display = 'none';
-          }}
-        />
-      );
+      const customEmoji = CUSTOM_EMOJI_LIST.find(e => e.name === emojiId);
+      if (customEmoji) {
+        result.push(
+          <img 
+            key={`${key}-${matchIndex}`}
+            src={customEmoji.url}
+            alt={`:${emojiId}:`} 
+            className="inline-block h-5 w-5 align-middle mx-px"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          />
+        );
+      } else {
+        result.push(<span key={`${key}-${matchIndex}`}>{matchText}</span>);
+      }
     } else if (type === 'url') {
       // Skip URLs that are part of image markdown
       if (!text.substring(Math.max(0, matchIndex - 5), matchIndex).includes('](')) {
