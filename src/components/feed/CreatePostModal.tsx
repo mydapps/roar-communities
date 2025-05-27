@@ -549,9 +549,14 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   // --- END POLL LOGIC FUNCTIONS ---
 
   const handleSubmit = async () => {
-    const currentHtmlContent = editorInstanceRef.current?.getHTML() || '';
+    let currentHtmlContent = editorInstanceRef.current?.getHTML() || '';
     const currentTextContent = editorInstanceRef.current?.getText() || '';
     
+    // Normalize consecutive <br> tags: replace 3 or more with exactly 2 <br> tags.
+    // This regex handles <br>, <br/>, <br />, and whitespace between them.
+    const brRegex = /(<br\s*\/?>\s*){3,}/gi;
+    currentHtmlContent = currentHtmlContent.replace(brRegex, '<br><br>');
+
     if (!isPollMode && !currentTextContent.trim() && uploadedMedia.length === 0) {
       setError('Please enter some content or add media.');
       return;
@@ -597,13 +602,12 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
       };
     }
     
-    console.log('Submitting post payload:', payload); // Added console log for debugging
+    console.log('Submitting post payload:', payload); 
 
     try {
       const success = await onPostSubmit(payload);
       if (success) {
-        onOpenChange(false); // Close modal on successful submission
-        // Reset states for next time (though useEffect on 'open' also does this)
+        onOpenChange(false); 
         setContent('');
         if(editorInstanceRef.current) editorInstanceRef.current.commands.clearContent();
         setUploadedMedia([]);
@@ -612,8 +616,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
         setPollOptions([]);
         setPollError(null);
       } else {
-        // Error handling might be done by onPostSubmit or here if it returns a specific error signal
-        // setError('Failed to create post. Please try again.'); // Generic error if not more specific
+        // setError('Failed to create post. Please try again.'); 
       }
     } catch (submissionError: any) {
       console.error('Post submission error:', submissionError);
