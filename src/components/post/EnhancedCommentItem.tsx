@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Cat, Send, Loader2, ImageIcon, VideoIcon } from 'lucide-react';
+import { Cat, Send, Loader2, ImageIcon, VideoIcon, Smile } from 'lucide-react';
 import { CommentReply } from '@/utils/commentApi';
 import { Link } from 'react-router-dom';
 import { processTextContent } from '@/utils/textFormatting';
@@ -12,6 +12,12 @@ import { MentionSuggestionsList, SuggestionItem } from '@/components/mentions/Me
 import { searchUsers, searchCommunities, SearchUserItem, SearchCommunityItem } from '@/utils/searchApi';
 import { debounce } from 'lodash';
 import { sanitizeHtml } from '@/utils/sanitizeHtml';
+import EmojiPicker, { EmojiClickData, EmojiStyle, Categories } from 'emoji-picker-react';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface EnhancedCommentItemProps {
   comment: CommentReply;
@@ -59,6 +65,8 @@ export const EnhancedCommentItem = ({
   const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
   const suggestionsContainerRef = useRef<HTMLDivElement>(null);
   // --- End Mention State ---
+  
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   
   const isPostAuthor = comment.handle === postAuthorHandle;
   
@@ -278,6 +286,41 @@ export const EnhancedCommentItem = ({
   };
   // --- End Mention Logic for Replies ---
   
+  // --- Custom Emoji Config (can be moved to a shared util if used in more places) ---
+  const customEmojisConfig = [
+    { id: 'angry', names: ['angry'], imgUrl: '/emojis/angry.png' },
+    { id: 'bitcoin', names: ['bitcoin'], imgUrl: '/emojis/bitcoin.png' },
+    { id: 'cool', names: ['cool'], imgUrl: '/emojis/cool.png' },
+    { id: 'ethereum', names: ['ethereum'], imgUrl: '/emojis/ethereum.png' },
+    { id: 'happy', names: ['happy'], imgUrl: '/emojis/happy.png' },
+    { id: 'mindblown', names: ['mindblown'], imgUrl: '/emojis/mindblown.png' },
+    { id: 'party', names: ['party'], imgUrl: '/emojis/party.png' },
+    { id: 'sad', names: ['sad'], imgUrl: '/emojis/sad.png' },
+    { id: 'scared', names: ['scared'], imgUrl: '/emojis/scared.png' },
+    { id: 'sleepy', names: ['sleepy'], imgUrl: '/emojis/sleepy.png' },
+    { id: 'solana', names: ['solana'], imgUrl: '/emojis/solana.png' },
+    { id: 'thinking', names: ['thinking'], imgUrl: '/emojis/thinking.png' },
+    { id: 'angelic', names: ['angelic'], imgUrl: '/emojis/angelic.png' },
+    { id: 'devilish', names: ['devilish'], imgUrl: '/emojis/devilish.png' },
+    { id: 'inlove', names: ['inlove'], imgUrl: '/emojis/inlove.png' },
+    { id: 'pleading', names: ['pleading'], imgUrl: '/emojis/pleading.png' },
+    { id: 'surprised', names: ['surprised'], imgUrl: '/emojis/surprised.png' },
+  ];
+
+  const emojiPickerCategoryConfig = [
+    { category: Categories.SUGGESTED, name: 'Suggested' },
+    { category: Categories.CUSTOM, name: 'Roar Emojis' },
+    { category: Categories.SMILEYS_PEOPLE, name: 'Smileys & People' },
+    { category: Categories.ANIMALS_NATURE, name: 'Animals & Nature' },
+    { category: Categories.FOOD_DRINK, name: 'Food & Drink' },
+    { category: Categories.TRAVEL_PLACES, name: 'Travel & Places' },
+    { category: Categories.ACTIVITIES, name: 'Activities' },
+    { category: Categories.OBJECTS, name: 'Objects' },
+    { category: Categories.SYMBOLS, name: 'Symbols' },
+    { category: Categories.FLAGS, name: 'Flags' },
+  ];
+  // --- End Custom Emoji Config ---
+
   const handleSubmitReply = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -377,6 +420,33 @@ export const EnhancedCommentItem = ({
       } else {
         console.log("Username clicked, parent handler (onInitiateMention) not provided.");
       }
+    }
+  };
+  
+  const onEmojiClickReply = (emojiData: EmojiClickData) => {
+    if (replyInputRef.current) {
+      const textarea = replyInputRef.current;
+      const { selectionStart, selectionEnd } = textarea;
+      const text = textarea.value;
+      let emojiToInsert = '';
+      if (emojiData.isCustom) {
+        emojiToInsert = `:${emojiData.emoji}:`; 
+      } else {
+        emojiToInsert = emojiData.emoji;
+      }
+      const newText =
+        text.substring(0, selectionStart) +
+        emojiToInsert +
+        text.substring(selectionEnd);
+      setReplyContent(newText);
+      const newCursorPosition = selectionStart + emojiToInsert.length;
+      setTimeout(() => {
+        if (textarea) {
+          textarea.focus();
+          textarea.setSelectionRange(newCursorPosition, newCursorPosition);
+        }
+      }, 0);
+      setIsEmojiPickerOpen(false);
     }
   };
   
@@ -491,84 +561,57 @@ export const EnhancedCommentItem = ({
                 )}
               </div>
               
-              {/* Media Upload and Preview */}
-              <div className="flex items-start justify-between">
-                <div className="flex gap-1 items-center">
-                  {uploadedMedia ? (
-                    <div className="w-16 h-16 relative">
-                      <MediaPreview
-                        media={uploadedMedia}
-                        onRemove={removeMedia}
+              {/* Media Upload and Preview for inline reply */}
+              {uploadedMedia && (
+                <div className="mt-2">
+                  <MediaPreview media={uploadedMedia} onRemove={removeMedia} />
+                </div>
+              )}
+              {/* Container for media buttons and submit button */}
+              <div className="flex items-center justify-between pt-2">
+                {/* Container for media icons + emoji icon */}
+                <div className="flex items-center space-x-1">
+                  <MediaUpload
+                    onMediaUploaded={handleMediaUploaded}
+                    acceptedTypes="image"
+                    disabled={!!uploadedMedia || isSending}
+                  >
+                    <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700 h-8 w-8 disabled:opacity-50" disabled={!!uploadedMedia || isSending} title="Upload Image">
+                      <ImageIcon className="h-4 w-4" />
+                    </Button>
+                  </MediaUpload>
+                  <MediaUpload
+                    onMediaUploaded={handleMediaUploaded}
+                    acceptedTypes="video"
+                    disabled={!!uploadedMedia || isSending}
+                  >
+                    <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700 h-8 w-8 disabled:opacity-50" disabled={!!uploadedMedia || isSending} title="Upload Video">
+                      <VideoIcon className="h-4 w-4" />
+                    </Button>
+                  </MediaUpload>
+                  <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700 h-8 w-8" disabled={isSending} title="Add Emoji">
+                        <Smile className="h-4 w-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 border-0 z-50" side="top" align="end">
+                      <EmojiPicker
+                        onEmojiClick={onEmojiClickReply}
+                        autoFocusSearch={false}
+                        emojiStyle={EmojiStyle.NATIVE}
+                        height={300}
+                        customEmojis={customEmojisConfig}
+                        categories={emojiPickerCategoryConfig}
                       />
-                    </div>
-                  ) : (
-                    <div className="flex gap-1">
-                      <MediaUpload
-                        onMediaUploaded={handleMediaUploaded}
-                        disabled={isSending}
-                        acceptedTypes="image"
-                        maxFiles={1}
-                      >
-                        <Button 
-                          type="button" 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-7 w-7 p-0"
-                          disabled={isSending}
-                        >
-                          <ImageIcon className="h-3.5 w-3.5" />
-                        </Button>
-                      </MediaUpload>
-                      
-                      <MediaUpload
-                        onMediaUploaded={handleMediaUploaded}
-                        disabled={isSending}
-                        acceptedTypes="video"
-                        maxFiles={1}
-                      >
-                        <Button 
-                          type="button" 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-7 w-7 p-0"
-                          disabled={isSending}
-                        >
-                          <VideoIcon className="h-3.5 w-3.5" />
-                        </Button>
-                      </MediaUpload>
-                    </div>
-                  )}
+                    </PopoverContent>
+                  </Popover>
                 </div>
-                
-              <div className="flex justify-end gap-2">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="sm" 
-                    onClick={() => {
-                      setIsReplying(false);
-                      setReplyContent('');
-                      setUploadedMedia(null);
-                      setShowSuggestions(false);
-                    }}
-                  className="text-xs h-8"
-                >
-                  Cancel
+                {/* Submit Button */}
+                <Button type="submit" size="sm" disabled={isSending || (!replyContent.trim() && !uploadedMedia)} className="h-8">
+                  {isSending ? <Loader2 className="animate-spin h-4 w-4" /> : <Send className="h-4 w-4" />}
+                  Post
                 </Button>
-                <Button 
-                  type="submit" 
-                  size="sm" 
-                    disabled={(!replyContent.trim() && !uploadedMedia) || isSending}
-                  className="text-xs h-8 gap-1.5"
-                >
-                  {isSending ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Send className="h-3.5 w-3.5" />
-                  )}
-                  Reply
-                </Button>
-                </div>
               </div>
             </form>
           )}

@@ -4,7 +4,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { EnhancedCommentItem } from './EnhancedCommentItem';
 import { fetchReplies, CommentReply, createReply, toggleMeow } from '@/utils/commentApi';
-import { RefreshCw, Send, Loader2, ImageIcon, VideoIcon } from 'lucide-react';
+import { RefreshCw, Send, Loader2, ImageIcon, VideoIcon, Smile } from 'lucide-react';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MobileReplyDrawer } from './MobileReplyDrawer';
@@ -13,6 +13,12 @@ import { MediaUpload, MediaPreview, MediaUploadResponse } from '@/components/ui/
 import { MentionSuggestionsList, SuggestionItem } from '@/components/mentions/MentionSuggestionsList';
 import { searchUsers, searchCommunities, SearchUserItem, SearchCommunityItem } from '@/utils/searchApi';
 import { debounce } from 'lodash';
+import EmojiPicker, { EmojiClickData, EmojiStyle, Categories } from 'emoji-picker-react';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface EnhancedCommentsSectionProps {
   postCode: string;
@@ -20,6 +26,39 @@ interface EnhancedCommentsSectionProps {
   initialReplyCount?: number;
   postAuthorHandle: string;
 }
+
+const customEmojisConfig = [
+  { id: 'angry', names: ['angry'], imgUrl: '/emojis/angry.png' },
+  { id: 'bitcoin', names: ['bitcoin'], imgUrl: '/emojis/bitcoin.png' },
+  { id: 'cool', names: ['cool'], imgUrl: '/emojis/cool.png' },
+  { id: 'ethereum', names: ['ethereum'], imgUrl: '/emojis/ethereum.png' },
+  { id: 'happy', names: ['happy'], imgUrl: '/emojis/happy.png' },
+  { id: 'mindblown', names: ['mindblown'], imgUrl: '/emojis/mindblown.png' },
+  { id: 'party', names: ['party'], imgUrl: '/emojis/party.png' },
+  { id: 'sad', names: ['sad'], imgUrl: '/emojis/sad.png' },
+  { id: 'scared', names: ['scared'], imgUrl: '/emojis/scared.png' },
+  { id: 'sleepy', names: ['sleepy'], imgUrl: '/emojis/sleepy.png' },
+  { id: 'solana', names: ['solana'], imgUrl: '/emojis/solana.png' },
+  { id: 'thinking', names: ['thinking'], imgUrl: '/emojis/thinking.png' },
+  { id: 'angelic', names: ['angelic'], imgUrl: '/emojis/angelic.png' },
+  { id: 'devilish', names: ['devilish'], imgUrl: '/emojis/devilish.png' },
+  { id: 'inlove', names: ['inlove'], imgUrl: '/emojis/inlove.png' },
+  { id: 'pleading', names: ['pleading'], imgUrl: '/emojis/pleading.png' },
+  { id: 'surprised', names: ['surprised'], imgUrl: '/emojis/surprised.png' },
+];
+
+const emojiPickerCategoryConfig = [
+  { category: Categories.SUGGESTED, name: 'Suggested' },
+  { category: Categories.CUSTOM, name: 'Roar Emojis' },
+  { category: Categories.SMILEYS_PEOPLE, name: 'Smileys & People' },
+  { category: Categories.ANIMALS_NATURE, name: 'Animals & Nature' },
+  { category: Categories.FOOD_DRINK, name: 'Food & Drink' },
+  { category: Categories.TRAVEL_PLACES, name: 'Travel & Places' },
+  { category: Categories.ACTIVITIES, name: 'Activities' },
+  { category: Categories.OBJECTS, name: 'Objects' },
+  { category: Categories.SYMBOLS, name: 'Symbols' },
+  { category: Categories.FLAGS, name: 'Flags' },
+];
 
 export const EnhancedCommentsSection = ({
   postCode,
@@ -54,38 +93,31 @@ export const EnhancedCommentsSection = ({
   const [activeTriggerPos, setActiveTriggerPos] = useState<number | null>(null);
   const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
   const suggestionsContainerRef = useRef<HTMLDivElement>(null);
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
 
   const handleInitiateMentionInNewComment = (username: string) => {
     if (newCommentInputRef.current) {
       const mention = `@${username} `;
       const currentComment = newCommentInputRef.current.value;
-      // Prepend if not already there, or handle smarter insertion
       if (!currentComment.startsWith(mention)) {
         setNewComment(mention + currentComment);
       }
       newCommentInputRef.current.focus();
-      // Optionally move cursor after the mention
       setTimeout(() => {
         if (newCommentInputRef.current) {
           newCommentInputRef.current.setSelectionRange(mention.length, mention.length);
         }
       }, 0);
-      // Ensure suggestions are closed if they were open for something else
       setShowSuggestions(false); 
     }
   };
 
   const fetchComments = useCallback(async () => {
     if (!postCode) return;
-    
     setLoading(true);
-    
     try {
-      console.log(`Fetching comments for post ${postCode}`);
       const response = await fetchReplies(postCode, 20);
-      
       if (response.success) {
-        console.log('Fetched replies successfully:', response.replies);
         setReplies(response.replies);
         setReplyCount(response.total_count);
       } else {
@@ -128,11 +160,8 @@ export const EnhancedCommentsSection = ({
       e.preventDefault();
       e.stopPropagation();
     }
-    
     if (!newComment.trim() && !uploadedMedia) return;
-    
     setSubmitting(true);
-    
     let finalContent = newComment.trim();
     if (uploadedMedia && uploadedMedia.url) {
       let mediaUrl = uploadedMedia.url;
@@ -143,29 +172,21 @@ export const EnhancedCommentsSection = ({
           mediaUrl = window.location.origin + mediaUrl;
         }
       }
-      
       const markdown = finalContent.length > 0 ? `\n\n![](${mediaUrl})` : `![](${mediaUrl})`;
-      console.log('Adding media markdown:', markdown);
       finalContent += markdown;
     }
-    
     try {
-      console.log('Submitting comment to post:', postCode, 'Content:', finalContent);
       const response = await createReply(postCode, finalContent);
-      
       if (!response.success && response.errCode === "004" && response.communityName) {
         setCommunityName(response.communityName);
         setNotInCommunitySheetOpen(true);
         setSubmitting(false);
         return;
       }
-      
       if (response.success && response.reply_id) {
-        console.log("Server returned reply_id:", response.reply_id);
-        
         const newReply: CommentReply = {
           id: response.reply_id,
-          uid: 0,
+          uid: 0, 
           handle: response.handle || localStorage.getItem('dapps_user_handle') || 'you',
           avatar_url: response.avatar_url || localStorage.getItem('dapps_user_avatar') || 'default',
           content: finalContent,
@@ -176,16 +197,12 @@ export const EnhancedCommentsSection = ({
           has_meowed: false,
           sub_replies: []
         };
-        
-        console.log("Created new comment with server-assigned ID:", newReply.id);
-        
         setReplies(prev => [...prev, newReply]);
         setReplyCount(prev => prev + 1);
         setNewComment('');
         setUploadedMedia(null);
         setShowSuggestions(false);
       } else {
-        console.error('API response missing reply_id or success=false:', response);
         toast.error('Error adding comment. Please try again.');
         fetchComments();
       }
@@ -210,7 +227,6 @@ export const EnhancedCommentsSection = ({
           }
           return undefined;
         };
-        
         const targetComment = findComment(replies, parentId);
         if (targetComment) {
           setReplyTarget({
@@ -226,20 +242,14 @@ export const EnhancedCommentsSection = ({
       }
       return Promise.resolve();
     }
-    
     try {
-      console.log(`Creating reply to comment ${parentId} with content: ${content}`);
       const response = await createReply(postCode, content, parentId);
-      
       if (!response.success && response.errCode === "004" && response.communityName) {
         setCommunityName(response.communityName);
         setNotInCommunitySheetOpen(true);
         return Promise.resolve();
       }
-      
       if (response.success && response.reply_id) {
-        console.log('Reply created successfully with ID:', response.reply_id);
-        
         const newReply: CommentReply = {
           id: response.reply_id,
           uid: 0,
@@ -252,9 +262,6 @@ export const EnhancedCommentsSection = ({
           meow_count: 0,
           has_meowed: false
         };
-        
-        console.log("Created new reply with server-assigned ID:", newReply.id);
-        
         setReplies(prevReplies => {
           const addReplyToComment = (comments: CommentReply[]): CommentReply[] => {
             return comments.map(comment => {
@@ -274,19 +281,14 @@ export const EnhancedCommentsSection = ({
               return comment;
             });
           };
-          
           return addReplyToComment(prevReplies);
         });
-        
         setReplyCount(prev => prev + 1);
         setShowSuggestions(false);
       } else {
-        console.error('API response missing reply_id or success=false:', response);
         toast.error('Error adding reply. Please try again.');
-        console.log('API reported success=false or missing reply_id, refreshing comments');
         fetchComments();
       }
-      
       return Promise.resolve();
     } catch (error) {
       console.error('Error adding reply:', error);
@@ -296,27 +298,18 @@ export const EnhancedCommentsSection = ({
   };
   
   const handleMeowChange = async (commentId: number, newState: boolean) => {
-    console.log(`Toggling meow for comment ID: ${commentId} to ${newState}`);
-    
     if (!commentId || isNaN(commentId) || commentId <= 0) {
-      console.error(`Invalid comment ID for meow toggle: ${commentId}`);
       toast.error('Cannot update reaction: Invalid comment ID');
       return;
     }
-    
     const updatedReplies = updateMeowState(replies, commentId, newState);
     setReplies(updatedReplies);
-    
     try {
       const response = await toggleMeow(commentId);
-      console.log('Meow toggle response:', response);
-      
       if (!response.success) {
-        console.error(`Server returned success=false for meow toggle on comment ID ${commentId}`);
-        throw new Error(`Server returned success=false for meow toggle`);
+        throw new Error('Server returned success=false for meow toggle');
       }
     } catch (error) {
-      console.error(`Error toggling meow for comment ID ${commentId}:`, error);
       const revertedReplies = updateMeowState(replies, commentId, !newState);
       setReplies(revertedReplies);
       toast.error('Could not update meow. Please try again.');
@@ -336,26 +329,18 @@ export const EnhancedCommentsSection = ({
           meow_count: newState ? reply.meow_count + 1 : Math.max(0, reply.meow_count - 1)
         };
       }
-      
       if (reply.sub_replies && reply.sub_replies.length > 0) {
         return {
           ...reply,
           sub_replies: updateMeowState(reply.sub_replies, targetId, newState)
         };
       }
-      
       return reply;
     });
   };
 
   const openReplyDrawer = (id: number, handle: string, avatar: string, content: string, isPost: boolean = false) => {
-    setReplyTarget({
-      id,
-      handle,
-      avatar,
-      content,
-      isPost
-    });
+    setReplyTarget({ id, handle, avatar, content, isPost });
     setDrawerOpen(true);
   };
 
@@ -363,9 +348,7 @@ export const EnhancedCommentsSection = ({
 
   const handleDrawerSubmit = async (content: string) => {
     if (!replyTarget || drawerSubmissionInProgress.current) return Promise.reject(new Error('No reply target or submission in progress'));
-    
     drawerSubmissionInProgress.current = true;
-    
     try {
       if (replyTarget.isPost) {
         setNewComment(content);
@@ -373,14 +356,9 @@ export const EnhancedCommentsSection = ({
       } else {
         await handleReplyToComment(replyTarget.id, content);
       }
-      
-      setTimeout(() => {
-        drawerSubmissionInProgress.current = false;
-      }, 500);
-      
+      setTimeout(() => { drawerSubmissionInProgress.current = false; }, 500);
       return Promise.resolve();
     } catch (error) {
-      console.error('Error in drawer submit:', error);
       drawerSubmissionInProgress.current = false;
       return Promise.reject(error);
     }
@@ -389,15 +367,11 @@ export const EnhancedCommentsSection = ({
   const getTriggerInfo = (textarea: HTMLTextAreaElement): { trigger: '@' | '/c/' | null; query: string; startPos: number } | null => {
     const text = textarea.value;
     const cursorPos = textarea.selectionStart;
-    
     const textBeforeCursor = text.substring(0, cursorPos);
-    
     const lastAt = textBeforeCursor.lastIndexOf('@');
     const lastSlashC = textBeforeCursor.lastIndexOf('/c/');
-    
     let triggerPos = -1;
     let trigger: '@' | '/c/' | null = null;
-    
     if (lastAt > lastSlashC) {
       triggerPos = lastAt;
       trigger = '@';
@@ -408,28 +382,14 @@ export const EnhancedCommentsSection = ({
         triggerPos = lastAt;
         trigger = '@';
     }
-    
     if (triggerPos === -1) return null;
-    
     const triggerLength = trigger === '@' ? 1 : 3; 
     const queryStartPos = triggerPos + triggerLength;
-    
     if(cursorPos < queryStartPos) return null;
-
-    if (cursorPos === queryStartPos && text.charAt(queryStartPos) === ' ') {
-        return null;
-    }
-    
+    if (cursorPos === queryStartPos && text.charAt(queryStartPos) === ' ') return null;
     const query = text.substring(queryStartPos, cursorPos);
-    
-    if (query.match(/\s/) || query.match(/\n/)) {
-      return null;
-    }
-    
-    if (query.length < 2) {
-      return null;
-    }
-
+    if (query.match(/\s/) || query.match(/\n/)) return null;
+    if (query.length < 2) return null;
     return { trigger, query, startPos: triggerPos };
   };
 
@@ -453,7 +413,7 @@ export const EnhancedCommentsSection = ({
               type: 'user'
             }));
           }
-        } else { // type === 'community'
+        } else { 
           const response = await searchCommunities(query, 1, 5);
           if (response.success && response.communities) {
             fetchedSuggestions = response.communities.items.map((comm: SearchCommunityItem) => ({
@@ -472,7 +432,6 @@ export const EnhancedCommentsSection = ({
         setSuggestions(uniqueSuggestions);
         setShowSuggestions(uniqueSuggestions.length > 0);
       } catch (error) {
-        console.error(`Error fetching ${type} suggestions:`, error);
         setShowSuggestions(false);
       } finally {
         setMentionLoading(false);
@@ -484,9 +443,7 @@ export const EnhancedCommentsSection = ({
   const handleNewCommentContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const textarea = e.target;
     setNewComment(textarea.value);
-
     const triggerInfo = getTriggerInfo(textarea);
-
     if (triggerInfo) {
       const currentMentionType = triggerInfo.trigger === '@' ? 'user' : 'community';
       if (triggerInfo.query !== mentionQuery || currentMentionType !== mentionType) {
@@ -499,28 +456,21 @@ export const EnhancedCommentsSection = ({
         setShowSuggestions(true);
       }
     } else {
-      if(showSuggestions) {
-         setShowSuggestions(false);
-      }
+      if(showSuggestions) setShowSuggestions(false);
     }
   };
 
   const handleSuggestionSelect = (suggestion: SuggestionItem) => {
     if (newCommentInputRef.current && activeTriggerPos !== null && mentionType) {
       const currentText = newCommentInputRef.current.value;
-      
       const mentionId = suggestion.type === 'community' && suggestion.id.includes('/') ? suggestion.id.split('/')[1] : suggestion.id;
       const mentionText = mentionType === 'user' ? `@${mentionId} ` : `/c/${mentionId} `;
-      
       const textBefore = currentText.substring(0, activeTriggerPos);
-      
       const triggerCharLength = mentionType === 'user' ? 1 : 3;
       const endOfQueryToReplace = activeTriggerPos + triggerCharLength + mentionQuery.length;
       const textAfter = currentText.substring(endOfQueryToReplace);
-
       const newText = textBefore + mentionText + textAfter;
       setNewComment(newText);
-      
       const newCursorPos = activeTriggerPos + mentionText.length;
       setTimeout(() => {
           if(newCommentInputRef.current) {
@@ -528,7 +478,6 @@ export const EnhancedCommentsSection = ({
             newCommentInputRef.current.setSelectionRange(newCursorPos, newCursorPos);
           }
       }, 0);
-
       setShowSuggestions(false);
       setMentionQuery('');
       setMentionType(null);
@@ -558,171 +507,183 @@ export const EnhancedCommentsSection = ({
     }
   };
 
+  const onEmojiClick = (emojiData: EmojiClickData) => {
+    if (newCommentInputRef.current) {
+      const textarea = newCommentInputRef.current;
+      const { selectionStart, selectionEnd } = textarea;
+      const text = textarea.value;
+      let emojiToInsert = '';
+      if (emojiData.isCustom) {
+        emojiToInsert = `:${emojiData.emoji}:`; 
+      } else {
+        emojiToInsert = emojiData.emoji;
+      }
+      const newText =
+        text.substring(0, selectionStart) +
+        emojiToInsert +
+        text.substring(selectionEnd);
+      setNewComment(newText);
+      const newCursorPosition = selectionStart + emojiToInsert.length;
+      setTimeout(() => {
+        if (textarea) {
+          textarea.focus();
+          textarea.setSelectionRange(newCursorPosition, newCursorPosition);
+        }
+      }, 0);
+      setIsEmojiPickerOpen(false);
+    }
+  };
+
   return (
     <div className="space-y-8">
       <div className="space-y-4">
         <h2 className="text-lg font-medium">Comments ({replyCount})</h2>
-        
-        <div className="space-y-4">
-          <form onSubmit={handleSubmitComment} className="space-y-4">
-            <div className="flex gap-3">
-              <Avatar className="h-10 w-10 mt-1">
-                <AvatarImage 
-                  src={`https://img.dapps.co/avatar/${localStorage.getItem('dapps_user_avatar') || 'default'}.svg`} 
-                />
-                <AvatarFallback>U</AvatarFallback>
-              </Avatar>
-              
-              <div className="flex-1 space-y-2 relative">
-                <Textarea
-                  ref={newCommentInputRef}
-                  placeholder="Join the conversation..."
-                  value={newComment}
-                  onChange={handleNewCommentContentChange}
-                  rows={3}
-                  className="resize-none"
-                  onKeyDown={handleKeyDown}
-                  onBlur={(e) => {
-                    if (suggestionsContainerRef.current && 
-                        !suggestionsContainerRef.current.contains(e.relatedTarget as Node | null)) {
-                      setShowSuggestions(false); 
-                      setHighlightedIndex(-1);
-                    }
-                  }}
-                  onFocus={(e) => {
-                    const triggerInfo = getTriggerInfo(e.target);
-                    if (triggerInfo && triggerInfo.query === mentionQuery && mentionType) {
-                       if(suggestions.length > 0) setShowSuggestions(true);
-                    }
-                  }}
-                />
-                
-                {showSuggestions && (
-                  <div 
-                    ref={suggestionsContainerRef}
-                    className="absolute z-10 w-full mt-1 md:w-auto md:max-w-xs"
-                  >
-                    <MentionSuggestionsList
-                      suggestions={suggestions}
-                      isLoading={mentionLoading}
-                      onSelect={handleSuggestionSelect}
-                      mentionType={mentionType}
-                      highlightedIndex={highlightedIndex}
-                      onItemHover={setHighlightedIndex}
-                    />
-                  </div>
-                )}
-                
-      <div className="flex items-center justify-between">
-                  <div className="flex gap-2 items-center">
-                    {uploadedMedia ? (
-                      <div className="w-24 h-24 relative">
-                        <MediaPreview
-                          media={uploadedMedia}
-                          onRemove={removeMedia}
-                        />
-                      </div>
-                    ) : (
-                      <div className="flex gap-2">
-                        <MediaUpload
-                          onMediaUploaded={handleMediaUploaded}
-                          disabled={submitting}
-                          acceptedTypes="image"
-                          maxFiles={1}
-                        >
-        <Button 
-                            type="button" 
-          variant="ghost" 
-          size="sm" 
-                            className="h-8 w-8 p-0"
-                            disabled={submitting}
-        >
-                            <ImageIcon className="h-4 w-4" />
-        </Button>
-                        </MediaUpload>
-      
-                        <MediaUpload
-                          onMediaUploaded={handleMediaUploaded}
-                          disabled={submitting}
-                          acceptedTypes="video"
-                          maxFiles={1}
-                        >
-            <Button 
-              type="button"
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-8 w-8 p-0"
-                            disabled={submitting}
-            >
-                            <VideoIcon className="h-4 w-4" />
-            </Button>
-                        </MediaUpload>
-                      </div>
-          )}
-                  </div>
-                  
-              <Button 
-                type="submit" 
-                    className="text-xs h-8 gap-1.5"
-                    disabled={submitting || (!newComment.trim() && !uploadedMedia)}
-                    onClick={() => handleSubmitComment()}
-              >
-                    {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              </Button>
-                </div>
-              </div>
-            </div>
-          </form>
-          
-          {loading && replies.length === 0 && (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          )}
-          
-          {!loading && replies.length === 0 && (
-            <div className="text-center py-8 bg-muted/20 rounded-lg border border-border/40">
-              <p className="text-muted-foreground">No comments yet. Be the first to comment!</p>
-            </div>
-          )}
-          
-          {replies.length > 0 && (
-            <>
-              <div className="flex items-center justify-between pt-4">
-                <h3 className="text-sm font-medium">Recent Comments</h3>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={fetchComments} 
-                  disabled={loading}
-                  className="h-8 text-xs gap-1"
-                >
-                  <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
-                  Refresh
-                </Button>
-        </div>
-      
-              <div className="space-y-6 divide-y divide-border/20">
-          {replies.map(reply => (
-            <div key={reply.id} className="pt-6 first:pt-0">
-              <EnhancedCommentItem 
-                comment={reply}
-                postAuthorHandle={postAuthorHandle}
-                onMeowChange={handleMeowChange}
-                onReply={handleReplyToComment}
-                      isAuthorReplying={reply.handle === postAuthorHandle}
-                      isMobile={isMobile}
-                      onOpenMobileReply={(id, handle, avatar, content) => openReplyDrawer(id, handle, avatar, content, false)}
-                      onInitiateMention={handleInitiateMentionInNewComment}
+        <form onSubmit={handleSubmitComment} className="space-y-4">
+          <div className="flex gap-3">
+            <Avatar className="h-10 w-10 mt-1">
+              <AvatarImage 
+                src={`https://img.dapps.co/avatar/${localStorage.getItem('dapps_user_avatar') || 'default'}.svg`} 
               />
+              <AvatarFallback>U</AvatarFallback>
+            </Avatar>
+            <div className="flex-1 space-y-2 relative">
+              <Textarea
+                ref={newCommentInputRef}
+                placeholder="Join the conversation..."
+                value={newComment}
+                onChange={handleNewCommentContentChange}
+                rows={3}
+                className="resize-none"
+                onKeyDown={handleKeyDown}
+                onBlur={(e) => {
+                  if (suggestionsContainerRef.current && 
+                      !suggestionsContainerRef.current.contains(e.relatedTarget as Node | null)) {
+                    setShowSuggestions(false); 
+                    setHighlightedIndex(-1);
+                  }
+                }}
+                onFocus={(e) => {
+                  const triggerInfo = getTriggerInfo(e.target);
+                  if (triggerInfo && triggerInfo.query === mentionQuery && mentionType) {
+                     if(suggestions.length > 0) setShowSuggestions(true);
+                  }
+                }}
+              />
+              {showSuggestions && (
+                <div 
+                  ref={suggestionsContainerRef}
+                  className="absolute z-10 w-full mt-1 md:w-auto md:max-w-xs"
+                >
+                  <MentionSuggestionsList
+                    suggestions={suggestions}
+                    isLoading={mentionLoading}
+                    onSelect={handleSuggestionSelect}
+                    mentionType={mentionType}
+                    highlightedIndex={highlightedIndex}
+                    onItemHover={setHighlightedIndex}
+                  />
+                </div>
+              )}
+              <div className="flex items-center justify-between pt-2">
+                <div className="flex items-center space-x-2">
+                  <MediaUpload
+                    onMediaUploaded={handleMediaUploaded}
+                    acceptedTypes="image"
+                    disabled={!!uploadedMedia || submitting}
+                  >
+                    <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700" disabled={!!uploadedMedia || submitting} title="Upload Image">
+                      <ImageIcon className="h-5 w-5" />
+                    </Button>
+                  </MediaUpload>
+                  <MediaUpload
+                    onMediaUploaded={handleMediaUploaded}
+                    acceptedTypes="video"
+                    disabled={!!uploadedMedia || submitting}
+                  >
+                    <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700" disabled={!!uploadedMedia || submitting} title="Upload Video">
+                      <VideoIcon className="h-5 w-5" />
+                    </Button>
+                  </MediaUpload>
+                  <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700" disabled={submitting} title="Add Emoji">
+                        <Smile className="h-5 w-5" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 border-0" side="top" align="end">
+                      <EmojiPicker
+                        onEmojiClick={onEmojiClick}
+                        autoFocusSearch={false}
+                        emojiStyle={EmojiStyle.NATIVE}
+                        height={350}
+                        customEmojis={customEmojisConfig}
+                        categories={emojiPickerCategoryConfig}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <Button 
+                  type="submit" 
+                  className="text-xs h-8 gap-1.5"
+                  disabled={submitting || (!newComment.trim() && !uploadedMedia)}
+                  onClick={handleSubmitComment}
+                >
+                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  Reply
+                </Button>
+              </div>
+              {uploadedMedia && (
+                <div className="mt-3">
+                  <MediaPreview media={uploadedMedia} onRemove={removeMedia} />
+                </div>
+              )}
             </div>
-          ))}
-        </div>
-            </>
-          )}
-        </div>
+          </div>
+        </form>
+        {loading && replies.length === 0 && (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        )}
+        {!loading && replies.length === 0 && (
+          <div className="text-center py-8 bg-muted/20 rounded-lg border border-border/40">
+            <p className="text-muted-foreground">No comments yet. Be the first to comment!</p>
+          </div>
+        )}
+        {replies.length > 0 && (
+          <>
+            <div className="flex items-center justify-between pt-4">
+              <h3 className="text-sm font-medium">Recent Comments</h3>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={fetchComments} 
+                disabled={loading}
+                className="h-8 text-xs gap-1"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+            </div>
+            <div className="space-y-6 divide-y divide-border/20">
+              {replies.map(reply => (
+                <div key={reply.id} className="pt-6 first:pt-0">
+                  <EnhancedCommentItem 
+                    comment={reply}
+                    postAuthorHandle={postAuthorHandle}
+                    onMeowChange={handleMeowChange}
+                    onReply={handleReplyToComment}
+                    isAuthorReplying={reply.handle === postAuthorHandle}
+                    isMobile={isMobile}
+                    onOpenMobileReply={(id, handle, avatar, content) => openReplyDrawer(id, handle, avatar, content, false)}
+                    onInitiateMention={handleInitiateMentionInNewComment}
+                  />
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
-      
       {isMobile && (
         <MobileReplyDrawer 
           open={drawerOpen}
@@ -734,7 +695,6 @@ export const EnhancedCommentsSection = ({
           onSubmit={handleDrawerSubmit}
         />
       )}
-      
       <NotInCommunitySheet 
         open={notInCommunitySheetOpen}
         onOpenChange={setNotInCommunitySheetOpen}

@@ -96,26 +96,30 @@ const processTextPart = (text: string, key: number): React.ReactNode => {
   const mentionRegex = /@(\w+)/g;
   const communityRegex = /\/c\/([a-zA-Z0-9-]+)/g;
   const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const emojiRegex = /:([a-zA-Z0-9_]+?):/g;
   
   // Find all matches for each pattern
   const mentionMatches: RegExpMatchArray[] = Array.from(text.matchAll(mentionRegex));
   const communityMatches: RegExpMatchArray[] = Array.from(text.matchAll(communityRegex));
   const urlMatches: RegExpMatchArray[] = Array.from(text.matchAll(urlRegex));
+  const emojiMatches: RegExpMatchArray[] = Array.from(text.matchAll(emojiRegex));
   
   // If no matches, return the text as is
   if (
     mentionMatches.length === 0 && 
     communityMatches.length === 0 && 
-    urlMatches.length === 0
+    urlMatches.length === 0 &&
+    emojiMatches.length === 0
   ) {
     return <span key={key}>{text}</span>;
   }
   
   // Combine all matches for sorting
   const allMatches = [
-    ...mentionMatches.map(match => ({ type: 'mention', match })),
-    ...communityMatches.map(match => ({ type: 'community', match })),
-    ...urlMatches.map(match => ({ type: 'url', match }))
+    ...mentionMatches.map(match => ({ type: 'mention' as const, match })),
+    ...communityMatches.map(match => ({ type: 'community' as const, match })),
+    ...urlMatches.map(match => ({ type: 'url' as const, match })),
+    ...emojiMatches.map(match => ({ type: 'emoji' as const, match })),
   ];
   
   // Sort by the start index of the match
@@ -186,6 +190,19 @@ const processTextPart = (text: string, key: number): React.ReactNode => {
         >
           {matchText}
         </a>
+      );
+    } else if (type === 'emoji') {
+      const emojiId = match[1];
+      result.push(
+        <img 
+          key={`${key}-${matchIndex}`}
+          src={`/emojis/${emojiId}.png`}
+          alt={emojiId}
+          className="inline-block h-5 w-5 mx-0.5 align-middle"
+          onError={(e) => {
+            (e.target as HTMLImageElement).style.display = 'none';
+          }}
+        />
       );
     } else if (type === 'url') {
       // Skip URLs that are part of image markdown
