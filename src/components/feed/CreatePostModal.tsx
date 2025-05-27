@@ -132,6 +132,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   initialContent = '',
 }) => {
   const isMobile = useIsMobile();
+  const [hasMounted, setHasMounted] = useState(false); // Added state to track client-side mount
   const [content, setContent] = useState(initialContent); // This will be the poll question if poll is active
   const [selectedCommunity, setSelectedCommunity] = useState(communityName || '');
   const [showCommunitySelector, setShowCommunitySelector] = useState(false);
@@ -197,6 +198,10 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
     { category: Categories.FLAGS, name: 'Flags' },
   ];
   // --- End Emoji Config ---
+
+  useEffect(() => {
+    setHasMounted(true); // Set to true after component has mounted client-side
+  }, []);
 
   useEffect(() => {
     if (open) {
@@ -971,6 +976,14 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
     </DialogContent>
   );
 
+  // Wait for client-side mount to ensure isMobile value is stable
+  if (!hasMounted) {
+    // If the modal is supposed to be open, returning null might be jarring.
+    // Consider a very lightweight placeholder or ensure open is false until hasMounted is true if possible from parent.
+    // For now, returning null if open is true, otherwise nothing.
+    return open ? null : null; 
+  }
+
   if (isMobile) {
     return (
       <>
@@ -992,7 +1005,6 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
             {PostCreationForm} 
           </DrawerContent>
         </Drawer>
-        {/* Separate Dialog for Community Selector on Mobile */}
         <Dialog open={showCommunitySelector} onOpenChange={setShowCommunitySelector}>
           {communitySelectorDialogContent}
         </Dialog>
@@ -1007,7 +1019,6 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
           {PostCreationForm}
         </DialogContent>
       </Dialog>
-      {/* Separate Dialog for Community Selector on Desktop */}
       <Dialog open={showCommunitySelector} onOpenChange={setShowCommunitySelector}>
          {communitySelectorDialogContent}
       </Dialog>
