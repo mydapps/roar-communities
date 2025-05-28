@@ -22,7 +22,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import CommunityCard from '@/components/communities/CommunityCard';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useCommunities } from '@/hooks/useCommunities';
@@ -47,9 +47,13 @@ const CommunitiesPage = () => {
   const [tradeLoading, setTradeLoading] = useState(false);
   const [tradeSuccess, setTradeSuccess] = useState(false);
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
   
   // State for active tab
   const [activeTab, setActiveTab] = useState('popular');
+  
+  // Check if user is logged in using dapps_user_id
+  const isLoggedIn = !!localStorage.getItem('dapps_user_id');
   
   // Effect to disable pull-to-refresh on this page
   useEffect(() => {
@@ -167,6 +171,12 @@ const CommunitiesPage = () => {
   
   // Handle buy/sell action
   const handleTradeAction = (community: Community, action: 'buy' | 'sell') => {
+    // If user is not logged in, redirect to index page
+    if (!isLoggedIn) {
+      navigate('/index');
+      return;
+    }
+    
     // Reset all trade states
     setTradeDialogOpen(false);
     setSelectedCommunity(null);
@@ -185,6 +195,15 @@ const CommunitiesPage = () => {
         fetchWalletBalance();
       }
     }, 50);
+  };
+  
+  // Handle create community button click
+  const handleCreateCommunity = () => {
+    if (!isLoggedIn) {
+      navigate('/index');
+      return;
+    }
+    navigate('/create-community');
   };
   
   // Handle trade success
@@ -370,10 +389,8 @@ const CommunitiesPage = () => {
               {/* Add Filter Dialog Content Here */}
             </DialogContent>
           </Dialog>
-          <Button asChild>
-            <Link to="/create-community">
-              <Plus className="h-4 w-4 mr-2" /> Create Community
-            </Link>
+          <Button onClick={handleCreateCommunity}>
+            <Plus className="h-4 w-4 mr-2" /> Create Community
           </Button>
         </div>
       </div>
@@ -445,6 +462,7 @@ const CommunitiesPage = () => {
                   userShares={community.userShares || 0}
                   onBuy={() => handleTradeAction(community, 'buy')}
                   onSell={() => handleTradeAction(community, 'sell')}
+                  isLoggedIn={isLoggedIn}
                 />
               ))}
               
@@ -500,17 +518,13 @@ const CommunitiesPage = () => {
       )}
       
       {/* Mobile FAB for creating community */}
-      <Link 
-        to="/create-community" 
-        className="md:hidden fixed bottom-28 right-4 z-50"
+      <Button 
+        onClick={handleCreateCommunity}
+        size="icon" 
+        className="md:hidden fixed bottom-28 right-4 z-50 h-14 w-14 rounded-full bg-[#31bcc3] hover:bg-[#31bcc3]/90 text-white shadow-lg"
       >
-        <Button 
-          size="icon" 
-          className="h-14 w-14 rounded-full bg-[#31bcc3] hover:bg-[#31bcc3]/90 text-white shadow-lg"
-        >
-          <Plus className="h-6 w-6" />
-        </Button>
-      </Link>
+        <Plus className="h-6 w-6" />
+      </Button>
     </div>
   );
 };

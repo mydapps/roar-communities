@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePreventZoom } from '@/hooks/usePreventZoom';
 import { useCommunityData } from '@/hooks/useCommunityData';
@@ -114,6 +114,7 @@ const debugLog = (message: string, ...args: any[]) => {
 const CommunityPage = () => {
   usePreventZoom();
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [tradeSheetOpen, setTradeSheetOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("posts");
@@ -125,7 +126,10 @@ const CommunityPage = () => {
   const [previousHasShares, setPreviousHasShares] = useState(false);
   const [tradeSuccess, setTradeSuccess] = useState(false);
   
-  debugLog("CommunityPage rendering, id:", id, "activeTab:", activeTab);
+  // Check if user is logged in using dapps_user_id
+  const isLoggedIn = !!localStorage.getItem('dapps_user_id');
+  
+  debugLog("CommunityPage rendering, id:", id, "activeTab:", activeTab, "isLoggedIn:", isLoggedIn);
   
   const { data: communityData, loading: communityLoading, error: communityError, refetch } = useCommunityData(id);
   
@@ -364,6 +368,11 @@ const CommunityPage = () => {
   }, [fetchWalletBalance, resetTradeState]);
   
   const handleBuyAction = useCallback(() => {
+    if (!isLoggedIn) {
+      navigate('/index');
+      return;
+    }
+    
     // Close sheet first to reset its state
     setTradeSheetOpen(false);
     
@@ -375,9 +384,14 @@ const CommunityPage = () => {
       // Fetch fresh balance when opening the modal
       fetchWalletBalance();
     }, 50);
-  }, [resetTradeState, fetchWalletBalance]);
+  }, [isLoggedIn, navigate, resetTradeState, fetchWalletBalance]);
   
   const handleSellAction = useCallback(() => {
+    if (!isLoggedIn) {
+      navigate('/index');
+      return;
+    }
+    
     // Close sheet first to reset its state
     setTradeSheetOpen(false);
     
@@ -387,7 +401,7 @@ const CommunityPage = () => {
       setTradeAction('sell');
       setTradeSheetOpen(true);
     }, 50);
-  }, [resetTradeState]);
+  }, [isLoggedIn, navigate, resetTradeState]);
   
   const handleRoar = useCallback(async (postCode: string) => {
     if (!postCode) {
@@ -525,19 +539,21 @@ const CommunityPage = () => {
         {/* Remove the Mobile sticky header - it's now in CommunityHeader */}
         {/* {isMobile && ( ... old header code ... )} */}
         
-        {/* Keep Create Post Card */}
-        <Card className="mb-6 bg-gradient-to-br from-primary/5 to-secondary/5 border-primary/20 mt-6 md:mt-8">
-          <CardContent className={`pt-6 ${isMobile ? 'mt-12' : ''}`}>
-            <h2 className="text-xl font-semibold mb-3 flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              What's on your mind?
-            </h2>
-            <CreatePostCard 
-              onPostCreated={handlePostCreated}
-              communityName={community?.name || id || ''}
-            />
-          </CardContent>
-        </Card>
+        {/* Only show Create Post Card for logged in users */}
+        {isLoggedIn && (
+          <Card className="mb-6 bg-gradient-to-br from-primary/5 to-secondary/5 border-primary/20 mt-6 md:mt-8">
+            <CardContent className={`pt-6 ${isMobile ? 'mt-12' : ''}`}>
+              <h2 className="text-xl font-semibold mb-3 flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" />
+                What's on your mind?
+              </h2>
+              <CreatePostCard 
+                onPostCreated={handlePostCreated}
+                communityName={community?.name || id || ''}
+              />
+            </CardContent>
+          </Card>
+        )}
         
         {/* Use the new CommunityTabs component within the main Tabs wrapper */} 
         <Tabs value={activeTab} onValueChange={setActiveTab} className={`w-full ${isMobile ? 'mb-6 mt-8' : ''}`}>
@@ -557,7 +573,7 @@ const CommunityPage = () => {
                   hasMore={hasMorePosts}
                   loadingElementRef={loadingElementRef}
                   handleRoar={handleRoar}
-                isLoggedIn={!!user}
+                isLoggedIn={isLoggedIn}
                 isAdmin={isAdmin}
                 onPostUpdated={handlePostUpdated}
                 />

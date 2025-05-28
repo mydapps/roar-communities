@@ -32,6 +32,7 @@ interface EnhancedCommentItemProps {
   level2ParentId?: number; // Track level 2 parent ID specifically
   optimisticToRealIdMap?: Record<number, number>; // Map from optimistic IDs to real IDs
   onInitiateMention?: (username: string) => void; // Added prop
+  readOnly?: boolean;
 }
 
 export const EnhancedCommentItem = ({
@@ -46,7 +47,8 @@ export const EnhancedCommentItem = ({
   onOpenMobileReply,
   level2ParentId,
   optimisticToRealIdMap = {},
-  onInitiateMention
+  onInitiateMention,
+  readOnly = false
 }: EnhancedCommentItemProps) => {
   const [isReplying, setIsReplying] = useState(false);
   const [replyContent, setReplyContent] = useState('');
@@ -491,6 +493,7 @@ export const EnhancedCommentItem = ({
               variant={comment.has_meowed ? "meow-active" : "meow"} 
               size="sm" 
               onClick={handleMeow}
+              disabled={readOnly}
               className="h-8 px-2 text-xs gap-1.5 rounded-full"
             >
               <div className="relative">
@@ -509,7 +512,8 @@ export const EnhancedCommentItem = ({
               </span>
             </Button>
             
-            {/* Always show the Reply button regardless of level */}
+            {/* Always show the Reply button regardless of level, but disable in read-only mode */}
+            {!readOnly && (
               <Button 
                 variant="ghost" 
                 size="sm" 
@@ -518,9 +522,10 @@ export const EnhancedCommentItem = ({
               >
                 {isReplying && !isMobile ? 'Cancel' : 'Reply'}
               </Button>
+            )}
           </div>
           
-          {isReplying && !isMobile && (
+          {isReplying && !isMobile && !readOnly && (
             <form onSubmit={handleSubmitReply} className="mt-3 space-y-2">
               <div className="relative">
               <Textarea 
@@ -635,6 +640,7 @@ export const EnhancedCommentItem = ({
               level2ParentId={currentLevel2ParentId}
               optimisticToRealIdMap={optimisticToRealIdMap}
               onInitiateMention={onInitiateMention}
+              readOnly={readOnly}
             />
           ))}
         </div>

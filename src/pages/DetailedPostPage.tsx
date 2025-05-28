@@ -395,30 +395,71 @@ const DetailedPostPage = () => {
   return (
     <div className="max-w-2xl mx-auto pt-16 pb-20 px-4 animate-in fade-in" onClick={(e) => e.stopPropagation()}>
       <Helmet>
+        {/* Primary Meta Tags */}
         <title>{displayTitle} | dapps.co</title>
+        <meta name="title" content={`${displayTitle} | dapps.co`} />
         <meta name="description" content={metaDescription} />
+        <meta name="keywords" content={`${post.community || ''}, ${post.author.handle || ''}, crypto, discussion, social, dapps.co, decentralized social, community shares, web3`} />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="theme-color" content="#31bcc3" />
+        <meta name="author" content={post.author.handle} />
         
+        {/* Open Graph / Facebook */}
         <meta property="og:type" content="article" />
+        <meta property="og:url" content={getCanonicalUrl()} />
         <meta property="og:title" content={displayTitle} />
         <meta property="og:description" content={metaDescription} />
-        {ogImage && <meta property="og:image" content={ogImage} />}
-        <meta property="og:url" content={getCanonicalUrl()} />
         <meta property="og:site_name" content="dapps.co" />
+        {ogImage ? (
+          <>
+            <meta property="og:image" content={ogImage} />
+            <meta property="og:image:width" content="1200" />
+            <meta property="og:image:height" content="630" />
+            <meta property="og:image:alt" content={`Image from post by ${post.author.handle}`} />
+          </>
+        ) : (
+          <>
+            <meta property="og:image" content="https://dapps.co/og-image.png" />
+            <meta property="og:image:width" content="1200" />
+            <meta property="og:image:height" content="630" />
+            <meta property="og:image:alt" content="dapps.co - decentralized community network" />
+          </>
+        )}
         
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={displayTitle} />
-        <meta name="twitter:description" content={metaDescription} />
-        {ogImage && <meta name="twitter:image" content={ogImage} />}
-        <meta name="twitter:site" content="@dapps_co" />
-        {post.author && <meta name="twitter:creator" content={`@${post.author.handle.split('.')[0]}`} />}
+        {/* Twitter */}
+        <meta property="twitter:card" content="summary_large_image" />
+        <meta property="twitter:url" content={getCanonicalUrl()} />
+        <meta property="twitter:title" content={displayTitle} />
+        <meta property="twitter:description" content={metaDescription} />
+        <meta property="twitter:site" content="@dapps_co" />
+        <meta property="twitter:creator" content={`@dapps_co`} />
+        {ogImage ? (
+          <meta property="twitter:image" content={ogImage} />
+        ) : (
+          <meta property="twitter:image" content="https://dapps.co/og-image.png" />
+        )}
         
-        <meta name="author" content={post.author.handle} />
+        {/* Article-specific meta tags */}
+        {post.author && <meta name="author" content={post.author.handle} />}
         {post.created_at && <meta name="article:published_time" content={post.created_at} />}
         {post.community && <meta name="article:section" content={post.community} />}
-        <meta name="keywords" content={`${post.community || ''}, ${post.author.handle || ''}, crypto, discussion, social, dapps.co`} />
+        {post.author && <meta name="article:author" content={post.author.handle} />}
         
+        {/* Additional structured data */}
+        <meta name="post:author" content={post.author.handle} />
+        {post.community && <meta name="post:community" content={post.community} />}
+        <meta name="post:replies" content={replyCount.toString()} />
+        <meta name="post:upvotes" content={(post.upvotes || 0).toString()} />
+        
+        {/* Canonical and indexing */}
         <link rel="canonical" href={getCanonicalUrl()} />
+        <meta name="robots" content="index, follow" />
         <link rel="icon" href="https://dapps.co/favicon.ico" />
+        
+        {/* Additional helpful meta tags */}
+        <meta name="application-name" content="dapps.co" />
+        <meta name="msapplication-TileColor" content="#31bcc3" />
+        <meta name="format-detection" content="telephone=no" />
       </Helmet>
       
       <div className="flex items-center justify-between mb-2 px-2 md:px-0">
@@ -492,7 +533,7 @@ const DetailedPostPage = () => {
         />
       </div>
       
-      {post && isLoggedIn ? (
+      {post && (
         <>
           {!isMobile && (
             <EnhancedCommentsSection
@@ -500,6 +541,7 @@ const DetailedPostPage = () => {
               initialReplies={replies}
               initialReplyCount={replyCount}
               postAuthorHandle={post.author?.handle || (post.handle || '')}
+              readOnly={!isLoggedIn}
             />
           )}
           
@@ -510,26 +552,26 @@ const DetailedPostPage = () => {
               replies={replies}
               onAddComment={handleAddReply}
               onRefresh={handleRefreshComments}
+              readOnly={!isLoggedIn}
             />
           )}
-        </>
-      ) : isLoggedIn ? null : (
-        <div className="relative backdrop-blur-sm py-10">
-          <div className="absolute inset-0 bg-background/70 flex flex-col items-center justify-center z-10">
-            <div className="bg-primary/10 p-4 rounded-full mb-4">
-              <MessageSquare className="h-8 w-8 text-primary" />
-            </div>
-            <h3 className="text-xl font-bold mb-2">Join the conversation</h3>
-            <p className="text-muted-foreground mb-6 text-center max-w-md">
-              Login or sign up to view and participate in the discussion
-            </p>
-            <Button onClick={(e) => navigateToLogin(e)}>Login or Sign Up</Button>
-          </div>
           
-          <div className="opacity-20 pointer-events-none filter blur-md">
-            <div className="h-[200px] bg-card rounded-lg"></div>
-          </div>
-        </div>
+          {/* Show sign-up CTA at bottom for non-logged-in users */}
+          {!isLoggedIn && (
+            <div className="mt-8 text-center bg-gradient-to-r from-primary/5 to-secondary/5 border border-primary/20 rounded-lg p-6">
+              <div className="bg-primary/10 p-3 rounded-full mb-4 inline-block">
+                <MessageSquare className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">Join the conversation</h3>
+              <p className="text-muted-foreground mb-4 text-sm">
+                Sign up to comment, react to posts, and engage with the community
+              </p>
+              <Button onClick={(e) => navigateToLogin(e)} className="bg-primary hover:bg-primary/90">
+                Sign Up Free
+              </Button>
+            </div>
+          )}
+        </>
       )}
       
       <NotInCommunitySheet 

@@ -25,6 +25,7 @@ interface EnhancedCommentsSectionProps {
   initialReplies?: CommentReply[];
   initialReplyCount?: number;
   postAuthorHandle: string;
+  readOnly?: boolean;
 }
 
 const customEmojisConfig = [
@@ -64,7 +65,8 @@ export const EnhancedCommentsSection = ({
   postCode,
   initialReplies = [],
   initialReplyCount = 0,
-  postAuthorHandle
+  postAuthorHandle,
+  readOnly = false
 }: EnhancedCommentsSectionProps) => {
   const [replies, setReplies] = useState<CommentReply[]>(initialReplies);
   const [replyCount, setReplyCount] = useState(initialReplyCount);
@@ -538,6 +540,8 @@ export const EnhancedCommentsSection = ({
     <div className="space-y-8">
       <div className="space-y-4">
         <h2 className="text-lg font-medium">Comments ({replyCount})</h2>
+        
+        {!readOnly && (
           <form onSubmit={handleSubmitComment} className="space-y-4">
             <div className="flex gap-3">
               <Avatar className="h-10 w-10 mt-1">
@@ -584,106 +588,108 @@ export const EnhancedCommentsSection = ({
                     />
                   </div>
                 )}
-              <div className="flex items-center justify-between pt-2">
-                <div className="flex items-center space-x-2">
-                        <MediaUpload
-                          onMediaUploaded={handleMediaUploaded}
-                          acceptedTypes="image"
-                    disabled={!!uploadedMedia || submitting}
-                        >
-                    <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700" disabled={!!uploadedMedia || submitting} title="Upload Image">
-                      <ImageIcon className="h-5 w-5" />
-        </Button>
-                        </MediaUpload>
-                        <MediaUpload
-                          onMediaUploaded={handleMediaUploaded}
-                          acceptedTypes="video"
-                    disabled={!!uploadedMedia || submitting}
-                        >
-                    <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700" disabled={!!uploadedMedia || submitting} title="Upload Video">
-                      <VideoIcon className="h-5 w-5" />
-            </Button>
-                        </MediaUpload>
-                  <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
-                    <PopoverTrigger asChild>
-                      <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700" disabled={submitting} title="Add Emoji">
-                        <Smile className="h-5 w-5" />
+                <div className="flex items-center justify-between pt-2">
+                  <div className="flex items-center space-x-2">
+                    <MediaUpload
+                      onMediaUploaded={handleMediaUploaded}
+                      acceptedTypes="image"
+                      disabled={!!uploadedMedia || submitting}
+                    >
+                      <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700" disabled={!!uploadedMedia || submitting} title="Upload Image">
+                        <ImageIcon className="h-5 w-5" />
                       </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 border-0" side="top" align="end">
-                      <EmojiPicker
-                        onEmojiClick={onEmojiClick}
-                        autoFocusSearch={false}
-                        emojiStyle={EmojiStyle.NATIVE}
-                        height={350}
-                        customEmojis={customEmojisConfig}
-                        categories={emojiPickerCategoryConfig}
-                      />
-                    </PopoverContent>
-                  </Popover>
+                    </MediaUpload>
+                    <MediaUpload
+                      onMediaUploaded={handleMediaUploaded}
+                      acceptedTypes="video"
+                      disabled={!!uploadedMedia || submitting}
+                    >
+                      <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700" disabled={!!uploadedMedia || submitting} title="Upload Video">
+                        <VideoIcon className="h-5 w-5" />
+                      </Button>
+                    </MediaUpload>
+                    <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700" disabled={submitting} title="Add Emoji">
+                          <Smile className="h-5 w-5" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0 border-0" side="top" align="end">
+                        <EmojiPicker
+                          onEmojiClick={onEmojiClick}
+                          autoFocusSearch={false}
+                          emojiStyle={EmojiStyle.NATIVE}
+                          height={350}
+                          customEmojis={customEmojisConfig}
+                          categories={emojiPickerCategoryConfig}
+                        />
+                      </PopoverContent>
+                    </Popover>
                   </div>
-              <Button 
-                type="submit" 
+                  <Button 
+                    type="submit" 
                     className="text-xs h-8 gap-1.5"
                     disabled={submitting || (!newComment.trim() && !uploadedMedia)}
-                  onClick={handleSubmitComment}
-              >
+                    onClick={handleSubmitComment}
+                  >
                     {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  Reply
-              </Button>
-              </div>
-              {uploadedMedia && (
-                <div className="mt-3">
-                  <MediaPreview media={uploadedMedia} onRemove={removeMedia} />
+                    Reply
+                  </Button>
                 </div>
-              )}
+                {uploadedMedia && (
+                  <div className="mt-3">
+                    <MediaPreview media={uploadedMedia} onRemove={removeMedia} />
+                  </div>
+                )}
               </div>
             </div>
           </form>
-          {loading && replies.length === 0 && (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        )}
+        {loading && replies.length === 0 && (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        )}
+        {!loading && replies.length === 0 && (
+          <div className="text-center py-8 bg-muted/20 rounded-lg border border-border/40">
+            <p className="text-muted-foreground">No comments yet. Be the first to comment!</p>
+          </div>
+        )}
+        {replies.length > 0 && (
+          <>
+            <div className="flex items-center justify-between pt-4">
+              <h3 className="text-sm font-medium">Recent Comments</h3>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={fetchComments} 
+                disabled={loading}
+                className="h-8 text-xs gap-1"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
             </div>
-          )}
-          {!loading && replies.length === 0 && (
-            <div className="text-center py-8 bg-muted/20 rounded-lg border border-border/40">
-              <p className="text-muted-foreground">No comments yet. Be the first to comment!</p>
+            <div className="space-y-6 divide-y divide-border/20">
+              {replies.map(reply => (
+                <div key={reply.id} className="pt-6 first:pt-0">
+                  <EnhancedCommentItem 
+                    comment={reply}
+                    postAuthorHandle={postAuthorHandle}
+                    onMeowChange={handleMeowChange}
+                    onReply={handleReplyToComment}
+                    isAuthorReplying={reply.handle === postAuthorHandle}
+                    isMobile={isMobile}
+                    onOpenMobileReply={(id, handle, avatar, content) => openReplyDrawer(id, handle, avatar, content, false)}
+                    onInitiateMention={handleInitiateMentionInNewComment}
+                    readOnly={readOnly}
+                  />
+                </div>
+              ))}
             </div>
-          )}
-          {replies.length > 0 && (
-            <>
-              <div className="flex items-center justify-between pt-4">
-                <h3 className="text-sm font-medium">Recent Comments</h3>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={fetchComments} 
-                  disabled={loading}
-                  className="h-8 text-xs gap-1"
-                >
-                  <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
-                  Refresh
-                </Button>
-        </div>
-              <div className="space-y-6 divide-y divide-border/20">
-          {replies.map(reply => (
-            <div key={reply.id} className="pt-6 first:pt-0">
-              <EnhancedCommentItem 
-                comment={reply}
-                postAuthorHandle={postAuthorHandle}
-                onMeowChange={handleMeowChange}
-                onReply={handleReplyToComment}
-                      isAuthorReplying={reply.handle === postAuthorHandle}
-                      isMobile={isMobile}
-                      onOpenMobileReply={(id, handle, avatar, content) => openReplyDrawer(id, handle, avatar, content, false)}
-                      onInitiateMention={handleInitiateMentionInNewComment}
-              />
-            </div>
-          ))}
-        </div>
-            </>
-          )}
-        </div>
+          </>
+        )}
+      </div>
       {isMobile && (
         <MobileReplyDrawer 
           open={drawerOpen}

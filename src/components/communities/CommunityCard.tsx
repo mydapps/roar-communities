@@ -23,6 +23,7 @@ interface CommunityCardProps {
   userShares?: number;
   onBuy?: () => void;
   onSell?: () => void;
+  isLoggedIn?: boolean;
 }
 
 const CommunityCard: React.FC<CommunityCardProps> = ({ 
@@ -40,7 +41,8 @@ const CommunityCard: React.FC<CommunityCardProps> = ({
   isAdmin = false,
   userShares = 0,
   onBuy,
-  onSell
+  onSell,
+  isLoggedIn = true
 }) => {
   const formatNumber = (num: number): string => {
     if (num >= 1_000_000) {
@@ -130,7 +132,7 @@ const CommunityCard: React.FC<CommunityCardProps> = ({
             </div>
           </div>
           
-          {userShares && userShares > 0 && (
+          {isLoggedIn && userShares && userShares > 0 && (
             <div className="col-span-2 mt-0.5 bg-primary/5 rounded-md px-2.5 py-1.5 flex items-center justify-between">
               <span className="text-xs font-medium">Your Ownership</span>
               <span className="text-xs font-medium">{userShares.toFixed(2)} shares</span>
@@ -150,7 +152,7 @@ const CommunityCard: React.FC<CommunityCardProps> = ({
               <Plus className="h-3 w-3 mr-1.5" />
               {isMember ? 'Buy' : 'Join'}
             </Button>
-            {isMember && (
+            {isMember && isLoggedIn && (
               <Button 
                 size="sm" 
                 onClick={onSell} 

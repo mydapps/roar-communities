@@ -21,6 +21,7 @@ interface MobileCommentsSectionProps {
     message?: string;
   }>;
   onRefresh: () => void;
+  readOnly?: boolean;
 }
 
 // Memoized comment item to prevent unnecessary renders
@@ -30,7 +31,8 @@ const MemoizedCommentItem = memo(({
   onMeowChange,
   onReply,
   onOpenMobileReply,
-  optimisticToRealIdMap
+  optimisticToRealIdMap,
+  readOnly = false
 }: {
   comment: CommentReply;
   postAuthorHandle: string;
@@ -38,6 +40,7 @@ const MemoizedCommentItem = memo(({
   onReply: (parentId: number, content: string) => Promise<void>;
   onOpenMobileReply: (id: number, handle: string, avatar: string, content: string, level2ParentId?: number) => void;
   optimisticToRealIdMap: Record<number, number>;
+  readOnly?: boolean;
 }) => (
   <div key={comment.id} className="pt-6 first:pt-0">
     <EnhancedCommentItem 
@@ -48,6 +51,7 @@ const MemoizedCommentItem = memo(({
       isMobile={true}
       onOpenMobileReply={onOpenMobileReply}
       optimisticToRealIdMap={optimisticToRealIdMap}
+      readOnly={readOnly}
     />
   </div>
 ));
@@ -57,7 +61,8 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
   postAuthorHandle,
   replies,
   onAddComment,
-  onRefresh
+  onRefresh,
+  readOnly
 }) => {
   const [replyingTo, setReplyingTo] = useState<{
     id: number;
@@ -434,11 +439,12 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
             onReply={handleReplySubmit}
             onOpenMobileReply={handleOpenMobileReply}
             optimisticToRealIdMap={optimisticToRealIdMap}
+            readOnly={readOnly}
           />
         ))}
       </div>
     );
-  }, [localReplies, postAuthorHandle, handleMeowChange, handleReplySubmit, handleOpenMobileReply, optimisticToRealIdMap]);
+  }, [localReplies, postAuthorHandle, handleMeowChange, handleReplySubmit, handleOpenMobileReply, optimisticToRealIdMap, readOnly]);
 
   if (!isMobile) {
     return null;
@@ -451,14 +457,16 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
         {commentsList}
       </div>
       
-      {/* Floating comment input */}
-      <MobileCommentInput
-        postCode={postCode}
-        isReplyMode={!!replyingTo}
-        replyToComment={replyingTo || undefined}
-        onSubmit={handleSubmit}
-        onCancel={handleCancelReply}
-      />
+      {/* Floating comment input - only show if not in read-only mode */}
+      {!readOnly && (
+        <MobileCommentInput
+          postCode={postCode}
+          isReplyMode={!!replyingTo}
+          replyToComment={replyingTo || undefined}
+          onSubmit={handleSubmit}
+          onCancel={handleCancelReply}
+        />
+      )}
 
       <NotInCommunitySheet 
         open={notInCommunitySheetOpen}
