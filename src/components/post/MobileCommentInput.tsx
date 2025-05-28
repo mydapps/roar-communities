@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Send, X, ImageIcon, VideoIcon, Loader2, AtSign, Hash, Smile } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -28,6 +28,10 @@ interface MobileCommentInputProps {
   };
   onSubmit: (content: string, parentId?: number) => Promise<void>;
   onCancel?: () => void;
+}
+
+export interface MobileCommentInputRef {
+  triggerExpand: () => void;
 }
 
 // Helper to get cursor position and text before it
@@ -117,13 +121,13 @@ const emojiPickerCategoryConfig = [
   { category: Categories.FLAGS, name: 'Flags' },
 ];
 
-export const MobileCommentInput: React.FC<MobileCommentInputProps> = ({
+export const MobileCommentInput = forwardRef<MobileCommentInputRef, MobileCommentInputProps>(({
   postCode,
   isReplyMode = false,
   replyToComment,
   onSubmit,
   onCancel
-}) => {
+}, ref) => {
   const [isExpanded, setIsExpanded] = useState(isReplyMode);
   const [content, setContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -397,6 +401,12 @@ export const MobileCommentInput: React.FC<MobileCommentInputProps> = ({
     }
   };
 
+  useImperativeHandle(ref, () => ({
+    triggerExpand: () => {
+      setIsExpanded(true);
+    }
+  }));
+
   return (
     <div 
       className={cn(
@@ -527,4 +537,4 @@ export const MobileCommentInput: React.FC<MobileCommentInputProps> = ({
       </div>
     </div>
   );
-};
+});

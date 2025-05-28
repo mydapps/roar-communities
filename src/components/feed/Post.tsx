@@ -57,6 +57,7 @@ export interface PostProps {
   onPostUpdated?: (postCode: string, newPinnedStatus: boolean) => void;
   is_poll?: boolean;
   poll_data?: PollData | null;
+  onTriggerMobileCommentInput?: () => void;
 }
 
 export const Post = ({ 
@@ -85,6 +86,7 @@ export const Post = ({
   onPostUpdated,
   is_poll = false,
   poll_data = null,
+  onTriggerMobileCommentInput,
 }: PostProps) => {
   const navigate = useNavigate();
   const [localRoared, setLocalRoared] = useState(roared);
@@ -644,6 +646,7 @@ export const Post = ({
           isLoggedIn={userIsLoggedIn}
           hideComments={hideComments}
           avatar={avatar}
+          onTriggerMobileCommentInput={onTriggerMobileCommentInput}
         >
           {showComments && !hideComments && (
             <div onClick={(e) => e.stopPropagation()} className="w-full">

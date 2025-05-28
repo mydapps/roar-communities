@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { fetchPost, PostDetails, OriginalPost } from '@/utils/postApi';
 import { toggleRoar } from '@/utils/api';
 import { Post } from '@/components/feed/Post';
 import { EnhancedCommentsSection } from '@/components/post/EnhancedCommentsSection';
-import { MobileCommentsSection } from '@/components/post/MobileCommentsSection';
+import { MobileCommentsSection, MobileCommentsSectionRef } from '@/components/post/MobileCommentsSection';
 import { Helmet } from 'react-helmet-async';
 import { 
   Breadcrumb, 
@@ -55,6 +55,16 @@ const DetailedPostPage = () => {
   
   // Use dapps_user_id to check login status
   const isLoggedIn = !!localStorage.getItem('dapps_user_id');
+  
+  // Ref for mobile comments section
+  const mobileCommentsSectionRef = useRef<MobileCommentsSectionRef>(null);
+  
+  // Function to trigger mobile comment input
+  const triggerMobileCommentInput = useCallback(() => {
+    if (mobileCommentsSectionRef.current) {
+      mobileCommentsSectionRef.current.triggerCommentInput();
+    }
+  }, []);
   
   const loadPost = useCallback(async () => {
     if (!postId) {
@@ -530,6 +540,7 @@ const DetailedPostPage = () => {
           isPinned={!!post.pinned}
           is_poll={post.is_poll}
           poll_data={post.poll_data}
+          onTriggerMobileCommentInput={triggerMobileCommentInput}
         />
       </div>
       
@@ -553,6 +564,7 @@ const DetailedPostPage = () => {
               onAddComment={handleAddReply}
               onRefresh={handleRefreshComments}
               readOnly={!isLoggedIn}
+              ref={mobileCommentsSectionRef}
             />
           )}
           
