@@ -182,48 +182,80 @@ const CommunityPage = () => {
   const communityMetadata = useMemo(() => {
     if (!community) {
       return { 
-        title: 'Community | dapps.co',
-        description: 'Join communities on dapps.co. Buy, sell, and discuss with other members.',
-        imageUrl: 'https://dapps.co/og-default.jpg',
+        title: 'Community | dapps.co - decentralized community network',
+        description: 'Join communities on dapps.co. Invest in communities like stocks, earn from your content, speak without fear. The social platform where users capture the value they create.',
+        imageUrl: 'https://dapps.co/og-community-image.png',
         url: window.location.href,
         priceInfo: ''
       };
     }
     
-    const title = `${community.name} Community | dapps.co`;
-    const description = community.description || `Join the ${community.name} community on dapps.co. Buy, sell, and discuss with other members.`;
-    const imageUrl = community.image || 'https://dapps.co/og-default.jpg';
-    const url = `${window.location.origin}/c/${community.name.toLowerCase().replace(/\s+/g, '-')}`;
-    const priceInfo = community.prices 
+    const title = `${community.name} Community | dapps.co - decentralized community network`;
+    
+    // Create a more descriptive description with community stats
+    const memberCount = community.members_count || 0;
+    const priceInfo = community.prices?.buy_price 
+      ? ` Current share price: ${community.prices.buy_price} ETH ($${community.prices.buy_price_usd?.toFixed(2) || '0.00'}).`
+      : '';
+    
+    const description = community.description 
+      ? `${community.description} Join ${memberCount} members in the ${community.name} community on dapps.co.${priceInfo} Invest in communities like stocks, earn from your participation.`
+      : `Join the ${community.name} community on dapps.co with ${memberCount} members. Invest in communities like stocks, earn from your participation, speak without fear.${priceInfo}`;
+    
+    // Use community image with fallback to default community OG image
+    const imageUrl = community.image || 'https://dapps.co/og-community-image.png';
+    
+    // Create clean URL slug from community name
+    const communitySlug = community.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    const url = `https://dapps.co/c/${communitySlug}`;
+    
+    const priceInfoDetail = community.prices 
       ? `Current price: ${community.prices.buy_price} ETH ($${community.prices.buy_price_usd?.toFixed(2) || '0.00'})` 
       : '';
     
-    return { title, description, imageUrl, url, priceInfo };
+    return { title, description, imageUrl, url, priceInfo: priceInfoDetail };
   }, [community]);
   
   const helmetContent = (
     <Helmet>
+      {/* Primary Meta Tags */}
       <title>{communityMetadata.title}</title>
+      <meta name="title" content={communityMetadata.title} />
       <meta name="description" content={communityMetadata.description} />
+      <meta name="keywords" content={`${community?.name || 'community'}, crypto community, social investing, community shares, dapps.co, web3, blockchain, decentralized social`} />
       
-      {/* OpenGraph Tags */}
+      {/* Open Graph / Facebook */}
+      <meta property="og:type" content="website" />
+      <meta property="og:url" content={communityMetadata.url} />
       <meta property="og:title" content={communityMetadata.title} />
       <meta property="og:description" content={communityMetadata.description} />
       <meta property="og:image" content={communityMetadata.imageUrl} />
-      <meta property="og:url" content={communityMetadata.url} />
-      <meta property="og:type" content="website" />
+      <meta property="og:image:width" content="1200" />
+      <meta property="og:image:height" content="630" />
       <meta property="og:site_name" content="dapps.co" />
       
-      {/* Twitter Card Tags */}
-      <meta name="twitter:card" content="summary_large_image" />
-      <meta name="twitter:title" content={communityMetadata.title} />
-      <meta name="twitter:description" content={communityMetadata.description} />
-      <meta name="twitter:image" content={communityMetadata.imageUrl} />
+      {/* Twitter */}
+      <meta property="twitter:card" content="summary_large_image" />
+      <meta property="twitter:url" content={communityMetadata.url} />
+      <meta property="twitter:title" content={communityMetadata.title} />
+      <meta property="twitter:description" content={communityMetadata.description} />
+      <meta property="twitter:image" content={communityMetadata.imageUrl} />
+      <meta property="twitter:site" content="@dapps_co" />
+      <meta property="twitter:creator" content="@dapps_co" />
       
       {/* Additional Meta Tags */}
-      <meta name="keywords" content={`${community?.name || 'community'}, crypto, social, dapps.co`} />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <meta name="theme-color" content="#31bcc3" />
       <meta name="author" content="dapps.co" />
       <link rel="canonical" href={communityMetadata.url} />
+      
+      {/* Community-specific meta tags */}
+      {community?.prices?.buy_price && (
+        <meta name="price" content={`${community.prices.buy_price} ETH`} />
+      )}
+      {community?.members_count && (
+        <meta name="members" content={community.members_count.toString()} />
+      )}
     </Helmet>
   );
   

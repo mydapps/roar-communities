@@ -32,6 +32,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { TradeSheet } from '@/components/shares/TradeSheet';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { getWalletBalance } from '@/utils/communityApi';
+import { Helmet } from 'react-helmet-async';
 
 const CommunitiesPage = () => {
   // State for search
@@ -326,6 +327,37 @@ const CommunitiesPage = () => {
 
   return (
     <div className={`container max-w-6xl mx-auto px-4 pt-12 ${isMobile ? 'pb-24' : 'pb-10'}`}>
+      <Helmet>
+        {/* Primary Meta Tags */}
+        <title>Communities - dapps.co - decentralized community network</title>
+        <meta name="title" content="Communities - dapps.co - decentralized community network" />
+        <meta name="description" content="Discover thriving communities on dapps.co. Invest in communities like stocks, join discussions, and earn from your participation. Browse popular, trending, and newest communities." />
+        <meta name="keywords" content="communities, invest in communities, community shares, social investing, decentralized communities, web3 communities, blockchain communities" />
+        
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://dapps.co/communities" />
+        <meta property="og:title" content="Communities - dapps.co - decentralized community network" />
+        <meta property="og:description" content="Discover thriving communities on dapps.co. Invest in communities like stocks, join discussions, and earn from your participation. Browse popular, trending, and newest communities." />
+        <meta property="og:image" content="https://dapps.co/og-community-image.png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:site_name" content="dapps.co" />
+        
+        {/* Twitter */}
+        <meta property="twitter:card" content="summary_large_image" />
+        <meta property="twitter:url" content="https://dapps.co/communities" />
+        <meta property="twitter:title" content="Communities - dapps.co - decentralized community network" />
+        <meta property="twitter:description" content="Discover thriving communities on dapps.co. Invest in communities like stocks, join discussions, and earn from your participation. Browse popular, trending, and newest communities." />
+        <meta property="twitter:image" content="https://dapps.co/og-community-image.png" />
+        <meta property="twitter:site" content="@dapps_co" />
+        <meta property="twitter:creator" content="@dapps_co" />
+        
+        {/* Additional Meta Tags */}
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="theme-color" content="#31bcc3" />
+        <link rel="canonical" href="https://dapps.co/communities" />
+      </Helmet>
       {/* Page Header */}
       <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
         <h1 className="text-3xl font-bold">Communities</h1>
