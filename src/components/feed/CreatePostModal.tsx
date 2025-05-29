@@ -148,6 +148,14 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const [pollOptions, setPollOptions] = useState<PollOptionInput[]>([]);
   const [pollError, setPollError] = useState<string | null>(null);
   const pollOptionImageUploadRefs = useRef<Record<string, HTMLInputElement>>({}); // To trigger file inputs
+  
+  // --- NEW MOBILE UX STATE FOR POLL OPTIONS ---
+  const [focusedPollOption, setFocusedPollOption] = useState<string | null>(null);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const pollOptionInputRefs = useRef<Record<string, HTMLInputElement>>({});
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  // --- END NEW MOBILE UX STATE ---
+  
   // --- END POLL STATE ---
 
   // --- NEW STATE FOR MENTIONS ---
@@ -226,9 +234,17 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
       setIsPollMode(false); // Reset poll mode on open
       setPollOptions([]);    // Clear poll options
       setPollError(null);    // Clear poll errors
+      
+      // Reset mobile UX state
+      setFocusedPollOption(null);
+      setIsKeyboardVisible(false);
     } else {
         // Optional: Clear editor content when modal closes if desired
         // editorInstanceRef.current?.commands.clearContent();
+        
+        // Reset mobile UX state when closing
+        setFocusedPollOption(null);
+        setIsKeyboardVisible(false);
     }
   }, [open, initialContent, communityName]); // Removed editorInstanceRef.current from deps as it can cause issues. Manage focus separately if needed.
 
@@ -477,6 +493,20 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const handlePollOptionTextChange = (optionId: string, newText: string) => {
     setPollOptions(prev => prev.map(opt => opt.id === optionId ? { ...opt, text: newText } : opt));
   };
+
+  // --- NEW: ENHANCED FOCUS MANAGEMENT FOR POLL OPTIONS ---
+  const handlePollOptionFocus = (optionId: string) => {
+    setFocusedPollOption(optionId);
+    setPollError(null); // Clear errors when user starts typing
+  };
+
+  const handlePollOptionBlur = () => {
+    // Small delay to allow for focus to move to another poll option
+    setTimeout(() => {
+      setFocusedPollOption(null);
+    }, 100);
+  };
+  // --- END ENHANCED FOCUS MANAGEMENT ---
 
   const handlePollOptionImageSelected = async (optionId: string, file: File) => {
     if (!file.type.startsWith('image/')) {
@@ -780,77 +810,137 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const renderPollCreator = () => {
     if (!isPollMode) return null;
     return (
-      <div className="p-4 border-t space-y-4">
+      <div className={cn("border-t space-y-3", isMobile ? "p-3" : "p-4")}>
         <h3 className="text-sm font-medium text-muted-foreground">Poll Options (min 2, max 4)</h3>
         {pollOptions.map((option, index) => (
-          <div key={option.id} className="flex items-start gap-2 p-2 border rounded-md bg-background">
-            <span className="text-sm font-medium pt-2">{index + 1}.</span>
-            <div className="flex-grow space-y-2">
+          <div 
+            key={option.id} 
+            className={cn(
+              "border rounded-lg bg-background transition-all duration-200",
+              isMobile ? "p-3" : "p-2",
+              focusedPollOption === option.id && isMobile ? "ring-2 ring-primary/50 border-primary/50 shadow-sm" : ""
+            )}
+          >
+            {/* Mobile-optimized layout */}
+            <div className={cn("flex gap-3", isMobile ? "items-start" : "items-start")}>
+              <span className={cn("font-medium text-muted-foreground flex-shrink-0", 
+                isMobile ? "text-base pt-3 min-w-[24px]" : "text-sm pt-2"
+              )}>
+                {index + 1}.
+              </span>
+              
+              <div className="flex-grow space-y-3">
                 <Input 
-                    type="text"
-                    placeholder={`Option ${index + 1}`}
-                    value={option.text}
-                    onChange={(e) => handlePollOptionTextChange(option.id, e.target.value)}
-                    className="text-sm"
-                    maxLength={100} // Example max length
-                    disabled={option.isUploadingImage}
+                  ref={el => { if (el) pollOptionInputRefs.current[option.id] = el; }}
+                  type="text"
+                  placeholder={`Option ${index + 1}`}
+                  value={option.text}
+                  onChange={(e) => handlePollOptionTextChange(option.id, e.target.value)}
+                  onFocus={() => handlePollOptionFocus(option.id)}
+                  onBlur={handlePollOptionBlur}
+                  className={cn(
+                    "transition-all duration-200",
+                    isMobile ? "text-base h-12 text-foreground" : "text-sm",
+                    focusedPollOption === option.id && isMobile ? "ring-2 ring-primary/30" : ""
+                  )}
+                  maxLength={100}
+                  disabled={option.isUploadingImage}
                 />
+                
+                {/* Image preview section - optimized for mobile */}
                 {option.imagePreviewUrl && (
-                    <div className="relative w-32 h-32 border rounded overflow-hidden">
-                        <img src={option.imagePreviewUrl} alt={`Preview option ${index + 1}`} className="object-cover w-full h-full" />
-                        {option.isUploadingImage && (
-                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                                <Loader2 className="h-6 w-6 animate-spin text-white" />
-                            </div>
-                        )}
-                    </div>
+                  <div className={cn("relative border rounded overflow-hidden", 
+                    isMobile ? "w-40 h-40" : "w-32 h-32"
+                  )}>
+                    <img src={option.imagePreviewUrl} alt={`Preview option ${index + 1}`} className="object-cover w-full h-full" />
+                    {option.isUploadingImage && (
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                        <Loader2 className="h-6 w-6 animate-spin text-white" />
+                      </div>
+                    )}
+                  </div>
                 )}
-                {option.imageUrl && !option.imagePreviewUrl && ( // Show uploaded image if no longer previewing (e.g. after successful upload)
-                    <div className="w-32 h-32 border rounded overflow-hidden">
-                        <img src={option.imageUrl} alt={`Poll option ${index + 1}`} className="object-cover w-full h-full" />
-                    </div>
+                
+                {option.imageUrl && !option.imagePreviewUrl && (
+                  <div className={cn("border rounded overflow-hidden", 
+                    isMobile ? "w-40 h-40" : "w-32 h-32"
+                  )}>
+                    <img src={option.imageUrl} alt={`Poll option ${index + 1}`} className="object-cover w-full h-full" />
+                  </div>
                 )}
+                
                 {option.imageUploadError && (
-                    <p className="text-xs text-red-500 flex items-center"><AlertTriangleIcon className="h-4 w-4 mr-1" />{option.imageUploadError}</p>
+                  <p className="text-xs text-red-500 flex items-center">
+                    <AlertTriangleIcon className="h-4 w-4 mr-1" />
+                    {option.imageUploadError}
+                  </p>
                 )}
+                
                 <input 
-                    type="file"
-                    accept="image/*"
-                    ref={el => { if (el) pollOptionImageUploadRefs.current[option.id] = el; }}
-                    onChange={(e) => e.target.files && e.target.files[0] && handlePollOptionImageSelected(option.id, e.target.files[0])}
-                    className="hidden"
-                    disabled={option.isUploadingImage}
+                  type="file"
+                  accept="image/*"
+                  ref={el => { if (el) pollOptionImageUploadRefs.current[option.id] = el; }}
+                  onChange={(e) => e.target.files && e.target.files[0] && handlePollOptionImageSelected(option.id, e.target.files[0])}
+                  className="hidden"
+                  disabled={option.isUploadingImage}
                 />
-            </div>
-            <div className="flex flex-col space-y-1 items-center pt-1">
+              </div>
+              
+              {/* Action buttons - mobile optimized */}
+              <div className={cn("flex items-start gap-1", 
+                isMobile ? "flex-col pt-2" : "flex-col space-y-1 pt-1"
+              )}>
                 <Button 
-                    variant="outline" size="icon" 
-                    onClick={() => pollOptionImageUploadRefs.current[option.id]?.click()} 
-                    title={option.imageUrl ? "Change Image" : "Add Image"}
-                    disabled={option.isUploadingImage || pollOptions.some(o => o.isUploadingImage && o.id !== option.id)} // Disable if any other image is uploading for simplicity
+                  variant="outline" 
+                  size={isMobile ? "default" : "icon"}
+                  onClick={() => pollOptionImageUploadRefs.current[option.id]?.click()} 
+                  title={option.imageUrl ? "Change Image" : "Add Image"}
+                  disabled={option.isUploadingImage || pollOptions.some(o => o.isUploadingImage && o.id !== option.id)}
+                  className={cn(isMobile ? "h-10 w-10 p-0" : "")}
                 >
-                    <ImagePlusIcon className="h-4 w-4" />
+                  <ImagePlusIcon className="h-4 w-4" />
                 </Button>
+                
                 {pollOptions.length > 2 && (
-                    <Button variant="ghost" size="icon" onClick={() => handleRemovePollOption(option.id)} title="Remove Option" className="text-muted-foreground hover:text-destructive">
-                        <Trash2Icon className="h-4 w-4" />
-                    </Button>
+                  <Button 
+                    variant="ghost" 
+                    size={isMobile ? "default" : "icon"}
+                    onClick={() => handleRemovePollOption(option.id)} 
+                    title="Remove Option" 
+                    className={cn(
+                      "text-muted-foreground hover:text-destructive",
+                      isMobile ? "h-10 w-10 p-0" : ""
+                    )}
+                  >
+                    <Trash2Icon className="h-4 w-4" />
+                  </Button>
                 )}
+              </div>
             </div>
           </div>
         ))}
+        
+        {/* Add option button - mobile optimized */}
         {pollOptions.length < 4 && (
-          <Button variant="outline" onClick={handleAddPollOption} className="w-full mt-2">
+          <Button 
+            variant="outline" 
+            onClick={handleAddPollOption} 
+            className={cn("w-full", isMobile ? "h-12 text-base" : "mt-2")}
+          >
             Add Option ({pollOptions.length}/4)
           </Button>
         )}
+        
         {pollError && (
           <Alert variant="destructive" className="mt-2">
             <AlertTriangleIcon className="h-4 w-4" />
             <AlertDescription>{pollError}</AlertDescription>
           </Alert>
         )}
-        <p className="text-xs text-muted-foreground mt-2">
+        
+        <p className={cn("text-muted-foreground mt-2", 
+          isMobile ? "text-sm" : "text-xs"
+        )}>
           The content you write above will be the poll question. Images in polls: if one option has an image, all options must have an image.
         </p>
       </div>
@@ -876,11 +966,24 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
       {!isPollMode && renderFormattingToolbar()} {/* Show only if not poll mode, or if you want it for poll Q too */}
 
       {/* Scrollable area for editor, poll options, and media previews */}
-      <div className={cn("flex-grow p-1 overflow-y-auto custom-scrollbar", {
-        "pb-[calc(env(safe-area-inset-bottom)_+_70px)]": isMobile, // Padding for mobile toolbar + some space
-      })} style={{ WebkitOverflowScrolling: 'touch' }}>
+      <div 
+        ref={scrollContainerRef}
+        className={cn("flex-grow overflow-y-auto custom-scrollbar", {
+          "pb-[calc(env(safe-area-inset-bottom)_+_70px)]": isMobile, // Padding for mobile toolbar + some space
+          // Adjust height when keyboard is visible on mobile
+          "max-h-[50vh]": isMobile && isKeyboardVisible && isPollMode,
+          "max-h-[60vh]": isMobile && isKeyboardVisible && !isPollMode,
+        })} 
+        style={{ 
+          WebkitOverflowScrolling: 'touch',
+          // Dynamic height adjustment for keyboard on mobile
+          ...(isMobile && isKeyboardVisible && window.visualViewport ? {
+            maxHeight: `${window.visualViewport.height - 200}px`
+          } : {})
+        }}
+      >
         {/* Container for Editor + Poll Options */}
-        <div className="p-4"> 
+        <div className={cn(isMobile ? "p-3" : "p-4")}> 
           <div className="flex-1 min-w-0"> {/* This div might not strictly need flex-1/min-w-0 if it's the sole child now, but harmless */}
         <RichTextEditor
             onEditorCreated={(editor) => { editorInstanceRef.current = editor; }}
@@ -891,7 +994,9 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
             mentionPluginOptions={{
                 onStateChange: handleMentionStateChange,
             }}
-              className="min-h-[120px] text-base mb-3" // mb-3 to give some space before poll options start
+              className={cn("text-base mb-3", 
+                isMobile ? "min-h-[100px]" : "min-h-[120px]"
+              )} // Slightly smaller on mobile when keyboard is up
         />
             {/* Poll Creator UI - now part of this scrollable column */}
             {isPollMode && renderPollCreator()}
@@ -900,7 +1005,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
       
         {/* Regular Media Preview Section (not for poll mode) */}
         {!isPollMode && uploadedMedia.length > 0 && (
-          <div className="px-4 pb-2">
+          <div className={cn(isMobile ? "px-3 pb-2" : "px-4 pb-2")}>
             <h4 className="text-xs font-medium text-muted-foreground mb-2">Attached Media:</h4>
           <div className="flex flex-wrap gap-2">
             {uploadedMedia.map((media) => (
@@ -979,6 +1084,73 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
     </DialogContent>
   );
 
+  // --- NEW: KEYBOARD DETECTION AND AUTO-SCROLL LOGIC ---
+  useEffect(() => {
+    if (!isMobile || !open) return;
+
+    const handleViewportChange = () => {
+      const viewport = window.visualViewport;
+      if (viewport) {
+        const keyboardHeight = window.innerHeight - viewport.height;
+        const keyboardVisible = keyboardHeight > 150; // Threshold for keyboard detection
+        setIsKeyboardVisible(keyboardVisible);
+      }
+    };
+
+    const handleResize = () => {
+      // Fallback for browsers without visualViewport support
+      const heightDiff = window.innerHeight - document.documentElement.clientHeight;
+      setIsKeyboardVisible(heightDiff > 150);
+    };
+
+    // Use visualViewport if available (better detection)
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleViewportChange);
+    } else {
+      window.addEventListener('resize', handleResize);
+    }
+
+    return () => {
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleViewportChange);
+      } else {
+        window.removeEventListener('resize', handleResize);
+      }
+    };
+  }, [isMobile, open]);
+
+  // Auto-scroll focused poll option into view
+  useEffect(() => {
+    if (!isMobile || !focusedPollOption || !isKeyboardVisible) return;
+
+    const timeoutId = setTimeout(() => {
+      const focusedInput = pollOptionInputRefs.current[focusedPollOption];
+      const scrollContainer = scrollContainerRef.current;
+      
+      if (focusedInput && scrollContainer) {
+        const inputRect = focusedInput.getBoundingClientRect();
+        const containerRect = scrollContainer.getBoundingClientRect();
+        
+        // Calculate if input is visible in the viewport considering keyboard
+        const viewportHeight = window.visualViewport?.height || window.innerHeight;
+        const isInputVisible = inputRect.top >= containerRect.top && 
+                              inputRect.bottom <= Math.min(containerRect.bottom, viewportHeight - 50);
+        
+        if (!isInputVisible) {
+          // Scroll the input into view with some padding
+          const scrollTop = inputRect.top - containerRect.top + scrollContainer.scrollTop - 100;
+          scrollContainer.scrollTo({
+            top: Math.max(0, scrollTop),
+            behavior: 'smooth'
+          });
+        }
+      }
+    }, 300); // Small delay to ensure keyboard is fully visible
+
+    return () => clearTimeout(timeoutId);
+  }, [focusedPollOption, isKeyboardVisible, isMobile]);
+  // --- END NEW KEYBOARD DETECTION LOGIC ---
+
   // Wait for client-side mount to ensure isMobile value is stable
   if (!hasMounted) {
     // If the modal is supposed to be open, returning null might be jarring.
@@ -990,20 +1162,30 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   if (isMobile) {
     return (
       <>
-        <Drawer open={open} onOpenChange={onOpenChange} direction="bottom">
+        <Drawer open={open} onOpenChange={onOpenChange} direction="bottom" dismissible={false}>
           <DrawerContent className="h-[95vh] mt-24 flex flex-col rounded-t-[10px]">
             <DrawerHeader className="p-3 border-b flex items-center justify-between sticky top-0 bg-background z-10 flex-shrink-0">
-              <DrawerClose asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8"><XIcon className="h-5 w-5" /></Button>
-              </DrawerClose>
-              <DrawerTitle className="text-md font-semibold">Create Post</DrawerTitle>
-              <Button 
-                size="sm" 
-                onClick={handleSubmit} 
-                disabled={isSubmitting || (!isPollMode && !editorInstanceRef.current?.getText().trim() && uploadedMedia.length === 0) || (isPollMode && !editorInstanceRef.current?.getText().trim())}
-                className="h-8 px-3 text-sm">
-                 {isSubmitting ? 'Posting...' : 'Post'}
-              </Button>
+              <div className="flex-1" /> {/* Left spacer */}
+              <DrawerTitle className="text-md font-semibold absolute left-1/2 transform -translate-x-1/2">
+                {isPollMode ? "Create Poll" : "Create Post"}
+              </DrawerTitle>
+              <div className="flex items-center gap-2">
+                <Button 
+                  size="sm" 
+                  onClick={handleSubmit} 
+                  disabled={isSubmitting || (!isPollMode && !editorInstanceRef.current?.getText().trim() && uploadedMedia.length === 0) || (isPollMode && !editorInstanceRef.current?.getText().trim())}
+                  className="h-8 px-3 text-sm">
+                   {isSubmitting ? 'Posting...' : 'Post'}
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8" 
+                  onClick={() => onOpenChange(false)}
+                >
+                  <XIcon className="h-5 w-5" />
+                </Button>
+              </div>
             </DrawerHeader>
             {PostCreationForm} 
           </DrawerContent>
