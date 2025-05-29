@@ -87,9 +87,26 @@ interface NavItemProps {
 }
 
 const NavItem = ({ to, icon, label }: NavItemProps) => {
+  const location = useLocation();
+  
+  const handleClick = (e: React.MouseEvent) => {
+    // If we're clicking on the Feed button and we're already on the feed page
+    if (to === '/feed' && location.pathname === '/feed') {
+      e.preventDefault();
+      // Dispatch a custom event to trigger feed refresh
+      window.dispatchEvent(new CustomEvent('feedRefresh'));
+      // Scroll to top smoothly
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    }
+  };
+
   return (
     <NavLink
       to={to}
+      onClick={handleClick}
       className={({ isActive }) =>
         cn(
           "flex flex-col items-center justify-center p-2 text-xs transition-all w-full",

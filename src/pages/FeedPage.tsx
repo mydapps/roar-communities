@@ -110,6 +110,20 @@ const FeedPage = () => {
     return cleanup;
   }, []);
   
+  // Add event listener for mobile feed refresh
+  useEffect(() => {
+    const handleFeedRefresh = () => {
+      console.log('[FeedPage] Feed refresh triggered from mobile navigation');
+      handleRefresh();
+    };
+
+    window.addEventListener('feedRefresh', handleFeedRefresh);
+    
+    return () => {
+      window.removeEventListener('feedRefresh', handleFeedRefresh);
+    };
+  }, []);
+  
   useEffect(() => {
     if (observerRef.current) {
       observerRef.current.disconnect();
@@ -267,7 +281,7 @@ const FeedPage = () => {
 
               console.log(`[FeedPage] Post Index: ${index}, showProfileSuggestionModule: ${showProfileSuggestionModule}, MinMet: ${(index + 1) >= MIN_POSTS_BEFORE_SUGGESTION}, IntervalMet: ${(index + 1) % SUGGESTION_INTERVAL === 0}, InstanceCount: ${suggestionModuleInstanceCount}`);
 
-              let componentsToReturn = [postComponent];
+              const componentsToReturn = [postComponent];
 
               if (
                   showProfileSuggestionModule && 
