@@ -36,6 +36,7 @@ import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
 import TransactionHistoryPage from '@/pages/TransactionHistoryPage';
 import AccountInactivePage from '@/pages/AccountInactivePage';
 import PostWarningPage from '@/pages/PostWarningPage';
+import ErrorBoundary from '@/components/shared/ErrorBoundary';
 
 // Lazy loaded components
 const LazyMySharesPage = lazy(() => import('@/pages/MySharesPage'));
@@ -84,6 +85,7 @@ function App() {
       <DeviceProvider>
       <PrivyAuthProvider>
         <PageViewTracker />
+        <ErrorBoundary>
         <Routes>
           {/* Public routes - accessible outside MainLayout */}
           <Route path="/" element={<Index />} />
@@ -174,6 +176,7 @@ function App() {
           </Route>
         </Routes>
         <Toaster position="top-right" />
+        </ErrorBoundary>
       </PrivyAuthProvider>
       </DeviceProvider>
     </HelmetProvider>

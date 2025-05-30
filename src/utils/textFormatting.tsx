@@ -148,14 +148,77 @@ export const processRichTextForDisplayingPosts = (htmlContent: string | null | u
 
   let sanitizedContent = sanitizeHtml(htmlContent, POST_SANITIZATION_OPTIONS);
 
+  // Process custom emojis
   const emojiCodeRegex = /(?<!<[^>]{0,256})(?<![a-zA-Z0-9]):([a-zA-Z0-9_]+?):/g;
   
-sanitizedContent = sanitizedContent.replace(emojiCodeRegex, (match, emojiId) => {
+  sanitizedContent = sanitizedContent.replace(emojiCodeRegex, (match, emojiId) => {
     const customEmoji = CUSTOM_EMOJI_LIST.find(e => e.name === emojiId);
     if (customEmoji) {
       return `<img src="${customEmoji.url}" alt=":${emojiId}:" class="inline-block h-5 w-5 align-middle mx-px" />`;
     } 
     return match; 
+  });
+
+  // Process URLs - convert URLs to clickable links with loadIn parameter
+  const urlRegex = /(https?:\/\/[^\s<>"]+)/g;
+  sanitizedContent = sanitizedContent.replace(urlRegex, (match, url, offset) => {
+    // Skip URLs that are part of existing anchor tags
+    const beforeMatch = sanitizedContent.substring(0, offset);
+    const afterMatch = sanitizedContent.substring(offset + match.length);
+    
+    // Check if this URL is already inside an anchor tag
+    const lastOpenTag = beforeMatch.lastIndexOf('<a');
+    const lastCloseTag = beforeMatch.lastIndexOf('</a>');
+    const nextCloseTag = afterMatch.indexOf('</a>');
+    
+    // If we're inside an anchor tag, don't process this URL
+    if (lastOpenTag > lastCloseTag && nextCloseTag !== -1) {
+      return match;
+    }
+    
+    // Check if URL is part of image markdown (skip URLs that have ]( before them)
+    if (beforeMatch.endsWith('](')) {
+      return match;
+    }
+    
+    // Check if URL is already part of an href attribute
+    if (beforeMatch.includes('href="') && beforeMatch.lastIndexOf('href="') > beforeMatch.lastIndexOf('"', beforeMatch.length - 7)) {
+      return match;
+    }
+    
+    let finalUrl = url;
+    
+    try {
+      const parsedUrl = new URL(url);
+      // Add loadIn parameter if not already present
+      if (!parsedUrl.searchParams.has('loadIn')) {
+        parsedUrl.searchParams.append('loadIn', 'defaultBrowser');
+        finalUrl = parsedUrl.toString();
+      }
+    } catch (e) {
+      // If URL parsing fails, attempt simple appending
+      if (!url.includes('loadIn=defaultBrowser')) {
+        if (url.includes('?')) {
+          finalUrl = `${url}&loadIn=defaultBrowser`;
+        } else {
+          finalUrl = `${url}?loadIn=defaultBrowser`;
+        }
+      }
+    }
+    
+    return `<a href="${finalUrl}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline" onclick="event.stopPropagation()">${url}</a>`;
+  });
+
+  // Process mentions - convert @username to clickable links
+  const mentionRegex = /@(\w+)/g;
+  sanitizedContent = sanitizedContent.replace(mentionRegex, (match, username) => {
+    return `<a href="/u/${username}" class="text-primary hover:underline" onclick="event.stopPropagation()">${match}</a>`;
+  });
+
+  // Process community mentions - convert /c/community to clickable links
+  const communityRegex = /\/c\/([a-zA-Z0-9-]+)/g;
+  sanitizedContent = sanitizedContent.replace(communityRegex, (match, community) => {
+    return `<a href="/c/${community}" class="text-primary hover:underline" onclick="event.stopPropagation()">${match}</a>`;
   });
 
   return sanitizedContent;

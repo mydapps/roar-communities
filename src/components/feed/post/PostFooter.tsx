@@ -78,7 +78,7 @@ export const PostFooter: React.FC<PostFooterProps> = ({
       onTriggerMobileCommentInput();
     }
   };
-
+  
   return (
     <CardFooter className="pt-0 flex justify-between flex-col">
       <div className="flex justify-between w-full mb-3">

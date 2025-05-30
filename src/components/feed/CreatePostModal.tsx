@@ -832,10 +832,10 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
               <div className="flex-grow space-y-3">
                 <Input 
                   ref={el => { if (el) pollOptionInputRefs.current[option.id] = el; }}
-                  type="text"
-                  placeholder={`Option ${index + 1}`}
-                  value={option.text}
-                  onChange={(e) => handlePollOptionTextChange(option.id, e.target.value)}
+                    type="text"
+                    placeholder={`Option ${index + 1}`}
+                    value={option.text}
+                    onChange={(e) => handlePollOptionTextChange(option.id, e.target.value)}
                   onFocus={() => handlePollOptionFocus(option.id)}
                   onBlur={handlePollOptionBlur}
                   className={cn(
@@ -844,7 +844,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
                     focusedPollOption === option.id && isMobile ? "ring-2 ring-primary/30" : ""
                   )}
                   maxLength={100}
-                  disabled={option.isUploadingImage}
+                    disabled={option.isUploadingImage}
                 />
                 
                 {/* Image preview section - optimized for mobile */}
@@ -852,21 +852,21 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
                   <div className={cn("relative border rounded overflow-hidden", 
                     isMobile ? "w-40 h-40" : "w-32 h-32"
                   )}>
-                    <img src={option.imagePreviewUrl} alt={`Preview option ${index + 1}`} className="object-cover w-full h-full" />
-                    {option.isUploadingImage && (
-                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                        <Loader2 className="h-6 w-6 animate-spin text-white" />
-                      </div>
-                    )}
-                  </div>
+                        <img src={option.imagePreviewUrl} alt={`Preview option ${index + 1}`} className="object-cover w-full h-full" />
+                        {option.isUploadingImage && (
+                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                <Loader2 className="h-6 w-6 animate-spin text-white" />
+                            </div>
+                        )}
+                    </div>
                 )}
                 
                 {option.imageUrl && !option.imagePreviewUrl && (
                   <div className={cn("border rounded overflow-hidden", 
                     isMobile ? "w-40 h-40" : "w-32 h-32"
                   )}>
-                    <img src={option.imageUrl} alt={`Poll option ${index + 1}`} className="object-cover w-full h-full" />
-                  </div>
+                        <img src={option.imageUrl} alt={`Poll option ${index + 1}`} className="object-cover w-full h-full" />
+                    </div>
                 )}
                 
                 {option.imageUploadError && (
@@ -877,14 +877,14 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
                 )}
                 
                 <input 
-                  type="file"
-                  accept="image/*"
-                  ref={el => { if (el) pollOptionImageUploadRefs.current[option.id] = el; }}
-                  onChange={(e) => e.target.files && e.target.files[0] && handlePollOptionImageSelected(option.id, e.target.files[0])}
-                  className="hidden"
-                  disabled={option.isUploadingImage}
+                    type="file"
+                    accept="image/*"
+                    ref={el => { if (el) pollOptionImageUploadRefs.current[option.id] = el; }}
+                    onChange={(e) => e.target.files && e.target.files[0] && handlePollOptionImageSelected(option.id, e.target.files[0])}
+                    className="hidden"
+                    disabled={option.isUploadingImage}
                 />
-              </div>
+            </div>
               
               {/* Action buttons - mobile optimized */}
               <div className={cn("flex items-start gap-1", 
@@ -893,12 +893,12 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
                 <Button 
                   variant="outline" 
                   size={isMobile ? "default" : "icon"}
-                  onClick={() => pollOptionImageUploadRefs.current[option.id]?.click()} 
-                  title={option.imageUrl ? "Change Image" : "Add Image"}
+                    onClick={() => pollOptionImageUploadRefs.current[option.id]?.click()} 
+                    title={option.imageUrl ? "Change Image" : "Add Image"}
                   disabled={option.isUploadingImage || pollOptions.some(o => o.isUploadingImage && o.id !== option.id)}
                   className={cn(isMobile ? "h-10 w-10 p-0" : "")}
                 >
-                  <ImagePlusIcon className="h-4 w-4" />
+                    <ImagePlusIcon className="h-4 w-4" />
                 </Button>
                 
                 {pollOptions.length > 2 && (
@@ -912,8 +912,8 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
                       isMobile ? "h-10 w-10 p-0" : ""
                     )}
                   >
-                    <Trash2Icon className="h-4 w-4" />
-                  </Button>
+                        <Trash2Icon className="h-4 w-4" />
+                    </Button>
                 )}
               </div>
             </div>
@@ -969,7 +969,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
       <div 
         ref={scrollContainerRef}
         className={cn("flex-grow overflow-y-auto custom-scrollbar", {
-          "pb-[calc(env(safe-area-inset-bottom)_+_70px)]": isMobile, // Padding for mobile toolbar + some space
+        "pb-[calc(env(safe-area-inset-bottom)_+_70px)]": isMobile, // Padding for mobile toolbar + some space
           // Adjust height when keyboard is visible on mobile
           "max-h-[50vh]": isMobile && isKeyboardVisible && isPollMode,
           "max-h-[60vh]": isMobile && isKeyboardVisible && !isPollMode,
@@ -1170,13 +1170,13 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
                 {isPollMode ? "Create Poll" : "Create Post"}
               </DrawerTitle>
               <div className="flex items-center gap-2">
-                <Button 
-                  size="sm" 
-                  onClick={handleSubmit} 
-                  disabled={isSubmitting || (!isPollMode && !editorInstanceRef.current?.getText().trim() && uploadedMedia.length === 0) || (isPollMode && !editorInstanceRef.current?.getText().trim())}
-                  className="h-8 px-3 text-sm">
-                   {isSubmitting ? 'Posting...' : 'Post'}
-                </Button>
+              <Button 
+                size="sm" 
+                onClick={handleSubmit} 
+                disabled={isSubmitting || (!isPollMode && !editorInstanceRef.current?.getText().trim() && uploadedMedia.length === 0) || (isPollMode && !editorInstanceRef.current?.getText().trim())}
+                className="h-8 px-3 text-sm">
+                 {isSubmitting ? 'Posting...' : 'Post'}
+              </Button>
                 <Button 
                   variant="ghost" 
                   size="icon" 
