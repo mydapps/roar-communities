@@ -293,11 +293,13 @@ export const Post = ({
   };
 
   const handleShareSuccess = (platform: string) => {
-    setTimeout(() => {
-      setShareSheetOpen(false);
-    }, 2000);
+    console.log(`Post shared successfully on ${platform}`);
   };
   
+  const handleShare = () => {
+    setShareSheetOpen(true);
+  };
+
   const postId = useRef(postCode || Array.from({length: 6}, () => 
     Math.floor(Math.random() * 36).toString(36)).join('')
   ).current;
@@ -607,6 +609,7 @@ export const Post = ({
           isPinned={currentIsPinned}
           onTogglePin={isAdmin ? handleTogglePin : undefined}
           onAdminHideWarn={isAdmin && !isOwner ? handleOpenHideWarnModal : undefined}
+          onShare={handleShare}
         />
         
         <PostContent 
