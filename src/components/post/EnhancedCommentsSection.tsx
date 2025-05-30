@@ -516,7 +516,7 @@ export const EnhancedCommentsSection = ({
       const text = textarea.value;
       let emojiToInsert = '';
       if (emojiData.isCustom) {
-        emojiToInsert = `:${emojiData.emoji}:`; 
+        emojiToInsert = ` :${emojiData.emoji}: `; 
       } else {
         emojiToInsert = emojiData.emoji;
       }

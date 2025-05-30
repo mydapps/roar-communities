@@ -376,8 +376,8 @@ export const MobileCommentInput = forwardRef<MobileCommentInputRef, MobileCommen
 
       let emojiToInsert = '';
       if (emojiData.isCustom) {
-        // For custom emojis, use the :id: format, emojiData.emoji contains the id for custom ones
-        emojiToInsert = `:${emojiData.emoji}:`; 
+        // For custom emojis, use the :id: format with spaces, emojiData.emoji contains the id for custom ones
+        emojiToInsert = ` :${emojiData.emoji}: `; 
       } else {
         // For standard emojis, use the emoji character itself
         emojiToInsert = emojiData.emoji;
