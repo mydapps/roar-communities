@@ -95,18 +95,60 @@ const RoarFarmingPage = () => {
   const [displayGoal, setDisplayGoal] = useState<number>(PHASE_1_GOAL);
   const [displayProgress, setDisplayProgress] = useState<number>(0);
   
+  // Authentication state
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  
   const navigate = useNavigate();
   const progressAnimationControls = useAnimation(); // Animation controls for progress bar
   
+  // Check if user is authenticated
+  const checkAuthentication = () => {
+    const userId = localStorage.getItem('dapps_user_id');
+    const userHandle = localStorage.getItem('dapps_user_handle');
+    return !!(userId && userHandle);
+  };
+  
+  // Redirect to index if not authenticated
+  const handleUnauthenticatedAction = () => {
+    navigate('/index');
+  };
+  
+  // Handle booster modal open with authentication check
+  const handleBoosterModalOpen = () => {
+    if (!checkAuthentication()) {
+      handleUnauthenticatedAction();
+      return;
+    }
+    setBoosterModalOpen(true);
+  };
+  
+  // Handle booster navigation with authentication check
+  const handleBoosterNavigation = (e: React.MouseEvent) => {
+    if (!checkAuthentication()) {
+      e.preventDefault();
+      handleUnauthenticatedAction();
+      return;
+    }
+    // If authenticated, allow normal navigation (Link will handle it)
+  };
+  
   // Load total roars and farming status on mount and when farming state changes
   useEffect(() => {
+    // Check authentication on mount
+    const isAuth = checkAuthentication();
+    setIsAuthenticated(isAuth);
+    
     // Call these at the start of the effect
     fetchTotalRoars();
-    checkFarmingStatus();
+    if (isAuth) {
+      checkFarmingStatus();
+    }
     
     // Setup polling for farming status (more frequent polling when actively farming)
     const statusInterval = setInterval(() => {
-      checkFarmingStatus();
+      if (checkAuthentication()) {
+        checkFarmingStatus();
+      }
     }, isFarming ? 15000 : 30000); // Check more frequently when farming
     
     return () => {
@@ -448,6 +490,12 @@ const RoarFarmingPage = () => {
   
   // Start farming
   const startFarming = async () => {
+    // Check authentication first
+    if (!checkAuthentication()) {
+      handleUnauthenticatedAction();
+      return;
+    }
+    
     try {
       setIsStarting(true);
       
@@ -769,14 +817,19 @@ const RoarFarmingPage = () => {
       }
     };
     
-    // Create a modal with a counting animation
+    // Create a modal with a counting animation and social sharing
     const showClaimModal = () => {
+      // Get user handle for social sharing
+      const userHandle = localStorage.getItem('dapps_user_handle') || 'Unknown';
+      
       // Create modal structure
       const overlay = document.createElement('div');
       overlay.className = 'claim-overlay';
       
       const card = document.createElement('div');
       card.className = 'claim-card';
+      card.style.width = '400px';
+      card.style.maxWidth = '95%';
       
       // Add rotating glow effect
       const rotatingGlow = document.createElement('div');
@@ -831,6 +884,304 @@ const RoarFarmingPage = () => {
       }, 50);
       
       card.appendChild(amount);
+      
+      // Add social sharing section
+      const shareSection = document.createElement('div');
+      shareSection.style.marginTop = '20px';
+      shareSection.style.marginBottom = '16px';
+      
+      const shareTitle = document.createElement('div');
+      shareTitle.style.fontSize = '14px';
+      shareTitle.style.fontWeight = 'bold';
+      shareTitle.style.color = '#92400E';
+      shareTitle.style.marginBottom = '12px';
+      shareTitle.style.textAlign = 'center';
+      shareTitle.textContent = '🚀 Share your success!';
+      shareSection.appendChild(shareTitle);
+      
+      // Social sharing buttons container
+      const socialButtons = document.createElement('div');
+      socialButtons.style.display = 'flex';
+      socialButtons.style.justifyContent = 'center';
+      socialButtons.style.gap = '12px';
+      socialButtons.style.flexWrap = 'wrap';
+      
+      // Helper function to create sharing messages and handle sharing
+      const shareToSocial = async (platform) => {
+        try {
+          // Generate the sharing image
+          const imageResponse = await fetch(`/api/generateRoarClaimImage?handle=${encodeURIComponent(userHandle)}`);
+          
+          if (!imageResponse.ok) {
+            throw new Error('Failed to generate sharing image');
+          }
+          
+          const imageBlob = await imageResponse.blob();
+          const imageFile = new File([imageBlob], 'roar-claim.png', { type: 'image/png' });
+          
+          const shareText = `🦁 Just claimed ${earnedAmount.toFixed(2)} 🦁 from farming on @dapps_co! 🚀\n\nJoin the roar farming revolution and earn rewards too! 💎\n\n#RoarFarming #DappsCo #CryptoCommunity`;
+          const shareUrl = 'https://dapps.co/roar-farming';
+          
+          // Try native Web Share API first (works on mobile and some desktop browsers)
+          if (navigator.share && navigator.canShare && navigator.canShare({ files: [imageFile] })) {
+            try {
+              await navigator.share({
+                title: 'ROAR Farming Success!',
+                text: shareText,
+                url: shareUrl,
+                files: [imageFile]
+              });
+              
+              if (typeof toast !== 'undefined') {
+                toast.success('Shared successfully!');
+              }
+              return;
+            } catch (shareError) {
+              console.log('Native sharing failed, falling back to platform-specific sharing');
+            }
+          }
+          
+          // Platform-specific sharing with improved approaches
+          if (platform === 'twitter') {
+            // Copy image to clipboard and open Twitter
+            try {
+              await navigator.clipboard.write([
+                new ClipboardItem({
+                  'image/png': imageBlob
+                })
+              ]);
+              
+              const twitterText = encodeURIComponent(shareText + `\n\n${shareUrl}`);
+              window.open(`https://twitter.com/intent/tweet?text=${twitterText}`, '_blank');
+              
+              if (typeof toast !== 'undefined') {
+                toast.success('Image copied to clipboard! Paste it in your tweet.');
+              }
+            } catch (clipboardError) {
+              // Fallback: Create a temporary URL for the image
+              const imageUrl = URL.createObjectURL(imageBlob);
+              const twitterText = encodeURIComponent(shareText + `\n\n${shareUrl}`);
+              window.open(`https://twitter.com/intent/tweet?text=${twitterText}`, '_blank');
+              
+              // Try to copy the image URL to clipboard as backup
+              try {
+                await navigator.clipboard.writeText(`Image for your tweet: ${imageUrl}\n\n${shareText}\n\n${shareUrl}`);
+                if (typeof toast !== 'undefined') {
+                  toast.success('Opening Twitter! Share text and image URL copied to clipboard.');
+                }
+              } catch {
+                if (typeof toast !== 'undefined') {
+                  toast.success('Opening Twitter! Please upload the image manually.');
+                }
+              }
+              
+              // Clean up URL after some time
+              setTimeout(() => URL.revokeObjectURL(imageUrl), 30000);
+            }
+            
+          } else if (platform === 'farcaster') {
+            // Copy image to clipboard and open Farcaster
+            try {
+              await navigator.clipboard.write([
+                new ClipboardItem({
+                  'image/png': imageBlob
+                })
+              ]);
+              
+              const farcasterText = encodeURIComponent(`🦁 Just claimed ${earnedAmount.toFixed(2)} 🦁 from farming! 🚀\n\nJoin the farming revolution on dapps.co! 💎\n\n${shareUrl}`);
+              window.open(`https://warpcast.com/~/compose?text=${farcasterText}`, '_blank');
+              
+              if (typeof toast !== 'undefined') {
+                toast.success('Image copied to clipboard! Paste it in your cast.');
+              }
+            } catch (clipboardError) {
+              const farcasterText = encodeURIComponent(`🦁 Just claimed ${earnedAmount.toFixed(2)} 🦁 from farming! 🚀\n\nJoin the farming revolution on dapps.co! 💎\n\n${shareUrl}`);
+              window.open(`https://warpcast.com/~/compose?text=${farcasterText}`, '_blank');
+              
+              if (typeof toast !== 'undefined') {
+                toast.success('Opening Farcaster! Please upload the image manually.');
+              }
+            }
+            
+          } else if (platform === 'telegram') {
+            // For Telegram, try clipboard first, then use share URL
+            try {
+              await navigator.clipboard.write([
+                new ClipboardItem({
+                  'image/png': imageBlob
+                })
+              ]);
+              
+              const telegramText = encodeURIComponent(`🦁 Just claimed ${earnedAmount.toFixed(2)} 🦁 from farming! 🚀\n\nJoin me on dapps.co and start earning tokens too! 💎\n\n${shareUrl}`);
+              window.open(`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${telegramText}`, '_blank');
+              
+              if (typeof toast !== 'undefined') {
+                toast.success('Image copied to clipboard! Paste it in your Telegram message.');
+              }
+            } catch (clipboardError) {
+              const telegramText = encodeURIComponent(`🦁 Just claimed ${earnedAmount.toFixed(2)} 🦁 from farming! 🚀\n\nJoin me on dapps.co and start earning tokens too! 💎\n\n${shareUrl}`);
+              window.open(`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${telegramText}`, '_blank');
+              
+              if (typeof toast !== 'undefined') {
+                toast.success('Opening Telegram! Please upload the image manually.');
+              }
+            }
+          }
+          
+        } catch (error) {
+          console.error('Error sharing to social media:', error);
+          // Fallback to text-only sharing
+          const fallbackText = `🦁 Just claimed ${earnedAmount.toFixed(2)} 🦁 from farming on dapps.co! 🚀\n\nJoin the roar farming revolution: https://dapps.co/roar-farming`;
+          
+          if (navigator.share) {
+            try {
+              await navigator.share({
+                title: 'ROAR Farming Success!',
+                text: fallbackText,
+                url: 'https://dapps.co/roar-farming'
+              });
+            } catch (shareError) {
+              // Copy to clipboard as final fallback
+              try {
+                await navigator.clipboard.writeText(fallbackText);
+                if (typeof toast !== 'undefined') {
+                  toast.success('Share text copied to clipboard!');
+                }
+              } catch {
+                if (typeof toast !== 'undefined') {
+                  toast.error('Sharing failed. Please try again.');
+                }
+              }
+            }
+          } else {
+            // Copy to clipboard as fallback
+            try {
+              await navigator.clipboard.writeText(fallbackText);
+              if (typeof toast !== 'undefined') {
+                toast.success('Share text copied to clipboard!');
+              }
+            } catch {
+              if (typeof toast !== 'undefined') {
+                toast.error('Sharing failed. Please try again.');
+              }
+            }
+          }
+        }
+      };
+      
+      // Twitter button
+      const twitterBtn = document.createElement('button');
+      twitterBtn.style.backgroundColor = '#1DA1F2';
+      twitterBtn.style.color = 'white';
+      twitterBtn.style.border = 'none';
+      twitterBtn.style.borderRadius = '8px';
+      twitterBtn.style.padding = '8px 12px';
+      twitterBtn.style.fontSize = '12px';
+      twitterBtn.style.fontWeight = 'bold';
+      twitterBtn.style.cursor = 'pointer';
+      twitterBtn.style.transition = 'transform 0.2s ease, background-color 0.2s ease';
+      twitterBtn.style.display = 'flex';
+      twitterBtn.style.alignItems = 'center';
+      twitterBtn.style.gap = '6px';
+      
+      const twitterIcon = document.createElement('img');
+      twitterIcon.src = 'https://dapps.co/x.png';
+      twitterIcon.style.width = '16px';
+      twitterIcon.style.height = '16px';
+      twitterIcon.style.objectFit = 'contain';
+      twitterBtn.appendChild(twitterIcon);
+      
+      const twitterText = document.createElement('span');
+      twitterText.textContent = 'X (Twitter)';
+      twitterBtn.appendChild(twitterText);
+      
+      twitterBtn.addEventListener('click', () => shareToSocial('twitter'));
+      twitterBtn.addEventListener('mouseover', () => {
+        twitterBtn.style.backgroundColor = '#0d8bd9';
+        twitterBtn.style.transform = 'scale(1.05)';
+      });
+      twitterBtn.addEventListener('mouseout', () => {
+        twitterBtn.style.backgroundColor = '#1DA1F2';
+        twitterBtn.style.transform = 'scale(1)';
+      });
+      
+      // Farcaster button
+      const farcasterBtn = document.createElement('button');
+      farcasterBtn.style.backgroundColor = '#855DCD';
+      farcasterBtn.style.color = 'white';
+      farcasterBtn.style.border = 'none';
+      farcasterBtn.style.borderRadius = '8px';
+      farcasterBtn.style.padding = '8px 12px';
+      farcasterBtn.style.fontSize = '12px';
+      farcasterBtn.style.fontWeight = 'bold';
+      farcasterBtn.style.cursor = 'pointer';
+      farcasterBtn.style.transition = 'transform 0.2s ease, background-color 0.2s ease';
+      farcasterBtn.style.display = 'flex';
+      farcasterBtn.style.alignItems = 'center';
+      farcasterBtn.style.gap = '6px';
+      
+      const farcasterIcon = document.createElement('img');
+      farcasterIcon.src = 'https://dapps.co/fc.png';
+      farcasterIcon.style.width = '16px';
+      farcasterIcon.style.height = '16px';
+      farcasterIcon.style.objectFit = 'contain';
+      farcasterBtn.appendChild(farcasterIcon);
+      
+      const farcasterText = document.createElement('span');
+      farcasterText.textContent = 'Farcaster';
+      farcasterBtn.appendChild(farcasterText);
+      
+      farcasterBtn.addEventListener('click', () => shareToSocial('farcaster'));
+      farcasterBtn.addEventListener('mouseover', () => {
+        farcasterBtn.style.backgroundColor = '#6d47a8';
+        farcasterBtn.style.transform = 'scale(1.05)';
+      });
+      farcasterBtn.addEventListener('mouseout', () => {
+        farcasterBtn.style.backgroundColor = '#855DCD';
+        farcasterBtn.style.transform = 'scale(1)';
+      });
+      
+      // Telegram button
+      const telegramBtn = document.createElement('button');
+      telegramBtn.style.backgroundColor = '#0088CC';
+      telegramBtn.style.color = 'white';
+      telegramBtn.style.border = 'none';
+      telegramBtn.style.borderRadius = '8px';
+      telegramBtn.style.padding = '8px 12px';
+      telegramBtn.style.fontSize = '12px';
+      telegramBtn.style.fontWeight = 'bold';
+      telegramBtn.style.cursor = 'pointer';
+      telegramBtn.style.transition = 'transform 0.2s ease, background-color 0.2s ease';
+      telegramBtn.style.display = 'flex';
+      telegramBtn.style.alignItems = 'center';
+      telegramBtn.style.gap = '6px';
+      
+      const telegramIcon = document.createElement('img');
+      telegramIcon.src = 'https://dapps.co/tg.png';
+      telegramIcon.style.width = '16px';
+      telegramIcon.style.height = '16px';
+      telegramIcon.style.objectFit = 'contain';
+      telegramBtn.appendChild(telegramIcon);
+      
+      const telegramText = document.createElement('span');
+      telegramText.textContent = 'Telegram';
+      telegramBtn.appendChild(telegramText);
+      
+      telegramBtn.addEventListener('click', () => shareToSocial('telegram'));
+      telegramBtn.addEventListener('mouseover', () => {
+        telegramBtn.style.backgroundColor = '#006ba6';
+        telegramBtn.style.transform = 'scale(1.05)';
+      });
+      telegramBtn.addEventListener('mouseout', () => {
+        telegramBtn.style.backgroundColor = '#0088CC';
+        telegramBtn.style.transform = 'scale(1)';
+      });
+      
+      socialButtons.appendChild(twitterBtn);
+      socialButtons.appendChild(farcasterBtn);
+      socialButtons.appendChild(telegramBtn);
+      shareSection.appendChild(socialButtons);
+      card.appendChild(shareSection);
       
       // Add close button
       const button = document.createElement('button');
@@ -1014,6 +1365,7 @@ const RoarFarmingPage = () => {
                 </Link>
                 <Link 
                   to="/boosters" 
+                  onClick={handleBoosterNavigation}
                   className="text-xs flex items-center gap-1 text-amber-600 hover:text-amber-700 hover:underline"
                 >
                   <Sparkles className="h-3 w-3" />
@@ -1216,7 +1568,7 @@ const RoarFarmingPage = () => {
                     {!isLoadingBoosters && boosterData && boosterData.total > 0 && (
                       <SimpleBoosterDisplay 
                         boosters={boosterData} 
-                        onClick={() => setBoosterModalOpen(true)} 
+                        onClick={handleBoosterModalOpen} 
                       />
                     )}
                     
@@ -1239,6 +1591,7 @@ const RoarFarmingPage = () => {
                 {/* Booster link - now positioned directly after the information section */}
                 <Link 
                   to="/boosters"
+                  onClick={handleBoosterNavigation}
                   className="flex justify-between items-center px-4 py-3 mt-4 mb-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800/30 hover:bg-amber-100 dark:hover:bg-amber-800/30 transition-colors"
                 >
                   <div className="flex items-center">
