@@ -4,7 +4,7 @@ import { Helmet } from 'react-helmet-async';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, ArrowRight, Sparkles, Award, Clock, AlertTriangle, TrendingUp, ChevronRight, Rocket } from 'lucide-react';
+import { Loader2, ArrowRight, Sparkles, Award, Clock, AlertTriangle, TrendingUp, ChevronRight, Rocket, Trophy } from 'lucide-react';
 import { createAuthHeaders, fetchAvailableBoosters, AvailableBoostersResponse } from '@/utils/apiBase';
 import { toast } from 'sonner';
 import { Link, useNavigate } from 'react-router-dom';
@@ -1002,8 +1002,16 @@ const RoarFarmingPage = () => {
                 </div>
               )}
               
-                {/* Booster link */}
-              <div className="flex justify-end mt-3">
+                {/* Links */}
+              <div className="flex justify-between items-center mt-3">
+                <Link 
+                  to="/roar-leaderboard" 
+                  className="text-xs flex items-center gap-1 text-amber-600 hover:text-amber-700 hover:underline"
+                >
+                  <Trophy className="h-3 w-3" />
+                  Leaderboard
+                  <ChevronRight className="h-3 w-3" />
+                </Link>
                 <Link 
                   to="/boosters" 
                   className="text-xs flex items-center gap-1 text-amber-600 hover:text-amber-700 hover:underline"
