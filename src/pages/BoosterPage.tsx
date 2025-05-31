@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Gift, Twitter, Users, Medal, Calendar, Clock, Link as LinkIcon, CheckCircle2, LucideIcon, Trophy, Rocket, Zap, Share2, MessageCircle, Award, ArrowRight, RefreshCw, ChevronRight, UserPlus, User, Gem, Target, Loader2, Lock, X, Info, Bell, Globe, ThumbsUp, MessageSquareText, HandHeart } from 'lucide-react';
+import { Sparkles, Gift, Twitter, Users, Medal, Calendar, Clock, Link as LinkIcon, CheckCircle2, LucideIcon, Trophy, Rocket, Zap, Share2, MessageCircle, Award, ArrowRight, RefreshCw, ChevronRight, UserPlus, User, Gem, Target, Loader2, Lock, X, Info, Bell, Globe, ThumbsUp, MessageSquareText, HandHeart, BarChart3, Vote } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -403,7 +403,9 @@ const getIconComponent = (iconName: string): React.ReactNode => {
     Award: Award,
     UpvoteStreak: HandHeart,
     CommentStreak: MessageSquareText,
-    FollowStreak: UserPlus
+    FollowStreak: UserPlus,
+    BarChart3: BarChart3,
+    Vote: Vote
   };
 
   const IconComponent = icons[iconName] || Sparkles;
@@ -1165,6 +1167,8 @@ const BoosterPage: React.FC = () => {
       case 'daily_upvote_streak': return 'UpvoteStreak';
       case 'daily_comment_streak': return 'CommentStreak';
       case 'daily_follow_streak': return 'FollowStreak';
+      case 'daily_poll_creation': return 'BarChart3';
+      case 'daily_poll_voting': return 'Vote';
       default: return 'Sparkles';
     }
   };
@@ -1182,6 +1186,8 @@ const BoosterPage: React.FC = () => {
       case 'refer_friends': return 'Refer friends to earn boosts.';
       case 'daily_tweet': return 'Tweet about us daily.';
       case 'daily_check_in': return 'Check in daily for rewards.';
+      case 'daily_poll_creation': return 'Create a poll today for a 2x boost.';
+      case 'daily_poll_voting': return 'Vote on 5 polls today for a 2x boost.';
       case 'share_community': return 'Share a community you like.';
       case 'first_post': return 'Make your first post.';
       case 'buy_shares': return 'Buy shares in a community.';
@@ -1227,6 +1233,8 @@ const BoosterPage: React.FC = () => {
       case 'daily_upvote_streak': return '/feed';
       case 'daily_comment_streak': return '/feed';
       case 'daily_follow_streak': return '/feed';
+      case 'daily_poll_creation': return '/feed';
+      case 'daily_poll_voting': return '/feed';
       default: return '/';
     }
   };
@@ -1297,7 +1305,9 @@ const BoosterPage: React.FC = () => {
         'roar_streak', 
         'daily_upvote_streak', 
         'daily_comment_streak', 
-        'daily_follow_streak'
+        'daily_follow_streak',
+        'daily_poll_creation',
+        'daily_poll_voting'
       ];
       
       if (regularBoosterTypes.includes(boosterType)) {

@@ -436,7 +436,7 @@ export const fetchRegularBoosterStatus = async (): Promise<RegularBoosterStatusR
 
 /**
  * Claim a specific regular booster
- * @param type The type of booster to claim (daily_tweet, daily_quote_tweet, daily_checkin, post_streak, roar_streak)
+ * @param type The type of booster to claim (daily_tweet, daily_quote_tweet, daily_checkin, post_streak, roar_streak, daily_poll_creation, daily_poll_voting)
  * @returns Promise that resolves to the claim response
  */
 export const claimRegularBooster = async (type: string): Promise<RegularBoosterClaimResponse | null> => {

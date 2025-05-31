@@ -12,7 +12,6 @@ import { BoosterDisplay, SimpleBoosterDisplay } from '@/components/shared/Booste
 import { BoosterDetailModal } from '@/components/shared/BoosterDetailModal';
 import confetti from 'canvas-confetti';
 import { Badge } from '@/components/ui/badge';
-import { saveStaticRoarFile } from '@/utils/staticRoarGenerator';
 
 // Constants
 const PHASE_1_GOAL = 10_000_000;
@@ -150,13 +149,13 @@ const RoarFarmingPage = () => {
     // Call these at the start of the effect
     fetchTotalRoars();
     if (isAuth) {
-      checkFarmingStatus();
+    checkFarmingStatus();
     }
     
     // Setup polling for farming status (more frequent polling when actively farming)
     const statusInterval = setInterval(() => {
       if (checkAuthentication()) {
-        checkFarmingStatus();
+      checkFarmingStatus();
       }
     }, isFarming ? 15000 : 30000); // Check more frequently when farming
     
@@ -918,11 +917,8 @@ const RoarFarmingPage = () => {
       // Helper function to create sharing messages and handle sharing
       const shareToSocial = async (platform) => {
         try {
-          // Generate static file for better social media support
-          await saveStaticRoarFile(userHandle);
-          
-          const shareText = `🦁 Just claimed ${earnedAmount.toFixed(2)} 🦁 from farming on @dapps_co! 🚀\n\nJoin the roar farming revolution and earn rewards too! 💎\n\n#RoarFarming #DappsCo #CryptoCommunity`;
-          const shareUrl = `https://dapps.co/roars/${encodeURIComponent(userHandle)}.html`;
+          const shareText = `🦁 Just claimed ${earnedAmount.toFixed(2)} 🦁 from farming on @dapps_co! 🚀\n\nJoin the roar farming revolution and earn rewards too! 💎\n\n#RoarFarming #airdrop #CryptoCommunity`;
+          const shareUrl = `https://dapps.co/roars/?u=${encodeURIComponent(userHandle)}`;
           
           // Try native Web Share API first (works on mobile and some desktop browsers)
           if (navigator.share) {
@@ -971,7 +967,7 @@ const RoarFarmingPage = () => {
         } catch (error) {
           console.error('Error sharing to social media:', error);
           // Fallback to text-only sharing
-          const fallbackShareUrl = `https://dapps.co/roars/${encodeURIComponent(userHandle)}.html`;
+          const fallbackShareUrl = `https://dapps.co/roars/?u=${encodeURIComponent(userHandle)}`;
           const fallbackText = `🦁 Just claimed ${earnedAmount.toFixed(2)} 🦁 from farming on dapps.co! 🚀\n\nJoin the roar farming revolution: ${fallbackShareUrl}`;
           
           if (navigator.share) {
