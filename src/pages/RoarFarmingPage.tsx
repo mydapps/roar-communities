@@ -12,6 +12,7 @@ import { BoosterDisplay, SimpleBoosterDisplay } from '@/components/shared/Booste
 import { BoosterDetailModal } from '@/components/shared/BoosterDetailModal';
 import confetti from 'canvas-confetti';
 import { Badge } from '@/components/ui/badge';
+import { saveStaticRoarFile } from '@/utils/staticRoarGenerator';
 
 // Constants
 const PHASE_1_GOAL = 10_000_000;
@@ -108,9 +109,17 @@ const RoarFarmingPage = () => {
     return !!(userId && userHandle);
   };
   
-  // Redirect to index if not authenticated
+  // Redirect to index if not authenticated, or to invite page if coming from shared link
   const handleUnauthenticatedAction = () => {
-    navigate('/index');
+    // Check if user came from a shared link
+    const shareReferrer = sessionStorage.getItem('roar_share_referrer');
+    if (shareReferrer) {
+      // Clear the referrer after use
+      sessionStorage.removeItem('roar_share_referrer');
+      navigate(`/invite/${shareReferrer}`);
+    } else {
+      navigate('/index');
+    }
   };
   
   // Handle booster modal open with authentication check
@@ -909,27 +918,19 @@ const RoarFarmingPage = () => {
       // Helper function to create sharing messages and handle sharing
       const shareToSocial = async (platform) => {
         try {
-          // Generate the sharing image
-          const imageResponse = await fetch(`/api/generateRoarClaimImage?handle=${encodeURIComponent(userHandle)}`);
-          
-          if (!imageResponse.ok) {
-            throw new Error('Failed to generate sharing image');
-          }
-          
-          const imageBlob = await imageResponse.blob();
-          const imageFile = new File([imageBlob], 'roar-claim.png', { type: 'image/png' });
+          // Generate static file for better social media support
+          await saveStaticRoarFile(userHandle);
           
           const shareText = `🦁 Just claimed ${earnedAmount.toFixed(2)} 🦁 from farming on @dapps_co! 🚀\n\nJoin the roar farming revolution and earn rewards too! 💎\n\n#RoarFarming #DappsCo #CryptoCommunity`;
-          const shareUrl = 'https://dapps.co/roar-farming';
+          const shareUrl = `https://dapps.co/roars/${encodeURIComponent(userHandle)}.html`;
           
           // Try native Web Share API first (works on mobile and some desktop browsers)
-          if (navigator.share && navigator.canShare && navigator.canShare({ files: [imageFile] })) {
+          if (navigator.share) {
             try {
               await navigator.share({
                 title: 'ROAR Farming Success!',
                 text: shareText,
-                url: shareUrl,
-                files: [imageFile]
+                url: shareUrl
               });
               
               if (typeof toast !== 'undefined') {
@@ -941,104 +942,44 @@ const RoarFarmingPage = () => {
             }
           }
           
-          // Platform-specific sharing with improved approaches
+          // Platform-specific sharing approaches
           if (platform === 'twitter') {
-            // Copy image to clipboard and open Twitter
-            try {
-              await navigator.clipboard.write([
-                new ClipboardItem({
-                  'image/png': imageBlob
-                })
-              ]);
-              
-              const twitterText = encodeURIComponent(shareText + `\n\n${shareUrl}`);
-              window.open(`https://twitter.com/intent/tweet?text=${twitterText}`, '_blank');
-              
-              if (typeof toast !== 'undefined') {
-                toast.success('Image copied to clipboard! Paste it in your tweet.');
-              }
-            } catch (clipboardError) {
-              // Fallback: Create a temporary URL for the image
-              const imageUrl = URL.createObjectURL(imageBlob);
-              const twitterText = encodeURIComponent(shareText + `\n\n${shareUrl}`);
-              window.open(`https://twitter.com/intent/tweet?text=${twitterText}`, '_blank');
-              
-              // Try to copy the image URL to clipboard as backup
-              try {
-                await navigator.clipboard.writeText(`Image for your tweet: ${imageUrl}\n\n${shareText}\n\n${shareUrl}`);
-                if (typeof toast !== 'undefined') {
-                  toast.success('Opening Twitter! Share text and image URL copied to clipboard.');
-                }
-              } catch {
-                if (typeof toast !== 'undefined') {
-                  toast.success('Opening Twitter! Please upload the image manually.');
-                }
-              }
-              
-              // Clean up URL after some time
-              setTimeout(() => URL.revokeObjectURL(imageUrl), 30000);
+            const twitterText = encodeURIComponent(`${shareText}\n\n${shareUrl}`);
+            window.open(`https://twitter.com/intent/tweet?text=${twitterText}`, '_blank');
+            
+            if (typeof toast !== 'undefined') {
+              toast.success('Opening Twitter! Your claim will show as a rich preview.');
             }
             
           } else if (platform === 'farcaster') {
-            // Copy image to clipboard and open Farcaster
-            try {
-              await navigator.clipboard.write([
-                new ClipboardItem({
-                  'image/png': imageBlob
-                })
-              ]);
-              
-              const farcasterText = encodeURIComponent(`🦁 Just claimed ${earnedAmount.toFixed(2)} 🦁 from farming! 🚀\n\nJoin the farming revolution on dapps.co! 💎\n\n${shareUrl}`);
-              window.open(`https://warpcast.com/~/compose?text=${farcasterText}`, '_blank');
-              
-              if (typeof toast !== 'undefined') {
-                toast.success('Image copied to clipboard! Paste it in your cast.');
-              }
-            } catch (clipboardError) {
-              const farcasterText = encodeURIComponent(`🦁 Just claimed ${earnedAmount.toFixed(2)} 🦁 from farming! 🚀\n\nJoin the farming revolution on dapps.co! 💎\n\n${shareUrl}`);
-              window.open(`https://warpcast.com/~/compose?text=${farcasterText}`, '_blank');
-              
-              if (typeof toast !== 'undefined') {
-                toast.success('Opening Farcaster! Please upload the image manually.');
-              }
+            const farcasterText = encodeURIComponent(`🦁 Just claimed ${earnedAmount.toFixed(2)} 🦁 from farming! 🚀\n\nJoin the farming revolution on dapps.co! 💎\n\n${shareUrl}`);
+            window.open(`https://warpcast.com/~/compose?text=${farcasterText}`, '_blank');
+            
+            if (typeof toast !== 'undefined') {
+              toast.success('Opening Farcaster! Your claim will show as a rich preview.');
             }
             
           } else if (platform === 'telegram') {
-            // For Telegram, try clipboard first, then use share URL
-            try {
-              await navigator.clipboard.write([
-                new ClipboardItem({
-                  'image/png': imageBlob
-                })
-              ]);
-              
-              const telegramText = encodeURIComponent(`🦁 Just claimed ${earnedAmount.toFixed(2)} 🦁 from farming! 🚀\n\nJoin me on dapps.co and start earning tokens too! 💎\n\n${shareUrl}`);
-              window.open(`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${telegramText}`, '_blank');
-              
-              if (typeof toast !== 'undefined') {
-                toast.success('Image copied to clipboard! Paste it in your Telegram message.');
-              }
-            } catch (clipboardError) {
-              const telegramText = encodeURIComponent(`🦁 Just claimed ${earnedAmount.toFixed(2)} 🦁 from farming! 🚀\n\nJoin me on dapps.co and start earning tokens too! 💎\n\n${shareUrl}`);
-              window.open(`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${telegramText}`, '_blank');
-              
-              if (typeof toast !== 'undefined') {
-                toast.success('Opening Telegram! Please upload the image manually.');
-              }
+            const telegramText = encodeURIComponent(`🦁 Just claimed ${earnedAmount.toFixed(2)} 🦁 from farming! 🚀\n\nJoin me on dapps.co and start earning tokens too! 💎`);
+            window.open(`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${telegramText}`, '_blank');
+            
+            if (typeof toast !== 'undefined') {
+              toast.success('Opening Telegram! Your claim will show as a rich preview.');
             }
           }
           
         } catch (error) {
           console.error('Error sharing to social media:', error);
           // Fallback to text-only sharing
-          const fallbackText = `🦁 Just claimed ${earnedAmount.toFixed(2)} 🦁 from farming on dapps.co! 🚀\n\nJoin the roar farming revolution: https://dapps.co/roar-farming`;
+          const fallbackShareUrl = `https://dapps.co/roars/${encodeURIComponent(userHandle)}.html`;
+          const fallbackText = `🦁 Just claimed ${earnedAmount.toFixed(2)} 🦁 from farming on dapps.co! 🚀\n\nJoin the roar farming revolution: ${fallbackShareUrl}`;
           
           if (navigator.share) {
             try {
               await navigator.share({
                 title: 'ROAR Farming Success!',
                 text: fallbackText,
-                url: 'https://dapps.co/roar-farming'
+                url: fallbackShareUrl
               });
             } catch (shareError) {
               // Copy to clipboard as final fallback

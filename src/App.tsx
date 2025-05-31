@@ -28,6 +28,7 @@ import RequestInvitePage from '@/pages/RequestInvitePage';
 import RoarFarmingPage from '@/pages/RoarFarmingPage';
 import RoarLeaderboardPage from '@/pages/RoarLeaderboardPage';
 import BoosterPage from '@/pages/BoosterPage';
+
 import AuthTestPage from '@/pages/AuthTestPage';
 import { validateAuthentication } from '@/utils/apiBase';
 import FollowSuggestionsPage from '@/pages/FollowSuggestionsPage';
@@ -138,6 +139,7 @@ function App() {
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="roar-farming" element={<RoarFarmingPage />} />
             <Route path="roar-leaderboard" element={<RoarLeaderboardPage />} />
+
             <Route path="boosters" element={<BoosterPage />} />
             <Route path="successful-onboarding" element={
               localStorage.getItem('dapps_show_onboarding') === '1' ? (
