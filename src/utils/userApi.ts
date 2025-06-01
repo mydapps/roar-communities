@@ -26,6 +26,8 @@ export interface UserProfile {
   location?: string;
   link?: string;
   answer?: string;
+  about?: string;
+  dob?: string;
   profile_updated_at?: string;
   wallet_address?: string;
   is_following?: boolean;
@@ -110,6 +112,8 @@ export interface UpdateProfileParams {
   location?: string;
   link?: string;
   answer?: string;
+  about?: string;
+  dob?: string;
   avatar_code?: string;
 }
 

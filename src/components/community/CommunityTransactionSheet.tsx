@@ -8,6 +8,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import confetti from 'canvas-confetti';
 import { Badge } from '../ui/badge';
 import { ethers } from 'ethers';
+import { getExplorerUrl, getExplorerName } from '@/utils/explorerUtils';
 
 interface CommunityTransactionSheetProps {
   open: boolean;
@@ -303,12 +304,12 @@ export const CommunityTransactionSheet = ({
                   <p className="text-xs font-mono truncate">{txHash}</p>
                 </div>
                 <a 
-                  href={`https://etherscan.io/tx/${txHash}`}
+                  href={getExplorerUrl(txHash)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-xs text-[#31bcc3] hover:underline mt-2 inline-block"
                 >
-                  View on Etherscan
+                  View on {getExplorerName()}
                 </a>
               </div>
             )}

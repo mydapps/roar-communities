@@ -113,6 +113,8 @@ const EditProfilePage = () => {
           location: response.user.location || '',
           link: response.user.link || '',
           answer: response.user.answer || '',
+          about: response.user.about || '',
+          dob: response.user.dob || '',
         });
         const fetchedAvatarCode = response.user.avatar_url || '';
         setAvatarCode(fetchedAvatarCode);
@@ -287,14 +289,18 @@ const EditProfilePage = () => {
       if (profile?.answer !== formData.answer) {
         changedData.answer = formData.answer;
       }
+      if (profile?.about !== formData.about) {
+        changedData.about = formData.about;
+      }
+      if (profile?.dob !== formData.dob) {
+        changedData.dob = formData.dob;
+      }
       if (Object.keys(changedData).length > 0) {
         const response = await updateUserProfile(changedData);
         if (response.success) {
           toast.success("Profile updated successfully");
           setProfile(response.user);
-          setTimeout(() => {
-            navigate(`/u/${userHandle}`);
-          }, 1500);
+          navigate(`/u/${userHandle}`, { replace: true });
         } else {
           toast.error((response as any).message || "Failed to update profile");
         }
@@ -567,7 +573,7 @@ const EditProfilePage = () => {
                 </div>
                 
                       <div className="grid gap-2">
-                        <Label htmlFor="location">Location (Optional)</Label>
+                        <Label htmlFor="location">Location</Label>
                       <Input
                         id="location"
                         name="location"
@@ -578,7 +584,7 @@ const EditProfilePage = () => {
                     </div>
                     
                       <div className="grid gap-2">
-                        <Label htmlFor="link">Link (Optional)</Label>
+                        <Label htmlFor="link">Link</Label>
                         <div className="relative">
                           <Link2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -596,7 +602,7 @@ const EditProfilePage = () => {
                   </div>
                   
                       <div className="grid gap-2">
-                        <Label htmlFor="answer">Why did the chicken cross the road? (Optional)</Label>
+                        <Label htmlFor="answer">Why did the chicken cross the road?</Label>
                     <Textarea
                       id="answer"
                       name="answer"
@@ -609,33 +615,69 @@ const EditProfilePage = () => {
                           A fun, optional field for your profile.
                         </p>
                 </div>
-              </CardContent>
-              <CardFooter className="flex justify-between">
-                <Button 
-                  variant="outline" 
-                  onClick={() => navigate(`/u/${userHandle}`)}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={saveProfile} 
-                  disabled={saving}
-                  className="gap-1.5"
-                >
-                  {saving ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="h-4 w-4" />
-                      Save Changes
-                    </>
-                  )}
-                </Button>
-              </CardFooter>
-            </Card>
+                
+                      {/* NEW: Date of Birth field */}
+                      <div className="grid gap-2">
+                        <Label htmlFor="dob">Date of Birth</Label>
+                        <div className="relative">
+                          <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="dob"
+                            name="dob"
+                            type="date"
+                            value={formData.dob || ''}
+                            onChange={handleInputChange}
+                            className="pl-10"
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Your date of birth. This will be used to calculate your age shown on your profile.
+                        </p>
+                      </div>
+                      
+                      {/* NEW: About Me field */}
+                      <div className="grid gap-2">
+                        <Label htmlFor="about">About Me</Label>
+                        <Textarea
+                          id="about"
+                          name="about"
+                          value={formData.about || ''}
+                          onChange={handleInputChange}
+                          placeholder="Tell people about yourself, your interests, or what you do..."
+                          className="min-h-[100px]"
+                          maxLength={500}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Share something about yourself (max 500 characters). This will be displayed on your profile.
+                        </p>
+                      </div>
+                    </CardContent>
+                    <CardFooter className="flex justify-between">
+                      <Button 
+                        variant="outline" 
+                        onClick={() => navigate(`/u/${userHandle}`)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button 
+                        onClick={saveProfile} 
+                        disabled={saving}
+                        className="gap-1.5"
+                      >
+                        {saving ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="h-4 w-4" />
+                            Save Changes
+                          </>
+                        )}
+                      </Button>
+                    </CardFooter>
+                  </Card>
                 </motion.div>
                     )}
             </AnimatePresence>

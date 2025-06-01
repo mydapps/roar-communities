@@ -216,6 +216,18 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
           </div>
         </div>
         
+        {/* About Me section - displayed prominently */}
+        {profile.about && (
+          <div className="mt-4 bg-card rounded-xl p-5 shadow-sm border border-border/30">
+            <div className="flex flex-col">
+              <div className="text-muted-foreground font-medium mb-2 text-sm">About</div>
+              <div className="text-card-foreground text-base leading-relaxed">
+                {profile.about}
+              </div>
+            </div>
+          </div>
+        )}
+        
         {/* Chicken joke answer - moved outside of profile card for better visibility */}
         {profile.answer && (
           <div className="mt-4 bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl p-5 shadow-sm border border-primary/10">
