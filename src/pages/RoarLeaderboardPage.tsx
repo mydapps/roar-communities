@@ -338,7 +338,7 @@ const RoarLeaderboardPage = () => {
             >
               {/* Winner effects */}
               <motion.div
-                className="absolute -inset-8 bg-gradient-to-r from-yellow-400/20 via-amber-400/30 to-yellow-400/20 rounded-full"
+                className="absolute -inset-8 bg-gradient-to-r from-yellow-400/20 via-amber-400/30 to-yellow-400/20 rounded-full pointer-events-none"
                 animate={{ 
                   scale: [1, 1.1, 1],
                   opacity: [0.3, 0.6, 0.3]
@@ -418,12 +418,14 @@ const RoarLeaderboardPage = () => {
                   </motion.div>
                 </motion.div>
                 
-                <Avatar className="h-10 w-10 sm:h-14 sm:w-14 ring-4 ring-amber-500 mb-3 group-hover:ring-amber-400 transition-all shadow-xl">
-                  <AvatarImage src={top3[2].avatar || ''} alt={top3[2].handle} />
-                  <AvatarFallback className="bg-amber-100 text-amber-800 font-bold">
-                    {top3[2].handle.slice(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
+                <Link to={`/u/${top3[2].handle}`} className="flex-shrink-0">
+                  <Avatar className="h-10 w-10 sm:h-14 sm:w-14 ring-4 ring-amber-500 mb-3 group-hover:ring-amber-400 transition-all shadow-xl cursor-pointer hover:ring-amber-400">
+                    <AvatarImage src={top3[2].avatar || ''} alt={top3[2].handle} />
+                    <AvatarFallback className="bg-amber-100 text-amber-800 font-bold">
+                      {top3[2].handle.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                </Link>
                 
                 <div className="text-center min-w-0 w-full">
                   <Link to={`/u/${top3[2].handle}`} className="hover:opacity-80 transition-opacity">
