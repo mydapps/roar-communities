@@ -148,99 +148,103 @@ const RoarLeaderboardPage = () => {
           </motion.div>
         </div>
 
-                 {/* Content */}
-         <div className="flex items-center justify-between pl-14 gap-3 min-w-0">
-           <div className="flex items-center gap-3 md:gap-4 min-w-0 flex-1">
-             {/* Avatar with enhanced styling */}
-             <motion.div
-               whileHover={{ scale: 1.1, rotate: 5 }}
-               className="relative flex-shrink-0"
-             >
-               <Avatar className={`
-                 ${isTopThree ? 'h-12 w-12 md:h-16 md:w-16' : 'h-10 w-10 md:h-12 md:w-12'} 
-                 ring-4 ${isCurrentUser ? 'ring-primary/50' : 'ring-white/30'} 
-                 shadow-lg
-               `}>
-                 <AvatarImage src={farmer.avatar || ''} alt={farmer.handle} />
-                 <AvatarFallback className={`${styling.text} font-bold text-xs md:text-sm`}>
-                   {farmer.handle.slice(0, 2).toUpperCase()}
-                 </AvatarFallback>
-               </Avatar>
-               
-               {/* Rank number overlay */}
-               <div className="absolute -bottom-1 -right-1 bg-background border-2 border-current rounded-full w-5 h-5 md:w-6 md:h-6 flex items-center justify-center text-xs font-bold">
-                 {farmer.rank}
-               </div>
-             </motion.div>
+        {/* Content */}
+        <div className="flex items-center justify-between pl-14 gap-3 min-w-0">
+          <div className="flex items-center gap-3 md:gap-4 min-w-0 flex-1">
+            {/* Avatar with enhanced styling */}
+            <Link to={`/u/${farmer.handle}`} className="flex-shrink-0">
+              <motion.div
+                whileHover={{ scale: 1.1, rotate: 5 }}
+                className="relative"
+              >
+                <Avatar className={`
+                  ${isTopThree ? 'h-12 w-12 md:h-16 md:w-16' : 'h-10 w-10 md:h-12 md:w-12'} 
+                  ring-4 ${isCurrentUser ? 'ring-primary/50' : 'ring-white/30'} 
+                  shadow-lg hover:ring-primary/60 transition-all cursor-pointer
+                `}>
+                  <AvatarImage src={farmer.avatar || ''} alt={farmer.handle} />
+                  <AvatarFallback className={`${styling.text} font-bold text-xs md:text-sm`}>
+                    {farmer.handle.slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                
+                {/* Rank number overlay */}
+                <div className="absolute -bottom-1 -right-1 bg-background border-2 border-current rounded-full w-5 h-5 md:w-6 md:h-6 flex items-center justify-center text-xs font-bold">
+                  {farmer.rank}
+                </div>
+              </motion.div>
+            </Link>
 
-             {/* User info */}
-             <div className="flex flex-col min-w-0 flex-1">
-               <div className="flex items-center gap-1 md:gap-2 flex-wrap">
-                 <span className={`font-bold ${isTopThree ? 'text-lg md:text-xl' : 'text-base md:text-lg'} ${styling.text} truncate max-w-[120px] md:max-w-none`}>
-                   {farmer.handle}
-                 </span>
-                 {isCurrentUser && (
-                   <motion.div
-                     initial={{ scale: 0 }}
-                     animate={{ scale: 1 }}
-                     transition={{ delay: 0.5, type: "spring" }}
-                     className="flex-shrink-0"
-                   >
-                     <Badge className="bg-primary text-primary-foreground shadow-lg text-xs">
-                       <Star className="h-2 w-2 md:h-3 md:w-3 mr-1" />
-                       You
-                     </Badge>
-                   </motion.div>
-                 )}
-                 {isTopThree && (
-                   <motion.div
-                     animate={{ 
-                       scale: [1, 1.2, 1],
-                       rotate: [0, 10, -10, 0] 
-                     }}
-                     transition={{ 
-                       duration: 2, 
-                       repeat: Infinity, 
-                       repeatDelay: 3 
-                     }}
-                     className="flex-shrink-0"
-                   >
-                     <Sparkles className="h-3 w-3 md:h-4 md:w-4 text-yellow-500" />
-                   </motion.div>
-                 )}
-               </div>
-               
-               {/* Progress indicator for current rank */}
-               {farmer.rank <= 10 && (
-                 <div className="flex items-center gap-1 mt-1">
-                   <span className="text-xs text-muted-foreground">Elite Farmer</span>
-                   <Flame className="h-2 w-2 md:h-3 md:w-3 text-orange-500" />
-                 </div>
-               )}
-             </div>
-           </div>
+            {/* User info */}
+            <div className="flex flex-col min-w-0 flex-1">
+              <div className="flex items-center gap-1 md:gap-2 flex-wrap">
+                <Link to={`/u/${farmer.handle}`} className="hover:opacity-80 transition-opacity">
+                  <span className={`font-bold ${isTopThree ? 'text-lg md:text-xl' : 'text-base md:text-lg'} ${styling.text} truncate max-w-[120px] md:max-w-none cursor-pointer hover:underline`}>
+                    {farmer.handle}
+                  </span>
+                </Link>
+                {isCurrentUser && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.5, type: "spring" }}
+                    className="flex-shrink-0"
+                  >
+                    <Badge className="bg-primary text-primary-foreground shadow-lg text-xs">
+                      <Star className="h-2 w-2 md:h-3 md:w-3 mr-1" />
+                      You
+                    </Badge>
+                  </motion.div>
+                )}
+                {isTopThree && (
+                  <motion.div
+                    animate={{ 
+                      scale: [1, 1.2, 1],
+                      rotate: [0, 10, -10, 0] 
+                    }}
+                    transition={{ 
+                      duration: 2, 
+                      repeat: Infinity, 
+                      repeatDelay: 3 
+                    }}
+                    className="flex-shrink-0"
+                  >
+                    <Sparkles className="h-3 w-3 md:h-4 md:w-4 text-yellow-500" />
+                  </motion.div>
+                )}
+              </div>
+              
+              {/* Progress indicator for current rank */}
+              {farmer.rank <= 10 && (
+                <div className="flex items-center gap-1 mt-1">
+                  <span className="text-xs text-muted-foreground">Elite Farmer</span>
+                  <Flame className="h-2 w-2 md:h-3 md:w-3 text-orange-500" />
+                </div>
+              )}
+            </div>
+          </div>
 
-           {/* Token count with enhanced styling */}
-           <div className="text-right flex-shrink-0">
-             <motion.div
-               initial={{ scale: 0.8 }}
-               animate={{ scale: 1 }}
-               transition={{ delay: index * 0.1 + 0.4 }}
-               className={`font-bold ${isTopThree ? 'text-lg md:text-2xl' : 'text-base md:text-xl'} ${styling.text}`}
-             >
-               {farmer.token_count_formatted}
-             </motion.div>
-             <div className="flex items-center justify-end gap-1 text-xs text-muted-foreground">
-               <span>ROAR</span>
-               <motion.div
-                 animate={{ scale: [1, 1.1, 1] }}
-                 transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 2 }}
-               >
-                 🦁
-               </motion.div>
-             </div>
-           </div>
-         </div>
+          {/* Token count with enhanced styling */}
+          <div className="text-right flex-shrink-0">
+            <motion.div
+              initial={{ scale: 0.8 }}
+              animate={{ scale: 1 }}
+              transition={{ delay: index * 0.1 + 0.4 }}
+              className={`font-bold ${isTopThree ? 'text-lg md:text-2xl' : 'text-base md:text-xl'} ${styling.text}`}
+            >
+              {farmer.token_count_formatted}
+            </motion.div>
+            <div className="flex items-center justify-end gap-1 text-xs text-muted-foreground">
+              <span>ROAR</span>
+              <motion.div
+                animate={{ scale: [1, 1.1, 1] }}
+                transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 2 }}
+              >
+                🦁
+              </motion.div>
+            </div>
+          </div>
+        </div>
       </motion.div>
     );
   };
@@ -279,15 +283,15 @@ const RoarLeaderboardPage = () => {
             </CardTitle>
           </motion.div>
         </CardHeader>
-        <CardContent className="p-8">
-          <div className="flex justify-center items-end gap-6 mb-6">
+        <CardContent className="p-4 sm:p-8">
+          <div className="flex justify-center items-end gap-2 sm:gap-4 md:gap-6 mb-6 overflow-hidden">
             {/* Second Place */}
             {top3[1] && (
               <motion.div
                 initial={{ opacity: 0, y: 80, scale: 0.8 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ duration: 0.8, delay: 0.4, type: "spring", stiffness: 200 }}
-                className="flex flex-col items-center group"
+                className="flex flex-col items-center group flex-1 max-w-[120px] sm:max-w-none"
               >
                 {/* Podium */}
                 <motion.div 
@@ -307,16 +311,18 @@ const RoarLeaderboardPage = () => {
                   </motion.div>
                 </motion.div>
                 
-                <Avatar className="h-16 w-16 ring-4 ring-gray-400 mb-3 group-hover:ring-gray-300 transition-all shadow-xl">
+                <Avatar className="h-12 w-12 sm:h-16 sm:w-16 ring-4 ring-gray-400 mb-3 group-hover:ring-gray-300 transition-all shadow-xl">
                   <AvatarImage src={top3[1].avatar || ''} alt={top3[1].handle} />
                   <AvatarFallback className="bg-gray-100 text-gray-700 font-bold">
                     {top3[1].handle.slice(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 
-                <div className="text-center">
-                  <div className="font-bold text-lg text-gray-700 dark:text-gray-200 mb-1">{top3[1].handle}</div>
-                  <div className="text-sm text-amber-600 font-semibold">{top3[1].token_count_formatted} ROAR</div>
+                <div className="text-center min-w-0 w-full">
+                  <Link to={`/u/${top3[1].handle}`} className="hover:opacity-80 transition-opacity">
+                    <div className="font-bold text-sm sm:text-lg text-gray-700 dark:text-gray-200 mb-1 hover:underline cursor-pointer truncate">{top3[1].handle}</div>
+                  </Link>
+                  <div className="text-xs sm:text-sm text-amber-600 font-semibold truncate">{top3[1].token_count_formatted} ROAR</div>
                 </div>
               </motion.div>
             )}
@@ -326,7 +332,7 @@ const RoarLeaderboardPage = () => {
               initial={{ opacity: 0, y: 100, scale: 0.7 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ duration: 1, delay: 0.2, type: "spring", stiffness: 200 }}
-              className="flex flex-col items-center relative group"
+              className="flex flex-col items-center relative group flex-1 max-w-[140px] sm:max-w-none"
             >
               {/* Winner effects */}
               <motion.div
@@ -359,22 +365,24 @@ const RoarLeaderboardPage = () => {
                 </motion.div>
               </motion.div>
               
-              <Avatar className="h-20 w-20 ring-6 ring-yellow-400 mb-3 group-hover:ring-yellow-300 transition-all shadow-2xl">
+              <Avatar className="h-16 w-16 sm:h-20 sm:w-20 ring-4 sm:ring-6 ring-yellow-400 mb-3 group-hover:ring-yellow-300 transition-all shadow-2xl">
                 <AvatarImage src={top3[0].avatar || ''} alt={top3[0].handle} />
                 <AvatarFallback className="bg-yellow-100 text-yellow-800 font-bold text-lg">
                   {top3[0].handle.slice(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               
-              <div className="text-center">
-                <div className="font-bold text-xl text-yellow-700 dark:text-yellow-200 mb-1 flex items-center gap-2">
-                  <Sparkles className="h-4 w-4" />
-                  {top3[0].handle}
-                  <Sparkles className="h-4 w-4" />
-                </div>
-                <div className="text-base text-amber-600 font-bold">{top3[0].token_count_formatted} ROAR</div>
-                <Badge className="mt-2 bg-yellow-500 text-yellow-900 shadow-lg">
-                  <Crown className="h-3 w-3 mr-1" />
+              <div className="text-center min-w-0 w-full">
+                <Link to={`/u/${top3[0].handle}`} className="hover:opacity-80 transition-opacity">
+                  <div className="font-bold text-lg sm:text-xl text-yellow-700 dark:text-yellow-200 mb-1 flex items-center gap-1 sm:gap-2 justify-center hover:underline cursor-pointer">
+                    <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                    <span className="truncate min-w-0">{top3[0].handle}</span>
+                    <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                  </div>
+                </Link>
+                <div className="text-sm sm:text-base text-amber-600 font-bold truncate">{top3[0].token_count_formatted} ROAR</div>
+                <Badge className="mt-2 bg-yellow-500 text-yellow-900 shadow-lg text-xs">
+                  <Crown className="h-2 w-2 sm:h-3 sm:w-3 mr-1" />
                   Champion
                 </Badge>
               </div>
@@ -386,7 +394,7 @@ const RoarLeaderboardPage = () => {
                 initial={{ opacity: 0, y: 60, scale: 0.9 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ duration: 0.7, delay: 0.6, type: "spring", stiffness: 200 }}
-                className="flex flex-col items-center group"
+                className="flex flex-col items-center group flex-1 max-w-[120px] sm:max-w-none"
               >
                 {/* Podium */}
                 <motion.div 
@@ -406,16 +414,18 @@ const RoarLeaderboardPage = () => {
                   </motion.div>
                 </motion.div>
                 
-                <Avatar className="h-14 w-14 ring-4 ring-amber-500 mb-3 group-hover:ring-amber-400 transition-all shadow-xl">
+                <Avatar className="h-10 w-10 sm:h-14 sm:w-14 ring-4 ring-amber-500 mb-3 group-hover:ring-amber-400 transition-all shadow-xl">
                   <AvatarImage src={top3[2].avatar || ''} alt={top3[2].handle} />
                   <AvatarFallback className="bg-amber-100 text-amber-800 font-bold">
                     {top3[2].handle.slice(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 
-                <div className="text-center">
-                  <div className="font-bold text-base text-amber-700 dark:text-amber-200 mb-1">{top3[2].handle}</div>
-                  <div className="text-sm text-amber-600 font-semibold">{top3[2].token_count_formatted} ROAR</div>
+                <div className="text-center min-w-0 w-full">
+                  <Link to={`/u/${top3[2].handle}`} className="hover:opacity-80 transition-opacity">
+                    <div className="font-bold text-sm sm:text-base text-amber-700 dark:text-amber-200 mb-1 hover:underline cursor-pointer truncate">{top3[2].handle}</div>
+                  </Link>
+                  <div className="text-xs sm:text-sm text-amber-600 font-semibold truncate">{top3[2].token_count_formatted} ROAR</div>
                 </div>
               </motion.div>
             )}
@@ -526,14 +536,14 @@ const RoarLeaderboardPage = () => {
           </motion.div>
         </div>
         
-                 <motion.p 
-           className="text-lg text-muted-foreground max-w-2xl mx-auto"
-           initial={{ opacity: 0 }}
-           animate={{ opacity: 1 }}
-           transition={{ delay: 0.3, duration: 0.6 }}
-         >
-           🚀 Compete and earn your place among the elite roar farmers!
-         </motion.p>
+        <motion.p 
+          className="text-lg text-muted-foreground max-w-2xl mx-auto"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3, duration: 0.6 }}
+        >
+          🚀 Compete and earn your place among the elite roar farmers!
+        </motion.p>
       </motion.div>
 
       {/* Podium */}
@@ -547,29 +557,29 @@ const RoarLeaderboardPage = () => {
       >
         <Card className="overflow-hidden shadow-xl border-2 border-border/50">
           <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 border-b-2 border-border/50">
-                         <CardTitle className="flex items-center gap-3 text-2xl">
-               <motion.div
-                 animate={{ scale: [1, 1.1, 1] }}
-                 transition={{ duration: 2, repeat: Infinity }}
-               >
-                 <TrendingUp className="h-6 w-6 text-primary" />
-               </motion.div>
-               Elite Farmers Ranking
-             </CardTitle>
+            <CardTitle className="flex items-center gap-3 text-2xl">
+              <motion.div
+                animate={{ scale: [1, 1.1, 1] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              >
+                <TrendingUp className="h-6 w-6 text-primary" />
+              </motion.div>
+              Elite Farmers Ranking
+            </CardTitle>
           </CardHeader>
-                     <CardContent className="p-6">
-             <div className="space-y-4">
-               {top_farmers.slice(3).map((farmer, index) => {
-                 const isCurrentUser = farmer.handle === currentUserHandle;
-                 return renderFarmerRow(farmer, isCurrentUser, index);
-               })}
-             </div>
-           </CardContent>
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              {top_farmers.slice(3).map((farmer, index) => {
+                const isCurrentUser = farmer.handle === currentUserHandle;
+                return renderFarmerRow(farmer, isCurrentUser, index);
+              })}
+            </div>
+          </CardContent>
         </Card>
       </motion.div>
 
-             {/* Current User (if not in top 30) */}
-       {is_authenticated && current_user && !userInTop30 && (
+      {/* Current User (if not in top 30) */}
+      {is_authenticated && current_user && !userInTop30 && (
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -620,8 +630,8 @@ const RoarLeaderboardPage = () => {
         </motion.div>
       )}
 
-             {/* Call to Action for authenticated users in ranks 4-30 */}
-       {is_authenticated && userInTop30 && !userInTop3 && (
+      {/* Call to Action for authenticated users in ranks 4-30 */}
+      {is_authenticated && userInTop30 && !userInTop3 && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -634,13 +644,13 @@ const RoarLeaderboardPage = () => {
                 animate={{ scale: [1, 1.05, 1] }}
                 transition={{ duration: 3, repeat: Infinity }}
               >
-                                 <h3 className="text-2xl font-bold mb-3 text-amber-700 dark:text-amber-300">
-                   🎉 Congratulations, Elite Farmer!
-                 </h3>
-               </motion.div>
-               <p className="text-lg text-muted-foreground mb-6">
-                 You're in the top 30! Keep farming to climb higher and reach the Hall of Fame!
-               </p>
+                <h3 className="text-2xl font-bold mb-3 text-amber-700 dark:text-amber-300">
+                  🎉 Congratulations, Elite Farmer!
+                </h3>
+              </motion.div>
+              <p className="text-lg text-muted-foreground mb-6">
+                You're in the top 30! Keep farming to climb higher and reach the Hall of Fame!
+              </p>
               <Link to="/roar-farming">
                 <Button size="lg" className="gap-2 bg-amber-500 hover:bg-amber-600 text-white shadow-lg">
                   <Sparkles className="h-5 w-5" />
