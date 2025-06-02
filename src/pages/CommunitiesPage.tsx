@@ -459,7 +459,7 @@ const CommunitiesPage = () => {
                   image={community.image || ''}
                   isMember={!!community.userShares && community.userShares > 0}
                   isAdmin={!!community.isAdmin}
-                  userShares={community.userShares || 0}
+                  userShares={community.userShares && community.userShares > 0 ? community.userShares : undefined}
                   onBuy={() => handleTradeAction(community, 'buy')}
                   onSell={() => handleTradeAction(community, 'sell')}
                   isLoggedIn={isLoggedIn}

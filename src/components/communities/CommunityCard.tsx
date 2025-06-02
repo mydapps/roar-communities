@@ -39,7 +39,7 @@ const CommunityCard: React.FC<CommunityCardProps> = ({
   image,
   isMember,
   isAdmin = false,
-  userShares = 0,
+  userShares,
   onBuy,
   onSell,
   isLoggedIn = true
@@ -132,7 +132,7 @@ const CommunityCard: React.FC<CommunityCardProps> = ({
             </div>
           </div>
           
-          {isLoggedIn && userShares && userShares > 0 && (
+          {isLoggedIn && userShares !== undefined && userShares > 0 && (
             <div className="col-span-2 mt-0.5 bg-primary/5 rounded-md px-2.5 py-1.5 flex items-center justify-between">
               <span className="text-xs font-medium">Your Ownership</span>
               <span className="text-xs font-medium">{userShares.toFixed(2)} shares</span>
