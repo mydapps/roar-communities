@@ -451,6 +451,7 @@ const MySharesPage = () => {
         onSellConfirm={handleSellSharesConfirm}
         loadingAction={loadingAction}
         precheckData={precheckData}
+        onBalanceUpdate={(newBalance) => setUserEthBalance(newBalance)}
       />
 
       <ShareTransferSheet

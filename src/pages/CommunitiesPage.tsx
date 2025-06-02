@@ -514,6 +514,7 @@ const CommunitiesPage = () => {
           onBuyConfirm={handleBuySharesConfirm}
           onSellConfirm={handleSellSharesConfirm}
           forceSuccessVisible={tradeSuccess}
+          onBalanceUpdate={(newBalance) => setUserEthBalance(newBalance)}
         />
       )}
       
