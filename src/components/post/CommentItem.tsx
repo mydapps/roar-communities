@@ -3,11 +3,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Reply } from '@/utils/postApi';
-import { Cat, Send, ChevronDown } from 'lucide-react';
+import { Cat, Send, ChevronDown, Share2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { toggleMeow } from '@/utils/commentApi';
 import { processTextContent } from '@/utils/textFormatting';
 import { useImageViewer } from '@/components/contexts/ImageViewerContext';
+import { useLocation } from 'react-router-dom';
 
 interface CommentItemProps {
   comment: Reply;
@@ -33,6 +34,9 @@ export const CommentItem = ({
   
   // Image viewer hook
   const { openImageViewer } = useImageViewer();
+  
+  // Location hook for sharing
+  const location = useLocation();
   
   // Extract images from comment content for the image viewer
   const extractImagesFromContent = useCallback((content: string): string[] => {
@@ -111,9 +115,63 @@ export const CommentItem = ({
     return `https://img.dapps.co/avatar/${avatarPath}.svg`;
   };
   
+  // Format username
+  const formatUsername = (handle: string) => {
+    return '@' + handle.split('.')[0];
+  };
+  
+  // Share comment functionality
+  const handleShareComment = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    try {
+      // Get the current URL and add the comment hash
+      const baseUrl = window.location.origin + location.pathname;
+      const commentUrl = `${baseUrl}#comment-${comment.id}`;
+      
+      // Try to use native share API first (mobile)
+      if (navigator.share) {
+        await navigator.share({
+          title: `Comment by ${formatUsername(comment.handle)}`,
+          text: comment.content.length > 100 ? 
+            comment.content.substring(0, 100) + '...' : 
+            comment.content,
+          url: commentUrl
+        });
+        return;
+      }
+      
+      // Fallback to clipboard
+      await navigator.clipboard.writeText(commentUrl);
+      toast.success('Comment link copied to clipboard!');
+    } catch (error) {
+      // If clipboard fails, create a temporary textarea
+      try {
+        const baseUrl = window.location.origin + location.pathname;
+        const commentUrl = `${baseUrl}#comment-${comment.id}`;
+        
+        const textArea = document.createElement('textarea');
+        textArea.value = commentUrl;
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        toast.success('Comment link copied to clipboard!');
+      } catch (fallbackError) {
+        toast.error('Failed to copy comment link');
+      }
+    }
+  };
+  
   return (
-    <div className="animate-in fade-in duration-300">
-      <div className={`flex gap-3 ${level > 1 ? 'border-l-2 border-primary/20 pl-3' : ''}`}>
+    <div 
+      id={`comment-${comment.id}`}
+      className="animate-in fade-in duration-300 scroll-mt-4"
+    >
+      <div className={`flex gap-3 group ${level > 1 ? 'border-l-2 border-primary/20 pl-3' : ''}`}>
         <Avatar className="h-10 w-10 shrink-0 border border-muted/60">
           <AvatarImage src={getAvatarUrl(comment.avatar)} />
           <AvatarFallback>{comment.handle[0].toUpperCase()}</AvatarFallback>
@@ -122,7 +180,7 @@ export const CommentItem = ({
         <div className="flex-1">
           <div className="flex flex-wrap items-center gap-1.5 mb-1">
             <span className="font-medium text-foreground">
-              @{comment.handle}
+              {formatUsername(comment.handle)}
             </span>
             <span className="text-muted-foreground text-xs">·</span>
             <span className="text-muted-foreground text-xs">{comment.time_ago}</span>
@@ -165,6 +223,17 @@ export const CommentItem = ({
                 {isReplying ? 'Cancel' : 'Reply'}
               </Button>
             )}
+            
+            {/* Share button - only visible on hover/focus */}
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleShareComment}
+              className="h-8 px-2 text-xs gap-1.5 rounded-full hover:bg-secondary/80 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+              title="Share comment"
+            >
+              <Share2 className="h-3.5 w-3.5" />
+            </Button>
             
             {comment.replies && comment.replies.length > 0 && (
               <Button 

@@ -141,6 +141,51 @@ const DetailedPostPage = () => {
     }
   }, [loadPost, postId]);
   
+  // Auto-scroll to comment if hash is present in URL
+  useEffect(() => {
+    const scrollToComment = () => {
+      const hash = window.location.hash;
+      if (hash && hash.startsWith('#comment-') && replies.length > 0) {
+        const commentId = hash.replace('#comment-', '');
+        const element = document.getElementById(`comment-${commentId}`);
+        
+        if (element) {
+          // Wait a bit for rendering to complete
+          setTimeout(() => {
+            element.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'center' 
+            });
+            
+            // Add a temporary highlight effect
+            element.classList.add('comment-highlight');
+            
+            // Remove highlight after animation
+            setTimeout(() => {
+              element.classList.remove('comment-highlight');
+            }, 2000);
+          }, 500);
+        }
+      }
+    };
+    
+    // Scroll when replies are loaded or when the hash changes
+    if (replies.length > 0) {
+      scrollToComment();
+    }
+    
+    // Listen for hash changes (when user clicks another comment link)
+    const handleHashChange = () => {
+      scrollToComment();
+    };
+    
+    window.addEventListener('hashchange', handleHashChange);
+    
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+    };
+  }, [replies]);
+  
   const handleRefreshComments = useCallback(() => {
     if (refreshingComments) return;
     

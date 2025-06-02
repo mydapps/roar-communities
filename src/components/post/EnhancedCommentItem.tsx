@@ -2,9 +2,9 @@ import React, { useState, useRef, useCallback } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Cat, Send, Loader2, ImageIcon, VideoIcon, Smile } from 'lucide-react';
+import { Cat, Send, Loader2, ImageIcon, VideoIcon, Smile, Share2 } from 'lucide-react';
 import { CommentReply } from '@/utils/commentApi';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { processTextContent } from '@/utils/textFormatting';
 import { MediaUpload, MediaPreview, MediaUploadResponse } from '@/components/ui/media-upload';
 import { toast } from 'sonner';
@@ -73,6 +73,9 @@ export const EnhancedCommentItem = ({
   
   // Image viewer hook
   const { openImageViewer } = useImageViewer();
+  
+  // Location hook for sharing
+  const location = useLocation();
   
   // Extract images from comment content for the image viewer
   const extractImagesFromContent = useCallback((content: string): string[] => {
@@ -481,9 +484,58 @@ export const EnhancedCommentItem = ({
     }
   };
   
+  // Share comment functionality
+  const handleShareComment = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    try {
+      // Get the current URL and add the comment hash
+      const baseUrl = window.location.origin + location.pathname;
+      const commentUrl = `${baseUrl}#comment-${commentRealId}`;
+      
+      // Try to use native share API first (mobile)
+      if (navigator.share) {
+        await navigator.share({
+          title: `Comment by ${formatUsername(comment.handle)}`,
+          text: comment.content.length > 100 ? 
+            comment.content.substring(0, 100) + '...' : 
+            comment.content,
+          url: commentUrl
+        });
+        return;
+      }
+      
+      // Fallback to clipboard
+      await navigator.clipboard.writeText(commentUrl);
+      toast.success('Comment link copied to clipboard!');
+    } catch (error) {
+      // If clipboard fails, create a temporary textarea
+      try {
+        const baseUrl = window.location.origin + location.pathname;
+        const commentUrl = `${baseUrl}#comment-${commentRealId}`;
+        
+        const textArea = document.createElement('textarea');
+        textArea.value = commentUrl;
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        toast.success('Comment link copied to clipboard!');
+      } catch (fallbackError) {
+        toast.error('Failed to copy comment link');
+      }
+    }
+  };
+  
   return (
-    <div className={`${level > 1 ? 'ml-8 border-l-2 border-primary/10 pl-4' : ''}`}>
-      <div className="flex gap-3">
+    <div 
+      id={`comment-${commentRealId}`}
+      className={`${level > 1 ? 'ml-8 border-l-2 border-primary/10 pl-4' : ''} scroll-mt-4`}
+    >
+      <div className="flex gap-3 group">
         <Link to={`/u/${comment.handle.split('.')[0]}`} onClick={(e) => e.stopPropagation()}>
           <Avatar className="h-8 w-8 flex-shrink-0">
             <AvatarImage src={getAvatarUrl(comment.avatar_url)} />
@@ -552,6 +604,17 @@ export const EnhancedCommentItem = ({
                 {isReplying && !isMobile ? 'Cancel' : 'Reply'}
               </Button>
             )}
+            
+            {/* Share button - only visible on hover/focus */}
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleShareComment}
+              className="h-8 px-2 text-xs gap-1.5 rounded-full hover:bg-secondary/80 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+              title="Share comment"
+            >
+              <Share2 className="h-3.5 w-3.5" />
+            </Button>
           </div>
           
           {isReplying && !isMobile && !readOnly && (
