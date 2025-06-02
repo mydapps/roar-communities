@@ -66,10 +66,14 @@ export const PostFooter: React.FC<PostFooterProps> = ({
   // Check if this is a detailed post page
   const isDetailedPostPage = location.pathname.includes('/post/') || 
                             location.pathname.match(/^\/c\/[^\/]+\/[^\/]+$/) || 
-                            location.pathname.match(/^\/[^\/]+\/[^\/]+$/);
+                            (location.pathname.match(/^\/[^\/]+\/[^\/]+$/) && !location.pathname.startsWith('/c/') && !location.pathname.startsWith('/u/'));
+  
+
+
   
   // Function to trigger mobile comment input
-  const handleCommentClick = () => {
+  const handleCommentClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent Post component's click handler from firing
     if (onTriggerMobileCommentInput) {
       onTriggerMobileCommentInput();
     }

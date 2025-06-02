@@ -311,12 +311,14 @@ const RoarLeaderboardPage = () => {
                   </motion.div>
                 </motion.div>
                 
-                <Avatar className="h-12 w-12 sm:h-16 sm:w-16 ring-4 ring-gray-400 mb-3 group-hover:ring-gray-300 transition-all shadow-xl">
-                  <AvatarImage src={top3[1].avatar || ''} alt={top3[1].handle} />
-                  <AvatarFallback className="bg-gray-100 text-gray-700 font-bold">
-                    {top3[1].handle.slice(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
+                <Link to={`/u/${top3[1].handle}`} className="flex-shrink-0">
+                  <Avatar className="h-12 w-12 sm:h-16 sm:w-16 ring-4 ring-gray-400 mb-3 group-hover:ring-gray-300 transition-all shadow-xl cursor-pointer hover:ring-gray-300">
+                    <AvatarImage src={top3[1].avatar || ''} alt={top3[1].handle} />
+                    <AvatarFallback className="bg-gray-100 text-gray-700 font-bold">
+                      {top3[1].handle.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                </Link>
                 
                 <div className="text-center min-w-0 w-full">
                   <Link to={`/u/${top3[1].handle}`} className="hover:opacity-80 transition-opacity">
@@ -365,12 +367,14 @@ const RoarLeaderboardPage = () => {
                 </motion.div>
               </motion.div>
               
-              <Avatar className="h-16 w-16 sm:h-20 sm:w-20 ring-4 sm:ring-6 ring-yellow-400 mb-3 group-hover:ring-yellow-300 transition-all shadow-2xl">
-                <AvatarImage src={top3[0].avatar || ''} alt={top3[0].handle} />
-                <AvatarFallback className="bg-yellow-100 text-yellow-800 font-bold text-lg">
-                  {top3[0].handle.slice(0, 2).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
+              <Link to={`/u/${top3[0].handle}`} className="flex-shrink-0">
+                <Avatar className="h-16 w-16 sm:h-20 sm:w-20 ring-4 sm:ring-6 ring-yellow-400 mb-3 group-hover:ring-yellow-300 transition-all shadow-2xl cursor-pointer hover:ring-yellow-300">
+                  <AvatarImage src={top3[0].avatar || ''} alt={top3[0].handle} />
+                  <AvatarFallback className="bg-yellow-100 text-yellow-800 font-bold text-lg">
+                    {top3[0].handle.slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              </Link>
               
               <div className="text-center min-w-0 w-full">
                 <Link to={`/u/${top3[0].handle}`} className="hover:opacity-80 transition-opacity">

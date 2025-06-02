@@ -225,6 +225,10 @@ export const UserPosts: React.FC<UserPostsProps> = ({ handle }) => {
             // Pass poll data
             is_poll={post.is_poll}
             poll_data={post.poll_data}
+            // Enable comments functionality
+            hideComments={false}
+            isLoggedIn={true} // Assume logged in since we're viewing profile
+
           />
         );
       })}

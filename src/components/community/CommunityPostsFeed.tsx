@@ -68,6 +68,7 @@ const CommunityPostsFeed: React.FC<CommunityPostsFeedProps> = ({
               onPostUpdated={onPostUpdated}
               is_poll={post.is_poll}
               poll_data={post.poll_data}
+
             />
           ))}
           
