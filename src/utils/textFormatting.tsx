@@ -4,9 +4,10 @@ import sanitizeHtml from 'sanitize-html';
 /**
  * Process text content to convert mentions, community references, URLs, and media markdown to interactive elements
  * @param content The raw text content to process
+ * @param onImageClick Optional callback for when images are clicked (for enhanced image viewer)
  * @returns React elements with proper links and media rendering
  */
-export const processTextContent = (content: string): React.ReactNode => {
+export const processTextContent = (content: string, onImageClick?: (imageUrl: string) => void): React.ReactNode => {
   if (!content) return null;
   
   // Updated regex to handle both newline and non-newline image markdown cases
@@ -36,8 +37,9 @@ export const processTextContent = (content: string): React.ReactNode => {
             <img 
               src={mediaUrl} 
               alt="Comment attachment" 
-              className="rounded-md object-cover w-full h-auto border border-border/20" 
+              className={`rounded-md object-cover w-full h-auto border border-border/20 ${onImageClick ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}`}
               loading="lazy"
+              onClick={onImageClick ? () => onImageClick(mediaUrl) : undefined}
               onError={(e) => {
                  e.currentTarget.style.display = 'none'; 
               }}
@@ -67,8 +69,9 @@ export const processTextContent = (content: string): React.ReactNode => {
             <img 
               src={mediaUrl} 
               alt="Comment attachment" 
-              className="rounded-md object-cover w-full h-auto border border-border/20" 
+              className={`rounded-md object-cover w-full h-auto border border-border/20 ${onImageClick ? 'cursor-pointer hover:opacity-90 transition-opacity' : ''}`}
               loading="lazy"
+              onClick={onImageClick ? () => onImageClick(mediaUrl) : undefined}
               onError={(e) => {
                  e.currentTarget.style.display = 'none'; 
               }}

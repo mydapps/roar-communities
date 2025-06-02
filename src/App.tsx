@@ -39,6 +39,7 @@ import TransactionHistoryPage from '@/pages/TransactionHistoryPage';
 import AccountInactivePage from '@/pages/AccountInactivePage';
 import PostWarningPage from '@/pages/PostWarningPage';
 import ErrorBoundary from '@/components/shared/ErrorBoundary';
+import { ImageViewerProvider } from '@/components/contexts/ImageViewerContext';
 
 // Lazy loaded components
 const LazyMySharesPage = lazy(() => import('@/pages/MySharesPage'));
@@ -86,8 +87,9 @@ function App() {
       <ZoomDisabledHelmet />
       <DeviceProvider>
       <PrivyAuthProvider>
-        <PageViewTracker />
-        <ErrorBoundary>
+        <ImageViewerProvider>
+          <PageViewTracker />
+          <ErrorBoundary>
         <Routes>
           {/* Public routes - accessible outside MainLayout */}
           <Route path="/" element={<Index />} />
@@ -181,6 +183,7 @@ function App() {
         </Routes>
         <Toaster position="top-right" />
         </ErrorBoundary>
+        </ImageViewerProvider>
       </PrivyAuthProvider>
       </DeviceProvider>
     </HelmetProvider>

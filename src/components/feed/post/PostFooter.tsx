@@ -26,9 +26,7 @@ interface PostFooterProps {
   setShareSheetOpen: (open: boolean) => void;
   community?: string;
   onShareSuccess: (platform: string) => void;
-  imageViewerOpen: boolean;
-  setImageViewerOpen: (open: boolean) => void;
-  selectedImageIndex: number;
+
   children?: React.ReactNode;
   commentCount: number;
   onToggleComments: () => void;
@@ -54,9 +52,7 @@ export const PostFooter: React.FC<PostFooterProps> = ({
   setShareSheetOpen,
   community,
   onShareSuccess,
-  imageViewerOpen,
-  setImageViewerOpen,
-  selectedImageIndex,
+
   children,
   commentCount,
   onToggleComments,
@@ -142,15 +138,6 @@ export const PostFooter: React.FC<PostFooterProps> = ({
       </div>
       
       {children}
-
-      {allImages && allImages.length > 0 && (
-        <ImageViewer 
-          images={allImages} 
-          selectedImageIndex={selectedImageIndex}
-          open={imageViewerOpen} 
-          onOpenChange={setImageViewerOpen} 
-        />
-      )}
     </CardFooter>
   );
 };

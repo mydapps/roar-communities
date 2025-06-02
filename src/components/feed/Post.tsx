@@ -20,6 +20,7 @@ import { ReportPostSheet } from './post/ReportPostSheet';
 import { PinPostConfirmationModal } from './post/PinPostConfirmationModal';
 import { HideWarnModal } from '@/components/admin/HideWarnModal';
 import { NotInCommunitySheet } from '@/components/community/NotInCommunitySheet';
+import { useImageViewer } from '@/components/contexts/ImageViewerContext';
 
 export interface PostProps {
   username: string;
@@ -97,8 +98,6 @@ export const Post = ({
   const [comments, setComments] = useState<CommentReply[]>([]);
   const [mirrorSheetOpen, setMirrorSheetOpen] = useState(false);
   const [shareSheetOpen, setShareSheetOpen] = useState(false);
-  const [imageViewerOpen, setImageViewerOpen] = useState(false);
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [ipfsSheetOpen, setIpfsSheetOpen] = useState(false);
   const [isHidden, setIsHidden] = useState(false);
   const [isHiding, setIsHiding] = useState(false);
@@ -111,6 +110,9 @@ export const Post = ({
   const [notInCommunitySheetOpen, setNotInCommunitySheetOpen] = useState(false);
   const [sheetCommunityName, setSheetCommunityName] = useState("");
   const isMobile = useIsMobile();
+  
+  // Image viewer hook
+  const { openImageViewer } = useImageViewer();
   
   const [currentPollData, setCurrentPollData] = useState<PollData | null>(poll_data);
   
@@ -212,18 +214,9 @@ export const Post = ({
   const handleImageClick = (imageSrc: string) => {
     if (allImages) {
       const index = allImages.findIndex(img => img === imageSrc);
-      if (index !== -1) {
-        setSelectedImageIndex(index);
-        setImageViewerOpen(true);
-      } else {
-        console.warn("Image clicked but not found in allImages:", imageSrc);
-        
-        setSelectedImageIndex(0);
-        setImageViewerOpen(true);
-      }
+      openImageViewer(allImages, index !== -1 ? index : 0);
     } else if (imageSrc) {
-      setSelectedImageIndex(0);
-      setImageViewerOpen(true);
+      openImageViewer([imageSrc], 0);
     }
   };
 
@@ -641,9 +634,6 @@ export const Post = ({
           setShareSheetOpen={setShareSheetOpen}
           community={community}
           onShareSuccess={handleShareSuccess}
-          imageViewerOpen={imageViewerOpen}
-          setImageViewerOpen={setImageViewerOpen}
-          selectedImageIndex={selectedImageIndex}
           commentCount={commentCount}
           onToggleComments={handleToggleComments}
           isLoggedIn={userIsLoggedIn}
@@ -670,14 +660,7 @@ export const Post = ({
           )}
         </PostFooter>
         
-        {allImages && allImages.length > 0 && (
-          <ImageViewer 
-            images={allImages} 
-            selectedImageIndex={selectedImageIndex}
-            open={imageViewerOpen} 
-            onOpenChange={setImageViewerOpen} 
-          />
-        )}
+
       </Card>
       
       <HidePostConfirmationSheet

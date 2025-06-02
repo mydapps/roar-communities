@@ -18,6 +18,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useImageViewer } from '@/components/contexts/ImageViewerContext';
 
 interface EnhancedCommentItemProps {
   comment: CommentReply;
@@ -69,6 +70,34 @@ export const EnhancedCommentItem = ({
   // --- End Mention State ---
   
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+  
+  // Image viewer hook
+  const { openImageViewer } = useImageViewer();
+  
+  // Extract images from comment content for the image viewer
+  const extractImagesFromContent = useCallback((content: string): string[] => {
+    const imageMarkdownRegex = /!\[\]\(([^)]+)\)/g;
+    const images: string[] = [];
+    let match;
+    while ((match = imageMarkdownRegex.exec(content)) !== null) {
+      const imageUrl = match[1].trim();
+      if (imageUrl && !images.includes(imageUrl)) {
+        // Check if it's an image by extension
+        const extension = imageUrl.split('.').pop()?.toLowerCase();
+        if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension || '')) {
+          images.push(imageUrl);
+        }
+      }
+    }
+    return images;
+  }, []);
+  
+  // Handle image click to open in viewer
+  const handleImageClick = useCallback((clickedImageUrl: string) => {
+    const allImages = extractImagesFromContent(comment.content);
+    const selectedIndex = allImages.findIndex(img => img === clickedImageUrl);
+    openImageViewer(allImages, selectedIndex >= 0 ? selectedIndex : 0);
+  }, [comment.content, extractImagesFromContent, openImageViewer]);
   
   const isPostAuthor = comment.handle === postAuthorHandle;
   
@@ -485,7 +514,7 @@ export const EnhancedCommentItem = ({
           <div 
             className="text-sm whitespace-pre-wrap break-words mt-1 prose prose-sm max-w-none dark:prose-invert prose-p:my-1 prose-strong:font-semibold prose-em:italic"
           >
-            {processTextContent(comment.content)}
+            {processTextContent(comment.content, handleImageClick)}
           </div>
           
           <div className="flex items-center gap-3 mt-2">
