@@ -4,7 +4,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Share2, Copy, CheckCircle2 } from 'lucide-react';
 import { shareToSocialMedia, SharePlatform } from '@/utils/shareUtils';
 import { useToast } from '@/hooks/use-toast';
-import { set as setNativeClipboard } from "webtonative/Clipboard";
+import { get as getNativeClipboard, set as setNativeClipboard } from "webtonative/Clipboard";
 import { useDevice } from '@/components/providers/DeviceProvider';
 import sanitizeHtml from 'sanitize-html';
 
@@ -49,17 +49,50 @@ export const ShareContent = ({
   
   const getShareUrl = () => {
     const baseUrl = window.location.origin;
+    
+    console.log(`[getShareUrl] postCode: ${postCode}, community: ${community}, username: ${username}`);
+    
     if (postCode) {
-      return `${baseUrl}/post/${postCode}`;
+      let generatedUrl;
+      // Try to create community-specific URL if possible
+      if (community) {
+        generatedUrl = `${baseUrl}/c/${community.toLowerCase().replace(/\s+/g, '-')}/${postCode}`;
+      } else {
+        // Try to create user-specific URL
+        const userHandle = username.split('.')[0];
+        if (userHandle) {
+          generatedUrl = `${baseUrl}/${userHandle}/${postCode}`;
+        } else {
+          // Fall back to generic post URL
+          generatedUrl = `${baseUrl}/post/${postCode}`;
+        }
+      }
+      console.log(`[getShareUrl] Generated URL with postCode: ${generatedUrl}`);
+      return generatedUrl;
     }
-    console.warn("[ShareContent] postCode is missing, cannot generate a direct post URL.");
-    return baseUrl; 
+    
+    // If no postCode, warn and return current page URL
+    console.warn("[ShareContent] postCode is missing, using current page URL for sharing.");
+    const currentUrl = window.location.href;
+    console.log(`[getShareUrl] Using current page URL: ${currentUrl}`);
+    return currentUrl; 
   };
   
   const handleShare = async (platform: SharePlatform) => {
+    console.log(`[ShareContent] handleShare called with platform: ${platform}`);
+    console.log(`[ShareContent] isMobileApp: ${isMobileApp}`);
+    console.log(`[ShareContent] postCode: ${postCode}`);
+    console.log(`[ShareContent] username: ${username}`);
+    console.log(`[ShareContent] community: ${community}`);
+    
+    // Prevent any potential event bubbling issues
+    console.log(`[ShareContent] Setting shareAnimating to true`);
     setShareAnimating(true);
+    
     const shareUrl = getShareUrl();
-    const shareTitle = `${formatUsername(username)}'s post on Roar Communities`;
+    console.log(`[ShareContent] Generated share URL: ${shareUrl}`);
+    
+    const shareTitle = `${formatUsername(username)}'s post on dapps.co`;
 
     const plainTextContent = sanitizeHtml(content, {
       allowedTags: [],
@@ -67,74 +100,144 @@ export const ShareContent = ({
     });
     const shareText = truncateText(plainTextContent.trim(), 150);
     
-    // --- Native Mobile App Clipboard Handling ---
-    if (platform === 'copy' && isMobileApp === true) {
-      console.log("Using native clipboard set (detected via useDevice)");
-      try {
-        setNativeClipboard({ data: shareUrl });
-        // Manually trigger success feedback
+    // --- Native Mobile App Sharing ---
+    if (isMobileApp === true) {
+      console.log("Detected mobile app, using native sharing methods");
+      console.log("Checking webtonative availability...");
+      console.log("setNativeClipboard type:", typeof setNativeClipboard);
+      console.log("getNativeClipboard type:", typeof getNativeClipboard);
+      
+      if (platform === 'copy') {
+        console.log("Using native clipboard set");
+        try {
+          // Check if webtonative clipboard is available
+          if (typeof setNativeClipboard === 'function') {
+            console.log("setNativeClipboard function is available, calling it");
+            setNativeClipboard({ data: shareUrl });
+            
+            // Manually trigger success feedback
+            setSuccessPlatform(platform);
+            setTimeout(() => {
+              toast({
+                title: "Shared successfully!",
+                description: "Link copied to clipboard!",
+                variant: "default"
+              });
+              if (onShareSuccess) {
+                onShareSuccess(platform);
+              }
+              setTimeout(() => {
+                setSuccessPlatform(null);
+                setShareAnimating(false);
+                // Keep the modal open a bit longer so user can see the success
+              }, 3000);
+            }, 200);
+          } else {
+            console.error("setNativeClipboard function not available");
+            throw new Error("Native clipboard function not available");
+          }
+        } catch (error) {
+          console.error("Native clipboard error:", error);
+          toast({
+            title: "Copy Failed",
+            description: "Could not copy link using native clipboard.",
+            variant: "destructive"
+          });
+          setShareAnimating(false);
+        }
+        return;
+      } else {
+        // For all other platforms in mobile app, use native sharing
+        console.log("Using native share API for platform:", platform);
+        try {
+          // Use the mobile app's native share API with the exact format specified
+          const shareMessage = shareText ? `${shareText} ${shareUrl}` : `Check out this post from ${formatUsername(username)} on dapps.co! ${shareUrl}`;
+          await navigator.share({
+            text: shareMessage, // text or url to be shared
+          });
+          
+          setSuccessPlatform(platform);
+          setTimeout(() => {
+            toast({
+              title: "Shared successfully!",
+              description: "Post shared using native sharing!",
+              variant: "default"
+            });
+            if (onShareSuccess) {
+              onShareSuccess(platform);
+            }
+            setTimeout(() => {
+              setSuccessPlatform(null);
+              setShareAnimating(false);
+            }, 3000);
+          }, 200);
+        } catch (error) {
+          console.error("Native share error:", error);
+          // Check if user cancelled vs actual error
+          if (error.name === 'AbortError') {
+            // User cancelled, don't show error
+            setShareAnimating(false);
+          } else {
+            toast({
+              title: "Share Failed",
+              description: "Could not share using native sharing.",
+              variant: "destructive"
+            });
+            setShareAnimating(false);
+          }
+        }
+        return;
+      }
+    }
+    // --- End Native Mobile App Handling ---
+    
+    // Default web share logic for other platforms or web users
+    try {
+      console.log(`[ShareContent] Attempting web sharing for platform: ${platform}`);
+      const success = await shareToSocialMedia(platform, {
+        url: shareUrl,
+        title: shareTitle,
+        text: shareText
+      });
+      
+      console.log(`[ShareContent] Web sharing result: ${success}`);
+      
+      if (success) {
         setSuccessPlatform(platform);
+        
+        // Show the confetti and success state for a moment
         setTimeout(() => {
           toast({
             title: "Shared successfully!",
-            description: "Link copied to clipboard!",
+            description: platform === 'copy' ? "Link copied to clipboard!" : `Post shared on ${platform}!`,
             variant: "default"
           });
+          
+          // Call the onShareSuccess callback if provided
           if (onShareSuccess) {
             onShareSuccess(platform);
           }
+          
+          // Reset after showing feedback
           setTimeout(() => {
             setSuccessPlatform(null);
             setShareAnimating(false);
-          }, 2000);
-        }, 500);
-      } catch (error) {
-        console.error("Native clipboard error:", error);
+          }, 3000);
+        }, 200);
+      } else {
+        setShareAnimating(false);
         toast({
-          title: "Copy Failed",
-          description: "Could not copy link using native clipboard.",
+          title: "Sharing failed",
+          description: "Could not share the post",
           variant: "destructive"
         });
-        setShareAnimating(false);
       }
-      return; // Prevent default web share logic
-    }
-    // --- End Native Handling ---
-    
-    // Default web share logic
-    const success = await shareToSocialMedia(platform, {
-      url: shareUrl,
-      title: shareTitle,
-      text: shareText
-    });
-    
-    if (success) {
-      setSuccessPlatform(platform);
-      
-      // Show the confetti and success state for a moment
-      setTimeout(() => {
-        toast({
-          title: "Shared successfully!",
-          description: platform === 'copy' ? "Link copied to clipboard!" : `Post shared on ${platform}!`,
-          variant: "default"
-        });
-        
-        // Call the onShareSuccess callback if provided
-        if (onShareSuccess) {
-          onShareSuccess(platform);
-        }
-        
-        // Reset after showing feedback
-        setTimeout(() => {
-          setSuccessPlatform(null);
-          setShareAnimating(false);
-        }, 2000);
-      }, 500);
-    } else {
+    } catch (error) {
+      console.error(`[ShareContent] Error in web sharing for platform ${platform}:`, error);
       setShareAnimating(false);
       toast({
         title: "Sharing failed",
-        description: "Could not share the post",
+        description: "An error occurred while trying to share the post",
         variant: "destructive"
       });
     }
@@ -201,11 +304,15 @@ export const ShareContent = ({
       <div className="p-4">
         <h3 className="mb-4 text-sm font-medium">Share via</h3>
         <div className="grid grid-cols-3 gap-2">
-          {navigator.share && (
+          {(isMobileApp && navigator.share) && (
             <Button 
               variant="outline" 
               className={`flex flex-col h-20 gap-1 items-center justify-center relative overflow-hidden ${successPlatform === 'native' ? 'border-primary/50 bg-primary/5' : ''}`} 
-              onClick={() => handleShare('native')}
+              onClick={(e) => {
+                e.stopPropagation();
+                console.log('[ShareContent] Native share button clicked');
+                handleShare('native');
+              }}
               disabled={shareAnimating}
             >
               <div className={`w-8 h-8 flex items-center justify-center rounded-full ${successPlatform === 'native' ? 'bg-primary/20' : 'bg-primary/10'}`}>
@@ -224,7 +331,11 @@ export const ShareContent = ({
           <Button 
             variant="outline" 
             className={`flex flex-col h-20 gap-1 items-center justify-center relative overflow-hidden ${successPlatform === 'twitter' ? 'border-[#1DA1F2]/50 bg-[#1DA1F2]/5' : ''}`} 
-            onClick={() => handleShare('twitter')}
+            onClick={(e) => {
+              e.stopPropagation();
+              console.log('[ShareContent] Twitter button clicked');
+              handleShare('twitter');
+            }}
             disabled={shareAnimating}
           >
             <div className={`w-8 h-8 flex items-center justify-center rounded-full ${successPlatform === 'twitter' ? 'bg-[#1DA1F2]/20' : 'bg-[#1DA1F2]/10'}`}>
@@ -245,7 +356,11 @@ export const ShareContent = ({
           <Button 
             variant="outline" 
             className={`flex flex-col h-20 gap-1 items-center justify-center relative overflow-hidden ${successPlatform === 'whatsapp' ? 'border-[#25D366]/50 bg-[#25D366]/5' : ''}`} 
-            onClick={() => handleShare('whatsapp')}
+            onClick={(e) => {
+              e.stopPropagation();
+              console.log('[ShareContent] WhatsApp button clicked');
+              handleShare('whatsapp');
+            }}
             disabled={shareAnimating}
           >
             <div className={`w-8 h-8 flex items-center justify-center rounded-full ${successPlatform === 'whatsapp' ? 'bg-[#25D366]/20' : 'bg-[#25D366]/10'}`}>
@@ -266,7 +381,11 @@ export const ShareContent = ({
           <Button 
             variant="outline" 
             className={`flex flex-col h-20 gap-1 items-center justify-center relative overflow-hidden ${successPlatform === 'farcaster' ? 'border-[#855DCD]/50 bg-[#855DCD]/5' : ''}`} 
-            onClick={() => handleShare('farcaster')}
+            onClick={(e) => {
+              e.stopPropagation();
+              console.log('[ShareContent] Farcaster button clicked');
+              handleShare('farcaster');
+            }}
             disabled={shareAnimating}
           >
             <div className={`w-8 h-8 flex items-center justify-center rounded-full ${successPlatform === 'farcaster' ? 'bg-[#855DCD]/20' : 'bg-[#855DCD]/10'}`}>
@@ -287,7 +406,11 @@ export const ShareContent = ({
           <Button 
             variant="outline" 
             className={`flex flex-col h-20 gap-1 items-center justify-center relative overflow-hidden ${successPlatform === 'telegram' ? 'border-[#0088cc]/50 bg-[#0088cc]/5' : ''}`} 
-            onClick={() => handleShare('telegram')}
+            onClick={(e) => {
+              e.stopPropagation();
+              console.log('[ShareContent] Telegram button clicked');
+              handleShare('telegram');
+            }}
             disabled={shareAnimating}
           >
             <div className={`w-8 h-8 flex items-center justify-center rounded-full ${successPlatform === 'telegram' ? 'bg-[#0088cc]/20' : 'bg-[#0088cc]/10'}`}>
@@ -308,7 +431,11 @@ export const ShareContent = ({
           <Button 
             variant="outline" 
             className={`flex flex-col h-20 gap-1 items-center justify-center relative overflow-hidden ${successPlatform === 'copy' ? 'border-primary/50 bg-primary/5' : ''}`} 
-            onClick={() => handleShare('copy')}
+            onClick={(e) => {
+              e.stopPropagation();
+              console.log('[ShareContent] Copy button clicked');
+              handleShare('copy');
+            }}
             disabled={shareAnimating}
           >
             <div className={`w-8 h-8 flex items-center justify-center rounded-full ${successPlatform === 'copy' ? 'bg-primary/20' : 'bg-muted'}`}>

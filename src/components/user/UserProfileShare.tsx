@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Drawer, DrawerTrigger, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useDevice } from '@/components/providers/DeviceProvider';
+import { set as setNativeClipboard } from "webtonative/Clipboard";
 
 // WhatsApp Icon Component
 const WhatsAppIcon = () => (
@@ -38,6 +40,7 @@ export const UserProfileShare = ({ handle, triggerComponent }: UserProfileShareP
   const [successPlatform, setSuccessPlatform] = useState<string | null>(null);
   const [shareAnimating, setShareAnimating] = useState(false);
   const isMobile = useIsMobile();
+  const { isMobileApp } = useDevice();
 
   const handleShare = async (platform: SharePlatform) => {
     setShareAnimating(true);
@@ -45,22 +48,60 @@ export const UserProfileShare = ({ handle, triggerComponent }: UserProfileShareP
     const title = `@${handle}'s Profile on dapps.co`;
     const text = `Check out @${handle}'s profile on dapps.co!`;
     
-    // Try native sharing first (mobile)
-    if (platform === 'native' && navigator.share) {
-      try {
-        await navigator.share({
-          title,
-          text,
-          url
-        });
-        setIsOpen(false);
+    // --- Native Mobile App Sharing ---
+    if (isMobileApp === true) {
+      console.log("Detected mobile app, using native sharing methods for profile");
+      
+      if (platform === 'copy') {
+        console.log("Using native clipboard set for profile");
+        try {
+          setNativeClipboard({ data: url });
+          setSuccessPlatform(platform);
+          setTimeout(() => {
+            toast.success("Profile link copied to clipboard!");
+            setTimeout(() => {
+              setSuccessPlatform(null);
+              setShareAnimating(false);
+            }, 2000);
+          }, 500);
+        } catch (error) {
+          console.error("Native clipboard error:", error);
+          toast.error("Could not copy profile link using native clipboard.");
+          setShareAnimating(false);
+        }
         return;
-      } catch (error) {
-        console.error('Error sharing:', error);
+      } else if (platform === 'native') {
+        console.log("Using native share API for profile");
+        try {
+          const shareMessage = `${text} ${url}`;
+          await navigator.share({
+            text: shareMessage,
+          });
+          setIsOpen(false);
+          setSuccessPlatform(platform);
+          setTimeout(() => {
+            toast.success("Profile shared using native sharing!");
+            setTimeout(() => {
+              setSuccessPlatform(null);
+              setShareAnimating(false);
+            }, 2000);
+          }, 500);
+        } catch (error) {
+          console.error("Native share error:", error);
+          if (error.name === 'AbortError') {
+            // User cancelled, don't show error
+            setShareAnimating(false);
+          } else {
+            toast.error("Could not share profile using native sharing.");
+            setShareAnimating(false);
+          }
+        }
+        return;
       }
     }
+    // --- End Native Mobile App Handling ---
     
-    // Fall back to platform-specific sharing
+    // Default web share logic for other platforms or web users
     const success = await shareToSocialMedia(platform, { url, title, text });
     
     if (success) {
@@ -108,7 +149,7 @@ export const UserProfileShare = ({ handle, triggerComponent }: UserProfileShareP
     <div className="p-4">
       <h3 className="mb-4 text-sm font-medium">Share via</h3>
       <div className="grid grid-cols-3 gap-2">
-        {navigator.share && (
+        {(isMobileApp && navigator.share) && (
           <Button 
             variant="outline" 
             className={`flex flex-col h-20 gap-1 items-center justify-center relative overflow-hidden ${successPlatform === 'native' ? 'border-primary/50 bg-primary/5' : ''}`} 

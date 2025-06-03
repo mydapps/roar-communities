@@ -71,6 +71,8 @@ const MobileMirrorSheet: React.FC<MobileMirrorSheetProps> = ({
   const [isMirroring, setIsMirroring] = useState(false);
   const [communitySearchQuery, setCommunitySearchQuery] = useState('');
   const quoteTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [viewportHeight, setViewportHeight] = useState(window.innerHeight);
 
   useEffect(() => {
     if (!open) {
@@ -81,6 +83,66 @@ const MobileMirrorSheet: React.FC<MobileMirrorSheetProps> = ({
       setCommunitySearchQuery('');
     }
   }, [open]);
+
+  // Mobile keyboard detection and viewport handling
+  useEffect(() => {
+    if (!open) return;
+
+    const handleViewportChange = () => {
+      if (window.visualViewport) {
+        const newHeight = window.visualViewport.height;
+        const keyboardHeight = window.innerHeight - newHeight;
+        const keyboardIsVisible = keyboardHeight > 150; // Threshold for keyboard detection
+        
+        setIsKeyboardVisible(keyboardIsVisible);
+        setViewportHeight(newHeight);
+        
+        // If keyboard is visible and we're on the quote step, ensure textarea is visible
+        if (keyboardIsVisible && currentStep === 'quote_confirm' && quoteTextareaRef.current) {
+          setTimeout(() => {
+            if (quoteTextareaRef.current) {
+              const textarea = quoteTextareaRef.current;
+              const rect = textarea.getBoundingClientRect();
+              const visibleHeight = window.visualViewport?.height || window.innerHeight;
+              
+              // Check if textarea is below the visible area
+              if (rect.bottom > visibleHeight - 20) {
+                textarea.scrollIntoView({
+                  behavior: 'smooth',
+                  block: 'center'
+                });
+              }
+            }
+          }, 300);
+        }
+      }
+    };
+
+    const handleResize = () => {
+      // Fallback for browsers without visualViewport support
+      const newHeight = window.innerHeight;
+      const heightDiff = window.screen.height - newHeight;
+      const keyboardIsVisible = heightDiff > 150;
+      
+      setIsKeyboardVisible(keyboardIsVisible);
+      setViewportHeight(newHeight);
+    };
+
+    // Use visualViewport if available (better detection)
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleViewportChange);
+    } else {
+      window.addEventListener('resize', handleResize);
+    }
+
+    return () => {
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleViewportChange);
+      } else {
+        window.removeEventListener('resize', handleResize);
+      }
+    };
+  }, [open, currentStep]);
 
   const handleSelectPersonalFeed = () => {
     setSelectedDestination({ 
@@ -262,21 +324,46 @@ const MobileMirrorSheet: React.FC<MobileMirrorSheetProps> = ({
 
       case 'quote_confirm':
         return (
-          <div className="px-4 pt-3 pb-2 flex flex-col flex-grow" style={{ height: 'calc(100% - 0px)' }}>
+          <div 
+            className="px-4 pt-3 pb-2 flex flex-col flex-grow" 
+            style={{ 
+              height: isKeyboardVisible ? `${viewportHeight - 180}px` : 'calc(100% - 0px)',
+              maxHeight: isKeyboardVisible ? `${viewportHeight - 180}px` : 'none'
+            }}
+          >
             <SimplifiedPostPreview />
             <Textarea
               ref={quoteTextareaRef}
               placeholder="Add a quote (optional)..."
               value={quoteText}
               onChange={(e) => setQuoteText(e.target.value)}
-              className="min-h-[80px] text-sm mt-1 mb-2 flex-grow"
+              className={`text-sm mt-1 ${isKeyboardVisible ? 'min-h-[120px] max-h-[200px] mb-16' : 'min-h-[80px] flex-grow mb-2'}`}
               onFocus={() => {
                 setTimeout(() => {
-                    quoteTextareaRef.current?.scrollIntoView({
+                  if (quoteTextareaRef.current) {
+                    const textarea = quoteTextareaRef.current;
+                    const rect = textarea.getBoundingClientRect();
+                    const visibleHeight = window.visualViewport?.height || window.innerHeight;
+                    
+                    // Calculate if textarea needs to be scrolled into view
+                    const footerHeight = 80; // Approximate footer height
+                    const bufferSpace = 20; // Extra space for comfortable viewing
+                    
+                    if (rect.bottom > visibleHeight - footerHeight - bufferSpace) {
+                      textarea.scrollIntoView({
                         behavior: 'smooth',
-                        block: 'center' 
-                    });
-                }, 300);
+                        block: 'nearest'
+                      });
+                    }
+                  }
+                }, 150);
+              }}
+              style={{
+                // Ensure the textarea remains visible and accessible
+                ...(isKeyboardVisible && {
+                  position: 'relative',
+                  zIndex: 10
+                })
               }}
             />
           </div>
@@ -297,7 +384,13 @@ const MobileMirrorSheet: React.FC<MobileMirrorSheetProps> = ({
   
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="max-h-[90vh] min-h-[300px] flex flex-col bg-card">
+      <DrawerContent 
+        className="flex flex-col bg-card"
+        style={{
+          maxHeight: isKeyboardVisible ? `${viewportHeight}px` : '90vh',
+          minHeight: isKeyboardVisible ? `${Math.min(viewportHeight, 400)}px` : '300px'
+        }}
+      >
         <DrawerHeader className="text-left border-b flex-shrink-0 py-3 px-4">
           <div className="flex items-center">
             {currentStep !== 'destination' && (
@@ -314,12 +407,30 @@ const MobileMirrorSheet: React.FC<MobileMirrorSheetProps> = ({
           </div>
         </DrawerHeader>
         
-        <div className="flex-grow overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div 
+          className="flex-grow overflow-y-auto" 
+          style={{ 
+            WebkitOverflowScrolling: 'touch',
+            maxHeight: isKeyboardVisible ? `${viewportHeight - 120}px` : 'none'
+          }}
+        >
           {renderStepContent()}
         </div>
 
         {currentStep === 'quote_confirm' && selectedDestination && (
-          <DrawerFooter className="border-t flex-shrink-0 bg-card p-3 sticky bottom-0 left-0 right-0 z-10">
+          <DrawerFooter 
+            className="border-t flex-shrink-0 bg-card p-3 sticky bottom-0 left-0 right-0 z-20"
+            style={{
+              // Ensure footer is always visible above keyboard
+              ...(isKeyboardVisible && {
+                position: 'fixed',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                borderRadius: 0
+              })
+            }}
+          >
             <Button 
                 size="lg" 
                 onClick={handleSubmitMirror} 

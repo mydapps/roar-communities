@@ -149,7 +149,15 @@ const POST_SANITIZATION_OPTIONS: sanitizeHtml.IOptions = {
 export const processRichTextForDisplayingPosts = (htmlContent: string | null | undefined): string => {
   if (!htmlContent || typeof htmlContent !== 'string') return '';
 
-  let sanitizedContent = sanitizeHtml(htmlContent, POST_SANITIZATION_OPTIONS);
+  // First, remove any leftover markdown image syntax to prevent it from showing as text
+  // This handles cases where older content still contains markdown syntax
+  // Patterns: ![](url), ![alt](url), ![alt text](url), etc.
+  let cleanedContent = htmlContent
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '') // Remove ![alt](url) patterns
+    .replace(/^\s*$\n/gm, '') // Remove empty lines that might be left after removing markdown
+    .trim(); // Remove leading/trailing whitespace
+  
+  let sanitizedContent = sanitizeHtml(cleanedContent, POST_SANITIZATION_OPTIONS);
 
   // Process custom emojis
   const emojiCodeRegex = /(?<!<[^>]{0,256})(?<![a-zA-Z0-9]):([a-zA-Z0-9_]+?):/g;

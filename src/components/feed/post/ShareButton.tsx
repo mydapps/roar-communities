@@ -37,7 +37,10 @@ export const ShareButton = ({
   const mobile = useIsMobile();
   
   const handleClick = (e: React.MouseEvent) => {
+    console.log('[ShareButton] Share button clicked');
     e.stopPropagation(); // Prevent post navigation
+    e.preventDefault(); // Prevent any default action
+    console.log('[ShareButton] Calling onOpenChange(true)');
     onOpenChange(true);
   };
   
