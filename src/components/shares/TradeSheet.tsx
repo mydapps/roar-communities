@@ -55,6 +55,12 @@ export const TradeSheet = ({
   const [userBalance, setUserBalance] = useState(userEthBalance);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
   
+  // Store the actual transaction quantity to show in success screen
+  const [transactionQuantity, setTransactionQuantity] = useState<number | null>(null);
+  
+  // Track if the component has been initialized to prevent unwanted resets
+  const [isInitialized, setIsInitialized] = useState(false);
+  
   // UI state
   const isMobile = useIsMobile();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -228,6 +234,8 @@ export const TradeSheet = ({
       if (action === 'buy') {
         if (onBuyConfirm) {
           await onBuyConfirm(community.community, shareQuantity);
+          // Store the actual transaction quantity for success screen
+          setTransactionQuantity(shareQuantity);
           // Force refresh balance after successful transaction
           await fetchBalance(true);
           setSuccessVisible(true);
@@ -235,12 +243,14 @@ export const TradeSheet = ({
         } else {
           const result = await buySharesConfirm(community.community, shareQuantity);
           if (result?.status === 'SUCCESS') {
+            // Store the actual transaction quantity for success screen
+            setTransactionQuantity(shareQuantity);
             // Force refresh balance after successful transaction
             await fetchBalance(true);
             setSuccessVisible(true);
             setTransactionHash(result.transactionHash || null);
             triggerSuccessAnimation();
-            toast.success(`Successfully purchased ${result.shareQuantity} shares!`);
+            toast.success(`Successfully purchased ${formatNumber(shareQuantity, shareQuantity < 1 ? 3 : shareQuantity < 10 ? 2 : 0)} shares!`);
             setTimeout(() => onOpenChange(false), 3000);
           } else {
             throw new Error(result?.message || 'Transaction failed');
@@ -249,6 +259,8 @@ export const TradeSheet = ({
       } else {
         if (onSellConfirm) {
           await onSellConfirm(community.community, shareQuantity);
+          // Store the actual transaction quantity for success screen
+          setTransactionQuantity(shareQuantity);
           // Force refresh balance after successful transaction
           await fetchBalance(true);
           setSuccessVisible(true);
@@ -256,12 +268,14 @@ export const TradeSheet = ({
         } else {
           const result = await sellSharesConfirm(community.community, shareQuantity);
           if (result?.status === 'SUCCESS') {
+            // Store the actual transaction quantity for success screen
+            setTransactionQuantity(shareQuantity);
             // Force refresh balance after successful transaction
             await fetchBalance(true);
             setSuccessVisible(true);
             setTransactionHash(result.transactionHash || null);
             triggerSuccessAnimation();
-            toast.success(`Successfully sold ${result.soldShares} shares!`);
+            toast.success(`Successfully sold ${formatNumber(shareQuantity, shareQuantity < 1 ? 3 : shareQuantity < 10 ? 2 : 0)} shares!`);
             setTimeout(() => onOpenChange(false), 3000);
           } else {
             throw new Error(result?.message || 'Transaction failed');
@@ -327,6 +341,8 @@ export const TradeSheet = ({
       setErrorMessage("");
       setSuccessVisible(false);
       setTransactionHash(null);
+      setTransactionQuantity(null);
+      setIsInitialized(false);
       onOpenChange(false);
     }
   };
@@ -339,12 +355,20 @@ export const TradeSheet = ({
         const ownedShares = community.shares || 0;
         setMaxShares(ownedShares);
         
-        // Set default quantity to a reasonable amount or max available
-        const defaultQuantity = Math.min(1, ownedShares);
-        updateQuantity(defaultQuantity);
+        // Only reset quantity on initial load, not on step changes
+        if (!isInitialized) {
+          const defaultQuantity = Math.min(1, ownedShares);
+          updateQuantity(defaultQuantity);
+          setIsInitialized(true);
+        }
       } else {
         setMaxShares(1000); // High limit for buying
-        updateQuantity(1);
+        
+        // Only reset quantity on initial load, not on step changes
+        if (!isInitialized) {
+          updateQuantity(1);
+          setIsInitialized(true);
+        }
       }
       
       // Fetch balance for buy orders with force refresh
@@ -352,7 +376,7 @@ export const TradeSheet = ({
         fetchBalance(true);
       }
     }
-  }, [open, community, action]);
+  }, [open, community, action, isInitialized]);
 
   // Track loading completion for success state
   useEffect(() => {
@@ -376,7 +400,7 @@ export const TradeSheet = ({
           <div className="space-y-2">
             <h3 className="text-xl font-bold text-green-700">Success! 🎉</h3>
             <p className="text-muted-foreground">
-              Your {action} order for {formatNumber(shareQuantity, 3)} shares of {community?.community} has been completed.
+              Your {action} order for {formatNumber(transactionQuantity || shareQuantity, 3)} shares of {community?.community} has been completed.
             </p>
           </div>
           
@@ -540,9 +564,16 @@ export const TradeSheet = ({
                 
                 <div className="flex justify-between text-lg font-semibold">
                   <span>{action === 'buy' ? 'Total Cost' : 'You Receive'}</span>
-                  <span>
-                    {precheck?.totalValue ? formatNumber(parseFloat(precheck.totalValue), 6) : '0'} ETH
-                  </span>
+                  <div className="text-right">
+                    <div className="font-semibold">
+                      {precheck?.totalValue ? formatNumber(parseFloat(precheck.totalValue), 6) : '0'} ETH
+                    </div>
+                    {precheck?.totalSharePriceUsd && (
+                      <div className="text-sm text-muted-foreground font-normal">
+                        (${formatNumber(parseFloat(precheck.totalSharePriceUsd.toString()), 2)})
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

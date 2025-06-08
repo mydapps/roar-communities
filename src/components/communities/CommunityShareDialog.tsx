@@ -103,7 +103,7 @@ export const CommunityShareDialog = ({
         result = await buySharesConfirm(community.name, quantity);
         if (result.status === 'SUCCESS') {
           triggerSuccessAnimation();
-          toast.success(`Successfully purchased ${result.shareQuantity} shares of ${community.name}`);
+          toast.success(`Successfully purchased ${quantity} shares of ${community.name}`);
           onOpenChange(false);
           if (onSuccess) onSuccess();
         } else {
@@ -113,7 +113,7 @@ export const CommunityShareDialog = ({
         result = await sellSharesConfirm(community.name, quantity);
         if (result.status === 'SUCCESS') {
           triggerSuccessAnimation();
-          toast.success(`Successfully sold ${result.soldShares} shares of ${community.name}`);
+          toast.success(`Successfully sold ${quantity} shares of ${community.name}`);
           onOpenChange(false);
           if (onSuccess) onSuccess();
         } else {
