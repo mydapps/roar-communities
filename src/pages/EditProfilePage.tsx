@@ -18,11 +18,13 @@ import {
   updateUserProfile, 
   updateUserAvatar
 } from '@/utils/userApi';
-import { Calendar, Check, Image, Link2, Loader2, MapPin, Pencil, RefreshCcw, RotateCw, Save, Upload, User, X, ArrowLeft, Trash2 } from 'lucide-react';
+import { Calendar, Check, Image, Link2, Loader2, MapPin, Pencil, RefreshCw, RotateCw, Save, Upload, User, X, ArrowLeft, Trash2, Mail, Plus } from 'lucide-react';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 import { Link } from 'react-router-dom';
+import { useLinkAccount } from '@privy-io/react-auth';
+import { createAuthHeaders } from '@/utils/apiBase';
 // import { AvatarSelectionDialog } from '@/components/shared/AvatarSelectionDialog';
 import {
   AlertDialog,
@@ -52,6 +54,24 @@ export interface MediaUploadResponse {
     size: number;
     type: string;
   };
+}
+
+// Email status response interface
+export interface EmailStatusResponse {
+  success: boolean;
+  hasValidEmail: boolean;
+  currentEmail?: string;
+  validEmail?: string;
+  privyId?: string;
+}
+
+// Update email response interface
+export interface UpdateEmailResponse {
+  success: boolean;
+  emailFound: boolean;
+  emailUpdated: boolean;
+  email?: string;
+  message: string;
 }
 
 const EditProfilePage = () => {
@@ -87,9 +107,87 @@ const EditProfilePage = () => {
   // Add new state for avatar edit
   const [showAvatarEdit, setShowAvatarEdit] = useState(false);
   
+  // Email-related state
+  const [emailStatus, setEmailStatus] = useState<EmailStatusResponse | null>(null);
+  const [loadingEmailStatus, setLoadingEmailStatus] = useState(false);
+  const [linkingEmail, setLinkingEmail] = useState(false);
+  
   // Current user handle from localStorage
   const userHandle = localStorage.getItem('dapps_user_handle');
   
+  // Function to fetch email status
+  const fetchEmailStatus = useCallback(async () => {
+    setLoadingEmailStatus(true);
+    try {
+      const response = await fetch('/api/check_email_status', {
+        method: 'GET',
+        headers: createAuthHeaders(),
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data: EmailStatusResponse = await response.json();
+        setEmailStatus(data);
+      } else {
+        console.error('Failed to fetch email status');
+        setEmailStatus(null);
+      }
+    } catch (error) {
+      console.error('Error fetching email status:', error);
+      setEmailStatus(null);
+    } finally {
+      setLoadingEmailStatus(false);
+    }
+  }, []);
+
+  // Privy link account hook
+  const { linkEmail } = useLinkAccount({
+    onSuccess: async (user) => {
+      console.log('Email linked successfully');
+      setLinkingEmail(false);
+      toast.success('Email linked successfully!');
+      
+      // Call our backend to update the email from Privy
+      try {
+        const response = await fetch('/api/update_email_from_privy', {
+          method: 'POST',
+          headers: createAuthHeaders(),
+          credentials: 'include'
+        });
+        
+        const data: UpdateEmailResponse = await response.json();
+        
+        if (data.success && data.emailUpdated) {
+          toast.success(data.message);
+          // Refresh email status to show the new email
+          await fetchEmailStatus();
+        } else {
+          toast.warning(data.message || 'Email was linked but may not have updated properly');
+        }
+      } catch (error) {
+        console.error('Error updating email from Privy:', error);
+        toast.error('Email was linked but failed to update in our system');
+      }
+    },
+    onError: (error) => {
+      console.error('Failed to link email:', error);
+      setLinkingEmail(false);
+      toast.error('Failed to link email. Please try again.');
+    }
+  });
+  
+  // Function to handle email linking
+  const handleLinkEmail = async () => {
+    setLinkingEmail(true);
+    try {
+      await linkEmail();
+    } catch (error) {
+      console.error('Error initiating email link:', error);
+      setLinkingEmail(false);
+      toast.error('Failed to initiate email linking');
+    }
+  };
+
   useEffect(() => {
     if (!userHandle) {
       toast.error('You must be logged in to edit your profile');
@@ -97,7 +195,8 @@ const EditProfilePage = () => {
       return;
     }
     fetchUserProfile();
-  }, [userHandle, navigate]);
+    fetchEmailStatus();
+  }, [userHandle, navigate, fetchEmailStatus]);
   
   const fetchUserProfile = useCallback(async () => {
     if (!userHandle) return;
@@ -329,7 +428,7 @@ const EditProfilePage = () => {
         <h2 className="text-2xl font-semibold mb-2">Error Loading Profile</h2>
         <p className="text-center mb-4">{error}</p>
         <Button onClick={fetchUserProfile} variant="destructive">
-          <RefreshCcw className="mr-2 h-4 w-4" /> Try Again
+          <RefreshCw className="mr-2 h-4 w-4" /> Try Again
         </Button>
       </div>
     );
@@ -454,7 +553,7 @@ const EditProfilePage = () => {
                           onClick={generateMoreGalleryAvatars}
                           className="text-xs flex-grow-0"
                         >
-                          <RefreshCcw className="h-3 w-3 mr-1" />
+                          <RefreshCw className="h-3 w-3 mr-1" />
                           More Options
                         </Button>
                         <Button
@@ -567,10 +666,67 @@ const EditProfilePage = () => {
                       <div className="grid gap-2">
                         <Label htmlFor="handle">Handle</Label>
                         <Input id="handle" value={profile.handle} disabled />
-                  <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-muted-foreground">
                           Your unique handle cannot be changed.
-                  </p>
-                </div>
+                        </p>
+                      </div>
+
+                      {/* Email Field */}
+                      <div className="grid gap-2">
+                        <Label htmlFor="email" className="flex items-center gap-2">
+                          <Mail className="h-4 w-4" />
+                          Email Address
+                        </Label>
+                        {loadingEmailStatus ? (
+                          <div className="flex items-center gap-2 p-2 border rounded-md">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <span className="text-sm text-muted-foreground">Checking email status...</span>
+                          </div>
+                        ) : emailStatus?.hasValidEmail ? (
+                          <div className="space-y-2">
+                            <Input 
+                              id="email" 
+                              value={emailStatus.currentEmail || emailStatus.validEmail || ''} 
+                              disabled 
+                              className="bg-muted/50"
+                            />
+                                                         <p className="text-xs text-muted-foreground flex items-center gap-1">
+                               <Check className="h-3 w-3 text-green-500" />
+                               Your email address is verified.
+                             </p>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                                                         <div className="flex items-center gap-2 p-3 border border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/20 rounded-md">
+                               <Mail className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                               <span className="text-sm text-orange-700 dark:text-orange-300">
+                                 No email address linked to your account. Connecting your email secures your account.
+                               </span>
+                             </div>
+                            <Button 
+                              onClick={handleLinkEmail}
+                              disabled={linkingEmail}
+                              variant="outline"
+                              className="w-full gap-2"
+                            >
+                              {linkingEmail ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                  Linking Email...
+                                </>
+                              ) : (
+                                <>
+                                  <Plus className="h-4 w-4" />
+                                  Link Email Address
+                                </>
+                              )}
+                            </Button>
+                            <p className="text-xs text-muted-foreground">
+                              Linking an email helps secure your account and enables notifications.
+                            </p>
+                          </div>
+                        )}
+                      </div>
                 
                       <div className="grid gap-2">
                         <Label htmlFor="location">Location</Label>

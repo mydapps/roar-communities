@@ -96,25 +96,6 @@ const MobileMirrorSheet: React.FC<MobileMirrorSheetProps> = ({
         
         setIsKeyboardVisible(keyboardIsVisible);
         setViewportHeight(newHeight);
-        
-        // If keyboard is visible and we're on the quote step, ensure textarea is visible
-        if (keyboardIsVisible && currentStep === 'quote_confirm' && quoteTextareaRef.current) {
-          setTimeout(() => {
-            if (quoteTextareaRef.current) {
-              const textarea = quoteTextareaRef.current;
-              const rect = textarea.getBoundingClientRect();
-              const visibleHeight = window.visualViewport?.height || window.innerHeight;
-              
-              // Check if textarea is below the visible area
-              if (rect.bottom > visibleHeight - 20) {
-                textarea.scrollIntoView({
-                  behavior: 'smooth',
-                  block: 'center'
-                });
-              }
-            }
-          }, 300);
-        }
       }
     };
 
@@ -324,46 +305,41 @@ const MobileMirrorSheet: React.FC<MobileMirrorSheetProps> = ({
 
       case 'quote_confirm':
         return (
-          <div 
-            className="px-4 pt-3 pb-2 flex flex-col flex-grow" 
-            style={{ 
-              height: isKeyboardVisible ? `${viewportHeight - 180}px` : 'calc(100% - 0px)',
-              maxHeight: isKeyboardVisible ? `${viewportHeight - 180}px` : 'none'
-            }}
-          >
-            <SimplifiedPostPreview />
+          <div className={`px-3 flex flex-col ${isKeyboardVisible ? 'pt-1 pb-1 h-full' : 'pt-3 pb-4 flex-grow'}`}>
+            {/* Extremely minimal post preview when keyboard is visible */}
+            {isKeyboardVisible ? (
+              <div className="flex items-center py-1 mb-1 text-xs">
+                <Avatar className="h-3 w-3 mr-1.5">
+                  <AvatarImage src={postData.avatarUrl || undefined} alt={postData.username} />
+                  <AvatarFallback className="text-[8px]">{postData.username.substring(0,1).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <span className="truncate text-muted-foreground">Mirroring {postData.username}'s post</span>
+              </div>
+            ) : (
+              <SimplifiedPostPreview />
+            )}
+            
+            {/* Textarea positioned right above button */}
             <Textarea
               ref={quoteTextareaRef}
               placeholder="Add a quote (optional)..."
               value={quoteText}
               onChange={(e) => setQuoteText(e.target.value)}
-              className={`text-sm mt-1 ${isKeyboardVisible ? 'min-h-[120px] max-h-[200px] mb-16' : 'min-h-[80px] flex-grow mb-2'}`}
+              className={`text-sm resize-none ${
+                isKeyboardVisible 
+                  ? 'h-16 mb-1 text-xs' // Very small height when keyboard visible
+                  : 'flex-grow min-h-[80px] mb-2' // Normal size when keyboard hidden
+              }`}
               onFocus={() => {
-                setTimeout(() => {
-                  if (quoteTextareaRef.current) {
-                    const textarea = quoteTextareaRef.current;
-                    const rect = textarea.getBoundingClientRect();
-                    const visibleHeight = window.visualViewport?.height || window.innerHeight;
-                    
-                    // Calculate if textarea needs to be scrolled into view
-                    const footerHeight = 80; // Approximate footer height
-                    const bufferSpace = 20; // Extra space for comfortable viewing
-                    
-                    if (rect.bottom > visibleHeight - footerHeight - bufferSpace) {
-                      textarea.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'nearest'
-                      });
+                if (isKeyboardVisible && quoteTextareaRef.current) {
+                  // Ensure the modal stays at bottom
+                  setTimeout(() => {
+                    const modal = document.querySelector('[data-state="open"]');
+                    if (modal) {
+                      (modal as HTMLElement).style.bottom = '0px';
                     }
-                  }
-                }, 150);
-              }}
-              style={{
-                // Ensure the textarea remains visible and accessible
-                ...(isKeyboardVisible && {
-                  position: 'relative',
-                  zIndex: 10
-                })
+                  }, 100);
+                }
               }}
             />
           </div>
@@ -387,22 +363,35 @@ const MobileMirrorSheet: React.FC<MobileMirrorSheetProps> = ({
       <DrawerContent 
         className="flex flex-col bg-card"
         style={{
-          maxHeight: isKeyboardVisible ? `${viewportHeight}px` : '90vh',
-          minHeight: isKeyboardVisible ? `${Math.min(viewportHeight, 400)}px` : '300px'
+          ...(isKeyboardVisible ? {
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: '160px',
+            maxHeight: '160px',
+            minHeight: '160px',
+            transform: 'translateY(0)',
+            borderRadius: '12px 12px 0 0'
+          } : {
+            height: 'auto',
+            maxHeight: '90vh',
+            minHeight: '300px'
+          })
         }}
       >
-        <DrawerHeader className="text-left border-b flex-shrink-0 py-3 px-4">
+        <DrawerHeader className={`text-left border-b flex-shrink-0 px-3 ${isKeyboardVisible ? 'py-1' : 'py-3'}`}>
           <div className="flex items-center">
             {currentStep !== 'destination' && (
-              <Button variant="ghost" size="icon" onClick={goBack} className="mr-1.5 -ml-1 h-8 w-8">
-                <ChevronLeft className="h-5 w-5" />
+              <Button variant="ghost" size="icon" onClick={goBack} className={`mr-1.5 -ml-1 ${isKeyboardVisible ? 'h-6 w-6' : 'h-8 w-8'}`}>
+                <ChevronLeft className={`${isKeyboardVisible ? 'h-4 w-4' : 'h-5 w-5'}`} />
               </Button>
             )}
             <div className="flex-grow">
-                <DrawerTitle className="text-base font-semibold">{getHeaderTitle()}</DrawerTitle>
+                <DrawerTitle className={`font-semibold ${isKeyboardVisible ? 'text-xs' : 'text-base'}`}>{getHeaderTitle()}</DrawerTitle>
             </div>
-            <DrawerClose asChild className="ml-auto -mr-1 h-8 w-8">
-                <Button variant="ghost" size="icon"><XIcon className="h-5 w-5" /></Button>
+            <DrawerClose asChild className={`ml-auto -mr-1 ${isKeyboardVisible ? 'h-6 w-6' : 'h-8 w-8'}`}>
+                <Button variant="ghost" size="icon"><XIcon className={`${isKeyboardVisible ? 'h-4 w-4' : 'h-5 w-5'}`} /></Button>
             </DrawerClose>
           </div>
         </DrawerHeader>
@@ -410,8 +399,7 @@ const MobileMirrorSheet: React.FC<MobileMirrorSheetProps> = ({
         <div 
           className="flex-grow overflow-y-auto" 
           style={{ 
-            WebkitOverflowScrolling: 'touch',
-            maxHeight: isKeyboardVisible ? `${viewportHeight - 120}px` : 'none'
+            WebkitOverflowScrolling: 'touch'
           }}
         >
           {renderStepContent()}
@@ -419,25 +407,15 @@ const MobileMirrorSheet: React.FC<MobileMirrorSheetProps> = ({
 
         {currentStep === 'quote_confirm' && selectedDestination && (
           <DrawerFooter 
-            className="border-t flex-shrink-0 bg-card p-3 sticky bottom-0 left-0 right-0 z-20"
-            style={{
-              // Ensure footer is always visible above keyboard
-              ...(isKeyboardVisible && {
-                position: 'fixed',
-                bottom: 0,
-                left: 0,
-                right: 0,
-                borderRadius: 0
-              })
-            }}
+            className={`border-t flex-shrink-0 bg-card ${isKeyboardVisible ? 'p-1 sticky bottom-0' : 'p-3'}`}
           >
             <Button 
-                size="lg" 
+                size={isKeyboardVisible ? "sm" : "lg"}
                 onClick={handleSubmitMirror} 
                 disabled={isMirroring}
-                className="w-full h-11 text-sm font-semibold"
+                className={`w-full font-semibold ${isKeyboardVisible ? 'h-8 text-xs py-1' : 'h-11 text-sm'}`}
             >
-              {isMirroring ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Repeat2 className="h-5 w-5 mr-2" />}
+              {isMirroring ? <Loader2 className={`${isKeyboardVisible ? 'h-3 w-3' : 'h-5 w-5'} animate-spin mr-1`} /> : <Repeat2 className={`${isKeyboardVisible ? 'h-3 w-3' : 'h-5 w-5'} mr-1`} />}
               {isMirroring ? 'Mirroring...' : `Mirror to ${selectedDestination.displayName}`}
             </Button>
           </DrawerFooter>
