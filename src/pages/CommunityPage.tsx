@@ -295,6 +295,9 @@ const CommunityPage = () => {
         toast.success('Successfully purchased shares!');
         fetchWalletBalance();
         
+        // IMPORTANT FIX: Refetch community data to update user shares state
+        refetch();
+        
         // IMPORTANT FIX: First set success to true, then set loading to false after delay
         // This ensures proper state sequence for the success screen
         setTradeSuccess(true);
@@ -324,7 +327,7 @@ const CommunityPage = () => {
       setTradeSuccess(false);
       toast.error('An error occurred while purchasing shares');
     }
-  }, [fetchWalletBalance, resetTradeState]);
+  }, [fetchWalletBalance, resetTradeState, refetch]);
   
   const handleSellSharesConfirm = useCallback(async (communityName: string, quantity: number) => {
     try {
@@ -335,6 +338,9 @@ const CommunityPage = () => {
       if (result && result.status === 'SUCCESS') {
         toast.success('Successfully sold shares!');
         fetchWalletBalance();
+        
+        // IMPORTANT FIX: Refetch community data to update user shares state
+        refetch();
         
         // IMPORTANT FIX: First set success to true, then set loading to false after delay
         // This ensures proper state sequence for the success screen
@@ -365,7 +371,7 @@ const CommunityPage = () => {
       setTradeSuccess(false);
       toast.error('An error occurred while selling shares');
     }
-  }, [fetchWalletBalance, resetTradeState]);
+  }, [fetchWalletBalance, resetTradeState, refetch]);
   
   const handleBuyAction = useCallback(() => {
     if (!isLoggedIn) {
