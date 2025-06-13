@@ -9,6 +9,8 @@ import { toggleRoar, fetchPosts, setupMirrorListener } from '@/utils/api';
 import { NotInCommunitySheet } from '@/components/community/NotInCommunitySheet';
 import { usePreventZoom } from '@/hooks/usePreventZoom';
 import { ProfileSuggestionModule } from '@/components/suggestions/ProfileSuggestionModule';
+import NotificationPermissionModal from '@/components/notifications/NotificationPermissionModal';
+import { useDeviceNotifications } from '@/hooks/useDeviceNotifications';
 
 const SUGGESTION_INTERVAL = 7;
 const MIN_POSTS_BEFORE_SUGGESTION = 3;
@@ -31,6 +33,10 @@ const FeedPage = () => {
   const [communityName, setCommunityName] = useState("");
   const [showProfileSuggestionModule, setShowProfileSuggestionModule] = useState(true);
   const requestInFlight = useRef(false);
+  
+  // Notification modal state
+  const { isMobileApp, isRegistered, isEnabled } = useDeviceNotifications();
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
   
   const loadPosts = useCallback(async (pageNum: number, replacePosts = false) => {
     if (requestInFlight.current && !replacePosts) {
@@ -109,6 +115,45 @@ const FeedPage = () => {
     
     return cleanup;
   }, []);
+  
+  // Check if we should show the notification permission modal
+  useEffect(() => {
+    // Simple check - wait for posts to load then check conditions
+    if (loading) return;
+    
+    // Only for mobile app users  
+    if (!isMobileApp) {
+      console.log('[FeedPage] Not mobile app, skipping notification modal');
+      return;
+    }
+    
+    // Check if user has been prompted before
+    const hasBeenPrompted = localStorage.getItem('dapps_notification_prompted') === 'true';
+    if (hasBeenPrompted) {
+      console.log('[FeedPage] User already prompted for notifications, skipping modal');
+      return;
+    }
+    
+    // Don't show if already registered and enabled (but only if we're sure)
+    if (isRegistered && isEnabled) {
+      console.log('[FeedPage] User already has notifications enabled, skipping modal');
+      return;
+    }
+    
+    console.log('[FeedPage] Conditions met, showing notification modal in 2 seconds');
+    console.log('[FeedPage] isMobileApp:', isMobileApp);
+    console.log('[FeedPage] isRegistered:', isRegistered); 
+    console.log('[FeedPage] isEnabled:', isEnabled);
+    console.log('[FeedPage] hasBeenPrompted:', hasBeenPrompted);
+    
+    // Show modal after a delay
+    const timer = setTimeout(() => {
+      console.log('[FeedPage] Showing notification permission modal');
+      setShowNotificationModal(true);
+    }, 2000);
+    
+    return () => clearTimeout(timer);
+  }, [isMobileApp, isRegistered, isEnabled, loading]);
   
   // Add event listener for mobile feed refresh
   useEffect(() => {
@@ -341,6 +386,17 @@ const FeedPage = () => {
         open={notInCommunitySheetOpen}
         onOpenChange={setNotInCommunitySheetOpen}
         communityName={communityName}
+      />
+      
+      <NotificationPermissionModal
+        isOpen={showNotificationModal}
+        onClose={() => {
+          console.log('[FeedPage] Modal onClose called');
+          setShowNotificationModal(false);
+        }}
+        onPermissionGranted={() => {
+          console.log('Notification permission granted!');
+        }}
       />
     </div>
   );

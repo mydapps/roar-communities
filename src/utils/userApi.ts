@@ -379,3 +379,61 @@ export const getUserReplies = async (
     throw error;
   }
 }; 
+
+export interface FollowUser {
+    id: number;
+    handle: string;
+    avatar_url: string;
+    name: string;
+    follows_back: boolean;
+}
+
+export interface PaginatedFollowResponse {
+    success: boolean;
+    data: FollowUser[];
+    pagination: {
+        currentPage: number;
+        totalPages: number;
+        perPage: number;
+        totalResults: number;
+    };
+    message?: string;
+}
+
+export const getFollowers = async (handle: string, page = 1, limit = 20): Promise<PaginatedFollowResponse> => {
+    try {
+        const headers = createAuthHeaders();
+        const response = await fetch(`/api/${handle}/followers?page=${page}&limit=${limit}`, {
+            method: 'GET',
+            headers,
+            credentials: 'include',
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to fetch followers');
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching followers:', error);
+        throw error;
+    }
+};
+
+export const getFollowing = async (handle: string, page = 1, limit = 20): Promise<PaginatedFollowResponse> => {
+    try {
+        const headers = createAuthHeaders();
+        const response = await fetch(`/api/${handle}/following?page=${page}&limit=${limit}`, {
+            method: 'GET',
+            headers,
+            credentials: 'include',
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to fetch following');
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching following:', error);
+        throw error;
+    }
+}; 

@@ -22,4 +22,39 @@ export const formatNumber = (value: number | string | undefined, decimals: numbe
     console.error("Error formatting number:", value, error);
     return `0.${'0'.repeat(decimals)}`;
   }
+};
+
+/**
+ * Formats ETH amounts with proper handling of scientific notation and trailing zeros.
+ * Always rounds to 6 decimal places and removes trailing zeros.
+ *
+ * @param value The ETH amount to format (number or string).
+ * @returns The formatted ETH string without trailing zeros.
+ */
+export const formatETH = (value: number | string | undefined): string => {
+  if (value === undefined || value === null) {
+    return '0';
+  }
+  
+  try {
+    const num = typeof value === 'string' ? parseFloat(value) : value;
+    
+    // Check if num is NaN after parsing
+    if (isNaN(num)) {
+      return '0';
+    }
+    
+    // Handle very small numbers that might display in scientific notation
+    // Round to 6 decimal places first
+    const rounded = Math.round(num * 1000000) / 1000000;
+    
+    // Format to 6 decimal places
+    const formatted = rounded.toFixed(6);
+    
+    // Remove trailing zeros and decimal point if necessary
+    return formatted.replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
+  } catch (error) {
+    console.error("Error formatting ETH amount:", value, error);
+    return '0';
+  }
 }; 

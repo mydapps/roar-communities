@@ -14,11 +14,32 @@ export default defineConfig(({ mode }) => ({
       cert: fs.readFileSync('./localhost+2.pem'),
     },
     proxy: {
+      // API proxy with cookie forwarding (handles both regular API and SSE endpoints)
       '/api': {
         target: 'https://api.dapps.co',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
-      },
+        secure: true,
+        configure: (proxy, options) => {
+          // Forward cookies for all API requests (including SSE)
+          proxy.on('proxyReq', (proxyReq, req, res) => {
+            if (req.headers.cookie) {
+              proxyReq.setHeader('cookie', req.headers.cookie);
+            }
+            // Log SSE requests for debugging
+            if (req.url?.includes('/sse/')) {
+              console.log('SSE proxy URL:', req.url);
+              console.log('SSE proxy request headers:', req.headers);
+            }
+          });
+          
+          proxy.on('error', (err, req, res) => {
+            if (req.url?.includes('/sse/')) {
+              console.error('SSE proxy error:', err);
+            }
+          });
+        }
+      }
     },
     fs: {
       // Allow serving files from one level up to the project root

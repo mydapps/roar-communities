@@ -357,8 +357,8 @@ export const TradeSheet = ({
         
         // Only reset quantity on initial load, not on step changes
         if (!isInitialized) {
-          const defaultQuantity = Math.min(1, ownedShares);
-          updateQuantity(defaultQuantity);
+        const defaultQuantity = Math.min(1, ownedShares);
+        updateQuantity(defaultQuantity);
           setIsInitialized(true);
         }
       } else {
@@ -366,7 +366,7 @@ export const TradeSheet = ({
         
         // Only reset quantity on initial load, not on step changes
         if (!isInitialized) {
-          updateQuantity(1);
+        updateQuantity(1);
           setIsInitialized(true);
         }
       }
@@ -566,7 +566,7 @@ export const TradeSheet = ({
                   <span>{action === 'buy' ? 'Total Cost' : 'You Receive'}</span>
                   <div className="text-right">
                     <div className="font-semibold">
-                      {precheck?.totalValue ? formatNumber(parseFloat(precheck.totalValue), 6) : '0'} ETH
+                    {precheck?.totalValue ? formatNumber(parseFloat(precheck.totalValue), 6) : '0'} ETH
                     </div>
                     {precheck?.totalSharePriceUsd && (
                       <div className="text-sm text-muted-foreground font-normal">

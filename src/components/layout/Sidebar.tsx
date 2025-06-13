@@ -11,12 +11,15 @@ import {
   Sparkles,
   Plus,
   Loader2,
-  ArrowUpRight
+  ArrowUpRight,
+  MessageCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { createAuthHeaders, cleanupAuthState } from '@/utils/apiBase';
+import { fetchUnreadCount } from '@/utils/messagingApi';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -47,6 +50,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const [userHandle, setUserHandle] = useState('');
   const [personalCommunities, setPersonalCommunities] = useState<Community[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   
   // Check authentication status on mount and listen for auth events
   useEffect(() => {
@@ -64,6 +68,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
       setIsLoggedIn(false);
       setCommunities([]);
       setHasCommunities(false);
+      setUnreadCount(0);
     };
     
     document.addEventListener('dapps_auth_invalidated', handleAuthInvalidated);
@@ -72,6 +77,26 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
       document.removeEventListener('dapps_auth_invalidated', handleAuthInvalidated);
     };
   }, []);
+
+  // Fetch unread count on mount and every 30 seconds
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setUnreadCount(0);
+      return;
+    }
+
+    const loadUnreadCount = async () => {
+      const response = await fetchUnreadCount();
+      if (response.success) {
+        setUnreadCount(response.unread_count);
+      }
+    };
+
+    loadUnreadCount();
+    const interval = setInterval(loadUnreadCount, 30000); // Update every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [isLoggedIn]);
   
   const fetchCommunities = async () => {
     setLoadingCommunities(true);
@@ -224,6 +249,12 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
               <NavItem to="/feed" icon={<Home className="h-5 w-5" />} label="Feed" />
               <NavItem to="/search" icon={<Search className="h-5 w-5" />} label="Search" />
               <NavItem to="/communities" icon={<Users className="h-5 w-5" />} label="Communities" />
+              <NavItem 
+                to="/messages" 
+                icon={<MessageCircle className="h-5 w-5" />} 
+                label="Messages" 
+                badgeCount={unreadCount}
+              />
               <NavItem to="/my-shares" icon={<Wallet className="h-5 w-5" />} label="My Shares" />
               <NavItem 
                 to="/referral" 
@@ -316,9 +347,10 @@ interface NavItemProps {
   icon: React.ReactNode;
   label: string;
   className?: string;
+  badgeCount?: number;
 }
 
-const NavItem = ({ to, icon, label, className }: NavItemProps) => {
+const NavItem = ({ to, icon, label, className, badgeCount }: NavItemProps) => {
   return (
     <NavLink
       to={to}
@@ -330,7 +362,23 @@ const NavItem = ({ to, icon, label, className }: NavItemProps) => {
         className
       )}
     >
+      <div className="relative">
       {icon}
+        
+        {/* Unread Badge */}
+        <AnimatePresence>
+          {badgeCount && badgeCount > 0 && (
+            <motion.div
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0, opacity: 0 }}
+              className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-gradient-to-r from-red-500 to-pink-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold shadow-lg border border-background"
+            >
+              {badgeCount > 99 ? '99+' : badgeCount}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
       {label}
     </NavLink>
   );

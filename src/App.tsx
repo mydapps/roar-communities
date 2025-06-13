@@ -40,6 +40,10 @@ import AccountInactivePage from '@/pages/AccountInactivePage';
 import PostWarningPage from '@/pages/PostWarningPage';
 import ErrorBoundary from '@/components/shared/ErrorBoundary';
 import { ImageViewerProvider } from '@/components/contexts/ImageViewerContext';
+import MessagesPage from '@/pages/MessagesPage';
+import ConversationPage from '@/pages/ConversationPage';
+import PaidConversationPage from '@/pages/PaidConversationPage';
+import { SSETest } from '@/pages/SSETest';
 
 // Lazy loaded components
 const LazyMySharesPage = lazy(() => import('@/pages/MySharesPage'));
@@ -174,6 +178,30 @@ function App() {
             <Route path="/c/:communityName/warning/:postCode" element={
               <ProtectedRoute>
                 <PostWarningPage />
+              </ProtectedRoute>
+            } />
+
+            {/* Messages Routes */}
+            <Route path="messages" element={
+              <ProtectedRoute>
+                <MessagesPage />
+              </ProtectedRoute>
+            } />
+            <Route path="messages/:conversationId" element={
+              <ProtectedRoute>
+                <ConversationPage />
+              </ProtectedRoute>
+            } />
+            <Route path="messages/paid/:handle" element={
+              <ProtectedRoute>
+                <PaidConversationPage />
+              </ProtectedRoute>
+            } />
+
+                          {/* SSE Test Route (for development/testing) */}
+            <Route path="sse-test" element={
+              <ProtectedRoute>
+                <SSETest />
               </ProtectedRoute>
             } />
             

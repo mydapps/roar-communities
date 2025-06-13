@@ -187,7 +187,7 @@ const EditProfilePage = () => {
       toast.error('Failed to initiate email linking');
     }
   };
-
+  
   useEffect(() => {
     if (!userHandle) {
       toast.error('You must be logged in to edit your profile');
@@ -666,10 +666,10 @@ const EditProfilePage = () => {
                       <div className="grid gap-2">
                         <Label htmlFor="handle">Handle</Label>
                         <Input id="handle" value={profile.handle} disabled />
-                        <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">
                           Your unique handle cannot be changed.
-                        </p>
-                      </div>
+                  </p>
+                </div>
 
                       {/* Email Field */}
                       <div className="grid gap-2">

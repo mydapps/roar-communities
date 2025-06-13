@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Pencil, Link as LinkIcon, MapPin, Calendar, Sparkles } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { UserProfileShare } from './UserProfileShare';
+import DMButton from './DMButton';
 
 interface UserProfileHeaderProps {
   profile: UserProfile;
@@ -90,7 +91,7 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
                     )}
                   </div>
 
-                  {/* Action buttons: Share and Follow/Unfollow */}
+                  {/* Action buttons: Share, Message, and Follow/Unfollow */}
                   <div className="flex gap-2 items-center">
                     {/* Show follows you badge if the profile user follows the current user */}
                     {profile.is_followed_by && !isOwnProfile && (
@@ -101,6 +102,15 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
                     
                     {/* Share button using the new UserProfileShare component */}
                     <UserProfileShare handle={profile.handle} />
+                    
+                    {/* Message Button (not shown for own profile) */}
+                    {!isOwnProfile && (
+                      <DMButton 
+                        userHandle={profile.handle}
+                        variant="outline"
+                        size="default"
+                      />
+                    )}
                     
                     {/* Follow/Unfollow Button (not shown for own profile) */}
                     {!isOwnProfile && (

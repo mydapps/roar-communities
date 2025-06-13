@@ -14,6 +14,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Check, ChevronLeft, Loader2, Repeat2, Search, Users, User as UserIcon, XIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { sanitizeHtml } from '@/utils/sanitizeHtml';
+import { useMobileKeyboard, useFocusedInputScroll } from '@/hooks/useMobileKeyboard';
 
 // Assuming Community type from API has at least: name: string, image?: string, handle?: string (optional slug)
 interface ApiCommunityType {
@@ -71,8 +72,14 @@ const MobileMirrorSheet: React.FC<MobileMirrorSheetProps> = ({
   const [isMirroring, setIsMirroring] = useState(false);
   const [communitySearchQuery, setCommunitySearchQuery] = useState('');
   const quoteTextareaRef = useRef<HTMLTextAreaElement>(null);
-  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
-  const [viewportHeight, setViewportHeight] = useState(window.innerHeight);
+  const communitySearchRef = useRef<HTMLInputElement>(null);
+  const drawerContentRef = useRef<HTMLDivElement>(null);
+  
+  // Use the shared keyboard detection hook
+  const { isKeyboardVisible, keyboardHeight, safeViewportHeight } = useMobileKeyboard(open);
+  
+  // Use the focused input scroll hook
+  useFocusedInputScroll(isKeyboardVisible, [quoteTextareaRef, communitySearchRef]);
 
   useEffect(() => {
     if (!open) {
@@ -83,47 +90,6 @@ const MobileMirrorSheet: React.FC<MobileMirrorSheetProps> = ({
       setCommunitySearchQuery('');
     }
   }, [open]);
-
-  // Mobile keyboard detection and viewport handling
-  useEffect(() => {
-    if (!open) return;
-
-    const handleViewportChange = () => {
-      if (window.visualViewport) {
-        const newHeight = window.visualViewport.height;
-        const keyboardHeight = window.innerHeight - newHeight;
-        const keyboardIsVisible = keyboardHeight > 150; // Threshold for keyboard detection
-        
-        setIsKeyboardVisible(keyboardIsVisible);
-        setViewportHeight(newHeight);
-      }
-    };
-
-    const handleResize = () => {
-      // Fallback for browsers without visualViewport support
-      const newHeight = window.innerHeight;
-      const heightDiff = window.screen.height - newHeight;
-      const keyboardIsVisible = heightDiff > 150;
-      
-      setIsKeyboardVisible(keyboardIsVisible);
-      setViewportHeight(newHeight);
-    };
-
-    // Use visualViewport if available (better detection)
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', handleViewportChange);
-    } else {
-      window.addEventListener('resize', handleResize);
-    }
-
-    return () => {
-      if (window.visualViewport) {
-        window.visualViewport.removeEventListener('resize', handleViewportChange);
-      } else {
-        window.removeEventListener('resize', handleResize);
-      }
-    };
-  }, [open, currentStep]);
 
   const handleSelectPersonalFeed = () => {
     setSelectedDestination({ 
@@ -205,7 +171,7 @@ const MobileMirrorSheet: React.FC<MobileMirrorSheetProps> = ({
   const SimplifiedPostPreview = () => {
     const sanitizedContent = sanitizeHtml(postData.content);
     return (
-      <div className="border rounded-lg p-3 mb-3 bg-muted/30 text-sm">
+      <div className={`border rounded-lg p-3 mb-3 bg-muted/30 text-sm ${isKeyboardVisible ? 'mb-1' : 'mb-3'}`}>
           <div className="flex items-center mb-1.5">
               <Avatar className="h-7 w-7 mr-2 flex-shrink-0">
                   <AvatarImage src={postData.avatarUrl || undefined} alt={postData.username} />
@@ -252,10 +218,11 @@ const MobileMirrorSheet: React.FC<MobileMirrorSheetProps> = ({
 
       case 'community_select':
         return (
-          <div className="px-4 pt-3 pb-1 flex flex-col" style={{ height: 'calc(100% - 0px)' }}>
+          <div className="px-4 pt-3 pb-1 flex flex-col h-full">
             <div className="relative mb-3 flex-shrink-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
+                ref={communitySearchRef}
                 placeholder="Search your communities..."
                 className="pl-9 h-10 text-sm"
                 value={communitySearchQuery}
@@ -267,7 +234,13 @@ const MobileMirrorSheet: React.FC<MobileMirrorSheetProps> = ({
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
               </div>
             ) : communityOptionsForList.length > 0 ? (
-              <div className="flex-grow overflow-y-auto space-y-1.5 pr-0.5 mr-[-2px]">
+              <div 
+                className="flex-grow overflow-y-auto space-y-1.5 pr-0.5 mr-[-2px]"
+                style={{
+                  // Ensure community list stays above keyboard
+                  maxHeight: isKeyboardVisible ? `${safeViewportHeight - 200}px` : 'auto'
+                }}
+              >
                 {communityOptionsForList.map(item => (
                   <Button
                     key={item.id}
@@ -305,10 +278,10 @@ const MobileMirrorSheet: React.FC<MobileMirrorSheetProps> = ({
 
       case 'quote_confirm':
         return (
-          <div className={`px-3 flex flex-col ${isKeyboardVisible ? 'pt-1 pb-1 h-full' : 'pt-3 pb-4 flex-grow'}`}>
-            {/* Extremely minimal post preview when keyboard is visible */}
+          <div className={`px-3 flex flex-col ${isKeyboardVisible ? 'pt-1 pb-1 h-full' : 'pt-3 pb-4 h-full'}`}>
+            {/* Post preview - minimal when keyboard is visible */}
             {isKeyboardVisible ? (
-              <div className="flex items-center py-1 mb-1 text-xs">
+              <div className="flex items-center py-1 mb-1 text-xs flex-shrink-0">
                 <Avatar className="h-3 w-3 mr-1.5">
                   <AvatarImage src={postData.avatarUrl || undefined} alt={postData.username} />
                   <AvatarFallback className="text-[8px]">{postData.username.substring(0,1).toUpperCase()}</AvatarFallback>
@@ -316,10 +289,12 @@ const MobileMirrorSheet: React.FC<MobileMirrorSheetProps> = ({
                 <span className="truncate text-muted-foreground">Mirroring {postData.username}'s post</span>
               </div>
             ) : (
-              <SimplifiedPostPreview />
+              <div className="flex-shrink-0">
+                <SimplifiedPostPreview />
+              </div>
             )}
             
-            {/* Textarea positioned right above button */}
+            {/* Textarea - flexible sizing based on keyboard state */}
             <Textarea
               ref={quoteTextareaRef}
               placeholder="Add a quote (optional)..."
@@ -327,20 +302,9 @@ const MobileMirrorSheet: React.FC<MobileMirrorSheetProps> = ({
               onChange={(e) => setQuoteText(e.target.value)}
               className={`text-sm resize-none ${
                 isKeyboardVisible 
-                  ? 'h-16 mb-1 text-xs' // Very small height when keyboard visible
-                  : 'flex-grow min-h-[80px] mb-2' // Normal size when keyboard hidden
+                  ? 'h-20 mb-1 text-xs flex-shrink-0' // Fixed height when keyboard visible
+                  : 'flex-grow min-h-[80px] mb-2' // Flexible height when keyboard hidden
               }`}
-              onFocus={() => {
-                if (isKeyboardVisible && quoteTextareaRef.current) {
-                  // Ensure the modal stays at bottom
-                  setTimeout(() => {
-                    const modal = document.querySelector('[data-state="open"]');
-                    if (modal) {
-                      (modal as HTMLElement).style.bottom = '0px';
-                    }
-                  }, 100);
-                }
-              }}
             />
           </div>
         );
@@ -361,18 +325,20 @@ const MobileMirrorSheet: React.FC<MobileMirrorSheetProps> = ({
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent 
+        ref={drawerContentRef}
         className="flex flex-col bg-card"
         style={{
           ...(isKeyboardVisible ? {
             position: 'fixed',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: '160px',
-            maxHeight: '160px',
-            minHeight: '160px',
+            bottom: '0px',
+            left: '0px',
+            right: '0px',
+            height: `${Math.min(safeViewportHeight - 20, 400)}px`, // Adaptive height with max limit
+            maxHeight: `${safeViewportHeight - 20}px`,
+            minHeight: '200px',
             transform: 'translateY(0)',
-            borderRadius: '12px 12px 0 0'
+            borderRadius: '12px 12px 0 0',
+            zIndex: 9999
           } : {
             height: 'auto',
             maxHeight: '90vh',
@@ -380,7 +346,7 @@ const MobileMirrorSheet: React.FC<MobileMirrorSheetProps> = ({
           })
         }}
       >
-        <DrawerHeader className={`text-left border-b flex-shrink-0 px-3 ${isKeyboardVisible ? 'py-1' : 'py-3'}`}>
+        <DrawerHeader className={`text-left border-b flex-shrink-0 px-3 ${isKeyboardVisible ? 'py-1.5' : 'py-3'}`}>
           <div className="flex items-center">
             {currentStep !== 'destination' && (
               <Button variant="ghost" size="icon" onClick={goBack} className={`mr-1.5 -ml-1 ${isKeyboardVisible ? 'h-6 w-6' : 'h-8 w-8'}`}>
@@ -388,7 +354,7 @@ const MobileMirrorSheet: React.FC<MobileMirrorSheetProps> = ({
               </Button>
             )}
             <div className="flex-grow">
-                <DrawerTitle className={`font-semibold ${isKeyboardVisible ? 'text-xs' : 'text-base'}`}>{getHeaderTitle()}</DrawerTitle>
+                <DrawerTitle className={`font-semibold ${isKeyboardVisible ? 'text-sm' : 'text-base'}`}>{getHeaderTitle()}</DrawerTitle>
             </div>
             <DrawerClose asChild className={`ml-auto -mr-1 ${isKeyboardVisible ? 'h-6 w-6' : 'h-8 w-8'}`}>
                 <Button variant="ghost" size="icon"><XIcon className={`${isKeyboardVisible ? 'h-4 w-4' : 'h-5 w-5'}`} /></Button>
@@ -399,7 +365,9 @@ const MobileMirrorSheet: React.FC<MobileMirrorSheetProps> = ({
         <div 
           className="flex-grow overflow-y-auto" 
           style={{ 
-            WebkitOverflowScrolling: 'touch'
+            WebkitOverflowScrolling: 'touch',
+            // Ensure content area respects safe area
+            height: isKeyboardVisible ? `${safeViewportHeight - 140}px` : 'auto'
           }}
         >
           {renderStepContent()}
@@ -407,7 +375,13 @@ const MobileMirrorSheet: React.FC<MobileMirrorSheetProps> = ({
 
         {currentStep === 'quote_confirm' && selectedDestination && (
           <DrawerFooter 
-            className={`border-t flex-shrink-0 bg-card ${isKeyboardVisible ? 'p-1 sticky bottom-0' : 'p-3'}`}
+            className={`border-t flex-shrink-0 bg-card ${isKeyboardVisible ? 'p-2' : 'p-3'}`}
+            style={{
+              // Ensure footer stays above keyboard
+              position: isKeyboardVisible ? 'sticky' : 'relative',
+              bottom: 0,
+              zIndex: 10
+            }}
           >
             <Button 
                 size={isKeyboardVisible ? "sm" : "lg"}
