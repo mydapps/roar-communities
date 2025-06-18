@@ -305,8 +305,6 @@ export interface Message {
   // For compatibility with existing components
   content?: string;
   sender?: MessageSender;
-  // Stable key for React rendering
-  optimisticKey?: string;
 }
 
 export interface MessagesPagination {
@@ -690,6 +688,27 @@ export interface DMPaymentInitiateResponse {
   error?: string;
 }
 
+export interface DMPaymentStatusResponse {
+  success: boolean;
+  has_paid: boolean;
+  is_current_user_eth_recipient: boolean;
+  recipient_id?: number;
+  recipient_handle?: string;
+  payment_info?: {
+    id: number;
+    amount: number;
+    payment_status: string;
+    payment_deadline: string;
+    is_expired: boolean;
+    has_replied: boolean;
+    detailed_status: string;
+    hours_until_deadline: number;
+    conversation_id?: number;
+    refund_eligible?: boolean;
+  };
+  error?: string;
+}
+
 /**
  * Calculate the price for starting a conversation with a user
  */
@@ -807,8 +826,8 @@ export const initiateDMPayment = async (recipientHandle: string, amount: number)
     
     const response = await fetch('/api/dm-payment/initiate', {
       method: 'POST',
-      credentials: 'include',
       headers: createAuthHeaders(),
+      credentials: 'include',
       body: JSON.stringify({
         recipient_handle: recipientHandle,
         amount: amount
@@ -816,154 +835,172 @@ export const initiateDMPayment = async (recipientHandle: string, amount: number)
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const data = await response.json();
-    debugLog('DM payment initiated successfully', data);
+    debugLog('DM payment initiation response', data);
     
     return data;
   } catch (error) {
     console.error('Error initiating DM payment:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to initiate payment'
+      error: error instanceof Error ? error.message : 'Failed to initiate DM payment'
     };
   }
 };
 
-// Paid conversation status interfaces
-export interface PaymentInfo {
-  payment_transaction_id: number;
-  amount: number;
-  status: string;
-  detailed_status: string;
-  status_description: string;
-  txn_hash: string;
-  conversation_id: number;
-  payment_deadline: string;
-  hours_until_deadline: number;
-  is_expired: boolean;
-  has_replied: boolean;
-  replied_at: string | null;
-  refund_eligible: boolean;
-  refund_amount: number;
-  refund_txn_hash: string | null;
-  distribution_txn_hash: string | null;
-  platform_fee: number | null;
-  recipient_amount: number | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface DMPaymentStatusResponse {
-  success: boolean;
-  has_paid: boolean;
-  recipient_handle: string;
-  recipient_id: number;
-  is_current_user_eth_recipient?: boolean; // True if current user will receive ETH by replying
-  payment_info?: PaymentInfo;
-  message?: string;
-  error?: string;
-}
-
 /**
- * Check payment status for a conversation with a specific user
- * This works for both sender and receiver perspectives
+ * Check DM payment status for a conversation with a user
  */
-export const checkDMPaymentStatus = async (otherUserHandle: string): Promise<DMPaymentStatusResponse> => {
+export const checkDMPaymentStatus = async (recipientHandle: string): Promise<DMPaymentStatusResponse> => {
   try {
-    debugLog('Checking DM payment status', { otherUserHandle });
+    debugLog('Checking DM payment status for recipient', recipientHandle);
     
-    // First, check if current user has paid to message the other user (sender perspective)
-    const senderResponse = await fetch(`/api/dm-payment/status/${otherUserHandle}`, {
+    // Use GET method with recipient handle in URL path as per API documentation
+    const response = await fetch(`/api/dm-payment/status/${encodeURIComponent(recipientHandle)}`, {
       method: 'GET',
-      credentials: 'include',
       headers: createAuthHeaders(),
+      credentials: 'include'
     });
 
-    if (senderResponse.ok) {
-      const senderData = await senderResponse.json();
-      debugLog('DM payment status (sender perspective)', senderData);
-      
-      if (senderData.success && senderData.has_paid) {
-        return senderData;
-      }
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    // If no payment found from sender perspective, check receiver perspective
-    // Get all received payments and find one from this specific user
-    const receiverResponse = await fetch('/api/dm-payment/received-payments?status=paid', {
-      method: 'GET',
-      credentials: 'include',
-      headers: createAuthHeaders(),
-    });
-
-    if (receiverResponse.ok) {
-      const receiverData = await receiverResponse.json();
-      debugLog('DM payment status (receiver perspective)', receiverData);
-      
-      if (receiverData.success && receiverData.received_payments) {
-        // Find payment from the specific user we're chatting with
-        const paymentFromUser = receiverData.received_payments.find(
-          (payment: any) => payment.sender_handle === otherUserHandle
-        );
-        
-        if (paymentFromUser) {
-          // Transform the received payment data to match the expected format
-          return {
-            success: true,
-            has_paid: true,
-            recipient_handle: otherUserHandle,
-            recipient_id: paymentFromUser.sender_id,
-            is_current_user_eth_recipient: true, // Current user will receive ETH if they reply
-            payment_info: {
-              payment_transaction_id: paymentFromUser.payment_transaction_id || paymentFromUser.id,
-              amount: paymentFromUser.amount,
-              status: paymentFromUser.status,
-              detailed_status: paymentFromUser.status,
-              status_description: paymentFromUser.status === 'paid' 
-                ? `💰 Reply now to earn ETH! Only ${paymentFromUser.hours_until_deadline || 0}h left or you lose the payment!`
-                : 'Payment received',
-              txn_hash: paymentFromUser.txn_hash,
-              conversation_id: paymentFromUser.conversation_id,
-              payment_deadline: paymentFromUser.payment_deadline,
-              hours_until_deadline: paymentFromUser.hours_until_deadline || 0,
-              is_expired: paymentFromUser.is_expired || false,
-              has_replied: paymentFromUser.has_replied || false,
-              replied_at: paymentFromUser.replied_at,
-              refund_eligible: paymentFromUser.refund_eligible || false,
-              refund_amount: paymentFromUser.refund_amount || 0,
-              refund_txn_hash: paymentFromUser.refund_txn_hash,
-              distribution_txn_hash: paymentFromUser.distribution_txn_hash,
-              platform_fee: paymentFromUser.platform_fee,
-              recipient_amount: paymentFromUser.recipient_amount,
-              created_at: paymentFromUser.created_at,
-              updated_at: paymentFromUser.updated_at
-            }
-          };
-        }
-      }
-    }
-
-    // No payment found from either perspective
-    return {
-      success: true,
-      has_paid: false,
-      recipient_handle: otherUserHandle,
-      recipient_id: 0,
-      message: 'No payment found between these users'
-    };
+    const data = await response.json();
+    debugLog('DM payment status response', data);
     
+    return data;
   } catch (error) {
     console.error('Error checking DM payment status:', error);
     return {
       success: false,
       has_paid: false,
-      recipient_handle: otherUserHandle,
-      recipient_id: 0,
-      error: error instanceof Error ? error.message : 'Failed to check payment status'
+      is_current_user_eth_recipient: false,
+      error: error instanceof Error ? error.message : 'Failed to check DM payment status'
     };
+  }
+}; 
+
+/**
+ * Check online status for a user
+ */
+export interface OnlineStatusResponse {
+  success: boolean;
+  handle: string;
+  user_id: number;
+  is_online: boolean;
+  active_connections: number;
+  last_seen: string;
+  error?: string;
+}
+
+export const checkOnlineStatus = async (handle: string): Promise<OnlineStatusResponse | null> => {
+  try {
+    debugLog('Checking online status for user', handle);
+    
+    const response = await fetch(`/api/chat-auth/online-status/${encodeURIComponent(handle)}`, {
+      method: 'GET',
+      credentials: 'include',
+      headers: createAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    debugLog('Online status check result', data);
+    
+    return data;
+  } catch (error) {
+    console.error('Error checking online status:', error);
+    return null;
+  }
+};
+
+/**
+ * Chat key interfaces
+ */
+export interface ChatKeyResponse {
+  success: boolean;
+  message: string;
+  chat_key: string;
+  key_id: number;
+  websocket_url: string;
+  error?: string;
+}
+
+/**
+ * Generate a chat key for WebSocket authentication
+ */
+export const generateChatKey = async (): Promise<ChatKeyResponse | null> => {
+  try {
+    debugLog('Generating chat key');
+    
+    const response = await fetch('/api/chat-auth/generate-key', {
+      method: 'POST',
+      credentials: 'include',
+      headers: createAuthHeaders(),
+      body: JSON.stringify({
+        key_name: 'WebSocket Chat Key',
+        expires_in_days: 30
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    debugLog('Chat key generated successfully', data);
+    
+    // Store chat key in localStorage for future use
+    if (data.success && data.chat_key) {
+      localStorage.setItem('dapps_chat_key', data.chat_key);
+      localStorage.setItem('dapps_chat_key_expires', (Date.now() + (30 * 24 * 60 * 60 * 1000)).toString());
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Error generating chat key:', error);
+    return null;
+  }
+};
+
+/**
+ * Get stored chat key or generate a new one
+ */
+export const getChatKey = async (): Promise<string | null> => {
+  try {
+    // Check if we have a valid stored chat key
+    const storedKey = localStorage.getItem('dapps_chat_key');
+    const expiresAt = localStorage.getItem('dapps_chat_key_expires');
+    
+    if (storedKey && expiresAt) {
+      const expirationTime = parseInt(expiresAt, 10);
+      if (Date.now() < expirationTime) {
+        debugLog('Using stored chat key');
+        return storedKey;
+      } else {
+        debugLog('Stored chat key expired, generating new one');
+        // Clear expired key
+        localStorage.removeItem('dapps_chat_key');
+        localStorage.removeItem('dapps_chat_key_expires');
+      }
+    }
+    
+    // Generate new chat key
+    const response = await generateChatKey();
+    if (response && response.success && response.chat_key) {
+      return response.chat_key;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error getting chat key:', error);
+    return null;
   }
 }; 

@@ -115,9 +115,9 @@ const NewMessageDialog: React.FC<NewMessageDialogProps> = ({
         if (pricingResponse.price_info.isFree) {
           // Free conversation - proceed normally
           console.log('✅ Free conversation, starting directly');
-          const response = await startConversation(user.handle);
+      const response = await startConversation(user.handle);
           if (response.success && response.conversation) {
-            toast.success(`Started conversation with @${user.handle}! 🎉`);
+        toast.success(`Started conversation with @${user.handle}! 🎉`);
                         onSuccess(response.conversation.id.toString(), {
               handle: response.conversation.other_user.handle,
               avatar: response.conversation.other_user.avatar
@@ -134,7 +134,7 @@ const NewMessageDialog: React.FC<NewMessageDialogProps> = ({
             duration: 2000,
           });
           navigate(`/messages/paid/${user.handle}`);
-          onOpenChange(false);
+        onOpenChange(false);
         }
       } else {
         console.error('❌ Pricing check failed:', pricingResponse);

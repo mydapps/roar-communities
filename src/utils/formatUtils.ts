@@ -22,7 +22,7 @@ export const formatNumber = (value: number | string | undefined, decimals: numbe
     console.error("Error formatting number:", value, error);
     return `0.${'0'.repeat(decimals)}`;
   }
-};
+}; 
 
 /**
  * Formats ETH amounts with proper handling of scientific notation and trailing zeros.

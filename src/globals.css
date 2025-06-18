@@ -71,3 +71,131 @@
   border-radius: 8px;
   transition: all 0.3s ease;
 } 
+
+/* iOS Safe Area Support */
+.h-safe-top {
+  height: env(safe-area-inset-top, 0px);
+}
+
+.pt-safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.pb-safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Hide scrollbar but keep functionality */
+.scrollbar-hide {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+/* Improve horizontal scrolling smoothness on mobile */
+.scroll-smooth {
+  scroll-behavior: smooth;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+}
+
+.scroll-smooth > * {
+  scroll-snap-align: start;
+}
+
+/* Safe area insets for iOS devices */
+.safe-area-top {
+  padding-top: max(env(safe-area-inset-top, 0px), 40px);
+}
+
+.safe-area-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 16px);
+}
+
+.safe-area-left {
+  padding-left: env(safe-area-inset-left, 0px);
+}
+
+.safe-area-right {
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+/* Combined safe area insets */
+.safe-area-inset-x {
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+.safe-area-inset-y {
+  padding-top: max(env(safe-area-inset-top, 0px), 40px);
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 16px);
+}
+
+.safe-area-inset-all {
+  padding-top: max(env(safe-area-inset-top, 0px), 40px);
+  padding-right: env(safe-area-inset-right, 0px);
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 16px);
+  padding-left: env(safe-area-inset-left, 0px);
+}
+
+/* Add a special class for iOS v-shaped notch devices */
+.ios-notch-fix {
+  padding-top: 50px !important;
+}
+
+/* Class for allowing content to be seen even with fixed headers */
+.pt-safe-offset {
+  padding-top: calc(env(safe-area-inset-top, 0px) + 60px);
+}
+
+/* Mobile popover and dropdown fixes */
+@media (max-width: 768px) {
+  .tab-container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+    margin-left: -1rem;
+    margin-right: -1rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Improve tap targets on mobile */
+  .mobile-friendly-tap {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Force popover content to be interactive on mobile */
+  [data-radix-popper-content-wrapper] {
+    z-index: 9999 !important;
+    pointer-events: auto !important;
+  }
+
+  [data-radix-popper-content-wrapper] > * {
+    pointer-events: auto !important;
+    touch-action: manipulation !important;
+  }
+
+  /* Ensure popovers are above everything on mobile */
+  [role="dialog"][data-state="open"] {
+    z-index: 9999 !important;
+  }
+
+  /* Mobile touch optimization for buttons */
+  .touch-manipulation {
+    touch-action: manipulation !important;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1) !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+  }
+
+  /* Prevent scroll when popover is open */
+  body:has([data-state="open"]) {
+    overflow: hidden !important;
+  }
+}

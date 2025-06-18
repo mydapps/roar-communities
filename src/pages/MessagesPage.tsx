@@ -9,7 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { fetchConversations, type Conversation } from '@/utils/messagingApi';
+import { fetchConversations, checkOnlineStatus, type Conversation, type OnlineStatusResponse } from '@/utils/messagingApi';
 import { useTitle } from '@/hooks/useTitle';
 import { formatDistanceToNow } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -25,6 +25,7 @@ const MessagesPage = () => {
   const [showNewMessage, setShowNewMessage] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [totalUnread, setTotalUnread] = useState(0);
+  const [onlineStatuses, setOnlineStatuses] = useState<Record<string, boolean>>({});
   const navigate = useNavigate();
   const isMobile = useIsMobile();
 
@@ -37,13 +38,58 @@ const MessagesPage = () => {
     try {
       const response = await fetchConversations();
       if (response.success) {
-        setConversations(response.conversations);
-        setTotalUnread(response.conversations.reduce((sum, conv) => sum + conv.unread_count, 0));
+        // Sort conversations by last message time (most recent first)
+        const sortedConversations = response.conversations.sort((a, b) => {
+          const dateA = new Date(a.last_message_at).getTime();
+          const dateB = new Date(b.last_message_at).getTime();
+          return dateB - dateA; // Descending order (newest first)
+        });
+        
+        setConversations(sortedConversations);
+        setTotalUnread(sortedConversations.reduce((sum, conv) => sum + conv.unread_count, 0));
+        
+        // Load online statuses for all users
+        loadOnlineStatuses(sortedConversations);
       }
     } finally {
       setLoading(false);
     }
   };
+
+  const loadOnlineStatuses = async (conversations: Conversation[]) => {
+    try {
+      const statusPromises = conversations.map(async (conv) => {
+        const status = await checkOnlineStatus(conv.other_user.handle);
+        return {
+          handle: conv.other_user.handle,
+          isOnline: status?.success ? status.is_online : false
+        };
+      });
+
+      const results = await Promise.all(statusPromises);
+      const statusMap: Record<string, boolean> = {};
+      
+      results.forEach(result => {
+        statusMap[result.handle] = result.isOnline;
+      });
+      
+      setOnlineStatuses(statusMap);
+      console.log('🟢 Online statuses loaded:', statusMap);
+    } catch (error) {
+      console.error('Error loading online statuses:', error);
+    }
+  };
+
+  // Refresh online statuses periodically
+  useEffect(() => {
+    if (conversations.length > 0) {
+      const interval = setInterval(() => {
+        loadOnlineStatuses(conversations);
+      }, 30000); // Check every 30 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [conversations]);
 
   const handleConversationClick = (conversation: Conversation) => {
     // Navigate to individual conversation using internal database ID
@@ -215,8 +261,10 @@ const MessagesPage = () => {
                         {getInitials(conversation.other_user.handle)}
                       </AvatarFallback>
                     </Avatar>
-                    {/* Online indicator */}
+                    {/* Online indicator - only show if user is online */}
+                    {onlineStatuses[conversation.other_user.handle] && (
                     <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-background" />
+                    )}
                   </div>
                   
                   <div className="flex-1 min-w-0">
@@ -232,7 +280,27 @@ const MessagesPage = () => {
                         )}
                         <span className="text-xs text-muted-foreground flex items-center">
                           <Clock className="w-3 h-3 mr-1" />
-                          {formatDistanceToNow(new Date(conversation.last_message_at), { addSuffix: true })}
+                          {(() => {
+                            try {
+                              // Handle various timestamp formats
+                              const timestamp = conversation.last_message_at;
+                              if (!timestamp) return 'Unknown';
+                              
+                              // Parse timestamp - handle both string and number formats
+                              const date = new Date(timestamp);
+                              
+                              // Check if date is valid
+                              if (isNaN(date.getTime())) {
+                                console.warn('Invalid timestamp:', timestamp);
+                                return 'Unknown';
+                              }
+                              
+                              return formatDistanceToNow(date, { addSuffix: true });
+                            } catch (error) {
+                              console.error('Error formatting timestamp:', error);
+                              return 'Unknown';
+                            }
+                          })()}
                         </span>
                       </div>
                     </div>
@@ -251,6 +319,8 @@ const MessagesPage = () => {
 
   const handleNewMessageSuccess = (conversationId: string, otherUser: any) => {
     setShowNewMessage(false);
+    // Refresh conversations list to ensure proper sorting after new conversation
+    loadConversations();
     navigate(`/messages/${conversationId}`, { state: { otherUser } });
   };
 

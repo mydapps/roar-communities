@@ -31,7 +31,7 @@ import {
   DialogHeader, 
   DialogTitle 
 } from '@/components/ui/dialog';
-import { fetchMessages, sendMessage, markAllMessagesAsRead, markMessageAsRead, checkUserBlockStatus, checkDMPaymentStatus, type Message, type ConversationParticipants, type DMPaymentStatusResponse } from '@/utils/messagingApi';
+import { fetchMessages, sendMessage, markAllMessagesAsRead, markMessageAsRead, checkUserBlockStatus, checkDMPaymentStatus, checkOnlineStatus, type Message, type ConversationParticipants, type DMPaymentStatusResponse, type OnlineStatusResponse } from '@/utils/messagingApi';
 import { MediaUpload, MediaPreview, MediaUploadResponse } from '@/components/ui/media-upload';
 import EmojiPicker, { EmojiClickData, EmojiStyle, Categories } from 'emoji-picker-react';
 import { toast } from 'sonner';
@@ -41,8 +41,8 @@ import SpecialCommandBubble from '@/components/messages/SpecialCommandBubble';
 import SpecialEffects from '@/components/animations/SpecialEffects';
 import { getUserProfile } from '@/utils/userApi';
 import { useDropzone } from 'react-dropzone';
-import { useSSE } from '@/hooks/useSSE';
-import { sseClient } from '@/utils/sseClient';
+import { useWebSocket } from '@/hooks/useWebSocket';
+import { webSocketClient } from '@/utils/webSocketClient';
 import * as apiBase from '@/utils/apiBase';
 import { isSpecialCommand, extractCommand, getEffectType, type SpecialCommand, type EffectType } from '@/utils/specialCommands';
 
@@ -87,6 +87,7 @@ const ConversationPage = () => {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
@@ -118,6 +119,9 @@ const ConversationPage = () => {
 
   // Special effects state
   const [currentEffect, setCurrentEffect] = useState<EffectType | null>(null);
+
+  // Online status state
+  const [isOtherUserOnline, setIsOtherUserOnline] = useState<boolean>(false);
 
   const onDrop = (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -195,14 +199,14 @@ const ConversationPage = () => {
     }
   };
 
-  // SSE integration for real-time messaging
-  const { markAsRead } = useSSE();
+  // WebSocket message handler
+  const { markAsRead, joinConversation, leaveConversation, sendMessage: sendWebSocketMessage, setMessageHandlers } = useWebSocket();
 
-  // Debug logging for SSE
+  // Debug logging for WebSocket
   useEffect(() => {
     console.log('🔍 ConversationPage - conversationId from URL params:', conversationId);
     console.log('🔍 ConversationPage - currentUserHandle:', currentUserHandle);
-    console.log('🔍 ConversationPage - SSE will connect automatically');
+    console.log('🔍 ConversationPage - WebSocket will connect automatically');
   }, [conversationId, currentUserHandle]);
 
   // Debug logging for conversation ID
@@ -215,11 +219,11 @@ const ConversationPage = () => {
   useEffect(() => {
     if (!conversationId) return;
 
-    console.log('🔗 Setting up SSE handlers for conversation:', conversationId);
+    console.log('🔗 Setting up WebSocket handlers for conversation:', conversationId);
 
-    // Set up SSE event handlers
-    sseClient.onNewMessage = (message: Message) => {
-      console.log('📨 SSE onNewMessage called:', message);
+    // Set up WebSocket event handlers
+    const handleNewMessage = (message: Message) => {
+      console.log('📨 WebSocket onNewMessage called:', message);
       console.log('🆔 Message conversation_id:', message.conversation_id, 'Current conversationId:', conversationId);
       
       // Handle both string and numeric conversation IDs
@@ -242,10 +246,10 @@ const ConversationPage = () => {
           }
         }
         
-        // CRITICAL FIX: Don't process our own messages from SSE
+        // CRITICAL FIX: Don't process our own messages from WebSocket
         // This prevents the annoying replacement of optimistic messages
         if (message.sender_handle === currentUserHandle) {
-          console.log('🚫 Ignoring our own message from SSE to prevent optimistic replacement');
+          console.log('🚫 Ignoring our own message from WebSocket to prevent optimistic replacement');
           return;
         }
         
@@ -254,7 +258,7 @@ const ConversationPage = () => {
           const existingMessage = prev.find(m => m.id === message.id);
           
           if (existingMessage) {
-            console.log('⚠️ Message already exists, skipping duplicate from SSE');
+            console.log('⚠️ Message already exists, skipping duplicate from WebSocket');
             return prev;
           }
         
@@ -263,7 +267,7 @@ const ConversationPage = () => {
           new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
         );
           
-          console.log('✅ Added new message via SSE, total messages:', newMessages.length);
+          console.log('✅ Added new message via WebSocket, total messages:', newMessages.length);
         
         // Auto-scroll to bottom when new message arrives
         setTimeout(() => scrollToBottom(), 100);
@@ -289,8 +293,8 @@ const ConversationPage = () => {
       }
     };
 
-    sseClient.onMessageRead = (data) => {
-      console.log('✅ SSE onMessageRead called:', data);
+    const handleMessageRead = (data: any) => {
+      console.log('✅ WebSocket onMessageRead called:', data);
       if (data.conversationId === parseInt(conversationId)) {
       setMessages(prev => 
         prev.map(msg => 
@@ -302,15 +306,25 @@ const ConversationPage = () => {
       }
     };
 
-    console.log('🔗 SSE handlers set up successfully');
+    // Set up WebSocket handlers
+    setMessageHandlers(handleNewMessage, handleMessageRead);
+
+    // Join the conversation when component mounts
+    if (conversationId) {
+      joinConversation(parseInt(conversationId));
+    }
+
+    console.log('🔗 WebSocket handlers set up successfully');
 
     return () => {
-      // Clean up handlers
-      console.log('🧹 Cleaning up SSE handlers');
-      sseClient.onNewMessage = undefined;
-      sseClient.onMessageRead = undefined;
+      // Clean up handlers and leave conversation
+      console.log('🧹 Cleaning up WebSocket handlers');
+      if (conversationId) {
+        leaveConversation(parseInt(conversationId));
+      }
+      setMessageHandlers(undefined, undefined);
     };
-  }, [conversationId, currentUserHandle, markAsRead, paymentStatus]);
+  }, [conversationId, currentUserHandle]);
 
   // Initialize user data once on mount
   useEffect(() => {
@@ -344,7 +358,7 @@ const ConversationPage = () => {
     };
   }, [conversationId, currentUserHandle]); // Need both dependencies for loadMessages to work
 
-  // Refresh payment status on page load/reload (separate from loadMessages)
+  // Refresh payment status and online status on page load/reload (separate from loadMessages)
   useEffect(() => {
     if (otherUserHandle && currentUserHandle && otherUserHandle !== currentUserHandle) {
       console.log('🔄 Page load - refreshing payment status for:', otherUserHandle);
@@ -358,6 +372,16 @@ const ConversationPage = () => {
         }
       };
       refreshPaymentStatus();
+      
+      // Load online status
+      loadOnlineStatus();
+      
+      // Set up interval to check online status every 30 seconds
+      const onlineStatusInterval = setInterval(loadOnlineStatus, 30000);
+      
+      return () => {
+        clearInterval(onlineStatusInterval);
+      };
     }
   }, [otherUserHandle, currentUserHandle]);
 
@@ -365,8 +389,13 @@ const ConversationPage = () => {
     scrollToBottom();
   }, [messages]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  const scrollToBottom = (force = false) => {
+    if (force) {
+      // Immediate scroll for optimistic messages
+      messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+    } else {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
   };
 
   const loadPaymentStatus = async () => {
@@ -382,6 +411,21 @@ const ConversationPage = () => {
       console.error('Error loading payment status:', error);
     } finally {
       setIsLoadingPaymentStatus(false);
+    }
+  };
+
+  const loadOnlineStatus = async () => {
+    if (!otherUserHandle) return;
+    
+    try {
+      console.log('🔍 Checking online status for:', otherUserHandle);
+      const status = await checkOnlineStatus(otherUserHandle);
+      console.log('🟢 Online status for user:', status);
+      if (status && status.success) {
+        setIsOtherUserOnline(status.is_online);
+      }
+    } catch (error) {
+      console.error('Error loading online status:', error);
     }
   };
 
@@ -510,6 +554,12 @@ const ConversationPage = () => {
           const status = await checkDMPaymentStatus(response.participants.otherUser.handle);
           setPaymentStatus(status);
         }
+        
+        // Auto-scroll to bottom and focus input after loading messages
+        setTimeout(() => {
+          scrollToBottom(true);
+          inputRef.current?.focus();
+        }, 100);
       }
     } catch (error) {
       console.error('Error loading messages:', error);
@@ -519,8 +569,11 @@ const ConversationPage = () => {
     }
   };
 
-  const handleSendMessage = async () => {
-    if ((!messageText.trim() && !uploadedMedia) || !conversationId) return;
+  const handleSendMessage = () => {
+    // Prevent any form submission or page reload
+    if ((!messageText.trim() && !uploadedMedia) || !conversationId || sending) return;
+    
+    console.log('📤 Starting INSTANT message send...');
 
     // Check if it's a special command and trigger immediate effect
     const trimmedMessage = messageText.trim();
@@ -532,12 +585,12 @@ const ConversationPage = () => {
       }
     }
 
-    // INSTANT OPTIMISTIC UI - No delays, no sorting, no complex logic
+    // INSTANT OPTIMISTIC UI - Absolutely no delays or async operations
     const finalContent = messageText.trim() + (uploadedMedia?.markdown ? (messageText.trim() ? "\n\n" : "") + uploadedMedia.markdown : "");
       const userAvatar = localStorage.getItem('dapps_user_avatar');
       const avatarUrl = userAvatar ? `https://img.dapps.co/avatar/${userAvatar}.svg` : 'https://img.dapps.co/avatar/default.svg';
 
-    const optimisticId = Date.now();
+    const optimisticId = Date.now() + Math.random(); // Ensure unique ID
     const optimisticMessage: Message = {
       id: optimisticId,
         conversation_id: conversationId,
@@ -561,62 +614,86 @@ const ConversationPage = () => {
         id: currentUserId,
           handle: currentUserHandle,
           avatar: avatarUrl
-        },
-        // Add a stable key that persists through API confirmation
-        optimisticKey: `msg_${optimisticId}`
-      };
+      }
+    };
       
-    // INSTANT: Add message to end of array (newest messages at bottom)
-    setMessages(prev => [...prev, optimisticMessage]);
+    // Store values before clearing
+    const replyToId = replyingTo?.id;
     
-    // INSTANT: Clear input and state
-      setMessageText('');
-      setUploadedMedia(null);
-      setReplyingTo(null);
+    console.log('⚡ INSTANT: Clearing input and adding optimistic message...');
+      
+    // INSTANT: Clear input and state FIRST - completely synchronous
+    setMessageText('');
+    setUploadedMedia(null);
+    setReplyingTo(null);
+    
+    // INSTANT: Add message to UI immediately - no async operations, no delays
+    setMessages(prev => {
+      const newMessages = [...prev, optimisticMessage];
+      console.log('✅ INSTANT: Message added to UI in <1ms, total messages:', newMessages.length);
+    
+      // INSTANT: Scroll to bottom immediately (synchronous)
+      requestAnimationFrame(() => messagesEndRef.current?.scrollIntoView({ behavior: 'auto' }));
+      
+      return newMessages;
+    });
       
     // INSTANT: Haptic feedback
-      if ('vibrate' in navigator) {
-        navigator.vibrate(50);
-      }
+    if ('vibrate' in navigator) {
+      navigator.vibrate(50);
+    }
       
-    // BACKGROUND: Send to server (completely async, no UI impact)
-    sendMessage(conversationId, finalContent, replyingTo?.id)
-      .then(result => {
-      if (result.success && result.message) {
-          // SUCCESS: Silently update message ID in background
-          setMessages(prev => prev.map(msg => 
-            msg.id === optimisticId ? {
-              ...msg,
-          id: result.message.id,
-          sender_id: result.message.sender_id,
-          created_at: result.message.created_at,
-              xmtp_message_id: `xmtp_${result.message.id}`,
-              isOptimistic: false
-              // Keep the optimisticKey for stable React key
-            } : msg
-          ));
-        } else {
-          // FAILURE: Remove optimistic message
-          setMessages(prev => prev.filter(msg => msg.id !== optimisticId));
+    console.log('🚀 INSTANT: UI updated in <1ms, starting background API call...');
+      
+    // BACKGROUND: Send to server (completely async, zero UI impact)
+    // REMOVED setTimeout(0) - this was causing the delay!
+    (async () => {
+      try {
+        const success = sendWebSocketMessage(parseInt(conversationId), finalContent, replyToId);
+        
+        if (!success) {
+          // WebSocket not connected, fallback to REST API
+          console.warn('⚠️ WebSocket not connected, falling back to REST API');
+          const result = await sendMessage(conversationId, finalContent, replyToId);
           
-          if (result.error === 'You cannot initiate a conversation with this user') {
-            toast.error('This user has blocked you and you cannot send messages to them.');
+    if (result.success && result.message) {
+        // SUCCESS: Silently update message ID in background
+            console.log('✅ REST API success, updating message ID in background');
+        setMessages(prev => prev.map(msg => 
+          msg.id === optimisticId ? {
+            ...msg,
+        id: result.message.id,
+        sender_id: result.message.sender_id,
+        created_at: result.message.created_at,
+            xmtp_message_id: `xmtp_${result.message.id}`,
+            isOptimistic: false
+          } : msg
+        ));
       } else {
-        toast.error(result.error || 'Failed to send message');
-      }
-      }
-      })
-      .catch(error => {
-        // ERROR: Remove optimistic message
-        console.error('❌ Error sending message:', error);
+        // FAILURE: Remove optimistic message
+            console.error('❌ REST API failed, removing optimistic message');
         setMessages(prev => prev.filter(msg => msg.id !== optimisticId));
-      toast.error('Failed to send message');
-      })
-      .finally(() => {
-      setSending(false);
-        // Refresh payment status after sending message (to detect replies)
-        refreshPaymentStatusAfterMessage();
-      });
+        
+        if (result.error === 'You cannot initiate a conversation with this user') {
+          toast.error('This user has blocked you and you cannot send messages to them.');
+    } else {
+      toast.error(result.error || 'Failed to send message');
+    }
+    }
+        } else {
+          // WebSocket message sent successfully
+          console.log('✅ Message sent via WebSocket successfully');
+        }
+      } catch (error) {
+      // ERROR: Remove optimistic message
+      console.error('❌ Error sending message:', error);
+      setMessages(prev => prev.filter(msg => msg.id !== optimisticId));
+    toast.error('Failed to send message');
+      } finally {
+      // Refresh payment status after sending message (to detect replies)
+      refreshPaymentStatusAfterMessage();
+      }
+    })();
   };
 
   const handleEmojiClick = (emojiData: EmojiClickData) => {
@@ -647,6 +724,7 @@ const ConversationPage = () => {
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
+      e.stopPropagation();
       handleSendMessage();
     }
   };
@@ -821,19 +899,31 @@ const ConversationPage = () => {
     const avatarUrl = userAvatar ? `https://img.dapps.co/avatar/${userAvatar}.svg` : 'https://img.dapps.co/avatar/default.svg';
 
     // Create optimistic message
+    const optimisticId = Date.now();
     const optimisticMessage: Message = {
-      id: Date.now(),
-      optimisticKey: `opt_${Date.now()}`,
+      id: optimisticId,
+      conversation_id: conversationId,
+      sender_id: currentUserId,
+      sender_handle: currentUserHandle,
+      sender_avatar: avatarUrl,
       message_content: commandMessage,
+      xmtp_message_id: `optimistic_${optimisticId}`,
+      message_type: 'text',
+      is_read: false,
+      created_at: new Date().toISOString(),
+      isOptimistic: true,
+      reply_to: replyingTo ? {
+        id: replyingTo.id,
+        content: replyingTo.content || replyingTo.message_content || '',
+        sender_id: replyingTo.sender_id,
+        sender_handle: replyingTo.sender_handle || replyingTo.sender?.handle || ''
+      } : null,
       content: commandMessage,
       sender: {
         id: currentUserId,
         handle: currentUserHandle,
-        avatar_url: avatarUrl,
-      },
-      created_at: new Date().toISOString(),
-      isOptimistic: true,
-      reply_to: replyingTo?.id || null,
+        avatar: avatarUrl,
+      }
     };
 
     // Add optimistic message immediately
@@ -843,7 +933,7 @@ const ConversationPage = () => {
     try {
       // Send the actual message
       await sendMessage(
-        parseInt(conversationId),
+        conversationId,
         commandMessage,
         replyingTo?.id || undefined
       );
@@ -856,7 +946,7 @@ const ConversationPage = () => {
     } catch (error) {
       console.error('Error sending special command:', error);
       // Remove optimistic message on error
-      setMessages(prev => prev.filter(m => m.optimisticKey !== optimisticMessage.optimisticKey));
+      setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
       toast.error('Failed to send message');
     }
   };
@@ -905,19 +995,26 @@ const ConversationPage = () => {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 pt-16">
+        <div className="flex flex-col bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 
+                     h-screen md:h-[calc(100vh-4rem)] 
+                     fixed md:relative top-0 md:top-16 left-0 right-0 bottom-0 md:left-auto md:right-auto md:bottom-auto
+                     z-[1000] md:z-auto overflow-hidden"
+    >
+      {/* iOS Safe Area Top Padding */}
+      <div className="h-safe-top md:h-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg"></div>
+      
       {/* Header */}
       <motion.div
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="flex items-center justify-between p-4 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700"
+        className="flex items-center justify-between p-4 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700 flex-shrink-0 sticky top-0 md:top-0 z-20"
       >
         <div className="flex items-center space-x-3">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate('/messages')}
-            className="hover:bg-gray-100 dark:hover:bg-gray-800 hidden md:flex"
+            className="hover:bg-gray-100 dark:hover:bg-gray-800"
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
@@ -934,6 +1031,10 @@ const ConversationPage = () => {
                 <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold shadow-lg">
                   {conversationTitle ? conversationTitle.slice(0, 2).toUpperCase() : '??'}
                 </div>
+              )}
+              {/* Online status indicator */}
+              {isOtherUserOnline && (
+                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white dark:border-gray-900 rounded-full shadow-sm"></div>
               )}
             </div>
             <div>
@@ -953,17 +1054,29 @@ const ConversationPage = () => {
         <div className="flex items-center space-x-2">
           <Popover>
             <PopoverTrigger asChild>
-          <Button variant="ghost" size="icon" className="hover:bg-gray-100 dark:hover:bg-gray-800">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="hover:bg-gray-100 dark:hover:bg-gray-800 touch-manipulation min-h-[44px] min-w-[44px]"
+                style={{ touchAction: 'manipulation' }}
+              >
             <MoreVertical className="h-5 w-5" />
           </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-48" side="bottom" align="end">
+            <PopoverContent 
+              className="w-48 z-[9999] shadow-xl border-2" 
+              side="bottom" 
+              align="end"
+              sideOffset={8}
+              collisionPadding={16}
+            >
               <div className="grid gap-1">
                 {!isUserBlocked ? (
                   <Button 
                     variant="ghost" 
-                    className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                    className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 min-h-[44px] touch-manipulation"
                     onClick={() => setIsBlockModalOpen(true)}
+                    style={{ touchAction: 'manipulation' }}
                   >
                     <UserX className="h-4 w-4 mr-2" />
                     Block User
@@ -971,9 +1084,10 @@ const ConversationPage = () => {
                 ) : (
                   <Button 
                     variant="ghost" 
-                    className="w-full justify-start text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20"
+                    className="w-full justify-start text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20 min-h-[44px] touch-manipulation"
                     onClick={handleUnblockUser}
                     disabled={isBlocking}
+                    style={{ touchAction: 'manipulation' }}
                   >
                     <UserX className="h-4 w-4 mr-2" />
                     {isBlocking ? 'Unblocking...' : 'Unblock User'}
@@ -1061,7 +1175,13 @@ const ConversationPage = () => {
       {/* Messages Area */}
       <div 
         ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto p-4 space-y-4"
+        className="flex-1 overflow-y-auto p-4 space-y-2"
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          WebkitOverflowScrolling: 'touch'
+        }}
       >
         <AnimatePresence>
           {messages.length === 0 ? (
@@ -1078,21 +1198,21 @@ const ConversationPage = () => {
               const isOwn = message.sender?.handle === currentUserHandle;
               const showAvatar = !isOwn && (index === 0 || messages[index - 1].sender?.handle !== message.sender?.handle);
               
-              // Only animate truly new messages, not API confirmations
+              // Optimistic messages should appear instantly with no animation delay
               const shouldAnimate = message.isOptimistic === true;
               
               return (
                 <motion.div
-                  key={message.optimisticKey || message.id}
+                  key={message.id}
                   ref={(el) => {
                     if (el) {
                       messageRefs.current.set(message.id, el);
                     }
                   }}
                   data-message-id={message.id}
-                  initial={shouldAnimate ? { opacity: 0, y: 20 } : { opacity: 1, y: 0 }}
+                  initial={shouldAnimate ? { opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={shouldAnimate ? { delay: index * 0.05 } : { duration: 0 }}
+                  transition={shouldAnimate ? { duration: 0 } : { duration: 0 }}
                 >
                   {/* Render special command bubble or regular message bubble */}
                   {isSpecialCommand(message.message_content || message.content || '') ? (
@@ -1102,15 +1222,15 @@ const ConversationPage = () => {
                       onClick={handleSpecialCommandClick}
                     />
                   ) : (
-                    <MessageBubble
-                      message={message}
-                      isOwn={isOwn}
+                  <MessageBubble
+                    message={message}
+                    isOwn={isOwn}
                       showAvatar={showAvatar}
                       currentUserId={currentUserId}
-                      onReply={handleReplyToMessage}
-                      onReplyClick={handleReplyClick}
-                      replyToMessage={message.reply_to}
-                    />
+                    onReply={handleReplyToMessage}
+                    onReplyClick={handleReplyClick}
+                    replyToMessage={message.reply_to}
+                  />
                   )}
                 </motion.div>
               );
@@ -1181,7 +1301,7 @@ const ConversationPage = () => {
       <motion.div
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="p-4 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-t border-gray-200 dark:border-gray-700"
+        className="p-4 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-t border-gray-200 dark:border-gray-700 flex-shrink-0 sticky bottom-0 md:relative md:bottom-auto z-20"
       >
         {/* Media Preview */}
         {uploadedMedia && (
@@ -1193,18 +1313,33 @@ const ConversationPage = () => {
         <div className="flex items-center space-x-3">
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 touch-manipulation min-h-[44px] min-w-[44px]"
+                style={{ touchAction: 'manipulation' }}
+              >
                 <Plus className="h-5 w-5" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-48" side="top" align="start">
+            <PopoverContent 
+              className="w-48 z-[9999] shadow-xl border-2" 
+              side="top" 
+              align="start"
+              sideOffset={8}
+              collisionPadding={16}
+            >
               <div className="grid gap-2">
                 <MediaUpload
                   onMediaUploaded={handleMediaUploaded}
                   acceptedTypes="image"
                   disabled={!!uploadedMedia}
                 >
-                  <Button variant="ghost" className="w-full justify-start">
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start min-h-[44px] touch-manipulation"
+                    style={{ touchAction: 'manipulation' }}
+                  >
                     <ImageIcon className="h-4 w-4 mr-2" />
                     Image
                   </Button>
@@ -1214,7 +1349,11 @@ const ConversationPage = () => {
                   acceptedTypes="video"
                   disabled={!!uploadedMedia}
                 >
-                  <Button variant="ghost" className="w-full justify-start">
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start min-h-[44px] touch-manipulation"
+                    style={{ touchAction: 'manipulation' }}
+                  >
                     <Video className="h-4 w-4 mr-2" />
                     Video
                   </Button>
@@ -1226,6 +1365,7 @@ const ConversationPage = () => {
           <div className="flex-1 relative" {...getRootProps()}>
             <input {...getInputProps()} />
             <Input
+              ref={inputRef}
               value={messageText}
               onChange={handleInputChange}
               onKeyPress={handleKeyPress}
@@ -1245,13 +1385,20 @@ const ConversationPage = () => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="absolute right-1 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                  className="absolute right-1 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 touch-manipulation min-h-[44px] min-w-[44px]"
                   disabled={sending}
+                  style={{ touchAction: 'manipulation' }}
                 >
                   <Smile className="h-5 w-5" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-full p-0 border-0 shadow-lg" side="top" align="end">
+              <PopoverContent 
+                className="w-full p-0 border-0 shadow-lg z-[9999]" 
+                side="top" 
+                align="end"
+                sideOffset={8}
+                collisionPadding={16}
+              >
                 <EmojiPicker
                   onEmojiClick={handleEmojiClick}
                   autoFocusSearch={false}
@@ -1266,7 +1413,12 @@ const ConversationPage = () => {
           
           <motion.div whileTap={{ scale: 0.95 }}>
             <Button
-              onClick={handleSendMessage}
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleSendMessage();
+              }}
               size="icon"
               className="rounded-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-lg"
             >

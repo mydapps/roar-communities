@@ -43,7 +43,7 @@ import { ImageViewerProvider } from '@/components/contexts/ImageViewerContext';
 import MessagesPage from '@/pages/MessagesPage';
 import ConversationPage from '@/pages/ConversationPage';
 import PaidConversationPage from '@/pages/PaidConversationPage';
-import { SSETest } from '@/pages/SSETest';
+
 
 // Lazy loaded components
 const LazyMySharesPage = lazy(() => import('@/pages/MySharesPage'));
@@ -198,12 +198,7 @@ function App() {
               </ProtectedRoute>
             } />
 
-                          {/* SSE Test Route (for development/testing) */}
-            <Route path="sse-test" element={
-              <ProtectedRoute>
-                <SSETest />
-              </ProtectedRoute>
-            } />
+              
             
             {/* 404 route */}
             <Route path="*" element={<NotFound />} />

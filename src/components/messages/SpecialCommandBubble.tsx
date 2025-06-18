@@ -36,6 +36,8 @@ const SpecialCommandBubble: React.FC<SpecialCommandBubbleProps> = ({
       dapps: { bg: 'from-blue-500 via-purple-500 to-pink-500', text: 'text-white' },
       heart: { bg: 'from-pink-500 to-red-500', text: 'text-white' },
       love: { bg: 'from-pink-500 to-red-500', text: 'text-white' },
+      roar: { bg: 'from-amber-500 via-orange-500 to-red-600', text: 'text-white' },
+      roars: { bg: 'from-amber-500 via-orange-500 to-red-600', text: 'text-white' },
     };
     return colors[command] || { bg: 'from-gray-500 to-gray-600', text: 'text-white' };
   };
@@ -46,24 +48,24 @@ const SpecialCommandBubble: React.FC<SpecialCommandBubbleProps> = ({
     <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} mb-2`}>
       <motion.div
         className={`
-          relative inline-block px-3 py-2 rounded-2xl cursor-pointer
+          relative max-w-xs lg:max-w-md px-4 py-3 rounded-2xl cursor-pointer
           transition-all duration-200 hover:scale-105 active:scale-95
           bg-gradient-to-r ${commandColors.bg} ${commandColors.text}
-          shadow-lg hover:shadow-xl border-2 border-transparent hover:border-white/20
+          shadow-sm hover:shadow-lg
         `}
       onClick={handleClick}
       whileHover={{ 
-        scale: 1.05,
-        boxShadow: "0 10px 25px rgba(0,0,0,0.2)"
+        scale: 1.02,
+        boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
       }}
-      whileTap={{ scale: 0.95 }}
+      whileTap={{ scale: 0.98 }}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
       {/* Content */}
       <div className="relative z-10">
-        <span className="text-base font-medium underline cursor-pointer">
+        <span className="text-sm font-medium underline cursor-pointer leading-relaxed">
           /{command}
         </span>
       </div>
@@ -84,6 +86,45 @@ const SpecialCommandBubble: React.FC<SpecialCommandBubbleProps> = ({
             ease: "easeInOut",
           }}
         />
+      )}
+
+      {/* Glorious animated border for ROAR commands */}
+      {(command === 'roar' || command === 'roars') && (
+        <>
+          {/* Golden glowing border */}
+          <motion.div
+            className="absolute inset-0 rounded-2xl border-2 border-amber-400"
+            animate={{
+              opacity: [0.6, 1, 0.6],
+              boxShadow: [
+                '0 0 10px rgba(251, 191, 36, 0.5)',
+                '0 0 25px rgba(251, 191, 36, 0.8)',
+                '0 0 10px rgba(251, 191, 36, 0.5)'
+              ]
+            }}
+            transition={{
+              duration: 1.5,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          />
+          
+          {/* Pulsing lion emoji overlay */}
+          <motion.div
+            className="absolute -top-2 -right-2 text-2xl"
+            animate={{
+              scale: [1, 1.3, 1],
+              rotate: [0, 10, -10, 0],
+            }}
+            transition={{
+              duration: 2,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          >
+            👑
+          </motion.div>
+        </>
       )}
       </motion.div>
     </div>

@@ -1,6 +1,6 @@
-export type SpecialCommand = 'buzz' | 'eth' | 'ethereum' | 'btc' | 'bitcoin' | 'base' | 'sol' | 'solana' | 'dapps' | 'heart' | 'love';
+export type SpecialCommand = 'buzz' | 'eth' | 'ethereum' | 'btc' | 'bitcoin' | 'base' | 'sol' | 'solana' | 'dapps' | 'heart' | 'love' | 'roar' | 'roars';
 
-export type EffectType = 'buzz' | 'eth' | 'btc' | 'base' | 'sol' | 'dapps' | 'heart';
+export type EffectType = 'buzz' | 'eth' | 'btc' | 'base' | 'sol' | 'dapps' | 'heart' | 'roar';
 
 // Map commands to their effect types
 const commandToEffect: Record<SpecialCommand, EffectType> = {
@@ -15,11 +15,13 @@ const commandToEffect: Record<SpecialCommand, EffectType> = {
   dapps: 'dapps',
   heart: 'heart',
   love: 'heart',
+  roar: 'roar',
+  roars: 'roar',
 };
 
 // All valid commands
 export const SPECIAL_COMMANDS: SpecialCommand[] = [
-  'buzz', 'eth', 'ethereum', 'btc', 'bitcoin', 'base', 'sol', 'solana', 'dapps', 'heart', 'love'
+  'buzz', 'eth', 'ethereum', 'btc', 'bitcoin', 'base', 'sol', 'solana', 'dapps', 'heart', 'love', 'roar', 'roars'
 ];
 
 /**
@@ -67,6 +69,8 @@ export const getCommandDisplayText = (command: SpecialCommand): string => {
     dapps: '🚀 Dapps.co',
     heart: '❤️ Love',
     love: '❤️ Love',
+    roar: '🦁 ROAR!',
+    roars: '🦁 ROARS!',
   };
   
   return displayTexts[command];
