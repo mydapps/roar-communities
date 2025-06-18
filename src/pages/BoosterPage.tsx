@@ -28,6 +28,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { BoosterDetailModal } from '@/components/shared/BoosterDetailModal';
 import { useEffect as useReactEffect, useLayoutEffect } from 'react';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { isMobileApp } from '@/utils/deviceUtils';
 
 // Mock API data - replace with actual API implementation
 const mockFetchBoosterData = async (): Promise<BoosterData> => {
@@ -454,6 +455,22 @@ const BoosterCard: React.FC<BoosterCardProps> = ({ activity, onClaim, isProcessi
       return;
     }
     
+    // Special handling for mobile notifications booster
+    if (activity.id === "enable_mobile_notifications" && activity.eligible === false) {
+      // Check if user is in mobile app
+      if (isMobileApp()) {
+        // Navigate to notifications page to enable notifications
+        navigate('/notifications');
+        return;
+      } else {
+        // Open app download link for web users
+        if (activity.action_url.startsWith('http')) {
+          window.open(activity.action_url, '_blank');
+          return;
+        }
+      }
+    }
+    
     // If the booster is completed, just return
     if (activity.completed) return;
     
@@ -529,6 +546,8 @@ const BoosterCard: React.FC<BoosterCardProps> = ({ activity, onClaim, isProcessi
                 Connect Twitter
                 <span className="ml-1">/ <span className="inline-block font-bold">𝕏</span></span>
               </>
+            ) : activity.id === 'enable_mobile_notifications' ? (
+              isMobileApp() ? 'Enable Notifications' : 'Download Mobile App'
             ) : 'Complete Task'}
           </>
         );
@@ -541,6 +560,8 @@ const BoosterCard: React.FC<BoosterCardProps> = ({ activity, onClaim, isProcessi
                 Connect Twitter
                 <span className="ml-1">/ <span className="inline-block font-bold">𝕏</span></span>
               </>
+            ) : activity.id === 'enable_mobile_notifications' ? (
+              isMobileApp() ? 'Enable Notifications' : 'Download Mobile App'
             ) : 'Start Task'}
           </>
         );
@@ -955,7 +976,7 @@ const BoosterPage: React.FC = () => {
             eligible: booster.eligible,
             icon: mapBoosterTypeToIcon(booster.type),
             prerequisites: [],
-            action_url: getActionUrl(booster.type),
+            action_url: booster.action_url || getActionUrl(booster.type),
           };
           
           // Add progress if available
@@ -1157,6 +1178,7 @@ const BoosterPage: React.FC = () => {
       case 'invite_10_friends': return 'UserPlus';
       case 'join_discord': return 'MessageCircle';
       case 'enable_notifications': return 'Bell';
+      case 'enable_mobile_notifications': return 'Bell';
       case 'refer_friends': return 'UserPlus';
       case 'daily_tweet': return 'Share2';
       case 'daily_check_in': return 'Calendar';
@@ -1183,6 +1205,7 @@ const BoosterPage: React.FC = () => {
       case 'invite_10_friends': return 'Invite 10 friends to join.';
       case 'join_discord': return 'Join our Discord server.';
       case 'enable_notifications': return 'Enable push notifications.';
+      case 'enable_mobile_notifications': return 'Download mobile app and enable notifications.';
       case 'refer_friends': return 'Refer friends to earn boosts.';
       case 'daily_tweet': return 'Tweet about us daily.';
       case 'daily_check_in': return 'Check in daily for rewards.';
@@ -1223,6 +1246,7 @@ const BoosterPage: React.FC = () => {
       case 'invite_10_friends': return '/referral';
       case 'join_discord': return 'https://discord.gg/yourserver';
       case 'enable_notifications': return '/notifications/settings';
+      case 'enable_mobile_notifications': return 'https://onelink.to/n6g5k2';
       case 'refer_friends': return '/referral';
       case 'daily_tweet': return '/share/twitter';
       case 'daily_check_in': return '/check-in';

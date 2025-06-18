@@ -233,6 +233,7 @@ export interface GoldenBoosterStatusResponse {
       boost: number;
       eligible: boolean;
       claimed: boolean;
+      action_url?: string;
       progress?: {
         current: number;
         required: number;
