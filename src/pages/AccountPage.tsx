@@ -19,9 +19,10 @@ import { toast } from 'sonner';
 import useDeviceNotifications from '@/hooks/useDeviceNotifications';
 import { Badge } from '@/components/ui/badge';
 import PushNotificationSetup from '@/components/notifications/PushNotificationSetup';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const AccountPage = () => {
-  const [darkMode, setDarkMode] = useState(false);
+  const { theme, toggleTheme } = useTheme();
   
   const {
     isMobileApp,
@@ -40,8 +41,8 @@ const AccountPage = () => {
   };
   
   const handleDarkModeToggle = () => {
-    setDarkMode(!darkMode);
-    toast.success(`${darkMode ? 'Light' : 'Dark'} mode enabled`);
+    toggleTheme();
+    toast.success(`${theme === 'light' ? 'Dark' : 'Light'} mode enabled`);
   };
 
   return (
@@ -208,7 +209,7 @@ const AccountPage = () => {
                   <Sun className="h-4 w-4 text-muted-foreground" />
                   <Switch 
                     id="dark-mode" 
-                    checked={darkMode} 
+                    checked={theme === 'dark'} 
                     onCheckedChange={handleDarkModeToggle} 
                   />
                   <Moon className="h-4 w-4 text-muted-foreground" />

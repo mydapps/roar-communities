@@ -695,16 +695,26 @@ export interface DMPaymentStatusResponse {
   recipient_id?: number;
   recipient_handle?: string;
   payment_info?: {
-    id: number;
+    payment_transaction_id: number;
     amount: number;
-    payment_status: string;
+    status: string;
+    detailed_status: string;
+    status_description: string;
+    txn_hash: string;
+    conversation_id?: number;
     payment_deadline: string;
+    hours_until_deadline: number;
     is_expired: boolean;
     has_replied: boolean;
-    detailed_status: string;
-    hours_until_deadline: number;
-    conversation_id?: number;
+    replied_at: string | null;
     refund_eligible?: boolean;
+    refund_amount?: number;
+    refund_txn_hash?: string | null;
+    distribution_txn_hash?: string | null;
+    platform_fee?: number | null;
+    recipient_amount?: number | null;
+    created_at: string;
+    updated_at: string;
   };
   error?: string;
 }

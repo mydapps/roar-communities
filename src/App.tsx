@@ -40,6 +40,7 @@ import AccountInactivePage from '@/pages/AccountInactivePage';
 import PostWarningPage from '@/pages/PostWarningPage';
 import ErrorBoundary from '@/components/shared/ErrorBoundary';
 import { ImageViewerProvider } from '@/components/contexts/ImageViewerContext';
+import { ThemeProvider } from '@/contexts/ThemeContext';
 import MessagesPage from '@/pages/MessagesPage';
 import ConversationPage from '@/pages/ConversationPage';
 import PaidConversationPage from '@/pages/PaidConversationPage';
@@ -91,9 +92,10 @@ function App() {
       <ZoomDisabledHelmet />
       <DeviceProvider>
       <PrivyAuthProvider>
-        <ImageViewerProvider>
-          <PageViewTracker />
-          <ErrorBoundary>
+        <ThemeProvider>
+          <ImageViewerProvider>
+            <PageViewTracker />
+            <ErrorBoundary>
         <Routes>
           {/* Public routes - accessible outside MainLayout */}
           <Route path="/" element={<Index />} />
@@ -207,6 +209,7 @@ function App() {
         <Toaster position="top-right" />
         </ErrorBoundary>
         </ImageViewerProvider>
+        </ThemeProvider>
       </PrivyAuthProvider>
       </DeviceProvider>
     </HelmetProvider>

@@ -98,6 +98,7 @@ const ConversationPage = () => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+  const [isMediaPopoverOpen, setIsMediaPopoverOpen] = useState(false);
   const [uploadedMedia, setUploadedMedia] = useState<MediaUploadResponse | null>(null);
   const [currentUserHandle, setCurrentUserHandle] = useState('');
   const [participants, setParticipants] = useState<ConversationParticipants | null>(null);
@@ -711,9 +712,11 @@ const ConversationPage = () => {
   const handleMediaUploaded = (media: MediaUploadResponse) => {
     if (uploadedMedia) {
       toast.error('Please remove the current media before uploading a new one');
+      setIsMediaPopoverOpen(false); // Close popover even on error
       return;
     }
     setUploadedMedia(media);
+    setIsMediaPopoverOpen(false); // Close the popover after successful upload
     toast.success('Media uploaded successfully');
   };
 
@@ -1140,8 +1143,11 @@ const ConversationPage = () => {
               </div>
             </div>
             
-            {/* Countdown Timer */}
-            {!paymentStatus.payment_info.is_expired && timeRemaining && timeRemaining !== 'Expired' && (
+            {/* Countdown Timer - Hide when payment is distributed, refunded, or expired */}
+            {!paymentStatus.payment_info.is_expired && 
+             timeRemaining && 
+             timeRemaining !== 'Expired' && 
+             !['distributed', 'refunded', 'expired'].includes(paymentStatus.payment_info.status) && (
               <div className="text-right">
                 <div className="text-sm font-medium text-purple-900 dark:text-purple-100">
                   {timeRemaining} remaining
@@ -1311,7 +1317,7 @@ const ConversationPage = () => {
         )}
 
         <div className="flex items-center space-x-3">
-          <Popover>
+          <Popover open={isMediaPopoverOpen} onOpenChange={setIsMediaPopoverOpen}>
             <PopoverTrigger asChild>
               <Button 
                 variant="ghost" 

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface SpecialEffectsProps {
-  effect: 'buzz' | 'eth' | 'btc' | 'base' | 'sol' | 'dapps' | 'heart' | 'roar' | null;
+  effect: 'buzz' | 'eth' | 'btc' | 'base' | 'sol' | 'dapps' | 'heart' | 'roar' | 'yoga' | null;
   onComplete: () => void;
 }
 
@@ -26,7 +26,7 @@ const SpecialEffects: React.FC<SpecialEffectsProps> = ({ effect, onComplete }) =
       }, 1000);
     } else {
       // For other effects, complete after animation duration
-      const duration = effect === 'dapps' ? 5000 : effect === 'roar' ? 4000 : 3000; // DAPPS gets 5s, ROAR gets 4s
+      const duration = effect === 'dapps' ? 5000 : effect === 'roar' ? 4000 : effect === 'yoga' ? 6000 : 3000; // DAPPS gets 5s, ROAR gets 4s, YOGA gets 6s
       timeout = setTimeout(() => {
         onComplete();
       }, duration);
@@ -669,6 +669,415 @@ const SpecialEffects: React.FC<SpecialEffectsProps> = ({ effect, onComplete }) =
                 </motion.div>
               );
             })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Yoga Effect - Journey from Chaos to Inner Peace */}
+      <AnimatePresence>
+        {effect === 'yoga' && (
+          <motion.div className="absolute inset-0">
+            
+            {/* Stage 1: Chaos/Stress - Scattered anxious thoughts */}
+            {[...Array(20)].map((_, i) => (
+              <motion.div
+                key={`stress-${i}`}
+                className="absolute text-2xl sm:text-3xl"
+                style={{
+                  left: `${Math.random() * 90 + 5}%`,
+                  top: `${Math.random() * 90 + 5}%`,
+                  color: '#ef4444',
+                }}
+                initial={{ scale: 0, opacity: 0, rotate: 0 }}
+                animate={{ 
+                  scale: [0, 1.2, 0.8, 1, 0],
+                  opacity: [0, 1, 1, 0.5, 0],
+                  rotate: [0, Math.random() * 360],
+                  x: [0, (Math.random() - 0.5) * 100],
+                  y: [0, (Math.random() - 0.5) * 100]
+                }}
+                transition={{ 
+                  duration: 2,
+                  delay: i * 0.05,
+                  ease: "easeOut"
+                }}
+              >
+                {['💭', '😰', '😵', '🤯', '😤'][Math.floor(Math.random() * 5)]}
+              </motion.div>
+            ))}
+
+            {/* Stage 2: Deep Breathing - Calming blue waves */}
+            <motion.div
+              className="absolute inset-0 flex items-center justify-center"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 0, 1, 1, 0.3] }}
+              transition={{ duration: 6, times: [0, 0.3, 0.4, 0.7, 1] }}
+            >
+              {[...Array(6)].map((_, i) => (
+                <motion.div
+                  key={`breath-${i}`}
+                  className="absolute border-2 border-blue-400 rounded-full"
+                  style={{
+                    width: `${(i + 1) * (window.innerWidth < 640 ? 60 : 120)}px`,
+                    height: `${(i + 1) * (window.innerWidth < 640 ? 60 : 120)}px`,
+                    borderColor: `rgba(59, 130, 246, ${0.8 - i * 0.1})`,
+                  }}
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ 
+                    scale: [0, 1.2, 1, 1.2, 1],
+                    opacity: [0, 0.8, 0.6, 0.8, 0],
+                  }}
+                  transition={{ 
+                    duration: 3,
+                    delay: 1.5 + i * 0.2,
+                    repeat: 1,
+                    ease: "easeInOut"
+                  }}
+                />
+              ))}
+              
+              {/* Breathing text */}
+              <motion.div
+                className="text-lg sm:text-2xl text-blue-600 font-medium text-center"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ 
+                  opacity: [0, 1, 1, 0],
+                  y: [20, 0, 0, -20],
+                  scale: [0.8, 1, 1, 0.8]
+                }}
+                transition={{ 
+                  duration: 3,
+                  delay: 1.8,
+                  ease: "easeInOut"
+                }}
+              >
+                Breathe...
+              </motion.div>
+            </motion.div>
+
+            {/* Stage 3: Yoga Poses Sequence */}
+            <motion.div
+              className="absolute inset-0 flex items-center justify-center"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 0, 1, 1, 0.5] }}
+              transition={{ duration: 6, times: [0, 0.4, 0.5, 0.8, 1] }}
+            >
+              {/* Tree Pose */}
+              <motion.div
+                className="absolute text-6xl sm:text-8xl"
+                initial={{ scale: 0, y: 50, opacity: 0 }}
+                animate={{ 
+                  scale: [0, 1.2, 1],
+                  y: [50, 0, 0],
+                  opacity: [0, 1, 0],
+                  rotate: [0, -5, 5, 0]
+                }}
+                transition={{ 
+                  duration: 1.5,
+                  delay: 2.5,
+                  ease: "backOut"
+                }}
+              >
+                🧘‍♀️
+              </motion.div>
+
+              {/* Warrior Pose */}
+              <motion.div
+                className="absolute text-6xl sm:text-8xl"
+                initial={{ scale: 0, x: -100, opacity: 0 }}
+                animate={{ 
+                  scale: [0, 1.2, 1],
+                  x: [-100, 0, 0],
+                  opacity: [0, 1, 0],
+                }}
+                transition={{ 
+                  duration: 1.5,
+                  delay: 3.2,
+                  ease: "backOut"
+                }}
+              >
+                🧘‍♂️
+              </motion.div>
+
+              {/* Lotus Position */}
+              <motion.div
+                className="absolute text-6xl sm:text-8xl"
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ 
+                  scale: [0, 1.3, 1],
+                  opacity: [0, 1, 1],
+                  rotate: [0, 360]
+                }}
+                transition={{ 
+                  duration: 2,
+                  delay: 3.8,
+                  ease: "backOut"
+                }}
+              >
+                🧘
+              </motion.div>
+            </motion.div>
+
+            {/* Stage 4: Chakra Activation - Rainbow energy centers */}
+            <motion.div
+              className="absolute inset-0 flex items-center justify-center"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 0, 1, 1, 0.7] }}
+              transition={{ duration: 6, times: [0, 0.6, 0.65, 0.85, 1] }}
+            >
+              {/* 7 Chakras with colors */}
+              {[
+                { emoji: '🔴', color: '#ef4444', name: 'Root' },
+                { emoji: '🟠', color: '#f97316', name: 'Sacral' },
+                { emoji: '🟡', color: '#eab308', name: 'Solar' },
+                { emoji: '🟢', color: '#22c55e', name: 'Heart' },
+                { emoji: '🔵', color: '#3b82f6', name: 'Throat' },
+                { emoji: '🟣', color: '#8b5cf6', name: 'Third Eye' },
+                { emoji: '⚪', color: '#f8fafc', name: 'Crown' }
+              ].map((chakra, i) => (
+                <motion.div
+                  key={`chakra-${i}`}
+                  className="absolute text-3xl sm:text-5xl"
+                  style={{
+                    top: `${20 + i * 10}%`,
+                    filter: `drop-shadow(0 0 20px ${chakra.color})`,
+                  }}
+                  initial={{ scale: 0, opacity: 0, x: -200 }}
+                  animate={{ 
+                    scale: [0, 1.5, 1.2, 1],
+                    opacity: [0, 1, 1, 0.8],
+                    x: [-200, 0, 0, 0],
+                    rotate: [0, 180, 360]
+                  }}
+                  transition={{ 
+                    duration: 1.5,
+                    delay: 3.5 + i * 0.15,
+                    ease: "backOut"
+                  }}
+                >
+                  {chakra.emoji}
+                </motion.div>
+              ))}
+
+              {/* Energy flow lines */}
+              <motion.div
+                className="absolute w-1 bg-gradient-to-b from-red-500 via-yellow-500 via-green-500 via-blue-500 to-purple-500"
+                style={{ 
+                  height: '70%',
+                  left: '50%',
+                  top: '15%',
+                  filter: 'blur(2px)',
+                  boxShadow: '0 0 20px rgba(147, 51, 234, 0.6)'
+                }}
+                initial={{ scaleY: 0, opacity: 0 }}
+                animate={{ 
+                  scaleY: [0, 1, 1, 0.8],
+                  opacity: [0, 0.8, 0.8, 0.4]
+                }}
+                transition={{ 
+                  duration: 2,
+                  delay: 4.2,
+                  ease: "easeInOut"
+                }}
+              />
+            </motion.div>
+
+            {/* Stage 5: Lotus Bloom Transformation */}
+            <motion.div
+              className="absolute inset-0 flex items-center justify-center"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 0, 1, 1] }}
+              transition={{ duration: 6, times: [0, 0.7, 0.75, 1] }}
+            >
+              {/* Lotus petals blooming */}
+              {[...Array(8)].map((_, i) => {
+                const angle = (i / 8) * 2 * Math.PI;
+                const radius = window.innerWidth < 640 ? 80 : 120;
+                const x = Math.cos(angle) * radius;
+                const y = Math.sin(angle) * radius;
+                
+                return (
+                  <motion.div
+                    key={`petal-${i}`}
+                    className="absolute text-4xl sm:text-6xl"
+                    style={{
+                      filter: 'drop-shadow(0 0 15px rgba(236, 72, 153, 0.6))',
+                    }}
+                    initial={{ scale: 0, x: 0, y: 0, rotate: 0, opacity: 0 }}
+                    animate={{
+                      scale: [0, 1.2, 1],
+                      x: [0, x * 0.7, x],
+                      y: [0, y * 0.7, y],
+                      rotate: [0, 180, 360],
+                      opacity: [0, 1, 1],
+                    }}
+                    transition={{
+                      duration: 2,
+                      delay: 4.2 + i * 0.1,
+                      ease: "backOut"
+                    }}
+                  >
+                    🌸
+                  </motion.div>
+                );
+              })}
+              
+              {/* Central lotus */}
+              <motion.div
+                className="absolute text-8xl sm:text-9xl"
+                style={{
+                  filter: 'drop-shadow(0 0 30px rgba(236, 72, 153, 0.8))',
+                }}
+                initial={{ scale: 0, rotate: 0, opacity: 0 }}
+                animate={{ 
+                  scale: [0, 1.3, 1.1, 1],
+                  rotate: [0, 360],
+                  opacity: [0, 1, 1, 1],
+                }}
+                transition={{ 
+                  duration: 2.5,
+                  delay: 4.5,
+                  ease: "backOut"
+                }}
+              >
+                🪷
+              </motion.div>
+            </motion.div>
+
+            {/* Stage 6: Enlightenment / Inner Peace */}
+            <motion.div
+              className="absolute inset-0 flex items-center justify-center"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 0, 1] }}
+              transition={{ duration: 6, times: [0, 0.8, 1] }}
+            >
+              {/* Golden aura */}
+              <motion.div
+                className="absolute rounded-full bg-gradient-to-r from-yellow-200 via-yellow-300 to-yellow-200"
+                style={{
+                  width: window.innerWidth < 640 ? '200px' : '300px',
+                  height: window.innerWidth < 640 ? '200px' : '300px',
+                  filter: 'blur(40px)',
+                }}
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ 
+                  scale: [0, 1.5, 1.2],
+                  opacity: [0, 0.6, 0.4],
+                }}
+                transition={{ 
+                  duration: 1.5,
+                  delay: 5,
+                  ease: "easeOut"
+                }}
+              />
+
+              {/* Peaceful emoji transformation */}
+              <motion.div
+                className="absolute text-8xl sm:text-9xl z-10"
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ 
+                  scale: [0, 1.2, 1],
+                  opacity: [0, 1, 1],
+                }}
+                transition={{ 
+                  duration: 1.5,
+                  delay: 5.2,
+                  ease: "backOut"
+                }}
+              >
+                😌
+              </motion.div>
+
+              {/* Floating "Om" symbols */}
+              {[...Array(12)].map((_, i) => {
+                const angle = (i / 12) * 2 * Math.PI;
+                const radius = window.innerWidth < 640 ? 150 : 250;
+                const x = Math.cos(angle) * radius;
+                const y = Math.sin(angle) * radius;
+                
+                return (
+                  <motion.div
+                    key={`om-${i}`}
+                    className="absolute text-2xl sm:text-3xl text-purple-600"
+                    style={{
+                      filter: 'drop-shadow(0 0 10px rgba(147, 51, 234, 0.8))',
+                    }}
+                    initial={{ scale: 0, x: 0, y: 0, opacity: 0 }}
+                    animate={{
+                      scale: [0, 1, 0.8],
+                      x: x,
+                      y: y,
+                      opacity: [0, 0.8, 0.6],
+                      rotate: [0, 360],
+                    }}
+                    transition={{
+                      duration: 2,
+                      delay: 5.3 + i * 0.08,
+                      ease: "easeOut"
+                    }}
+                  >
+                    ॐ
+                  </motion.div>
+                );
+              })}
+
+              {/* Final message */}
+              <motion.div
+                className="absolute bottom-1/4 text-center"
+                initial={{ opacity: 0, y: 50 }}
+                animate={{ 
+                  opacity: [0, 1, 1],
+                  y: [50, 0, 0],
+                }}
+                transition={{ 
+                  duration: 1.5,
+                  delay: 5.8,
+                  ease: "easeOut"
+                }}
+              >
+                <div 
+                  className="text-2xl sm:text-3xl font-light text-purple-800"
+                  style={{
+                    textShadow: '0 0 20px rgba(147, 51, 234, 0.5)',
+                    fontFamily: 'serif',
+                  }}
+                >
+                  ✨ Inner Peace Found ✨
+                </div>
+                <motion.div
+                  className="text-lg sm:text-xl text-purple-600 mt-2"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: [0, 1] }}
+                  transition={{ delay: 6.3, duration: 0.8 }}
+                >
+                  Namaste 🙏
+                </motion.div>
+              </motion.div>
+
+              {/* Gentle sparkles */}
+              {Array.from({ length: 30 }).map((_, i) => (
+                <motion.div
+                  key={`sparkle-yoga-${i}`}
+                  className="absolute w-1 h-1 bg-yellow-300 rounded-full"
+                  style={{
+                    top: `${10 + Math.random() * 80}%`,
+                    left: `${10 + Math.random() * 80}%`,
+                  }}
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ 
+                    scale: [0, 1.5, 0], 
+                    opacity: [0, 0.8, 0] 
+                  }}
+                  transition={{
+                    delay: 5.5 + Math.random() * 1,
+                    duration: 1.2,
+                    repeat: Infinity,
+                    repeatDelay: Math.random() * 2
+                  }}
+                />
+              ))}
+            </motion.div>
+
           </motion.div>
         )}
       </AnimatePresence>
