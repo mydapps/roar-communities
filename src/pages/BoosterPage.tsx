@@ -21,11 +21,11 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { 
   fetchAvailableBoosters, 
   fetchRegularBoosterStatus, 
-  fetchGoldenBoosterStatus,
-  claimGoldenBooster,
-  claimAllGoldenBoosters,
-  claimRegularBooster,
-  fetchAchievements,
+  fetchGoldenBoosterStatus, 
+  claimGoldenBooster, 
+  claimAllGoldenBoosters, 
+  claimRegularBooster, 
+  fetchAchievements, 
   submitENBWallet,
   fetchENBWalletStatus,
   refreshENBWalletBalances
@@ -36,7 +36,7 @@ import type {
   GoldenBoosterStatusResponse,
   GoldenBoosterClaimResponse,
   RegularBoosterClaimResponse,
-  Achievement as ApiAchievement,
+  Achievement as ApiAchievement, 
   ENBWalletStatusResponse,
   ENBWalletSubmitResponse,
   ENBWalletRefreshResponse

@@ -312,20 +312,20 @@ const ConversationPage = () => {
         // Store current input focus state before updating messages
         const wasInputFocused = inputRef.current === document.activeElement;
         
-        setMessages(prev => 
-          prev.map(msg => 
-              msg.id === data.messageId 
-              ? { ...msg, is_read: true }
-              : msg
-          )
-        );
+      setMessages(prev => 
+        prev.map(msg => 
+            msg.id === data.messageId 
+            ? { ...msg, is_read: true }
+            : msg
+        )
+      );
         
         // Restore input focus if it was focused before the update
         if (wasInputFocused && inputRef.current) {
           setTimeout(() => {
             if (inputRef.current) {
               inputRef.current.focus();
-            }
+      }
           }, 10);
         }
       }
@@ -605,32 +605,32 @@ const ConversationPage = () => {
       id: optimisticId,
       conversation_id: conversationId!,
       sender_id: currentUserId,
-      sender_handle: currentUserHandle,
+        sender_handle: currentUserHandle,
       sender_avatar: '',
       message_content: messageText,
       xmtp_message_id: `optimistic_${optimisticId}`,
-      message_type: 'text',
-      is_read: false,
-      created_at: new Date().toISOString(),
-      reply_to: replyingTo ? {
-        id: replyingTo.id,
-        content: replyingTo.content || replyingTo.message_content || '',
+        message_type: 'text',
+        is_read: false,
+        created_at: new Date().toISOString(),
+        reply_to: replyingTo ? {
+          id: replyingTo.id,
+          content: replyingTo.content || replyingTo.message_content || '',
         sender_id: replyingTo.sender_id || 0,
         sender_handle: replyingTo.sender?.handle || replyingTo.sender_handle || 'Unknown'
       } : undefined,
       isOptimistic: true,
       // Compatibility fields
       content: messageText,
-      sender: {
+        sender: {
         id: currentUserId,
-        handle: currentUserHandle,
+          handle: currentUserHandle,
         avatar: ''
       }
     };
 
     // Add optimistic message immediately
     setMessages(prev => [...prev, optimisticMessage]);
-    
+      
     // Clear input immediately for better UX
     const messageToSend = messageText;
     const mediaToSend = uploadedMedia;
@@ -729,7 +729,7 @@ const ConversationPage = () => {
             setTimeout(() => {
               if (inputRef.current) {
                 inputRef.current.focus();
-              }
+      }
             }, 10);
           }
         }
@@ -740,7 +740,7 @@ const ConversationPage = () => {
         const wasInputFocused = inputRef.current === document.activeElement;
         
         setMessages(prev => prev.filter(msg => msg.id !== optimisticId));
-        toast.error('Failed to send message');
+      toast.error('Failed to send message');
         
         // Restore input focus if it was focused before the update
         if (wasInputFocused && inputRef.current) {
@@ -756,7 +756,7 @@ const ConversationPage = () => {
     // Execute send in background
     sendMessageAsync().finally(() => {
       setSending(false);
-    });
+      });
   };
 
   const handleEmojiClick = (emojiData: EmojiClickData) => {
@@ -1059,7 +1059,7 @@ const ConversationPage = () => {
     );
   }
 
-      return (
+  return (
         <div className="flex flex-col bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 
                      h-screen md:h-[calc(100vh-4rem)] 
                      fixed md:relative top-0 md:top-16 left-0 right-0 bottom-0 md:left-auto md:right-auto md:bottom-auto

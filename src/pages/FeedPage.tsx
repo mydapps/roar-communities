@@ -244,8 +244,17 @@ const FeedPage = () => {
   };
   
   const handleTabChange = (value: string) => {
+    console.log(`[FeedPage] Tab changing from ${activeTab} to ${value}`);
     setActiveTab(value);
     setError(null);
+    
+    // Reset posts and pagination when switching tabs to ensure fresh data
+    setPosts([]);
+    setPage(1);
+    setHasMore(true);
+    
+    // Force a refresh to get fresh data from API
+    setRefreshKey(prev => prev + 1);
   };
   
   const handleDismissSuggestionModule = useCallback(() => {
