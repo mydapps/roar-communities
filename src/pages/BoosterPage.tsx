@@ -1,34 +1,48 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Gift, Twitter, Users, Medal, Calendar, Clock, Link as LinkIcon, CheckCircle2, LucideIcon, Trophy, Rocket, Zap, Share2, MessageCircle, Award, ArrowRight, RefreshCw, ChevronRight, UserPlus, User, Gem, Target, Loader2, Lock, X, Info, Bell, Globe, ThumbsUp, MessageSquareText, HandHeart, BarChart3, Vote } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+import { 
+  Sparkles, TrendingUp, Clock, Users, UserPlus, Twitter, Bell, 
+  ArrowRight, Trophy, Target, Calendar, Share2, ThumbsUp, MessageCircle,
+  PenTool, BarChart3, Vote, User, Coins, Wallet, RefreshCw, Loader2,
+  Info, CheckCircle2, LucideIcon, ChevronRight, Gift, Lock
+} from 'lucide-react';
+import { useLinkAccount } from '@privy-io/react-auth';
 import { toast } from 'sonner';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { isMobileApp } from '@/utils/deviceUtils';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { 
   fetchAvailableBoosters, 
-  fetchGoldenBoosterStatus, 
-  claimGoldenBooster, 
-  claimAllGoldenBoosters, 
-  AvailableBoostersResponse, 
-  GoldenBoosterStatusResponse, 
   fetchRegularBoosterStatus, 
-  claimRegularBooster, 
-  useBooster, 
-  RegularBoosterStatusResponse, 
-  fetchAchievements, 
-  Achievement as ApiAchievement, 
-  AchievementsResponse 
+  fetchGoldenBoosterStatus,
+  claimGoldenBooster,
+  claimAllGoldenBoosters,
+  claimRegularBooster,
+  fetchAchievements,
+  submitENBWallet,
+  fetchENBWalletStatus,
+  refreshENBWalletBalances
 } from '@/utils/apiBase';
-import { Link, useNavigate } from 'react-router-dom';
+import type { 
+  AvailableBoostersResponse, 
+  RegularBoosterStatusResponse, 
+  GoldenBoosterStatusResponse,
+  GoldenBoosterClaimResponse,
+  RegularBoosterClaimResponse,
+  Achievement as ApiAchievement,
+  ENBWalletStatusResponse,
+  ENBWalletSubmitResponse,
+  ENBWalletRefreshResponse
+} from '@/utils/apiBase';
+import { BoosterDisplay } from '@/components/shared/BoosterDisplay';
 import { BoosterDetailModal } from '@/components/shared/BoosterDetailModal';
-import { useEffect as useReactEffect, useLayoutEffect } from 'react';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { isMobileApp } from '@/utils/deviceUtils';
 
 // Mock API data - replace with actual API implementation
 const mockFetchBoosterData = async (): Promise<BoosterData> => {
@@ -379,34 +393,413 @@ interface BoosterData {
   achievements: Achievement[];
 }
 
+// ENB Wallet Linking Modal Component
+interface ENBWalletModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+const ENBWalletModal: React.FC<ENBWalletModalProps> = ({ isOpen, onClose, onSuccess }) => {
+  const [isLinking, setIsLinking] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [walletStatus, setWalletStatus] = useState<ENBWalletStatusResponse | null>(null);
+  const [isLoadingStatus, setIsLoadingStatus] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const { linkWallet } = useLinkAccount({
+    onSuccess: async (user) => {
+      console.log('[wallet] ✅ Wallet linked successfully');
+      console.log('[wallet] User object received:', JSON.stringify(user, null, 2));
+      console.log('[wallet] User ID:', user?.id);
+      console.log('[wallet] User linked accounts count:', user?.linkedAccounts?.length || 0);
+      
+      setIsLinking(false);
+      
+      // Find the most recently linked wallet
+      const walletAccounts = user.linkedAccounts?.filter(account => account.type === 'wallet') || [];
+      console.log('[wallet] All linked accounts:', user?.linkedAccounts?.map(acc => ({ 
+        type: acc.type, 
+        address: (acc as any).address || 'no-address' 
+      })));
+      console.log('[wallet] Wallet accounts found:', walletAccounts.length);
+      console.log('[wallet] Wallet accounts details:', walletAccounts.map(wallet => ({ 
+        type: wallet.type, 
+        address: (wallet as any).address || 'no-address',
+        chainId: (wallet as any).chainId || 'unknown',
+        walletClient: (wallet as any).walletClient || 'unknown'
+      })));
+      
+      if (walletAccounts.length > 0) {
+        const latestWallet = walletAccounts[walletAccounts.length - 1];
+        console.log('[wallet] Latest wallet selected:', latestWallet);
+        console.log('[wallet] Latest wallet address:', (latestWallet as any).address);
+        
+        if ((latestWallet as any).address) {
+          console.log('[wallet] Proceeding to submit wallet address:', (latestWallet as any).address);
+          await handleWalletSubmit((latestWallet as any).address);
+        } else {
+          console.error('[wallet] ❌ Latest wallet has no address field');
+          toast.error('Wallet address not found');
+        }
+      } else {
+        console.error('[wallet] ❌ No wallet accounts found in linkedAccounts');
+        console.log('[wallet] All account types found:', user?.linkedAccounts?.map(acc => acc.type));
+        toast.error('No wallet found in linked accounts');
+      }
+    },
+    onError: (error) => {
+      console.log('[wallet] ❌ Failed to link wallet - ERROR DETAILS:');
+      console.log('[wallet] Error object:', error);
+      console.log('[wallet] Error type:', typeof error);
+      console.log('[wallet] Error keys:', error ? Object.keys(error) : 'null');
+      console.log('[wallet] Error stringified:', JSON.stringify(error, null, 2));
+      
+      const errorObj = error as any;
+      console.log('[wallet] Error message:', errorObj?.message);
+      console.log('[wallet] Error code:', errorObj?.code);
+      console.log('[wallet] Error privyErrorCode:', errorObj?.privyErrorCode);
+      console.log('[wallet] Error type field:', errorObj?.type);
+      console.log('[wallet] Error cause:', errorObj?.cause);
+      console.log('[wallet] Error stack:', errorObj?.stack);
+      
+      setIsLinking(false);
+      
+      // Provide specific error messages based on the error code
+      let errorMessage = 'Failed to link wallet. Please try again.';
+      
+      if (error && typeof error === 'object') {
+        const errorCode = errorObj?.privyErrorCode || errorObj?.code || errorObj?.type;
+        console.log('[wallet] Determined error code:', errorCode);
+        
+        switch (errorCode) {
+          case 'failed_to_link_account':
+            errorMessage = 'Wallet linking was cancelled or failed. Please try again.';
+            console.log('[wallet] Error categorized as: failed_to_link_account');
+            break;
+          case 'cannot_link_more_of_type':
+            errorMessage = 'You already have a wallet linked. Please use the refresh button to update balances.';
+            console.log('[wallet] Error categorized as: cannot_link_more_of_type');
+            break;
+          case 'user_exited_link_flow':
+            errorMessage = 'Wallet linking was cancelled.';
+            console.log('[wallet] Error categorized as: user_exited_link_flow');
+            break;
+          case 'wallet_connection_rejected':
+          case 'user_rejected_request':
+            errorMessage = 'Wallet connection was rejected. Please approve the connection in your wallet.';
+            console.log('[wallet] Error categorized as: wallet_connection_rejected/user_rejected_request');
+            break;
+          case 'unsupported_wallet':
+            errorMessage = 'This wallet type is not supported. Please try with MetaMask or another supported wallet.';
+            console.log('[wallet] Error categorized as: unsupported_wallet');
+            break;
+          case 'timeout':
+            errorMessage = 'Wallet linking timed out. Please try again.';
+            console.log('[wallet] Error categorized as: timeout');
+            break;
+          default:
+            console.log('[wallet] Error not categorized, checking message content');
+            // Check if error message contains helpful information
+            if (errorObj?.message) {
+              console.log('[wallet] Analyzing error message:', errorObj.message);
+              if (errorObj.message.includes('cancelled')) {
+                errorMessage = 'Wallet linking was cancelled.';
+                console.log('[wallet] Message indicates cancellation');
+              } else if (errorObj.message.includes('rejected')) {
+                errorMessage = 'Wallet connection was rejected. Please try again.';
+                console.log('[wallet] Message indicates rejection');
+              } else if (errorObj.message.includes('timeout')) {
+                errorMessage = 'Connection timed out. Please try again.';
+                console.log('[wallet] Message indicates timeout');
+              }
+            }
+            break;
+        }
+      }
+      
+      console.log('[wallet] Final error message to show user:', errorMessage);
+      toast.error(errorMessage);
+    }
+  });
+
+  const handleLinkWallet = () => {
+    console.log('[wallet] 🚀 Starting wallet linking process...');
+    console.log('[wallet] Current linking state:', isLinking);
+    console.log('[wallet] Current submitting state:', isSubmitting);
+    
+    setIsLinking(true);
+    console.log('[wallet] Set isLinking to true, calling linkWallet()');
+    
+    try {
+      linkWallet();
+      console.log('[wallet] linkWallet() called successfully');
+    } catch (error) {
+      console.error('[wallet] ❌ Error calling linkWallet():', error);
+      setIsLinking(false);
+      toast.error('Failed to initiate wallet linking');
+    }
+  };
+
+  const handleWalletSubmit = async (walletAddress: string) => {
+    console.log('[wallet] 📤 Starting wallet submission process...');
+    console.log('[wallet] Wallet address to submit:', walletAddress);
+    
+    setIsSubmitting(true);
+    try {
+      console.log('[wallet] Calling submitENBWallet API...');
+      const result = await submitENBWallet(walletAddress);
+      console.log('[wallet] submitENBWallet result:', result);
+      
+      if (result && result.success) {
+        console.log('[wallet] ✅ Wallet submission successful');
+        console.log('[wallet] Result data:', result.data);
+        toast.success(result.message);
+        
+        if (result.data?.eligible_for_booster) {
+          console.log('[wallet] 🎉 User eligible for booster!');
+          console.log('[wallet] ENB balance:', result.data.enb_balance);
+          toast.success(`🎉 Eligible for 2x ENB Token Holder Boost! Balance: ${result.data.enb_balance} ENB`);
+          onSuccess();
+          onClose();
+        } else {
+          console.log('[wallet] ⚠️ User not eligible for booster');
+          console.log('[wallet] ENB balance:', result.data?.enb_balance);
+          console.log('[wallet] Required balance:', result.data?.required_balance);
+          toast.warning(`Insufficient ENB balance: ${result.data?.enb_balance || 0} ENB. Need at least ${result.data?.required_balance || 1000} ENB.`);
+          // Refresh wallet status to show current wallets
+          await loadWalletStatus();
+        }
+      } else {
+        console.error('[wallet] ❌ Wallet submission failed');
+        console.log('[wallet] Error result:', result);
+        toast.error(result?.message || 'Failed to verify wallet');
+      }
+    } catch (error) {
+      console.error('[wallet] ❌ Exception during wallet submission:', error);
+      toast.error('Failed to verify wallet. Please try again.');
+    } finally {
+      console.log('[wallet] Setting isSubmitting to false');
+      setIsSubmitting(false);
+    }
+  };
+
+  const loadWalletStatus = async () => {
+    console.log('[wallet] 📋 Loading wallet status...');
+    setIsLoadingStatus(true);
+    try {
+      console.log('[wallet] Calling fetchENBWalletStatus API...');
+      const status = await fetchENBWalletStatus();
+      console.log('[wallet] fetchENBWalletStatus result:', status);
+      console.log('[wallet] Status success:', status?.success);
+      console.log('[wallet] Wallets count:', status?.data?.wallets?.length || 0);
+      setWalletStatus(status);
+    } catch (error) {
+      console.error('[wallet] ❌ Error loading wallet status:', error);
+    } finally {
+      console.log('[wallet] Setting isLoadingStatus to false');
+      setIsLoadingStatus(false);
+    }
+  };
+
+  const handleRefreshBalances = async () => {
+    console.log('[wallet] 🔄 Refreshing wallet balances...');
+    setIsRefreshing(true);
+    try {
+      console.log('[wallet] Calling refreshENBWalletBalances API...');
+      const result = await refreshENBWalletBalances();
+      console.log('[wallet] refreshENBWalletBalances result:', result);
+      
+      if (result && result.success) {
+        console.log('[wallet] ✅ Balance refresh successful');
+        console.log('[wallet] Refresh result data:', result.data);
+        toast.success('Wallet balances refreshed!');
+        
+        if (result.data.eligible_for_booster) {
+          console.log('[wallet] 🎉 User now eligible for booster after refresh!');
+          console.log('[wallet] Max balance after refresh:', result.data.max_balance);
+          toast.success(`🎉 Now eligible for 2x ENB Token Holder Boost! Max balance: ${result.data.max_balance} ENB`);
+          onSuccess();
+          onClose();
+        } else {
+          console.log('[wallet] ⚠️ User still not eligible after refresh');
+          console.log('[wallet] Max balance:', result.data.max_balance);
+          console.log('[wallet] Required balance:', result.data.required_balance);
+          toast.info(`Max balance: ${result.data.max_balance} ENB. Need at least ${result.data.required_balance} ENB.`);
+        }
+        
+        // Refresh the status display
+        console.log('[wallet] Refreshing wallet status display...');
+        await loadWalletStatus();
+      } else {
+        console.error('[wallet] ❌ Balance refresh failed');
+        console.log('[wallet] Error result:', result);
+        toast.error(result?.message || 'Failed to refresh balances');
+      }
+    } catch (error) {
+      console.error('[wallet] ❌ Exception during balance refresh:', error);
+      toast.error('Failed to refresh balances. Please try again.');
+    } finally {
+      console.log('[wallet] Setting isRefreshing to false');
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      loadWalletStatus();
+    }
+  }, [isOpen]);
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Coins className="h-5 w-5 text-yellow-500" />
+            ENB Token Holder Boost
+          </DialogTitle>
+          <DialogDescription>
+            Connect your external wallet to verify you hold 1000+ ENB tokens for a 2x boost.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="space-y-4">
+          {/* Requirements */}
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40 rounded-lg p-3">
+            <h4 className="font-medium text-amber-800 dark:text-amber-200 mb-2">Requirements:</h4>
+            <ul className="text-sm text-amber-700 dark:text-amber-300 space-y-1">
+              <li>• Hold at least 1,000 ENB tokens</li>
+              <li>• Connect external wallet (MetaMask, etc.)</li>
+              <li>• Wallet must contain ENB tokens</li>
+            </ul>
+          </div>
+
+          {/* Current Wallet Status */}
+          {isLoadingStatus ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <span className="ml-2">Loading wallet status...</span>
+            </div>
+          ) : walletStatus?.success && walletStatus.data.wallets.length > 0 ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="font-medium">Connected Wallets:</h4>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRefreshBalances}
+                  disabled={isRefreshing}
+                >
+                  {isRefreshing ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                  {isRefreshing ? 'Refreshing...' : 'Refresh'}
+                </Button>
+              </div>
+              
+              <div className="space-y-2">
+                {walletStatus.data.wallets.map((wallet, index) => (
+                  <div key={index} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-sm">
+                        {wallet.wallet.slice(0, 6)}...{wallet.wallet.slice(-4)}
+                      </span>
+                      <span className={`font-medium ${Number(wallet.enb_balance) >= 1000 ? 'text-green-600' : 'text-orange-600'}`}>
+                        {Number(wallet.enb_balance).toFixed(2)} ENB
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/40 rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-blue-800 dark:text-blue-200">
+                    Max Balance:
+                  </span>
+                  <span className={`font-bold ${walletStatus.data.eligible_for_booster ? 'text-green-600' : 'text-orange-600'}`}>
+                    {Number(walletStatus.data.max_balance).toFixed(2)} ENB
+                  </span>
+                </div>
+                {walletStatus.data.eligible_for_booster ? (
+                  <p className="text-sm text-green-600 mt-1">✅ Eligible for 2x boost!</p>
+                ) : (
+                  <p className="text-sm text-orange-600 mt-1">
+                    Need {(Number(walletStatus.data.required_balance) - Number(walletStatus.data.max_balance)).toFixed(2)} more ENB
+                  </p>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-4">
+              <Wallet className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+              <p className="text-gray-600 dark:text-gray-400">No wallets connected yet</p>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex gap-2">
+            <Button
+              onClick={handleLinkWallet}
+              disabled={isLinking || isSubmitting}
+              className="flex-1"
+            >
+              {isLinking ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Connecting...
+                </>
+              ) : (
+                <>
+                  <Wallet className="h-4 w-4 mr-2" />
+                  Connect New Wallet
+                </>
+              )}
+            </Button>
+            
+            <Button variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 const getIconComponent = (iconName: string): React.ReactNode => {
   const icons: Record<string, LucideIcon> = {
     Twitter: Twitter,
     Users: Users,
     Trophy: Trophy,
-    TrendingUp: Trophy,
+    TrendingUp: TrendingUp,
     ThumbsUp: ThumbsUp,
     Share2: Share2,
-    Rocket: Rocket,
-    RefreshCw: RefreshCw,
-    PenTool: Sparkles,
+    Rocket: Sparkles,
+    RefreshCw: Clock,
+    PenTool: PenTool,
     MessageCircle: MessageCircle,
-    Medal: Medal,
-    Gift: Gift,
-    Globe: Globe,
+    Medal: Sparkles,
+    Gift: Sparkles,
+    Globe: Sparkles,
     Calendar: Calendar,
     Clock: Clock,
-    Gem: Gem,
+    Gem: Sparkles,
     UserPlus: UserPlus,
     User: User,
     Bell: Bell,
     Target: Target,
-    Award: Award,
-    UpvoteStreak: HandHeart,
-    CommentStreak: MessageSquareText,
+    Award: Trophy,
+    UpvoteStreak: Sparkles,
+    CommentStreak: Sparkles,
     FollowStreak: UserPlus,
     BarChart3: BarChart3,
-    Vote: Vote
+    Vote: Vote,
+    Coins: Coins,
+    Wallet: Wallet
   };
 
   const IconComponent = icons[iconName] || Sparkles;
@@ -418,9 +811,10 @@ interface BoosterCardProps {
   activity: BoosterActivity;
   onClaim: (id: string) => Promise<void>;
   isProcessing: boolean;
+  showENBModal?: () => void;
 }
 
-const BoosterCard: React.FC<BoosterCardProps> = ({ activity, onClaim, isProcessing }) => {
+const BoosterCard: React.FC<BoosterCardProps> = ({ activity, onClaim, isProcessing, showENBModal }) => {
   const [claiming, setClaiming] = useState(false);
   const navigate = useNavigate();
   
@@ -468,6 +862,14 @@ const BoosterCard: React.FC<BoosterCardProps> = ({ activity, onClaim, isProcessi
           window.open(activity.action_url, '_blank');
           return;
         }
+      }
+    }
+    
+    // Special handling for ENB token holder booster
+    if (activity.id === "enb_token_holder" && activity.eligible === false) {
+      if (showENBModal) {
+        showENBModal();
+        return;
       }
     }
     
@@ -548,6 +950,8 @@ const BoosterCard: React.FC<BoosterCardProps> = ({ activity, onClaim, isProcessi
               </>
             ) : activity.id === 'enable_mobile_notifications' ? (
               isMobileApp() ? 'Enable Notifications' : 'Download Mobile App'
+            ) : activity.id === 'enb_token_holder' ? (
+              'Connect Wallet'
             ) : 'Complete Task'}
           </>
         );
@@ -562,6 +966,8 @@ const BoosterCard: React.FC<BoosterCardProps> = ({ activity, onClaim, isProcessi
               </>
             ) : activity.id === 'enable_mobile_notifications' ? (
               isMobileApp() ? 'Enable Notifications' : 'Download Mobile App'
+            ) : activity.id === 'enb_token_holder' ? (
+              'Connect Wallet'
             ) : 'Start Task'}
           </>
         );
@@ -862,7 +1268,7 @@ const MobileModalRenderer: React.FC<{
   const isMobile = useIsMobile();
   
   // Check for drawer elements and log their state
-  useReactEffect(() => {
+  useEffect(() => {
     if (!isOpen || !isMobile) return;
     
     console.log('MobileModalRenderer: Modal opened, checking elements...');
@@ -945,6 +1351,9 @@ const BoosterPage: React.FC = () => {
   
   // Add a ref to track if we're on mobile
   const isMobileRef = useRef<boolean>(false);
+  
+  // ENB Wallet Modal state
+  const [showENBWalletModal, setShowENBWalletModal] = useState(false);
   
   // Function to fetch all booster data
   const fetchData = async () => {
@@ -1179,6 +1588,7 @@ const BoosterPage: React.FC = () => {
       case 'join_discord': return 'MessageCircle';
       case 'enable_notifications': return 'Bell';
       case 'enable_mobile_notifications': return 'Bell';
+      case 'enb_token_holder': return 'Coins';
       case 'refer_friends': return 'UserPlus';
       case 'daily_tweet': return 'Share2';
       case 'daily_check_in': return 'Calendar';
@@ -1206,6 +1616,7 @@ const BoosterPage: React.FC = () => {
       case 'join_discord': return 'Join our Discord server.';
       case 'enable_notifications': return 'Enable push notifications.';
       case 'enable_mobile_notifications': return 'Download mobile app and enable notifications.';
+      case 'enb_token_holder': return 'Hold 1000 or more ENB tokens to unlock this boost.';
       case 'refer_friends': return 'Refer friends to earn boosts.';
       case 'daily_tweet': return 'Tweet about us daily.';
       case 'daily_check_in': return 'Check in daily for rewards.';
@@ -1830,6 +2241,7 @@ const BoosterPage: React.FC = () => {
                     activity={booster} 
                     onClaim={handleClaimBooster}
                     isProcessing={isProcessing}
+                    showENBModal={() => setShowENBWalletModal(true)}
                   />
                 </motion.div>
               ))}
@@ -1872,6 +2284,7 @@ const BoosterPage: React.FC = () => {
                     activity={booster} 
                     onClaim={handleClaimBooster}
                     isProcessing={isProcessing}
+                    showENBModal={() => setShowENBWalletModal(true)}
                   />
                 </motion.div>
               ))}
@@ -1970,6 +2383,16 @@ const BoosterPage: React.FC = () => {
           </Button>
         </div>
       </div>
+      
+      {/* ENB Wallet Modal */}
+      <ENBWalletModal
+        isOpen={showENBWalletModal}
+        onClose={() => setShowENBWalletModal(false)}
+        onSuccess={() => {
+          // Refresh booster data when wallet is successfully linked and eligible
+          fetchData();
+        }}
+      />
     </>
   );
 };

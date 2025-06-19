@@ -265,6 +265,57 @@ export interface GoldenBoosterClaimResponse {
 }
 
 /**
+ * ENB Wallet Status Response interface
+ */
+export interface ENBWalletStatusResponse {
+  success: boolean;
+  data: {
+    wallets: Array<{
+      wallet: string;
+      enb_balance: number;
+      date: string;
+      status: number;
+    }>;
+    max_balance: number;
+    eligible_for_booster: boolean;
+    required_balance: number;
+  };
+}
+
+/**
+ * ENB Wallet Submit Response interface
+ */
+export interface ENBWalletSubmitResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    wallet: string;
+    enb_balance: number;
+    eligible_for_booster: boolean;
+    required_balance: number;
+  };
+}
+
+/**
+ * ENB Wallet Refresh Response interface
+ */
+export interface ENBWalletRefreshResponse {
+  success: boolean;
+  message: string;
+  data: {
+    refresh_results: Array<{
+      wallet: string;
+      new_balance?: number;
+      success: boolean;
+      error?: string;
+    }>;
+    max_balance: number;
+    eligible_for_booster: boolean;
+    required_balance: number;
+  };
+}
+
+/**
  * Fetch status of all golden boosters
  * @returns Promise that resolves to golden booster status data
  */
@@ -346,6 +397,92 @@ export const claimAllGoldenBoosters = async (): Promise<GoldenBoosterClaimRespon
     return data;
   } catch (error) {
     console.error('Error claiming all golden boosters:', error);
+    return null;
+  }
+};
+
+/**
+ * Fetch ENB wallet status
+ * @returns Promise that resolves to ENB wallet status data
+ */
+export const fetchENBWalletStatus = async (): Promise<ENBWalletStatusResponse | null> => {
+  try {
+    // Use relative path for proxy
+    const response = await fetch(`/api/enb_wallet/status`, {
+      method: 'GET',
+      credentials: 'include', // Important for cookie-based auth
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Error fetching ENB wallet status:', errorData);
+      return null;
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching ENB wallet status:', error);
+    return null;
+  }
+};
+
+/**
+ * Submit ENB wallet address
+ * @param wallet The Ethereum wallet address to submit
+ * @returns Promise that resolves to the submit response
+ */
+export const submitENBWallet = async (wallet: string): Promise<ENBWalletSubmitResponse | null> => {
+  try {
+    // Use relative path for proxy
+    const response = await fetch(`/api/enb_wallet/submit`, {
+      method: 'POST',
+      credentials: 'include', // Important for cookie-based auth
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ wallet })
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Error submitting ENB wallet:', errorData);
+      return null;
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error submitting ENB wallet:', error);
+    return null;
+  }
+};
+
+/**
+ * Refresh ENB wallet balances
+ * @returns Promise that resolves to the refresh response
+ */
+export const refreshENBWalletBalances = async (): Promise<ENBWalletRefreshResponse | null> => {
+  try {
+    // Use relative path for proxy
+    const response = await fetch(`/api/enb_wallet/refresh`, {
+      method: 'POST',
+      credentials: 'include', // Important for cookie-based auth
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Error refreshing ENB wallet balances:', errorData);
+      return null;
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error refreshing ENB wallet balances:', error);
     return null;
   }
 };
