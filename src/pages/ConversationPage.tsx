@@ -600,6 +600,16 @@ const ConversationPage = () => {
     
     setSending(true);
 
+    // Check if this is a special command and trigger animation immediately for sender
+    if (isSpecialCommand(messageText.trim())) {
+      const command = extractCommand(messageText.trim());
+      if (command) {
+        const effectType = getEffectType(command);
+        console.log(`[ConversationPage] Triggering animation for special command: /${command} -> ${effectType}`);
+        setCurrentEffect(effectType);
+      }
+    }
+
     const optimisticId = Date.now();
     const optimisticMessage: Message = {
       id: optimisticId,
