@@ -184,14 +184,19 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
     );
   };
 
-  const handleLongPressStart = () => {
+  const handleLongPressStart = (e: React.MouseEvent | React.TouchEvent) => {
+    // Prevent default only for mouse events to avoid conflicts
+    if (e.type === 'mousedown') {
+      e.preventDefault();
+    }
+    
     const timer = setTimeout(() => {
       setShowActions(true);
       // Haptic feedback on mobile
       if ('vibrate' in navigator) {
-        navigator.vibrate(50);
+        navigator.vibrate([50, 25, 50]); // More noticeable vibration pattern
       }
-    }, 500); // 500ms long press
+    }, 300); // Reduced to 300ms for better mobile responsiveness
     setLongPressTimer(timer);
   };
 
@@ -284,7 +289,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
         <motion.div
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          className={`px-4 py-3 rounded-2xl shadow-sm transition-all duration-200 ${
+          className={`px-4 py-3 rounded-2xl shadow-sm transition-all duration-200 mobile-message-bubble ${
             isOwn
               ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
               : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 shadow-md'
@@ -294,6 +299,12 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
           onMouseUp={handleLongPressEnd}
           onTouchEnd={handleLongPressEnd}
           onMouseLeave={handleLongPressEnd}
+          style={{ 
+            touchAction: 'manipulation',
+            userSelect: 'none',
+            WebkitUserSelect: 'none',
+            WebkitTouchCallout: 'none' // Prevent iOS callout menu
+          }}
         >
           {renderReplyPreview()}
           {detectAndRenderMedia(message.content || message.message_content)}
@@ -306,7 +317,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
-              className={`absolute -top-12 ${isOwn ? 'right-0' : 'left-0'} z-10`}
+              className={`absolute -top-12 ${isOwn ? 'right-0' : 'left-0'} z-[9999]`}
             >
               <div className="bg-white dark:bg-gray-800 rounded-full shadow-lg border border-gray-200 dark:border-gray-700 p-1 flex items-center space-x-1">
                 <Button
@@ -334,7 +345,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-32 p-1" side={isOwn ? 'left' : 'right'}>
+            <PopoverContent className="w-32 p-1 z-[9999]" side={isOwn ? 'left' : 'right'}>
               <Button
                 size="sm"
                 variant="ghost"
@@ -368,7 +379,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
       {/* Click outside to close actions */}
       {showActions && (
         <div 
-          className="fixed inset-0 z-0" 
+          className="fixed inset-0 z-[9998]" 
           onClick={() => setShowActions(false)}
         />
       )}

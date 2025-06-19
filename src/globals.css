@@ -353,4 +353,68 @@ body {
   body:has([data-state="open"]) {
     overflow: hidden !important;
   }
-}
+
+  /* Mobile conversation page fixes */
+  .mobile-conversation-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+    overflow: hidden;
+  }
+
+  .mobile-messages-container {
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-y !important;
+    overscroll-behavior: contain !important;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .mobile-messages-container::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Improve mobile touch responsiveness */
+  .mobile-message-bubble {
+    touch-action: manipulation !important;
+    -webkit-touch-callout: none !important;
+    -webkit-user-select: none !important;
+    user-select: none !important;
+  }
+
+  /* Ensure keyboard doesn't affect layout on mobile */
+  @media (max-width: 768px) {
+    .mobile-input-container {
+      position: sticky !important;
+      bottom: 0 !important;
+      z-index: 21 !important;
+      background: rgba(255, 255, 255, 0.95) !important;
+      backdrop-filter: blur(10px) !important;
+    }
+
+    .dark .mobile-input-container {
+      background: rgba(17, 24, 39, 0.95) !important;
+    }
+
+    /* Prevent pull-to-refresh on conversation pages */
+    .mobile-conversation-container {
+      overscroll-behavior: none !important;
+      overscroll-behavior-y: none !important;
+    }
+
+    /* Ensure proper scrolling on mobile conversation pages */
+    .mobile-messages-container {
+      overscroll-behavior: contain !important;
+      overscroll-behavior-y: contain !important;
+      -webkit-overflow-scrolling: touch !important;
+    }
+
+    /* Prevent input zoom on iOS */
+    input[type="text"], input[type="search"], textarea {
+      font-size: 16px !important;
+    }
+  }
+} 

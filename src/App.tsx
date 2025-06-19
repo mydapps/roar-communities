@@ -93,9 +93,9 @@ function App() {
       <DeviceProvider>
       <PrivyAuthProvider>
         <ThemeProvider>
-          <ImageViewerProvider>
-            <PageViewTracker />
-            <ErrorBoundary>
+        <ImageViewerProvider>
+          <PageViewTracker />
+          <ErrorBoundary>
         <Routes>
           {/* Public routes - accessible outside MainLayout */}
           <Route path="/" element={<Index />} />

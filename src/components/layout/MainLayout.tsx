@@ -32,7 +32,9 @@ const MainLayout = () => {
     location.pathname === '/communities' || 
     location.pathname === '/feed' || 
     location.pathname === '/boosters' || // Add /boosters page
-    /^\/c\/[^/]+$/.test(location.pathname); // Matches /c/communityId or /c/communityName
+    location.pathname === '/messages' || // Disable on messages list page
+    /^\/c\/[^/]+$/.test(location.pathname) || // Matches /c/communityId or /c/communityName
+    /^\/messages\/[^/]+$/.test(location.pathname); // Disable on conversation pages /messages/conversationId
   
   useEffect(() => {
     // Check if user is logged in

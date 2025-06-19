@@ -254,6 +254,9 @@ const ConversationPage = () => {
           return;
         }
         
+        // Store current input focus state before updating messages
+        const wasInputFocused = inputRef.current === document.activeElement;
+        
       setMessages(prev => {
           // Simple duplicate check - only prevent true duplicates
           const existingMessage = prev.find(m => m.id === message.id);
@@ -270,11 +273,20 @@ const ConversationPage = () => {
           
           console.log('✅ Added new message via WebSocket, total messages:', newMessages.length);
         
-        // Auto-scroll to bottom when new message arrives
-        setTimeout(() => scrollToBottom(), 100);
-        
         return newMessages;
       });
+      
+      // Restore input focus if it was focused before the update
+      if (wasInputFocused && inputRef.current) {
+        setTimeout(() => {
+          if (inputRef.current) {
+            inputRef.current.focus();
+          }
+        }, 10);
+      }
+      
+      // Auto-scroll to bottom when new message arrives
+      setTimeout(() => scrollToBottom(), 100);
       
         // Auto-mark as read if conversation is active
         markAsRead(parseInt(conversationId), message.id);
@@ -297,13 +309,25 @@ const ConversationPage = () => {
     const handleMessageRead = (data: any) => {
       console.log('✅ WebSocket onMessageRead called:', data);
       if (data.conversationId === parseInt(conversationId)) {
-      setMessages(prev => 
-        prev.map(msg => 
-            msg.id === data.messageId 
-            ? { ...msg, is_read: true }
-            : msg
-        )
-      );
+        // Store current input focus state before updating messages
+        const wasInputFocused = inputRef.current === document.activeElement;
+        
+        setMessages(prev => 
+          prev.map(msg => 
+              msg.id === data.messageId 
+              ? { ...msg, is_read: true }
+              : msg
+          )
+        );
+        
+        // Restore input focus if it was focused before the update
+        if (wasInputFocused && inputRef.current) {
+          setTimeout(() => {
+            if (inputRef.current) {
+              inputRef.current.focus();
+            }
+          }, 10);
+        }
       }
     };
 
@@ -571,130 +595,168 @@ const ConversationPage = () => {
   };
 
   const handleSendMessage = () => {
-    // Prevent any form submission or page reload
-    if ((!messageText.trim() && !uploadedMedia) || !conversationId || sending) return;
+    if (!messageText.trim() && !uploadedMedia) return;
+    if (sending) return;
     
-    console.log('📤 Starting INSTANT message send...');
+    setSending(true);
 
-    // Check if it's a special command and trigger immediate effect
-    const trimmedMessage = messageText.trim();
-    if (isSpecialCommand(trimmedMessage)) {
-      const command = extractCommand(trimmedMessage);
-      if (command) {
-        const effectType = getEffectType(command);
-        setCurrentEffect(effectType);
-      }
-    }
-
-    // INSTANT OPTIMISTIC UI - Absolutely no delays or async operations
-    const finalContent = messageText.trim() + (uploadedMedia?.markdown ? (messageText.trim() ? "\n\n" : "") + uploadedMedia.markdown : "");
-      const userAvatar = localStorage.getItem('dapps_user_avatar');
-      const avatarUrl = userAvatar ? `https://img.dapps.co/avatar/${userAvatar}.svg` : 'https://img.dapps.co/avatar/default.svg';
-
-    const optimisticId = Date.now() + Math.random(); // Ensure unique ID
+    const optimisticId = Date.now();
     const optimisticMessage: Message = {
       id: optimisticId,
-        conversation_id: conversationId,
+      conversation_id: conversationId!,
       sender_id: currentUserId,
-        sender_handle: currentUserHandle,
-        sender_avatar: avatarUrl,
-        message_content: finalContent,
+      sender_handle: currentUserHandle,
+      sender_avatar: '',
+      message_content: messageText,
       xmtp_message_id: `optimistic_${optimisticId}`,
-        message_type: 'text',
-        is_read: false,
-        created_at: new Date().toISOString(),
+      message_type: 'text',
+      is_read: false,
+      created_at: new Date().toISOString(),
+      reply_to: replyingTo ? {
+        id: replyingTo.id,
+        content: replyingTo.content || replyingTo.message_content || '',
+        sender_id: replyingTo.sender_id || 0,
+        sender_handle: replyingTo.sender?.handle || replyingTo.sender_handle || 'Unknown'
+      } : undefined,
       isOptimistic: true,
-        reply_to: replyingTo ? {
-          id: replyingTo.id,
-          content: replyingTo.content || replyingTo.message_content || '',
-          sender_id: replyingTo.sender_id,
-          sender_handle: replyingTo.sender_handle || replyingTo.sender?.handle || ''
-        } : null,
-        content: finalContent,
-        sender: {
+      // Compatibility fields
+      content: messageText,
+      sender: {
         id: currentUserId,
-          handle: currentUserHandle,
-          avatar: avatarUrl
+        handle: currentUserHandle,
+        avatar: ''
       }
     };
-      
-    // Store values before clearing
-    const replyToId = replyingTo?.id;
+
+    // Add optimistic message immediately
+    setMessages(prev => [...prev, optimisticMessage]);
     
-    console.log('⚡ INSTANT: Clearing input and adding optimistic message...');
-      
-    // INSTANT: Clear input and state FIRST - completely synchronous
+    // Clear input immediately for better UX
+    const messageToSend = messageText;
+    const mediaToSend = uploadedMedia;
+    const replyToSend = replyingTo;
+    
     setMessageText('');
     setUploadedMedia(null);
     setReplyingTo(null);
     
-    // INSTANT: Add message to UI immediately - no async operations, no delays
-    setMessages(prev => {
-      const newMessages = [...prev, optimisticMessage];
-      console.log('✅ INSTANT: Message added to UI in <1ms, total messages:', newMessages.length);
+    // Keep input focused on mobile to prevent keyboard from closing
+    if (inputRef.current) {
+      // Small delay to ensure input is cleared first
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+        }
+      }, 10);
+    }
     
-      // INSTANT: Scroll to bottom immediately (synchronous)
-      requestAnimationFrame(() => messagesEndRef.current?.scrollIntoView({ behavior: 'auto' }));
-      
-      return newMessages;
-    });
-      
-    // INSTANT: Haptic feedback
-    if ('vibrate' in navigator) {
-      navigator.vibrate(50);
-    }
-      
-    console.log('🚀 INSTANT: UI updated in <1ms, starting background API call...');
-      
-    // BACKGROUND: Send to server (completely async, zero UI impact)
-    // REMOVED setTimeout(0) - this was causing the delay!
-    (async () => {
+    // Scroll to bottom
+    scrollToBottom(true);
+
+    // Send message in background (non-blocking)
+    const sendMessageAsync = async () => {
       try {
-        const success = sendWebSocketMessage(parseInt(conversationId), finalContent, replyToId);
+        let messageContent = messageToSend;
         
-        if (!success) {
-          // WebSocket not connected, fallback to REST API
-          console.warn('⚠️ WebSocket not connected, falling back to REST API');
-          const result = await sendMessage(conversationId, finalContent, replyToId);
+        if (mediaToSend) {
+          if (mediaToSend.type === 'image') {
+            messageContent = `![](${mediaToSend.url})${messageToSend ? '\n' + messageToSend : ''}`;
+          } else if (mediaToSend.type === 'video') {
+            messageContent = `![video](${mediaToSend.url})${messageToSend ? '\n' + messageToSend : ''}`;
+          }
+        }
+
+        const response = await sendMessage(
+          conversationId!,
+          messageContent,
+          replyToSend?.id
+        );
+
+        if (response.success && response.message) {
+          // Transform the response message to our interface
+          const serverMessage: Message = {
+            id: response.message.id,
+            conversation_id: response.message.conversation_id.toString(),
+            sender_id: response.message.sender_id,
+            sender_handle: currentUserHandle,
+            sender_avatar: '',
+            message_content: response.message.message_content,
+            xmtp_message_id: `msg_${response.message.id}`,
+            message_type: response.message.message_type,
+            is_read: false,
+            created_at: response.message.created_at,
+            reply_to: replyToSend ? {
+              id: replyToSend.id,
+              content: replyToSend.content || replyToSend.message_content || '',
+              sender_id: replyToSend.sender_id || 0,
+              sender_handle: replyToSend.sender?.handle || 'Unknown'
+            } : undefined,
+            isOptimistic: false,
+            content: response.message.message_content,
+            sender: {
+              id: response.message.sender_id,
+              handle: currentUserHandle,
+              avatar: ''
+            }
+          };
+
+          // Store current input focus state before updating messages
+          const wasInputFocused = inputRef.current === document.activeElement;
           
-    if (result.success && result.message) {
-        // SUCCESS: Silently update message ID in background
-            console.log('✅ REST API success, updating message ID in background');
-        setMessages(prev => prev.map(msg => 
-          msg.id === optimisticId ? {
-            ...msg,
-        id: result.message.id,
-        sender_id: result.message.sender_id,
-        created_at: result.message.created_at,
-            xmtp_message_id: `xmtp_${result.message.id}`,
-            isOptimistic: false
-          } : msg
-        ));
-      } else {
-        // FAILURE: Remove optimistic message
-            console.error('❌ REST API failed, removing optimistic message');
-        setMessages(prev => prev.filter(msg => msg.id !== optimisticId));
-        
-        if (result.error === 'You cannot initiate a conversation with this user') {
-          toast.error('This user has blocked you and you cannot send messages to them.');
-    } else {
-      toast.error(result.error || 'Failed to send message');
-    }
-    }
+          // Replace optimistic message with real message
+          setMessages(prev => prev.map(msg => 
+            msg.id === optimisticId ? serverMessage : msg
+          ));
+          
+          // Restore input focus if it was focused before the update
+          if (wasInputFocused && inputRef.current) {
+            setTimeout(() => {
+              if (inputRef.current) {
+                inputRef.current.focus();
+              }
+            }, 10);
+          }
         } else {
-          // WebSocket message sent successfully
-          console.log('✅ Message sent via WebSocket successfully');
+          // Store current input focus state before updating messages
+          const wasInputFocused = inputRef.current === document.activeElement;
+          
+          // Remove failed optimistic message and show error
+          setMessages(prev => prev.filter(msg => msg.id !== optimisticId));
+          toast.error(response.error || 'Failed to send message');
+          
+          // Restore input focus if it was focused before the update
+          if (wasInputFocused && inputRef.current) {
+            setTimeout(() => {
+              if (inputRef.current) {
+                inputRef.current.focus();
+              }
+            }, 10);
+          }
         }
       } catch (error) {
-      // ERROR: Remove optimistic message
-      console.error('❌ Error sending message:', error);
-      setMessages(prev => prev.filter(msg => msg.id !== optimisticId));
-    toast.error('Failed to send message');
-      } finally {
-      // Refresh payment status after sending message (to detect replies)
-      refreshPaymentStatusAfterMessage();
+        console.error('Send message error:', error);
+        
+        // Store current input focus state before updating messages
+        const wasInputFocused = inputRef.current === document.activeElement;
+        
+        setMessages(prev => prev.filter(msg => msg.id !== optimisticId));
+        toast.error('Failed to send message');
+        
+        // Restore input focus if it was focused before the update
+        if (wasInputFocused && inputRef.current) {
+          setTimeout(() => {
+            if (inputRef.current) {
+              inputRef.current.focus();
+            }
+          }, 10);
+        }
       }
-    })();
+    };
+
+    // Execute send in background
+    sendMessageAsync().finally(() => {
+      setSending(false);
+    });
   };
 
   const handleEmojiClick = (emojiData: EmojiClickData) => {
@@ -997,11 +1059,11 @@ const ConversationPage = () => {
     );
   }
 
-  return (
+      return (
         <div className="flex flex-col bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 
                      h-screen md:h-[calc(100vh-4rem)] 
                      fixed md:relative top-0 md:top-16 left-0 right-0 bottom-0 md:left-auto md:right-auto md:bottom-auto
-                     z-[1000] md:z-auto overflow-hidden"
+                     z-[1000] md:z-auto overflow-hidden mobile-conversation-container md:relative"
     >
       {/* iOS Safe Area Top Padding */}
       <div className="h-safe-top md:h-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg"></div>
@@ -1181,12 +1243,16 @@ const ConversationPage = () => {
       {/* Messages Area */}
       <div 
         ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto p-4 space-y-2"
+        className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-hide mobile-messages-container"
         style={{
           flex: 1,
           overflowY: 'auto',
           overflowX: 'hidden',
-          WebkitOverflowScrolling: 'touch'
+          WebkitOverflowScrolling: 'touch',
+          touchAction: 'pan-y', // Allow vertical scrolling on touch devices
+          overscrollBehavior: 'contain', // Prevent overscroll from affecting parent
+          height: '100%', // Ensure proper height
+          minHeight: 0 // Allow flex child to shrink
         }}
       >
         <AnimatePresence>
@@ -1307,7 +1373,13 @@ const ConversationPage = () => {
       <motion.div
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="p-4 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-t border-gray-200 dark:border-gray-700 flex-shrink-0 sticky bottom-0 md:relative md:bottom-auto z-20"
+        className="p-4 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-t border-gray-200 dark:border-gray-700 flex-shrink-0 sticky bottom-0 md:relative md:bottom-auto z-20 mobile-input-container"
+        style={{
+          // Ensure input area stays in place on mobile keyboards
+          position: 'sticky',
+          bottom: 0,
+          zIndex: 20
+        }}
       >
         {/* Media Preview */}
         {uploadedMedia && (
