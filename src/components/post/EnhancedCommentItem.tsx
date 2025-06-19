@@ -415,14 +415,22 @@ export const EnhancedCommentItem = ({
     }
   };
   
-  const getAvatarUrl = (avatarPath: string) => {
+  const getAvatarUrl = (avatarPath: string | null | undefined) => {
+    // Handle null, undefined, or empty values
+    if (!avatarPath || avatarPath === 'null' || avatarPath === 'undefined') {
+      return `https://img.dapps.co/avatar/default.svg`;
+    }
+    
+    // Check if it's already a full URL
     if (avatarPath.includes('https://img.dapps.co/avatar/')) {
       return avatarPath;
     }
+    
     return `https://img.dapps.co/avatar/${avatarPath}.svg`;
   };
   
-  const formatUsername = (handle: string) => {
+  const formatUsername = (handle: string | null | undefined) => {
+    if (!handle) return '@unknown';
     return '@' + handle.split('.')[0];
   };
 
@@ -430,7 +438,7 @@ export const EnhancedCommentItem = ({
     e.preventDefault(); // Prevent navigation from Link
     e.stopPropagation();
 
-    const usernameToMention = comment.handle.split('.')[0];
+    const usernameToMention = comment.handle?.split('.')[0] || 'unknown';
 
     if (isReplying && !isMobile && replyInputRef.current) {
       // Scenario A: Reply box within this item is open
@@ -536,17 +544,17 @@ export const EnhancedCommentItem = ({
       className={`${level > 1 ? 'ml-8 border-l-2 border-primary/10 pl-4' : ''} scroll-mt-4`}
     >
       <div className="flex gap-3 group">
-        <Link to={`/u/${comment.handle.split('.')[0]}`} onClick={(e) => e.stopPropagation()}>
+        <Link to={`/u/${comment.handle?.split('.')[0] || 'unknown'}`} onClick={(e) => e.stopPropagation()}>
           <Avatar className="h-8 w-8 flex-shrink-0">
             <AvatarImage src={getAvatarUrl(comment.avatar_url)} />
-            <AvatarFallback>{comment.handle[0].toUpperCase()}</AvatarFallback>
+            <AvatarFallback>{comment.handle?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
           </Avatar>
         </Link>
         
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <Link 
-              to={`/u/${comment.handle.split('.')[0]}`}
+              to={`/u/${comment.handle?.split('.')[0] || 'unknown'}`}
               className="font-medium text-sm hover:underline"
               onClick={handleUsernameClick}
             >

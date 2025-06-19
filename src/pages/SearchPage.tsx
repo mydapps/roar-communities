@@ -721,7 +721,7 @@ const UserResult = ({ user }: UserResultProps) => {
             >
               <Avatar className="h-16 w-16 border-2 border-border/30 group-hover:border-primary/30 transition-colors">
                 <AvatarImage src={user.avatar_url} />
-                <AvatarFallback className="bg-primary/10 text-primary">{user.handle[0].toUpperCase()}</AvatarFallback>
+                                        <AvatarFallback className="bg-primary/10 text-primary">{user.handle?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
           </Avatar>
             </motion.div>
             <motion.div
@@ -760,7 +760,7 @@ const PostSearchResult = ({ post, onClick }: PostSearchResultProps) => {
               >
                 <Avatar className="h-10 w-10 border border-border/50 group-hover:border-primary/30 transition-colors">
                   <AvatarImage src={post.author.avatar_url} />
-                  <AvatarFallback className="bg-primary/10 text-primary">{post.author.handle[0].toUpperCase()}</AvatarFallback>
+                                        <AvatarFallback className="bg-primary/10 text-primary">{post.author.handle?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
                 </Avatar>
               </motion.div>
               <motion.div

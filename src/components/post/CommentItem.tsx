@@ -111,12 +111,23 @@ export const CommentItem = ({
   const canReply = level < 3;
   
   // Format avatar URL
-  const getAvatarUrl = (avatarPath: string) => {
+  const getAvatarUrl = (avatarPath: string | null | undefined) => {
+    // Handle null, undefined, or empty values
+    if (!avatarPath || avatarPath === 'null' || avatarPath === 'undefined') {
+      return `https://img.dapps.co/avatar/default.svg`;
+    }
+    
+    // Check if it's already a full URL
+    if (avatarPath.includes('https://img.dapps.co/avatar/')) {
+      return avatarPath;
+    }
+    
     return `https://img.dapps.co/avatar/${avatarPath}.svg`;
   };
   
   // Format username
-  const formatUsername = (handle: string) => {
+  const formatUsername = (handle: string | null | undefined) => {
+    if (!handle) return '@unknown';
     return '@' + handle.split('.')[0];
   };
   
@@ -174,7 +185,7 @@ export const CommentItem = ({
       <div className={`flex gap-3 group ${level > 1 ? 'border-l-2 border-primary/20 pl-3' : ''}`}>
         <Avatar className="h-10 w-10 shrink-0 border border-muted/60">
           <AvatarImage src={getAvatarUrl(comment.avatar)} />
-          <AvatarFallback>{comment.handle[0].toUpperCase()}</AvatarFallback>
+          <AvatarFallback>{comment.handle?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
         </Avatar>
         
         <div className="flex-1">
