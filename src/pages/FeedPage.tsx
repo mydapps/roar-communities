@@ -13,6 +13,7 @@ import NotificationPermissionModal from '@/components/notifications/Notification
 import { useDeviceNotifications } from '@/hooks/useDeviceNotifications';
 import { useNavigate } from 'react-router-dom';
 import { useUsernameCheck } from '@/hooks/useUsernameCheck';
+import { cn } from '@/lib/utils';
 
 const SUGGESTION_INTERVAL = 7;
 const MIN_POSTS_BEFORE_SUGGESTION = 3;
@@ -269,7 +270,20 @@ const FeedPage = () => {
   }, []);
 
   return (
-    <div className="max-w-2xl mx-auto pt-8 pb-20 px-4">
+    <div className={cn(
+      // Responsive feed container strategy
+      "mx-auto pt-8 pb-20 px-4",
+      // Mobile: full width with padding
+      "w-full max-w-none",
+      // Tablet: moderate constraint for readability
+      "sm:max-w-2xl",
+      // Desktop: wider but still readable
+      "md:max-w-3xl lg:max-w-4xl",
+      // Large desktop: optimal reading width
+      "xl:max-w-4xl 2xl:max-w-5xl",
+      // Ultra-wide: cap for optimal reading experience
+      "3xl:max-w-[900px]"
+    )}>
       <div className="mb-6">
         <CreatePostCard onPostCreated={handleNewPost} />
       </div>

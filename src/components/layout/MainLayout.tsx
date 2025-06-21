@@ -125,7 +125,19 @@ const MainLayout = () => {
               mainContentClass, 
               isMobileAppUser ? "pt-16" : "" // Keep mobile app top padding
             )}>
-              <div className="container py-6 px-4 sm:px-6 max-w-5xl mx-auto animate-fade-in">
+              <div className={cn(
+                "py-6 px-4 sm:px-6 animate-fade-in",
+                // Responsive container strategy for different screen sizes
+                "mx-auto", // Center the container
+                // Mobile: full width with padding
+                "w-full max-w-none sm:max-w-none",
+                // Tablet: moderate constraint
+                "md:max-w-4xl lg:max-w-5xl",
+                // Desktop: wider but not unlimited
+                "xl:max-w-6xl 2xl:max-w-7xl",
+                // Ultra-wide: cap at reasonable reading width
+                "3xl:max-w-[1600px]"
+              )}>
                 <Outlet />
               </div>
             </main>
@@ -140,7 +152,19 @@ const MainLayout = () => {
               mainContentClass, 
               isMobileAppUser ? "pt-16" : "" // Keep mobile app top padding
             )}>
-              <div className="container py-6 px-4 sm:px-6 max-w-5xl mx-auto animate-fade-in">
+              <div className={cn(
+                "py-6 px-4 sm:px-6 animate-fade-in",
+                // Responsive container strategy for different screen sizes
+                "mx-auto", // Center the container
+                // Mobile: full width with padding
+                "w-full max-w-none sm:max-w-none",
+                // Tablet: moderate constraint
+                "md:max-w-4xl lg:max-w-5xl",
+                // Desktop: wider but not unlimited
+                "xl:max-w-6xl 2xl:max-w-7xl",
+                // Ultra-wide: cap at reasonable reading width
+                "3xl:max-w-[1600px]"
+              )}>
                 <Outlet />
               </div>
             </main>
