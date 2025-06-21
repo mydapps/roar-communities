@@ -5,6 +5,7 @@ import { Eye, CheckCircle2, Play, Reply, MoreHorizontal } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { useImageViewer } from '@/components/contexts/ImageViewerContext';
 import { type Message, type ReplyToMessage } from '@/utils/messagingApi';
 
 interface MessageBubbleProps {
@@ -47,8 +48,11 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   onReplyClick,
   replyToMessage,
 }) => {
-  const [mediaDialogOpen, setMediaDialogOpen] = useState(false);
-  const [selectedMedia, setSelectedMedia] = useState<{ url: string; type: 'image' | 'video' } | null>(null);
+  const imageViewerContext = useImageViewer();
+  console.log('MessageBubble: imageViewerContext:', imageViewerContext);
+  const { openImageViewer } = imageViewerContext;
+  const [showVideoDialog, setShowVideoDialog] = useState(false);
+  const [selectedVideoUrl, setSelectedVideoUrl] = useState<string | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [showActions, setShowActions] = useState(false);
   const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
@@ -126,20 +130,52 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
         {parts.map((part, index) => {
           if (!part) return null;
 
-          const imageMatch = imageRegex.exec(part);
+          const imageMatch = imageRegex.exec(part); 
           if (imageMatch) {
             const url = imageMatch[1];
             return (
-              <div key={index} className="relative">
+              <div 
+                key={index} 
+                className="relative"
+                data-media-container="true"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  console.log('Image container clicked:', url);
+                  console.log('Opening ImageViewer with images:', [url]);
+                  console.log('imageViewerContext:', imageViewerContext);
+                  try {
+                    openImageViewer([url], 0);
+                    console.log('ImageViewer opened successfully');
+                  } catch (error) {
+                    console.error('Error opening ImageViewer:', error);
+                  }
+                }}
+                onTouchEnd={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  console.log('Image container touched:', url);
+                  console.log('Opening ImageViewer with images:', [url]);
+                  console.log('imageViewerContext:', imageViewerContext);
+                  try {
+                    openImageViewer([url], 0);
+                    console.log('ImageViewer opened successfully');
+                  } catch (error) {
+                    console.error('Error opening ImageViewer:', error);
+                  }
+                }}
+                style={{ 
+                  touchAction: 'manipulation',
+                  cursor: 'pointer',
+                  zIndex: 10,
+                  position: 'relative'
+                }}
+              >
                 <img
                   src={url}
                   alt="Shared image"
-                  className="max-w-full h-auto rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                  className="max-w-full h-auto rounded-lg hover:opacity-90 transition-opacity pointer-events-none"
                   style={{ maxHeight: '200px' }}
-                  onClick={() => {
-                    setSelectedMedia({ url, type: 'image' });
-                    setMediaDialogOpen(true);
-                  }}
                 />
               </div>
             );
@@ -149,8 +185,44 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
           if (videoMatch) {
             const url = videoMatch[1];
             return (
-              <div key={index} className="relative">
-                <div className="relative">
+              <div 
+                key={index} 
+                className="relative"
+                data-media-container="true"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  console.log('Video container clicked:', url);
+                  setSelectedVideoUrl(url);
+                  setShowVideoDialog(true);
+                }}
+                onTouchStart={(e) => {
+                  e.stopPropagation();
+                  // Store the touch start to ensure it's a tap, not a scroll
+                  (e.currentTarget as any).touchStartTime = Date.now();
+                }}
+                onTouchEnd={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  
+                  // Only trigger if it's a quick tap (not a long press or scroll)
+                  const touchStartTime = (e.currentTarget as any).touchStartTime;
+                  const touchDuration = Date.now() - (touchStartTime || 0);
+                  
+                  if (touchDuration < 500) { // Less than 500ms = tap
+                    console.log('Video container touched:', url);
+                    setSelectedVideoUrl(url);
+                    setShowVideoDialog(true);
+                  }
+                }}
+                style={{ 
+                  touchAction: 'manipulation',
+                  cursor: 'pointer',
+                  zIndex: 10,
+                  position: 'relative'
+                }}
+              >
+                <div className="relative pointer-events-none">
                   <video
                     src={url}
                     className="max-w-full h-auto rounded-lg"
@@ -158,13 +230,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
                     controls={false}
                     poster={`${url}?poster=true`}
                   />
-                  <div 
-                    className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 rounded-lg cursor-pointer hover:bg-opacity-40 transition-all"
-                    onClick={() => {
-                      setSelectedMedia({ url, type: 'video' });
-                      setMediaDialogOpen(true);
-                    }}
-                  >
+                  <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 rounded-lg hover:bg-opacity-40 transition-all">
                     <div className="bg-white bg-opacity-80 rounded-full p-3">
                       <Play className="h-6 w-6 text-black" />
                     </div>
@@ -283,7 +349,14 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className={`flex ${isOwn ? 'justify-end' : 'justify-start'} group relative`}
-      onClick={() => setShowDetails(!showDetails)}
+      onClick={(e) => {
+        // Only toggle details if the click is not on media content
+        const target = e.target as HTMLElement;
+        const isMediaClick = target.closest('[data-media-container="true"]');
+        if (!isMediaClick) {
+          setShowDetails(!showDetails);
+        }
+      }}
     >
       <div className={`max-w-xs lg:max-w-md ${isOwn ? 'ml-auto' : 'mr-auto'} relative`}>
         <motion.div
@@ -294,10 +367,34 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
               ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
               : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 shadow-md'
           }`}
-          onMouseDown={handleLongPressStart}
-          onTouchStart={handleLongPressStart}
-          onMouseUp={handleLongPressEnd}
-          onTouchEnd={handleLongPressEnd}
+          onMouseDown={(e) => {
+            const target = e.target as HTMLElement;
+            const isMediaClick = target.closest('[data-media-container="true"]');
+            if (!isMediaClick) {
+              handleLongPressStart(e);
+            }
+          }}
+          onTouchStart={(e) => {
+            const target = e.target as HTMLElement;
+            const isMediaClick = target.closest('[data-media-container="true"]');
+            if (!isMediaClick) {
+              handleLongPressStart(e);
+            }
+          }}
+          onMouseUp={(e) => {
+            const target = e.target as HTMLElement;
+            const isMediaClick = target.closest('[data-media-container="true"]');
+            if (!isMediaClick) {
+              handleLongPressEnd();
+            }
+          }}
+          onTouchEnd={(e) => {
+            const target = e.target as HTMLElement;
+            const isMediaClick = target.closest('[data-media-container="true"]');
+            if (!isMediaClick) {
+              handleLongPressEnd();
+            }
+          }}
           onMouseLeave={handleLongPressEnd}
           style={{ 
             touchAction: 'manipulation',
@@ -384,24 +481,25 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
         />
       )}
 
-      <Dialog open={mediaDialogOpen} onOpenChange={setMediaDialogOpen}>
+      {/* Video Dialog - Images now use the global ImageViewer */}
+      <Dialog open={showVideoDialog} onOpenChange={setShowVideoDialog}>
         <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden">
-          {selectedMedia && (
+          {selectedVideoUrl && (
             <div className="flex items-center justify-center bg-black">
-              {selectedMedia.type === 'image' ? (
-                <img
-                  src={selectedMedia.url}
-                  alt="Expanded media"
-                  className="max-w-full max-h-[90vh] object-contain"
-                />
-              ) : (
-                <video
-                  src={selectedMedia.url}
-                  className="max-w-full max-h-[90vh] object-contain"
-                  controls
-                  autoPlay
-                />
-              )}
+              <video
+                src={selectedVideoUrl}
+                className="max-w-full max-h-[90vh] object-contain"
+                controls
+                autoPlay
+                playsInline
+                onLoadStart={(event) => {
+                  // Ensure video can play on mobile
+                  const video = event.target as HTMLVideoElement;
+                  if (video) {
+                    video.muted = true; // Start muted for autoplay policies
+                  }
+                }}
+              />
             </div>
           )}
         </DialogContent>

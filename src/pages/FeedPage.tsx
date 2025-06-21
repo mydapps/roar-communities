@@ -11,6 +11,8 @@ import { usePreventZoom } from '@/hooks/usePreventZoom';
 import { ProfileSuggestionModule } from '@/components/suggestions/ProfileSuggestionModule';
 import NotificationPermissionModal from '@/components/notifications/NotificationPermissionModal';
 import { useDeviceNotifications } from '@/hooks/useDeviceNotifications';
+import { useNavigate } from 'react-router-dom';
+import { useUsernameCheck } from '@/hooks/useUsernameCheck';
 
 const SUGGESTION_INTERVAL = 7;
 const MIN_POSTS_BEFORE_SUGGESTION = 3;
@@ -18,6 +20,10 @@ const POSTS_PER_PAGE = 10;
 
 const FeedPage = () => {
   usePreventZoom();
+  const navigate = useNavigate();
+  
+  // Check if username is set, redirect to avatar-handle if not
+  useUsernameCheck();
 
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

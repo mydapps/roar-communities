@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { X, ZoomIn, ZoomOut, RotateCcw, ChevronLeft, ChevronRight, Download, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogPortal, DialogOverlay } from '@/components/ui/dialog';
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 
 interface ImageViewerProps {
   images: string[];
@@ -19,6 +21,7 @@ interface TransformState {
 }
 
 export const ImageViewer = ({ images, selectedImageIndex, open, onOpenChange }: ImageViewerProps) => {
+  console.log('ImageViewer render - open:', open, 'images:', images, 'selectedIndex:', selectedImageIndex);
   const [currentIndex, setCurrentIndex] = useState(selectedImageIndex);
   const [transform, setTransform] = useState<TransformState>({ scale: 1, translateX: 0, translateY: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -50,6 +53,37 @@ export const ImageViewer = ({ images, selectedImageIndex, open, onOpenChange }: 
     resetTransform();
     setIsLoading(true);
   }, [currentIndex]);
+
+  // Mobile body scroll lock
+  useEffect(() => {
+    if (open) {
+      // Lock body scroll on mobile when ImageViewer is open
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.width = '100%';
+      document.body.style.height = '100%';
+      
+      // Add mobile-specific attributes
+      document.body.setAttribute('data-image-viewer-open', 'true');
+    } else {
+      // Restore body scroll
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.height = '';
+      
+      document.body.removeAttribute('data-image-viewer-open');
+    }
+
+    return () => {
+      // Cleanup on unmount
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.width = '';
+      document.body.style.height = '';
+      document.body.removeAttribute('data-image-viewer-open');
+    };
+  }, [open]);
 
   // Auto-hide controls after inactivity
   useEffect(() => {
@@ -310,168 +344,215 @@ export const ImageViewer = ({ images, selectedImageIndex, open, onOpenChange }: 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-none w-screen h-screen p-0 border-none bg-black/95">
-        <div 
-          ref={containerRef}
-          className="relative w-full h-full flex items-center justify-center overflow-hidden cursor-grab active:cursor-grabbing"
-          onClick={handleContainerClick}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
+      <DialogPortal>
+        <DialogOverlay className="fixed inset-0 z-[9999] bg-black/95 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+        <DialogPrimitive.Content
+          className={cn(
+            "fixed inset-0 z-[9999] grid w-screen h-screen p-0 border-none bg-transparent shadow-none duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+            "focus:outline-none",
+            // Mobile-specific styles
+            "touch-none select-none overscroll-none",
+            // Ensure proper mobile rendering
+            "@media (max-width: 768px): fixed inset-0 !important"
+          )}
+          style={{
+            maxWidth: 'none',
+            maxHeight: 'none',
+            transform: 'none',
+            left: '0',
+            top: '0',
+            right: '0',
+            bottom: '0',
+            width: '100vw',
+            height: '100vh',
+            position: 'fixed',
+            zIndex: 9999
+          }}
         >
-          {/* Close button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn(
-              "absolute right-4 top-4 z-20 h-10 w-10 bg-black/50 text-white rounded-full hover:bg-black/70 transition-opacity duration-300",
-              showControls || transform.scale === 1 ? "opacity-100" : "opacity-0"
-            )}
-            onClick={() => onOpenChange(false)}
+          <VisuallyHidden>
+            <DialogTitle>Image Viewer</DialogTitle>
+          </VisuallyHidden>
+          <div 
+            ref={containerRef}
+            className="relative w-full h-full flex items-center justify-center overflow-hidden cursor-grab active:cursor-grabbing bg-black/95 touch-manipulation"
+            onClick={handleContainerClick}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            style={{
+              // Ensure full coverage on mobile
+              position: 'fixed',
+              inset: 0,
+              zIndex: 9999,
+              // Prevent mobile scrolling/zooming issues
+              touchAction: 'none',
+              WebkitTouchCallout: 'none',
+              WebkitUserSelect: 'none',
+              userSelect: 'none',
+              overscrollBehavior: 'none'
+            }}
           >
-            <X className="h-5 w-5" />
-          </Button>
+            {/* Close button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "absolute right-4 top-4 z-[10000] h-10 w-10 bg-black/50 text-white rounded-full hover:bg-black/70 transition-opacity duration-300 touch-manipulation",
+                showControls || transform.scale === 1 ? "opacity-100" : "opacity-0"
+              )}
+              onClick={() => onOpenChange(false)}
+              style={{ zIndex: 10000 }}
+            >
+              <X className="h-5 w-5" />
+            </Button>
 
-          {/* Navigation arrows */}
-          {images.length > 1 && (
-            <>
+            {/* Navigation arrows */}
+            {images.length > 1 && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    "absolute left-4 top-1/2 -translate-y-1/2 z-[10000] h-12 w-12 bg-black/50 text-white rounded-full hover:bg-black/70 transition-opacity duration-300 touch-manipulation",
+                    showControls || transform.scale === 1 ? "opacity-100" : "opacity-0"
+                  )}
+                  onClick={goToPrevious}
+                  style={{ zIndex: 10000 }}
+                >
+                  <ChevronLeft className="h-6 w-6" />
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    "absolute right-4 top-1/2 -translate-y-1/2 z-[10000] h-12 w-12 bg-black/50 text-white rounded-full hover:bg-black/70 transition-opacity duration-300 touch-manipulation",
+                    showControls || transform.scale === 1 ? "opacity-100" : "opacity-0"
+                  )}
+                  onClick={goToNext}
+                  style={{ zIndex: 10000 }}
+                >
+                  <ChevronRight className="h-6 w-6" />
+                </Button>
+              </>
+            )}
+
+            {/* Bottom controls */}
+            <div className={cn(
+              "absolute bottom-4 left-1/2 -translate-x-1/2 z-[10000] flex items-center gap-2 bg-black/50 backdrop-blur-sm rounded-full px-4 py-2 transition-opacity duration-300 touch-manipulation",
+              showControls || transform.scale === 1 ? "opacity-100" : "opacity-0"
+            )}>
               <Button
                 variant="ghost"
                 size="icon"
-                className={cn(
-                  "absolute left-4 top-1/2 -translate-y-1/2 z-20 h-12 w-12 bg-black/50 text-white rounded-full hover:bg-black/70 transition-opacity duration-300",
-                  showControls || transform.scale === 1 ? "opacity-100" : "opacity-0"
-                )}
-                onClick={goToPrevious}
+                className="h-8 w-8 text-white hover:bg-white/20 touch-manipulation"
+                onClick={zoomOut}
+                disabled={transform.scale <= 1}
               >
-                <ChevronLeft className="h-6 w-6" />
+                <ZoomOut className="h-4 w-4" />
               </Button>
               
               <Button
                 variant="ghost"
                 size="icon"
-                className={cn(
-                  "absolute right-4 top-1/2 -translate-y-1/2 z-20 h-12 w-12 bg-black/50 text-white rounded-full hover:bg-black/70 transition-opacity duration-300",
-                  showControls || transform.scale === 1 ? "opacity-100" : "opacity-0"
-                )}
-                onClick={goToNext}
+                className="h-8 w-8 text-white hover:bg-white/20 touch-manipulation"
+                onClick={zoomIn}
+                disabled={transform.scale >= 5}
               >
-                <ChevronRight className="h-6 w-6" />
+                <ZoomIn className="h-4 w-4" />
               </Button>
-            </>
-          )}
-
-          {/* Bottom controls */}
-          <div className={cn(
-            "absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 bg-black/50 backdrop-blur-sm rounded-full px-4 py-2 transition-opacity duration-300",
-            showControls || transform.scale === 1 ? "opacity-100" : "opacity-0"
-          )}>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-white hover:bg-white/20"
-              onClick={zoomOut}
-              disabled={transform.scale <= 1}
-            >
-              <ZoomOut className="h-4 w-4" />
-            </Button>
-            
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-white hover:bg-white/20"
-              onClick={zoomIn}
-              disabled={transform.scale >= 5}
-            >
-              <ZoomIn className="h-4 w-4" />
-            </Button>
-            
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-white hover:bg-white/20"
-              onClick={resetTransform}
-              disabled={transform.scale === 1}
-            >
-              <RotateCcw className="h-4 w-4" />
-            </Button>
-            
-            <div className="w-px h-6 bg-white/30 mx-1" />
-            
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-white hover:bg-white/20"
-              onClick={handleDownload}
-            >
-              <Download className="h-4 w-4" />
-            </Button>
-            
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-white hover:bg-white/20"
-              onClick={handleShare}
-            >
-              <Share2 className="h-4 w-4" />
-            </Button>
-          </div>
-
-          {/* Image counter */}
-          {images.length > 1 && (
-            <div className={cn(
-              "absolute top-4 left-4 z-20 bg-black/50 backdrop-blur-sm text-white px-3 py-1 rounded-full text-sm transition-opacity duration-300",
-              showControls || transform.scale === 1 ? "opacity-100" : "opacity-0"
-            )}>
-              {currentIndex + 1} / {images.length}
+              
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-white hover:bg-white/20 touch-manipulation"
+                onClick={resetTransform}
+                disabled={transform.scale === 1}
+              >
+                <RotateCcw className="h-4 w-4" />
+              </Button>
+              
+              <div className="w-px h-6 bg-white/30 mx-1" />
+              
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-white hover:bg-white/20 touch-manipulation"
+                onClick={handleDownload}
+              >
+                <Download className="h-4 w-4" />
+              </Button>
+              
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-white hover:bg-white/20 touch-manipulation"
+                onClick={handleShare}
+              >
+                <Share2 className="h-4 w-4" />
+              </Button>
             </div>
-          )}
 
-          {/* Main image */}
-          <div className="flex items-center justify-center w-full h-full">
-            {isLoading && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            {/* Image counter */}
+            {images.length > 1 && (
+              <div className={cn(
+                "absolute top-4 left-4 z-[10000] bg-black/50 backdrop-blur-sm text-white px-3 py-1 rounded-full text-sm transition-opacity duration-300",
+                showControls || transform.scale === 1 ? "opacity-100" : "opacity-0"
+              )}>
+                {currentIndex + 1} / {images.length}
               </div>
             )}
-            
-            <img
-              ref={imageRef}
-              src={images[currentIndex]}
-              alt={`Image ${currentIndex + 1} of ${images.length}`}
-              className="max-w-full max-h-full object-contain select-none transition-transform duration-200 ease-out"
-              style={{
-                transform: `scale(${transform.scale}) translate(${transform.translateX}px, ${transform.translateY}px)`,
-                cursor: transform.scale > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default'
-              }}
-              onLoad={handleImageLoad}
-              onError={handleImageError}
-              draggable={false}
-            />
+
+            {/* Main image */}
+            <div className="flex items-center justify-center w-full h-full">
+              {isLoading && (
+                <div className="absolute inset-0 flex items-center justify-center z-[10000]">
+                  <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                </div>
+              )}
+              
+              <img
+                ref={imageRef}
+                src={images[currentIndex]}
+                alt={`Image ${currentIndex + 1} of ${images.length}`}
+                className="max-w-full max-h-full object-contain select-none transition-transform duration-200 ease-out touch-none"
+                style={{
+                  transform: `scale(${transform.scale}) translate(${transform.translateX}px, ${transform.translateY}px)`,
+                  cursor: transform.scale > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default',
+                  // Mobile-specific image styling
+                  maxWidth: '100vw',
+                  maxHeight: '100vh',
+                  touchAction: 'none'
+                }}
+                onLoad={handleImageLoad}
+                onError={handleImageError}
+                draggable={false}
+              />
+            </div>
+
+            {/* Zoom indicator */}
+            {transform.scale > 1 && (
+              <div className={cn(
+                "absolute top-16 left-4 z-[10000] bg-black/50 backdrop-blur-sm text-white px-2 py-1 rounded text-xs transition-opacity duration-300",
+                showControls ? "opacity-100" : "opacity-50"
+              )}>
+                {Math.round(transform.scale * 100)}%
+              </div>
+            )}
+
+            {/* Instructions overlay for first-time users */}
+            {transform.scale === 1 && (
+              <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-[9998] text-white/70 text-sm text-center bg-black/30 backdrop-blur-sm rounded-lg px-4 py-2 pointer-events-none">
+                Double-tap or pinch to zoom • Drag to pan • Arrow keys to navigate
+              </div>
+            )}
           </div>
-
-          {/* Zoom indicator */}
-          {transform.scale > 1 && (
-            <div className={cn(
-              "absolute top-16 left-4 z-20 bg-black/50 backdrop-blur-sm text-white px-2 py-1 rounded text-xs transition-opacity duration-300",
-              showControls ? "opacity-100" : "opacity-50"
-            )}>
-              {Math.round(transform.scale * 100)}%
-            </div>
-          )}
-
-          {/* Instructions overlay for first-time users */}
-          {transform.scale === 1 && (
-            <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-10 text-white/70 text-sm text-center bg-black/30 backdrop-blur-sm rounded-lg px-4 py-2 pointer-events-none">
-              Double-tap or pinch to zoom • Drag to pan • Arrow keys to navigate
-            </div>
-          )}
-        </div>
-      </DialogContent>
+        </DialogPrimitive.Content>
+      </DialogPortal>
     </Dialog>
   );
 };

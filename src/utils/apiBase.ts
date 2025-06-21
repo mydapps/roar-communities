@@ -316,6 +316,57 @@ export interface ENBWalletRefreshResponse {
 }
 
 /**
+ * SNI Wallet Status Response interface
+ */
+export interface SNIWalletStatusResponse {
+  success: boolean;
+  data: {
+    wallets: Array<{
+      wallet: string;
+      sni_balance: number;
+      date: string;
+      status: number;
+    }>;
+    max_balance: number;
+    eligible_for_booster: boolean;
+    required_balance: number;
+  };
+}
+
+/**
+ * SNI Wallet Submit Response interface
+ */
+export interface SNIWalletSubmitResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    wallet: string;
+    sni_balance: number;
+    eligible_for_booster: boolean;
+    required_balance: number;
+  };
+}
+
+/**
+ * SNI Wallet Refresh Response interface
+ */
+export interface SNIWalletRefreshResponse {
+  success: boolean;
+  message: string;
+  data: {
+    refresh_results: Array<{
+      wallet: string;
+      new_balance?: number;
+      success: boolean;
+      error?: string;
+    }>;
+    max_balance: number;
+    eligible_for_booster: boolean;
+    required_balance: number;
+  };
+}
+
+/**
  * Fetch status of all golden boosters
  * @returns Promise that resolves to golden booster status data
  */
@@ -483,6 +534,92 @@ export const refreshENBWalletBalances = async (): Promise<ENBWalletRefreshRespon
     return data;
   } catch (error) {
     console.error('Error refreshing ENB wallet balances:', error);
+    return null;
+  }
+};
+
+/**
+ * Fetch SNI wallet status for the current user
+ * @returns Promise that resolves to the wallet status data
+ */
+export const fetchSNIWalletStatus = async (): Promise<SNIWalletStatusResponse | null> => {
+  try {
+    // Use relative path for proxy
+    const response = await fetch(`/api/sni_wallet/status`, {
+      method: 'GET',
+      credentials: 'include', // Important for cookie-based auth
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Error fetching SNI wallet status:', errorData);
+      return null;
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching SNI wallet status:', error);
+    return null;
+  }
+};
+
+/**
+ * Submit SNI wallet address
+ * @param wallet The Ethereum wallet address to submit
+ * @returns Promise that resolves to the submit response
+ */
+export const submitSNIWallet = async (wallet: string): Promise<SNIWalletSubmitResponse | null> => {
+  try {
+    // Use relative path for proxy
+    const response = await fetch(`/api/sni_wallet/submit`, {
+      method: 'POST',
+      credentials: 'include', // Important for cookie-based auth
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ wallet })
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Error submitting SNI wallet:', errorData);
+      return errorData;
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error submitting SNI wallet:', error);
+    return null;
+  }
+};
+
+/**
+ * Refresh SNI wallet balances
+ * @returns Promise that resolves to the refresh response
+ */
+export const refreshSNIWalletBalances = async (): Promise<SNIWalletRefreshResponse | null> => {
+  try {
+    // Use relative path for proxy
+    const response = await fetch(`/api/sni_wallet/refresh`, {
+      method: 'POST',
+      credentials: 'include', // Important for cookie-based auth
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Error refreshing SNI wallet balances:', errorData);
+      return null;
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error refreshing SNI wallet balances:', error);
     return null;
   }
 };

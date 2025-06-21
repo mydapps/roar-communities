@@ -28,7 +28,10 @@ import {
   fetchAchievements, 
   submitENBWallet,
   fetchENBWalletStatus,
-  refreshENBWalletBalances
+  refreshENBWalletBalances,
+  submitSNIWallet,
+  fetchSNIWalletStatus,
+  refreshSNIWalletBalances
 } from '@/utils/apiBase';
 import type { 
   AvailableBoostersResponse, 
@@ -39,7 +42,10 @@ import type {
   Achievement as ApiAchievement, 
   ENBWalletStatusResponse,
   ENBWalletSubmitResponse,
-  ENBWalletRefreshResponse
+  ENBWalletRefreshResponse,
+  SNIWalletStatusResponse,
+  SNIWalletSubmitResponse,
+  SNIWalletRefreshResponse
 } from '@/utils/apiBase';
 import { BoosterDisplay } from '@/components/shared/BoosterDisplay';
 import { BoosterDetailModal } from '@/components/shared/BoosterDetailModal';
@@ -770,6 +776,300 @@ const ENBWalletModal: React.FC<ENBWalletModalProps> = ({ isOpen, onClose, onSucc
   );
 };
 
+// SNI Wallet Linking Modal Component
+interface SNIWalletModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+const SNIWalletModal: React.FC<SNIWalletModalProps> = ({ isOpen, onClose, onSuccess }) => {
+  const [isLinking, setIsLinking] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [walletStatus, setWalletStatus] = useState<SNIWalletStatusResponse | null>(null);
+  const [isLoadingStatus, setIsLoadingStatus] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const { linkWallet } = useLinkAccount({
+    onSuccess: async (user) => {
+      console.log('[sni_wallet] ✅ Wallet linked successfully');
+      setIsLinking(false);
+      
+      // Find the most recently linked wallet
+      const walletAccounts = user.linkedAccounts?.filter(account => account.type === 'wallet') || [];
+      
+      if (walletAccounts.length > 0) {
+        const latestWallet = walletAccounts[walletAccounts.length - 1];
+        
+        if ((latestWallet as any).address) {
+          console.log('[sni_wallet] Proceeding to submit wallet address:', (latestWallet as any).address);
+          await handleWalletSubmit((latestWallet as any).address);
+        } else {
+          console.error('[sni_wallet] ❌ Latest wallet has no address field');
+          toast.error('Wallet address not found');
+        }
+      } else {
+        console.error('[sni_wallet] ❌ No wallet accounts found in linkedAccounts');
+        toast.error('No wallet found in linked accounts');
+      }
+    },
+    onError: (error) => {
+      console.log('[sni_wallet] ❌ Failed to link wallet:', error);
+      setIsLinking(false);
+      
+      // Provide specific error messages
+      let errorMessage = 'Failed to link wallet. Please try again.';
+      const errorObj = error as any;
+      const errorCode = errorObj?.privyErrorCode || errorObj?.code || errorObj?.type;
+      
+      switch (errorCode) {
+        case 'failed_to_link_account':
+          errorMessage = 'Wallet linking was cancelled or failed. Please try again.';
+          break;
+        case 'cannot_link_more_of_type':
+          errorMessage = 'You already have a wallet linked. Please use the refresh button to update balances.';
+          break;
+        case 'user_exited_link_flow':
+          errorMessage = 'Wallet linking was cancelled.';
+          break;
+        case 'wallet_connection_rejected':
+        case 'user_rejected_request':
+          errorMessage = 'Wallet connection was rejected. Please approve the connection in your wallet.';
+          break;
+        default:
+          if (errorObj?.message) {
+            if (errorObj.message.includes('cancelled')) {
+              errorMessage = 'Wallet linking was cancelled.';
+            } else if (errorObj.message.includes('rejected')) {
+              errorMessage = 'Wallet connection was rejected. Please try again.';
+            }
+          }
+          break;
+      }
+      
+      toast.error(errorMessage);
+    }
+  });
+
+  const handleLinkWallet = () => {
+    console.log('[sni_wallet] 🚀 Starting wallet linking process...');
+    setIsLinking(true);
+    
+    try {
+      linkWallet();
+    } catch (error) {
+      console.error('[sni_wallet] ❌ Error calling linkWallet():', error);
+      setIsLinking(false);
+      toast.error('Failed to initiate wallet linking');
+    }
+  };
+
+  const handleWalletSubmit = async (walletAddress: string) => {
+    console.log('[sni_wallet] 📤 Starting wallet submission process...');
+    setIsSubmitting(true);
+    try {
+      const result = await submitSNIWallet(walletAddress);
+      
+      if (result && result.success) {
+        toast.success(result.message);
+        
+        if (result.data?.eligible_for_booster) {
+          toast.success(`🎉 Eligible for 2x SNI Token Holder Boost! Balance: ${result.data.sni_balance} SNI`);
+          onSuccess();
+          onClose();
+        } else {
+          toast.warning(`Insufficient SNI balance: ${result.data?.sni_balance || 0} SNI. Need at least ${result.data?.required_balance || 10} SNI.`);
+          await loadWalletStatus();
+        }
+      } else {
+        toast.error(result?.message || 'Failed to verify wallet');
+      }
+    } catch (error) {
+      toast.error('Failed to verify wallet. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const loadWalletStatus = async () => {
+    setIsLoadingStatus(true);
+    try {
+      const result = await fetchSNIWalletStatus();
+      if (result && result.success) {
+        setWalletStatus(result);
+      }
+    } catch (error) {
+      console.error('[sni_wallet] ❌ Exception loading wallet status:', error);
+    } finally {
+      setIsLoadingStatus(false);
+    }
+  };
+
+  const handleRefreshBalances = async () => {
+    setIsRefreshing(true);
+    try {
+      const result = await refreshSNIWalletBalances();
+      
+      if (result && result.success) {
+        toast.success('Wallet balances refreshed!');
+        
+        if (result.data.eligible_for_booster) {
+          toast.success(`🎉 Now eligible for 2x SNI Token Holder Boost! Max balance: ${result.data.max_balance} SNI`);
+          onSuccess();
+          onClose();
+        } else {
+          toast.info(`Max balance: ${result.data.max_balance} SNI. Need at least ${result.data.required_balance} SNI.`);
+        }
+        
+        await loadWalletStatus();
+      } else {
+        toast.error(result?.message || 'Failed to refresh balances');
+      }
+    } catch (error) {
+      toast.error('Failed to refresh balances. Please try again.');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      loadWalletStatus();
+    }
+  }, [isOpen]);
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Coins className="h-5 w-5 text-purple-500" />
+            SNI Token Holder Boost
+          </DialogTitle>
+          <DialogDescription>
+            Connect your external wallet to verify you hold 10+ SNI tokens for a 2x boost.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="space-y-4">
+          {/* Requirements */}
+          <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700/40 rounded-lg p-3">
+            <h4 className="font-medium text-purple-800 dark:text-purple-200 mb-2">Requirements:</h4>
+            <ul className="text-sm text-purple-700 dark:text-purple-300 space-y-1">
+              <li>• Hold at least 10 SNI tokens</li>
+              <li>• Connect external wallet (MetaMask, etc.)</li>
+              <li>• Wallet must contain SNI tokens on Polygon</li>
+            </ul>
+          </div>
+
+          {/* Current Wallet Status */}
+          {isLoadingStatus ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+              <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">Loading wallet status...</span>
+            </div>
+          ) : walletStatus?.data?.wallets && walletStatus.data.wallets.length > 0 ? (
+            <div className="space-y-3">
+              <h4 className="font-medium">Connected Wallets:</h4>
+              
+              {walletStatus.data.wallets.map((wallet, index) => (
+                <div key={index} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-mono text-gray-600 dark:text-gray-400">
+                      {wallet.wallet.slice(0, 6)}...{wallet.wallet.slice(-4)}
+                    </span>
+                    <span className="text-sm font-semibold">
+                      {Number(wallet.sni_balance).toFixed(2)} SNI
+                    </span>
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    Updated: {new Date(wallet.date).toLocaleDateString()}
+                  </div>
+                </div>
+              ))}
+              
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700/40 rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-blue-800 dark:text-blue-200">
+                    Max Balance:
+                  </span>
+                  <span className={`font-bold ${walletStatus.data.eligible_for_booster ? 'text-green-600' : 'text-orange-600'}`}>
+                    {Number(walletStatus.data.max_balance).toFixed(2)} SNI
+                  </span>
+                </div>
+                {walletStatus.data.eligible_for_booster ? (
+                  <p className="text-sm text-green-600 mt-1">✅ Eligible for 2x boost!</p>
+                ) : (
+                  <p className="text-sm text-orange-600 mt-1">
+                    Need {(Number(walletStatus.data.required_balance) - Number(walletStatus.data.max_balance)).toFixed(2)} more SNI
+                  </p>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-4">
+              <Wallet className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+              <p className="text-gray-600 dark:text-gray-400">No wallets connected yet</p>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex flex-col gap-2">
+            <Button 
+              onClick={handleLinkWallet} 
+              disabled={isLinking || isSubmitting}
+              className="w-full"
+            >
+              {isLinking ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Connecting Wallet...
+                </>
+              ) : (
+                <>
+                  <Wallet className="mr-2 h-4 w-4" />
+                  Connect New Wallet
+                </>
+              )}
+            </Button>
+            
+            {walletStatus?.data?.wallets && walletStatus.data.wallets.length > 0 && (
+              <Button 
+                variant="outline" 
+                onClick={handleRefreshBalances}
+                disabled={isRefreshing || isSubmitting}
+                className="w-full"
+              >
+                {isRefreshing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Refreshing...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Refresh Balances
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+
+          {/* Info */}
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+            <div className="flex items-start gap-2">
+              <Info className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                <p>SNI tokens are on the Polygon network. Make sure your wallet is connected to Polygon to see your balance.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 const getIconComponent = (iconName: string): React.ReactNode => {
   const icons: Record<string, LucideIcon> = {
     Twitter: Twitter,
@@ -812,9 +1112,10 @@ interface BoosterCardProps {
   onClaim: (id: string) => Promise<void>;
   isProcessing: boolean;
   showENBModal?: () => void;
+  showSNIModal?: () => void;
 }
 
-const BoosterCard: React.FC<BoosterCardProps> = ({ activity, onClaim, isProcessing, showENBModal }) => {
+const BoosterCard: React.FC<BoosterCardProps> = ({ activity, onClaim, isProcessing, showENBModal, showSNIModal }) => {
   const [claiming, setClaiming] = useState(false);
   const navigate = useNavigate();
   
@@ -869,6 +1170,14 @@ const BoosterCard: React.FC<BoosterCardProps> = ({ activity, onClaim, isProcessi
     if (activity.id === "enb_token_holder" && activity.eligible === false) {
       if (showENBModal) {
         showENBModal();
+        return;
+      }
+    }
+    
+    // Special handling for SNI token holder booster
+    if (activity.id === "sni_token_holder" && activity.eligible === false) {
+      if (showSNIModal) {
+        showSNIModal();
         return;
       }
     }
@@ -951,6 +1260,8 @@ const BoosterCard: React.FC<BoosterCardProps> = ({ activity, onClaim, isProcessi
             ) : activity.id === 'enable_mobile_notifications' ? (
               isMobileApp() ? 'Enable Notifications' : 'Download Mobile App'
             ) : activity.id === 'enb_token_holder' ? (
+              'Connect Wallet'
+            ) : activity.id === 'sni_token_holder' ? (
               'Connect Wallet'
             ) : 'Complete Task'}
           </>
@@ -1354,6 +1665,9 @@ const BoosterPage: React.FC = () => {
   
   // ENB Wallet Modal state
   const [showENBWalletModal, setShowENBWalletModal] = useState(false);
+  
+  // SNI Wallet Modal state
+  const [showSNIWalletModal, setShowSNIWalletModal] = useState(false);
   
   // Function to fetch all booster data
   const fetchData = async () => {
@@ -2242,6 +2556,7 @@ const BoosterPage: React.FC = () => {
                     onClaim={handleClaimBooster}
                     isProcessing={isProcessing}
                     showENBModal={() => setShowENBWalletModal(true)}
+                    showSNIModal={() => setShowSNIWalletModal(true)}
                   />
                 </motion.div>
               ))}
@@ -2285,6 +2600,7 @@ const BoosterPage: React.FC = () => {
                     onClaim={handleClaimBooster}
                     isProcessing={isProcessing}
                     showENBModal={() => setShowENBWalletModal(true)}
+                    showSNIModal={() => setShowSNIWalletModal(true)}
                   />
                 </motion.div>
               ))}
@@ -2388,6 +2704,16 @@ const BoosterPage: React.FC = () => {
       <ENBWalletModal
         isOpen={showENBWalletModal}
         onClose={() => setShowENBWalletModal(false)}
+        onSuccess={() => {
+          // Refresh booster data when wallet is successfully linked and eligible
+          fetchData();
+        }}
+      />
+      
+      {/* SNI Wallet Modal */}
+      <SNIWalletModal
+        isOpen={showSNIWalletModal}
+        onClose={() => setShowSNIWalletModal(false)}
         onSuccess={() => {
           // Refresh booster data when wallet is successfully linked and eligible
           fetchData();

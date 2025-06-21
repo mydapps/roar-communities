@@ -27,9 +27,11 @@ export const ImageViewerProvider: React.FC<ImageViewerProviderProps> = ({ childr
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   const openImageViewer = (imageList: string[], selectedIdx = 0) => {
+    console.log('ImageViewerContext: openImageViewer called with:', imageList, selectedIdx);
     setImages(imageList);
     setSelectedIndex(selectedIdx);
     setIsOpen(true);
+    console.log('ImageViewerContext: State updated - isOpen:', true, 'images:', imageList);
   };
 
   const closeImageViewer = () => {

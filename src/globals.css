@@ -385,36 +385,73 @@ body {
     user-select: none !important;
   }
 
+  /* Prevent input zoom on iOS */
+  input[type="text"], input[type="search"], textarea {
+    font-size: 16px !important;
+  }
+
+  /* ImageViewer mobile optimizations */
+  body[data-image-viewer-open] {
+    overflow: hidden !important;
+    position: fixed !important;
+    width: 100% !important;
+    height: 100% !important;
+    touch-action: none !important;
+    -webkit-overflow-scrolling: none !important;
+  }
+
+  /* Ensure ImageViewer dialog is above everything */
+  [data-radix-dialog-overlay][data-state="open"] {
+    z-index: 9999 !important;
+    position: fixed !important;
+  }
+
+  [data-radix-dialog-content][data-state="open"] {
+    z-index: 9999 !important;
+    position: fixed !important;
+    inset: 0 !important;
+    max-width: none !important;
+    max-height: none !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    transform: none !important;
+  }
+
+  /* Mobile image viewer specific styles */
+  .mobile-image-viewer {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 9999 !important;
+    touch-action: none !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    -webkit-touch-callout: none !important;
+    overscroll-behavior: none !important;
+  }
+
   /* Ensure keyboard doesn't affect layout on mobile */
-  @media (max-width: 768px) {
-    .mobile-input-container {
-      position: sticky !important;
-      bottom: 0 !important;
-      z-index: 21 !important;
-      background: rgba(255, 255, 255, 0.95) !important;
-      backdrop-filter: blur(10px) !important;
-    }
+  .mobile-input-container {
+    position: sticky !important;
+    bottom: 0 !important;
+    z-index: 21 !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+    backdrop-filter: blur(10px) !important;
+  }
 
-    .dark .mobile-input-container {
-      background: rgba(17, 24, 39, 0.95) !important;
-    }
+  .dark .mobile-input-container {
+    background: rgba(17, 24, 39, 0.95) !important;
+  }
 
-    /* Prevent pull-to-refresh on conversation pages */
-    .mobile-conversation-container {
-      overscroll-behavior: none !important;
-      overscroll-behavior-y: none !important;
-    }
+  /* Prevent pull-to-refresh on conversation pages */
+  .mobile-conversation-container {
+    overscroll-behavior: none !important;
+    overscroll-behavior-y: none !important;
+  }
 
-    /* Ensure proper scrolling on mobile conversation pages */
-    .mobile-messages-container {
-      overscroll-behavior: contain !important;
-      overscroll-behavior-y: contain !important;
-      -webkit-overflow-scrolling: touch !important;
-    }
-
-    /* Prevent input zoom on iOS */
-    input[type="text"], input[type="search"], textarea {
-      font-size: 16px !important;
-    }
+  /* Ensure proper scrolling on mobile conversation pages */
+  .mobile-messages-container {
+    overscroll-behavior: contain !important;
+    overscroll-behavior-y: contain !important;
+    -webkit-overflow-scrolling: touch !important;
   }
 } 
