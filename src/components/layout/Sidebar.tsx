@@ -1,25 +1,26 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
   Home, 
   Search, 
   Users, 
-  Wallet, 
-  Gift, 
-  Settings,
-  X,
-  Sparkles,
-  Plus,
-  Loader2,
+  MessageCircle, 
+  Settings, 
+  X, 
+  Loader2, 
+  Plus, 
   ArrowUpRight,
-  MessageCircle
+  Wallet,
+  Gift,
+  Sparkles
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { motion, AnimatePresence } from 'framer-motion';
 import { createAuthHeaders, cleanupAuthState } from '@/utils/apiBase';
 import { fetchUnreadCount } from '@/utils/messagingApi';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -51,6 +52,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const [personalCommunities, setPersonalCommunities] = useState<Community[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const isMobile = useIsMobile();
   
   // Check authentication status on mount and listen for auth events
   useEffect(() => {
@@ -247,7 +249,10 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
             {/* Navigation links */}
             <nav className="space-y-1">
               <NavItem to="/feed" icon={<Home className="h-5 w-5" />} label="Feed" />
-              <NavItem to="/search" icon={<Search className="h-5 w-5" />} label="Search" />
+              {/* Only show Search on mobile */}
+              {isMobile && (
+                <NavItem to="/search" icon={<Search className="h-5 w-5" />} label="Search" />
+              )}
               <NavItem to="/communities" icon={<Users className="h-5 w-5" />} label="Communities" />
               <NavItem 
                 to="/messages" 

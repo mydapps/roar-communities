@@ -582,7 +582,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
     let currentHtmlContent = editorInstanceRef.current?.getHTML() || '';
     const currentTextContent = editorInstanceRef.current?.getText() || '';
     
-    // Normalize consecutive <br> tags: replace 3 or more with exactly 2 <br> tags.
+    
     // This regex handles <br>, <br/>, <br />, and whitespace between them.
     const brRegex = /(<br\s*\/?>\s*){3,}/gi;
     currentHtmlContent = currentHtmlContent.replace(brRegex, '<br><br>');
@@ -646,11 +646,54 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
         setPollOptions([]);
         setPollError(null);
       } else {
-        // setError('Failed to create post. Please try again.'); 
+        // The onPostSubmit returned false, which means there was an error
+        // Check if it's a specific community membership error
+        setError('Failed to create post. Please check your community membership and try again.');
       }
     } catch (submissionError: any) {
       console.error('Post submission error:', submissionError);
-      setError(submissionError.message || 'An unexpected error occurred during submission.');
+      
+      // Enhanced error parsing to handle different error formats
+      let errorMessage = 'An unexpected error occurred during submission.';
+      
+      if (submissionError && typeof submissionError === 'object') {
+        // Handle direct error message
+        if (submissionError.message) {
+          errorMessage = submissionError.message;
+        }
+        // Handle API error responses (like the 403 community membership error)
+        else if (submissionError.response && submissionError.response.data) {
+          const responseData = submissionError.response.data;
+          if (typeof responseData === 'string') {
+            // Try to parse JSON string response
+            try {
+              const parsedData = JSON.parse(responseData);
+              errorMessage = parsedData.error || parsedData.message || responseData;
+            } catch {
+              errorMessage = responseData;
+            }
+          } else if (responseData.error) {
+            errorMessage = responseData.error;
+          } else if (responseData.message) {
+            errorMessage = responseData.message;
+          }
+        }
+        // Handle direct error object
+        else if (submissionError.error) {
+          errorMessage = submissionError.error;
+        }
+      } else if (typeof submissionError === 'string') {
+        errorMessage = submissionError;
+      }
+      
+      // Special handling for community membership errors
+      if (errorMessage.includes('not a part of') || errorMessage.includes('Join the community first')) {
+        setError(`🚫 ${errorMessage}`);
+      } else if (errorMessage.includes('403')) {
+        setError('❌ You don\'t have permission to post in this community. Please join the community first.');
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setIsSubmitting(false);
     }

@@ -68,8 +68,8 @@ const CreatePostCard = ({ onPostCreated, communityName }: CreatePostCardProps) =
     } else {
       if (!body.trim() && (!media || media.length === 0)) {
         toast.error('Please enter some content or add media to your post.');
-      return false;
-    }
+        return false;
+      }
     }
       
     let finalBody = body.trim();
@@ -79,12 +79,12 @@ const CreatePostCard = ({ onPostCreated, communityName }: CreatePostCardProps) =
       media.forEach(m => {
         if (!finalBody.includes(m.url)) { 
           mediaMarkdownToAppend += `\n\n![](${m.url})`; 
-      }
+        }
       });
       if (mediaMarkdownToAppend) {
         finalBody += mediaMarkdownToAppend;
       }
-      }
+    }
       
     try {
       const postDataForApi: any = {
@@ -172,13 +172,26 @@ const CreatePostCard = ({ onPostCreated, communityName }: CreatePostCardProps) =
         onPostCreated(newPostForUI);
         return true;
       } else if (response.status === 'ERROR') {
-        throw new Error(response.message || 'Failed to create post');
+        // Check if it's a community membership error that should be handled by the modal
+        const errorMessage = response.message || 'Failed to create post';
+        if (errorMessage.includes('not a part of') || errorMessage.includes('Join the community first') || errorMessage.includes('403')) {
+          // Re-throw community membership errors so the modal can handle them
+          throw new Error(errorMessage);
+        } else {
+          // Handle other errors normally with toast
+          toast.error(errorMessage);
+          return false;
+        }
       } else {
         console.error('Unknown response structure from create post API:', response);
         throw new Error('Unknown response from create post API');
       }
     } catch (error: any) {
+      console.error('Error in handleModalPostSubmit:', error);
+      
+      // Parse error message from different possible formats
       let errorMessage = error.message || 'Failed to create post. Please try again.';
+      
       if (error && typeof error === 'object') {
         if (error.response && typeof error.response.data === 'object' && error.response.data !== null) {
             const serverError = error.response.data.message || error.response.data.error;
@@ -188,8 +201,16 @@ const CreatePostCard = ({ onPostCreated, communityName }: CreatePostCardProps) =
             if (serverError) errorMessage = serverError;
         }
       }
-      toast.error(errorMessage);
-      return false;
+      
+      // Check if it's a community membership error that should be handled by the modal
+      if (errorMessage.includes('not a part of') || errorMessage.includes('Join the community first') || errorMessage.includes('403')) {
+        // Re-throw community membership errors so the modal can handle them inline
+        throw error;
+      } else {
+        // Handle other errors with toast and return false
+        toast.error(errorMessage);
+        return false;
+      }
     }
   };
 
