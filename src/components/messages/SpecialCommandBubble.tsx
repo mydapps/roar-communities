@@ -38,6 +38,7 @@ const SpecialCommandBubble: React.FC<SpecialCommandBubbleProps> = ({
       love: { bg: 'from-pink-500 to-red-500', text: 'text-white' },
       roar: { bg: 'from-amber-500 via-orange-500 to-red-600', text: 'text-white' },
       roars: { bg: 'from-amber-500 via-orange-500 to-red-600', text: 'text-white' },
+      magic: { bg: 'from-purple-600 via-indigo-600 to-amber-500', text: 'text-white' },
     };
     return colors[command] || { bg: 'from-gray-500 to-gray-600', text: 'text-white' };
   };
@@ -123,6 +124,83 @@ const SpecialCommandBubble: React.FC<SpecialCommandBubbleProps> = ({
             }}
           >
             👑
+          </motion.div>
+        </>
+      )}
+
+      {/* Magical animated effects for MAGIC command */}
+      {command === 'magic' && (
+        <>
+          {/* Mystical glowing border with magical colors */}
+          <motion.div
+            className="absolute inset-0 rounded-2xl border-2 border-purple-400"
+            animate={{
+              opacity: [0.5, 1, 0.5],
+              boxShadow: [
+                '0 0 15px rgba(147, 51, 234, 0.4)',
+                '0 0 30px rgba(147, 51, 234, 0.8)',
+                '0 0 15px rgba(147, 51, 234, 0.4)'
+              ],
+              borderColor: ['#a855f7', '#6366f1', '#f59e0b', '#a855f7']
+            }}
+            transition={{
+              duration: 3,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          />
+          
+          {/* Floating magical sparkles */}
+          <motion.div
+            className="absolute -top-1 -right-1 text-lg"
+            animate={{
+              scale: [1, 1.4, 1],
+              rotate: [0, 360],
+              opacity: [0.6, 1, 0.6]
+            }}
+            transition={{
+              duration: 2.5,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          >
+            ✨
+          </motion.div>
+          
+          {/* Secondary magical element */}
+          <motion.div
+            className="absolute -top-1 -left-1 text-lg"
+            animate={{
+              scale: [1, 1.2, 1],
+              rotate: [0, -360],
+              opacity: [0.7, 1, 0.7]
+            }}
+            transition={{
+              duration: 3,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: 0.5
+            }}
+          >
+            🔮
+          </motion.div>
+
+          {/* Magic wand sparkle */}
+          <motion.div
+            className="absolute -bottom-1 -right-1 text-sm"
+            animate={{
+              scale: [0.8, 1.3, 0.8],
+              y: [0, -5, 0],
+              opacity: [0.5, 1, 0.5]
+            }}
+            transition={{
+              duration: 2,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: 1
+            }}
+          >
+            🪄
           </motion.div>
         </>
       )}

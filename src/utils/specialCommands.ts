@@ -1,6 +1,6 @@
-export type SpecialCommand = 'buzz' | 'eth' | 'ethereum' | 'btc' | 'bitcoin' | 'base' | 'sol' | 'solana' | 'dapps' | 'heart' | 'love' | 'roar' | 'roars' | 'yoga' | 'worldyogaday' | 'happyyogaday';
+export type SpecialCommand = 'buzz' | 'eth' | 'ethereum' | 'btc' | 'bitcoin' | 'base' | 'sol' | 'solana' | 'dapps' | 'heart' | 'love' | 'roar' | 'roars' | 'yoga' | 'worldyogaday' | 'happyyogaday' | 'magic';
 
-export type EffectType = 'buzz' | 'eth' | 'btc' | 'base' | 'sol' | 'dapps' | 'heart' | 'roar' | 'yoga';
+export type EffectType = 'buzz' | 'eth' | 'btc' | 'base' | 'sol' | 'dapps' | 'heart' | 'roar' | 'yoga' | 'magic';
 
 // Map commands to their effect types
 const commandToEffect: Record<SpecialCommand, EffectType> = {
@@ -20,11 +20,12 @@ const commandToEffect: Record<SpecialCommand, EffectType> = {
   yoga: 'yoga',
   worldyogaday: 'yoga',
   happyyogaday: 'yoga',
+  magic: 'magic',
 };
 
 // All valid commands
 export const SPECIAL_COMMANDS: SpecialCommand[] = [
-  'buzz', 'eth', 'ethereum', 'btc', 'bitcoin', 'base', 'sol', 'solana', 'dapps', 'heart', 'love', 'roar', 'roars', 'yoga', 'worldyogaday', 'happyyogaday'
+  'buzz', 'eth', 'ethereum', 'btc', 'bitcoin', 'base', 'sol', 'solana', 'dapps', 'heart', 'love', 'roar', 'roars', 'yoga', 'worldyogaday', 'happyyogaday', 'magic'
 ];
 
 /**
@@ -77,6 +78,7 @@ export const getCommandDisplayText = (command: SpecialCommand): string => {
     yoga: '🧘 Yoga',
     worldyogaday: '🧘 World Yoga Day',
     happyyogaday: '🧘 Happy Yoga Day',
+    magic: '✨ Magic',
   };
   
   return displayTexts[command];
