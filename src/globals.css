@@ -74,6 +74,14 @@ body {
   color: hsl(var(--foreground));
 }
 
+/* Line clamp utilities for community cards */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 /* Enhanced Theme Transition Animations */
 @keyframes ripple-expand {
   0% {
