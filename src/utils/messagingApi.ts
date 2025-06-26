@@ -257,12 +257,12 @@ export const startConversation = async (handle: string): Promise<StartConversati
     const data = await response.json();
     debugLog('V3 Conversation started successfully', data);
     
-    return {
+      return {
       success: data.success,
-      conversation: data.conversation,
+        conversation: data.conversation,
       isNew: data.isNew,
-      message: data.message
-    };
+        message: data.message
+      };
   } catch (error) {
     const friendlyMessage = handleXMTPError(error as Error, 'startConversation');
     console.error('Error starting V3 conversation:', error);
@@ -458,7 +458,7 @@ export const fetchMessages = async (conversationId: string, page: number = 1): P
 
   console.error('All V3 fetchMessages attempts failed:', lastError);
   toast.error('Failed to load messages');
-  
+
   return {
     success: false,
     messages: [],
@@ -483,33 +483,33 @@ export const sendMessage = async (conversationId: string, content: string, reply
   message?: any;
   error?: string;
 }> => {
-  try {
+    try {
     debugLog('Sending message via XMTP V3', { conversationId, contentLength: content.length, replyToMessageId });
     
     // ✅ V3 (WORKING) - Updated endpoint
     const response = await fetch(`/api/xmtp/v3/conversations/${conversationId}/messages`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify({
-        message_content: content,
-        message_type: 'text',
-        reply_to_message_id: replyToMessageId
-      }),
-    });
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          message_content: content,
+          message_type: 'text',
+          reply_to_message_id: replyToMessageId
+        }),
+      });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
+      if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
-    }
+      }
 
-    const data = await response.json();
-    
-    if (!data.success) {
-      throw new Error(data.error || 'Failed to send message');
-    }
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to send message');
+      }
 
     debugLog('V3 Message sent successfully', {
       messageId: data.message?.id,
@@ -517,17 +517,17 @@ export const sendMessage = async (conversationId: string, content: string, reply
       version: data.version // 🆕 Version tracking
     });
 
-    return {
-      success: true,
-      message: data.message
-    };
-  } catch (error) {
+      return {
+        success: true,
+        message: data.message
+      };
+    } catch (error) {
     console.error('V3 sendMessage failed:', error);
     toast.error('Failed to send message');
-    return {
-      success: false,
+  return {
+    success: false,
       error: error instanceof Error ? error.message : 'Failed to send message'
-    };
+  };
   }
 };
 

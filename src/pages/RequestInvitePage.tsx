@@ -1,32 +1,38 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { 
-  Check, 
-  XIcon, 
-  Send, 
-  Trophy,
-  ArrowUp,
-  User,
-  CheckCircle2,
-  AlertCircle,
-  Loader2,
-  PartyPopper,
-  Unlock,
-  LogOut
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Helmet } from 'react-helmet-async';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { shareToSocialMedia } from '@/utils/shareUtils';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { cn } from '@/lib/utils';
-import confetti from 'canvas-confetti';
+import { shareToSocialMedia } from '@/utils/shareUtils';
 import OnboardingStories from '@/components/onboarding/OnboardingStories';
 import { motion, AnimatePresence } from 'framer-motion';
-import { usePrivy } from '@privy-io/react-auth';
+import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { 
+  CheckCircle2,
+  User, 
+  Trophy, 
+  Check, 
+  PartyPopper,
+  Loader2, 
+  AlertCircle,
+  Unlock,
+  LogOut,
+  X as XIcon,
+  Mail,
+  Plus,
+  Shield,
+  Bell
+} from 'lucide-react';
+import confetti from 'canvas-confetti';
 import * as apiBase from '@/utils/apiBase';
+import { usePrivy, useLinkAccount } from '@privy-io/react-auth';
+import { createAuthHeaders } from '@/utils/apiBase';
 
 interface Task {
   id: string;
@@ -52,6 +58,24 @@ interface ApiResponse {
   registered: number;
 }
 
+// Email status response interface
+interface EmailStatusResponse {
+  success: boolean;
+  hasValidEmail: boolean;
+  currentEmail?: string;
+  validEmail?: string;
+  privyId?: string;
+}
+
+// Update email response interface
+interface UpdateEmailResponse {
+  success: boolean;
+  emailFound: boolean;
+  emailUpdated: boolean;
+  email?: string;
+  message: string;
+}
+
 const RequestInvitePage = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -72,6 +96,11 @@ const RequestInvitePage = () => {
   const [authWindow, setAuthWindow] = useState<Window | null>(null);
   const [checkIntervalId, setCheckIntervalId] = useState<NodeJS.Timeout | null>(null);
   const [loadingTimeoutId, setLoadingTimeoutId] = useState<NodeJS.Timeout | null>(null);
+  
+  // Email-related state
+  const [emailStatus, setEmailStatus] = useState<EmailStatusResponse | null>(null);
+  const [loadingEmailStatus, setLoadingEmailStatus] = useState(false);
+  const [linkingEmail, setLinkingEmail] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([
     {
       id: 'connect-twitter',
@@ -118,6 +147,79 @@ const RequestInvitePage = () => {
     "Error 404: Valid Code Not Found. But your persistence is impressive!",
     "That code expired sometime during the Jurassic period. Got a newer one?",
   ];
+
+  // Function to fetch email status
+  const fetchEmailStatus = useCallback(async () => {
+    setLoadingEmailStatus(true);
+    try {
+      const response = await fetch('/api/check_email_status', {
+        method: 'GET',
+        headers: createAuthHeaders(),
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        const data: EmailStatusResponse = await response.json();
+        setEmailStatus(data);
+      } else {
+        console.error('Failed to fetch email status');
+        setEmailStatus(null);
+      }
+    } catch (error) {
+      console.error('Error fetching email status:', error);
+      setEmailStatus(null);
+    } finally {
+      setLoadingEmailStatus(false);
+    }
+  }, []);
+
+  // Privy link email with callbacks
+  const { linkEmail: linkEmailAction } = useLinkAccount({
+    onSuccess: async (user) => {
+      console.log('Email linked successfully');
+      setLinkingEmail(false);
+      toast.success('Email linked successfully! 🎉');
+      
+      // Call our backend to update the email from Privy
+      try {
+        const response = await fetch('/api/update_email_from_privy', {
+          method: 'POST',
+          headers: createAuthHeaders(),
+          credentials: 'include'
+        });
+        
+        const data: UpdateEmailResponse = await response.json();
+        
+        if (data.success && data.emailUpdated) {
+          toast.success(data.message);
+          // Refresh email status to show the new email
+          await fetchEmailStatus();
+        } else {
+          toast.warning(data.message || 'Email was linked but may not have updated properly');
+        }
+      } catch (error) {
+        console.error('Error updating email from Privy:', error);
+        toast.error('Email was linked but failed to update in our system');
+      }
+    },
+    onError: (error) => {
+      console.error('Failed to link email:', error);
+      setLinkingEmail(false);
+      toast.error('Failed to link email. Please try again.');
+    }
+  });
+
+  // Function to handle email linking
+  const handleLinkEmail = async () => {
+    setLinkingEmail(true);
+    try {
+      await linkEmailAction();
+    } catch (error) {
+      console.error('Error initiating email link:', error);
+      setLinkingEmail(false);
+      toast.error('Failed to initiate email linking');
+    }
+  };
 
   useEffect(() => {
     // Check for user ID instead of API key
@@ -168,10 +270,13 @@ const RequestInvitePage = () => {
     // Fetch status using cookie auth (no key needed)
     fetchInviteStatus(); 
     
+    // Fetch email status
+    fetchEmailStatus();
+    
     return () => {
       if (timeout) clearTimeout(timeout);
     };
-  }, [navigate]);
+  }, [navigate, fetchEmailStatus]);
 
   // Clean up any auth windows, intervals, and timeouts when component unmounts
   useEffect(() => {
@@ -809,6 +914,71 @@ const RequestInvitePage = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Email Section - Only show if user doesn't have valid email */}
+        {!loadingEmailStatus && !emailStatus?.hasValidEmail && (
+          <Card className="mb-8 overflow-hidden animate-slide-up" style={{ animationDelay: '0.2s' }}>
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-full">
+                  <Mail className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Secure Your Invite Delivery</CardTitle>
+                  <CardDescription className="flex items-center gap-2 mt-1">
+                    <Shield className="h-4 w-4 text-green-500" />
+                    Adding your email ensures we can send you the invite code
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            
+            <CardContent className="space-y-4">
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-4"
+              >
+                <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                  <Mail className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="font-medium text-amber-900 dark:text-amber-100">
+                      📧 Connect Your Email for Instant Delivery
+                    </p>
+                    <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                      We'll send your invite code directly to your email when you reach the front of the queue. 
+                      This ensures you don't miss your exclusive access opportunity!
+                    </p>
+                  </div>
+                </div>
+                
+                <Button 
+                  onClick={handleLinkEmail}
+                  disabled={linkingEmail}
+                  className="w-full gap-3 py-6 text-base bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                  size="lg"
+                >
+                  {linkingEmail ? (
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      Connecting Email...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-5 w-5" />
+                      Connect Email Address
+                    </>
+                  )}
+                </Button>
+                
+                <p className="text-xs text-muted-foreground text-center">
+                  🔐 Your email is securely encrypted and only used for invite delivery. 
+                  We respect your privacy.
+                </p>
+              </motion.div>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="mb-8">
           <div className="flex items-center justify-between mb-6">

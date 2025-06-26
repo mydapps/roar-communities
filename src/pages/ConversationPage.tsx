@@ -215,7 +215,7 @@ const ConversationPage = () => {
         setMessages(prev => {
           const existingMessage = prev.find(m => m.id === message.id);
           if (existingMessage) return prev;
-
+        
           // Add new message and sort in ascending order (oldest first, newest last)
           const newMessages = [...prev, { ...message, isOptimistic: false }].sort((a, b) => 
             new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
@@ -361,12 +361,12 @@ const ConversationPage = () => {
     const now = new Date();
     const deadlineDate = new Date(deadline);
     const diffMs = deadlineDate.getTime() - now.getTime();
-    
+
     if (diffMs <= 0) return '0h 0m';
     
     const hours = Math.floor(diffMs / (1000 * 60 * 60));
     const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    
+
       return `${hours}h ${minutes}m`;
   };
 
@@ -378,7 +378,7 @@ const ConversationPage = () => {
     const messageToSend = messageText.trim();
     const userAvatar = localStorage.getItem('dapps_user_avatar');
     const avatarUrl = userAvatar ? `https://img.dapps.co/avatar/${userAvatar}.svg` : 'https://img.dapps.co/avatar/default.svg';
-
+        
     // 🎯 Check if this is a special command and trigger animation immediately for sender
     if (isSpecialCommand(messageToSend)) {
       const command = extractCommand(messageToSend);
@@ -435,7 +435,7 @@ const ConversationPage = () => {
 
       if (paymentStatus?.has_paid) {
         setTimeout(() => loadPaymentStatus(), 500);
-      }
+          }
     } catch (error) {
       console.error('Error sending message:', error);
       
@@ -455,7 +455,7 @@ const ConversationPage = () => {
       setSending(false);
     }
   };
-
+        
   // Handle emoji click
   const handleEmojiClick = (emojiData: EmojiClickData) => {
     const emoji = emojiData.emoji;
@@ -644,7 +644,7 @@ const ConversationPage = () => {
         onBlockUser={() => setIsBlockModalOpen(true)}
         onUnblockUser={handleUnblockUser}
       />
-      
+
       {/* Content container with proper spacing for fixed mobile header */}
       <div className="flex flex-col flex-1 md:mt-0 mt-[140px]">
         {/* Payment Status Banner */}
@@ -654,7 +654,7 @@ const ConversationPage = () => {
             timeRemaining={timeRemaining}
           />
         )}
-        
+            
         {/* Messages */}
         <ConversationMessages
           ref={messagesRef}
@@ -670,7 +670,7 @@ const ConversationPage = () => {
           onSpecialCommandClick={handleSpecialCommandClick}
           onLoadMore={handleLoadMore}
         />
-        
+
         {/* Input Area or Blocked Interface */}
       {isUserBlocked ? (
           <BlockedUserInterface
@@ -678,7 +678,7 @@ const ConversationPage = () => {
             isBlocking={isBlocking}
             onUnblockUser={handleUnblockUser}
           />
-        ) : (
+      ) : (
           <MessageInput
             ref={messageInputRef}
             messageText={messageText}
@@ -698,7 +698,7 @@ const ConversationPage = () => {
             onFileUpload={handleFileUpload}
             onTyping={handleTyping}
           />
-        )}
+              )}
         </div>
       
       {/* Modals */}

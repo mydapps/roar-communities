@@ -1095,34 +1095,34 @@ const SpecialEffects: React.FC<SpecialEffectsProps> = ({ effect, onComplete }) =
               transition={{ duration: 0.8, times: [0, 0.3, 1] }}
             >
               {/* Screen glitch overlay */}
-              <motion.div
+                <motion.div
                 className="absolute inset-0 bg-gradient-to-r from-purple-500/30 via-pink-500/30 to-blue-500/30"
-                animate={{
+                  animate={{ 
                   opacity: [0, 0.8, 0.3, 0.9, 0],
                   scale: [1, 1.02, 0.98, 1.01, 1],
-                }}
+                  }}
                 transition={{ duration: 0.8, ease: "easeInOut" }}
               />
               
               {/* Digital glitch lines */}
               {[...Array(8)].map((_, i) => (
-                <motion.div
+              <motion.div
                   key={`glitch-${i}`}
                   className="absolute w-full h-1 bg-white/80"
-                  style={{
+                style={{
                     top: `${10 + i * 12}%`,
                     filter: 'blur(0.5px)',
-                  }}
+                }}
                   initial={{ x: '-100%', opacity: 0 }}
-                  animate={{ 
+                animate={{ 
                     x: ['100%', '-100%', '100%'],
                     opacity: [0, 1, 0],
-                  }}
-                  transition={{ 
+                }}
+                transition={{ 
                     duration: 0.6,
                     delay: i * 0.05,
                     ease: "linear"
-                  }}
+                }}
                 />
               ))}
 
@@ -1141,8 +1141,8 @@ const SpecialEffects: React.FC<SpecialEffectsProps> = ({ effect, onComplete }) =
                   style={{
                     textShadow: '0 0 40px rgba(255, 255, 255, 0.8)',
                     filter: 'drop-shadow(0 0 20px rgba(139, 92, 246, 0.8))',
-                  }}
-                >
+                }}
+              >
                   ⚡
                 </div>
               </motion.div>
@@ -1256,28 +1256,28 @@ const SpecialEffects: React.FC<SpecialEffectsProps> = ({ effect, onComplete }) =
                 const y = Math.sin((creature.angle * Math.PI) / 180) * radius;
                 
                 return (
-                  <motion.div
+              <motion.div
                     key={`creature-${i}`}
                     className="absolute text-6xl sm:text-8xl z-20"
-                    style={{
+                style={{
                       filter: 'drop-shadow(0 0 15px rgba(255, 215, 0, 0.8))',
-                    }}
+                }}
                     initial={{ scale: 0, x: 0, y: 0, opacity: 0, rotate: 0 }}
-                    animate={{
+                animate={{ 
                       scale: [0, 1.4, 1.2, 1],
                       x: [0, x * 0.7, x, x * 1.2],
                       y: [0, y * 0.7, y, y * 1.2],
                       opacity: [0, 1, 1, 0.8],
                       rotate: [0, 180, 360],
-                    }}
-                    transition={{
+                }}
+                transition={{ 
                       duration: 1.3,
                       delay: creature.delay,
-                      ease: "backOut"
-                    }}
-                  >
+                  ease: "backOut"
+                }}
+              >
                     {creature.emoji}
-                  </motion.div>
+              </motion.div>
                 );
               })}
 
@@ -1301,7 +1301,7 @@ const SpecialEffects: React.FC<SpecialEffectsProps> = ({ effect, onComplete }) =
               >
                 🪄
               </motion.div>
-            </motion.div>
+              </motion.div>
 
             {/* Stage 4: Reality Transformation (3.0-4.0s) - Final AHA Moment */}
             <motion.div
@@ -1341,7 +1341,7 @@ const SpecialEffects: React.FC<SpecialEffectsProps> = ({ effect, onComplete }) =
                       filter: 'drop-shadow(0 0 10px rgba(255, 215, 0, 0.8))',
                     }}
                     initial={{ scale: 0, opacity: 0, rotate: 0 }}
-                    animate={{ 
+                    animate={{
                       scale: [0, 1.2, 1, 0.8, 0],
                       opacity: [0, 1, 0.8, 0.6, 0],
                       rotate: [0, 360, 720],
@@ -1373,39 +1373,39 @@ const SpecialEffects: React.FC<SpecialEffectsProps> = ({ effect, onComplete }) =
                 }}
               >
                 <div className="text-center">
-                  <motion.div
+                <motion.div 
                     className="text-5xl sm:text-7xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent mb-4"
                     style={{
                       filter: 'drop-shadow(0 0 20px rgba(139, 92, 246, 0.5))',
                     }}
-                    animate={{
+                  animate={{ 
                       scale: [1, 1.05, 1],
-                    }}
-                    transition={{
-                      duration: 2,
-                      repeat: Infinity,
+                  }}
+                  transition={{ 
+                    duration: 2,
+                    repeat: Infinity,
                       ease: "easeInOut"
-                    }}
-                  >
+                  }}
+                >
                     ✨ MAGIC! ✨
-                  </motion.div>
-                  
-                  <motion.div
+              </motion.div>
+
+              <motion.div
                     className="text-2xl sm:text-3xl text-amber-500 font-semibold"
                     style={{
                       textShadow: '0 0 15px rgba(245, 158, 11, 0.6)',
                     }}
                     initial={{ opacity: 0, y: 20 }}
-                    animate={{ 
+                animate={{ 
                       opacity: [0, 1],
                       y: [20, 0],
-                    }}
-                    transition={{ 
+                }}
+                transition={{ 
                       duration: 0.8,
                       delay: 4.0,
-                      ease: "easeOut"
-                    }}
-                  >
+                  ease: "easeOut"
+                }}
+              >
                     Reality has been transformed! 🌟
                   </motion.div>
                 </div>
