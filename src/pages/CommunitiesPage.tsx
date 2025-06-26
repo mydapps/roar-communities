@@ -7,20 +7,12 @@ import {
   TrendingUp, 
   Users, 
   Plus,
-  Filter,
   User,
   Loader2,
   RefreshCw,
   Clock,
   Gift
 } from 'lucide-react';
-import { 
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Link, useNavigate } from 'react-router-dom';
 import CommunityCard from '@/components/communities/CommunityCard';
@@ -381,14 +373,6 @@ const CommunitiesPage = () => {
       <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
         <h1 className="text-3xl font-bold">Communities</h1>
         <div className="flex gap-2">
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button variant="outline"><Filter className="h-4 w-4 mr-2" /> Filters</Button>
-            </DialogTrigger>
-            <DialogContent>
-              {/* Add Filter Dialog Content Here */}
-            </DialogContent>
-          </Dialog>
           <Button onClick={handleCreateCommunity}>
             <Plus className="h-4 w-4 mr-2" /> Create Community
           </Button>
