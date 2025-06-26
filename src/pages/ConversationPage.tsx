@@ -162,22 +162,22 @@ const ConversationPage = () => {
     formData.append('media', file);
 
     try {
-      const response = await fetch('/api/upload_media', {
-        method: 'POST',
-        body: formData,
-        credentials: 'include',
-      });
+        const response = await fetch('/api/upload_media', {
+            method: 'POST',
+            body: formData,
+            credentials: 'include',
+        });
 
-      if (!response.ok) {
-        throw new Error('Upload failed');
-      }
+        if (!response.ok) {
+            throw new Error('Upload failed');
+        }
 
-      const result = await response.json();
+        const result = await response.json();
       setUploadedMedia(result);
       toast.success('Media ready to be sent');
     } catch (error) {
-      toast.error('Failed to upload media.');
-      console.error(error);
+        toast.error('Failed to upload media.');
+        console.error(error);
     }
   };
 
@@ -202,40 +202,41 @@ const ConversationPage = () => {
               setTimeout(() => {
                 setIsFloatingMessages(true);
                 setTimeout(() => setIsFloatingMessages(false), 2500);
-              }, 4800);
+              }, 2000);
             }
-          }
-        }
-
+            }
+                  }
+        
         // Skip our own messages to prevent optimistic replacement
         if (message.sender_handle === currentUserHandle) {
           return;
         }
-
+        
         setMessages(prev => {
           const existingMessage = prev.find(m => m.id === message.id);
           if (existingMessage) return prev;
 
+          // Add new message and sort in ascending order (oldest first, newest last)
           const newMessages = [...prev, { ...message, isOptimistic: false }].sort((a, b) => 
             new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
           );
           return newMessages;
         });
-
+        
         setTimeout(() => messagesRef.current?.scrollToBottom(), 100);
-        markAsRead(parseInt(conversationId), message.id);
-
-        if (paymentStatus?.has_paid) {
+          markAsRead(parseInt(conversationId), message.id);
+          
+          if (paymentStatus?.has_paid) {
           setTimeout(() => loadPaymentStatus(), 500);
+          }
         }
-      }
-    };
+      };
 
-    const handleMessageRead = (data: any) => {
-      if (data.conversationId === parseInt(conversationId)) {
+      const handleMessageRead = (data: any) => {
+        if (data.conversationId === parseInt(conversationId)) {
         setMessages(prev => 
           prev.map(msg => 
-            msg.id === data.messageId 
+              msg.id === data.messageId 
               ? { ...msg, is_read: true }
               : msg
           )
@@ -296,7 +297,11 @@ const ConversationPage = () => {
       const result = await fetchMessages(conversationId, page);
       
       if (result.success) {
-        setMessages(result.messages);
+        // Sort messages in ascending order (oldest first, newest last) for proper conversation flow
+        const sortedMessages = result.messages.sort((a, b) => 
+          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
+        setMessages(sortedMessages);
         setParticipants(result.participants);
         setHasMore(result.pagination.page < result.pagination.totalPages);
         
@@ -362,7 +367,7 @@ const ConversationPage = () => {
     const hours = Math.floor(diffMs / (1000 * 60 * 60));
     const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
     
-    return `${hours}h ${minutes}m`;
+      return `${hours}h ${minutes}m`;
   };
 
   // Send message handler
@@ -374,28 +379,46 @@ const ConversationPage = () => {
     const userAvatar = localStorage.getItem('dapps_user_avatar');
     const avatarUrl = userAvatar ? `https://img.dapps.co/avatar/${userAvatar}.svg` : 'https://img.dapps.co/avatar/default.svg';
 
+    // 🎯 Check if this is a special command and trigger animation immediately for sender
+    if (isSpecialCommand(messageToSend)) {
+      const command = extractCommand(messageToSend);
+          if (command) {
+              const effectType = getEffectType(command);
+              setCurrentEffect(effectType);
+        
+        if (command === 'magic') {
+        setTimeout(() => {
+            setIsFloatingMessages(true);
+            setTimeout(() => setIsFloatingMessages(false), 2500);
+          }, 2000);
+        }
+      }
+    }
+
     // Create optimistic message
     const optimisticMessage: Message = {
       id: Date.now(),
       conversation_id: conversationId,
       sender_id: currentUserId,
-      sender_handle: currentUserHandle,
+        sender_handle: currentUserHandle,
       sender_avatar: avatarUrl,
       message_content: messageToSend,
       xmtp_message_id: '',
-      message_type: 'text',
-      is_read: false,
-      created_at: new Date().toISOString(),
+        message_type: 'text',
+        is_read: false,
+        created_at: new Date().toISOString(),
       isOptimistic: true,
-      sender: {
+        sender: {
         id: currentUserId,
-        handle: currentUserHandle,
+          handle: currentUserHandle,
         avatar: avatarUrl
       }
     };
 
-    // Add optimistic message
-    setMessages(prev => [...prev, optimisticMessage]);
+    // Add optimistic message (sorted in ascending order - oldest first, newest last)
+    setMessages(prev => [...prev, optimisticMessage].sort((a, b) => 
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    ));
     setMessageText('');
     setUploadedMedia(null);
     setReplyingTo(null);
@@ -425,7 +448,7 @@ const ConversationPage = () => {
       const errorMessage = error instanceof Error ? error.message : 'Failed to send message';
       if (errorMessage.includes('You cannot initiate a conversation with this user')) {
         toast.error('🚫 You cannot message this user');
-      } else {
+        } else {
         toast.error(errorMessage);
       }
     } finally {
@@ -549,12 +572,52 @@ const ConversationPage = () => {
       setTimeout(() => {
         setIsFloatingMessages(true);
         setTimeout(() => setIsFloatingMessages(false), 2500);
-      }, 4800);
+      }, 2000);
     }
     
-    // Send the command message directly
-    setMessageText(`/${command}`);
-    setTimeout(() => handleSendMessage(), 100);
+    // Send the command message directly without setting messageText state
+    const commandMessage = `/${command}`;
+    const userAvatar = localStorage.getItem('dapps_user_avatar');
+    const avatarUrl = userAvatar ? `https://img.dapps.co/avatar/${userAvatar}.svg` : 'https://img.dapps.co/avatar/default.svg';
+
+    // Create optimistic message for the command
+    const optimisticMessage: Message = {
+      id: Date.now(),
+      conversation_id: conversationId,
+      sender_id: currentUserId,
+      sender_handle: currentUserHandle,
+      sender_avatar: avatarUrl,
+      message_content: commandMessage,
+      xmtp_message_id: '',
+      message_type: 'text',
+      is_read: false,
+      created_at: new Date().toISOString(),
+      isOptimistic: true,
+      sender: {
+        id: currentUserId,
+        handle: currentUserHandle,
+        avatar: avatarUrl
+      }
+    };
+
+    // Add optimistic message
+    setMessages(prev => [...prev, optimisticMessage].sort((a, b) => 
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    ));
+
+    setTimeout(() => messagesRef.current?.scrollToBottom(), 50);
+
+    try {
+      const result = await sendMessage(conversationId, commandMessage);
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to send command');
+      }
+    } catch (error) {
+      console.error('Error sending special command:', error);
+      // Remove optimistic message on error
+      setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
+    }
   };
 
   // Load more messages
@@ -567,7 +630,7 @@ const ConversationPage = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-950" {...getRootProps()}>
+    <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-950 mobile-conversation-container" {...getRootProps()}>
       <input {...getInputProps()} />
       
       {/* Header */}
@@ -582,58 +645,61 @@ const ConversationPage = () => {
         onUnblockUser={handleUnblockUser}
       />
       
-      {/* Payment Status Banner */}
-      {paymentStatus?.has_paid && (
-        <PaymentStatusBanner
-          paymentStatus={paymentStatus}
-          timeRemaining={timeRemaining}
-        />
-      )}
-      
-      {/* Messages */}
-      <ConversationMessages
-        ref={messagesRef}
-        messages={messages}
-        loading={loading}
-        hasMore={hasMore}
-        currentUserHandle={currentUserHandle}
-        replyingTo={replyingTo}
-        isFloatingMessages={isFloatingMessages}
-        messageRefs={messageRefs}
-        onReplyToMessage={handleReplyToMessage}
-        onReplyClick={handleReplyClick}
-        onSpecialCommandClick={handleSpecialCommandClick}
-        onLoadMore={handleLoadMore}
-      />
-      
-      {/* Input Area or Blocked Interface */}
-      {isUserBlocked ? (
-        <BlockedUserInterface
-          otherUserHandle={otherUserHandle}
-          isBlocking={isBlocking}
-          onUnblockUser={handleUnblockUser}
-        />
-      ) : (
-        <MessageInput
-          ref={messageInputRef}
-          messageText={messageText}
-          sending={sending}
+      {/* Content container with proper spacing for fixed mobile header */}
+      <div className="flex flex-col flex-1 md:mt-0 mt-[140px]">
+        {/* Payment Status Banner */}
+        {paymentStatus?.has_paid && (
+          <PaymentStatusBanner
+            paymentStatus={paymentStatus}
+            timeRemaining={timeRemaining}
+          />
+        )}
+        
+        {/* Messages */}
+        <ConversationMessages
+          ref={messagesRef}
+          messages={messages}
+          loading={loading}
+          hasMore={hasMore}
+          currentUserHandle={currentUserHandle}
           replyingTo={replyingTo}
-          uploadedMedia={uploadedMedia}
-          isEmojiPickerOpen={isEmojiPickerOpen}
-          isMediaPopoverOpen={isMediaPopoverOpen}
-          onMessageTextChange={setMessageText}
-          onSendMessage={handleSendMessage}
-          onEmojiClick={handleEmojiClick}
-          onMediaUploaded={handleMediaUploaded}
-          onRemoveMedia={removeMedia}
-          onCancelReply={cancelReply}
-          onSetEmojiPickerOpen={setIsEmojiPickerOpen}
-          onSetMediaPopoverOpen={setIsMediaPopoverOpen}
-          onFileUpload={handleFileUpload}
-          onTyping={handleTyping}
+          isFloatingMessages={isFloatingMessages}
+          messageRefs={messageRefs}
+          onReplyToMessage={handleReplyToMessage}
+                    onReplyClick={handleReplyClick}
+          onSpecialCommandClick={handleSpecialCommandClick}
+          onLoadMore={handleLoadMore}
         />
-      )}
+        
+        {/* Input Area or Blocked Interface */}
+      {isUserBlocked ? (
+          <BlockedUserInterface
+            otherUserHandle={otherUserHandle}
+            isBlocking={isBlocking}
+            onUnblockUser={handleUnblockUser}
+          />
+        ) : (
+          <MessageInput
+            ref={messageInputRef}
+            messageText={messageText}
+            sending={sending}
+            replyingTo={replyingTo}
+            uploadedMedia={uploadedMedia}
+            isEmojiPickerOpen={isEmojiPickerOpen}
+            isMediaPopoverOpen={isMediaPopoverOpen}
+            onMessageTextChange={setMessageText}
+            onSendMessage={handleSendMessage}
+            onEmojiClick={handleEmojiClick}
+                  onMediaUploaded={handleMediaUploaded}
+            onRemoveMedia={removeMedia}
+            onCancelReply={cancelReply}
+            onSetEmojiPickerOpen={setIsEmojiPickerOpen}
+            onSetMediaPopoverOpen={setIsMediaPopoverOpen}
+            onFileUpload={handleFileUpload}
+            onTyping={handleTyping}
+          />
+        )}
+        </div>
       
       {/* Modals */}
       <ConversationModals

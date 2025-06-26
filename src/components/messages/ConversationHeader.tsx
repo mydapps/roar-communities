@@ -9,6 +9,8 @@ import {
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { motion } from 'framer-motion';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { isIOSApp } from '@/utils/deviceUtils';
 
 interface ConversationHeaderProps {
   conversationTitle: string;
@@ -31,13 +33,128 @@ const ConversationHeader: React.FC<ConversationHeaderProps> = ({
   onBlockUser,
   onUnblockUser,
 }) => {
+  const isMobile = useIsMobile();
+  const isIOS = isIOSApp();
+
+  // Mobile-first design
+  if (isMobile) {
+    return (
+      <motion.div 
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className={`
+          flex flex-col bg-white dark:bg-gray-900 
+          border-b border-gray-200 dark:border-gray-700 fixed top-0 left-0 right-0 z-50
+          ${isIOS ? 'pt-12' : 'pt-4'}
+        `}
+        style={{
+          paddingTop: isIOS ? 'max(env(safe-area-inset-top, 0px), 48px)' : '16px'
+        }}
+      >
+        {/* Main header with user info */}
+        <div className="flex items-center justify-between px-4 pb-3">
+          <div className="flex items-center space-x-3 flex-1">
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={onBack} 
+              className="touch-manipulation min-h-[44px] min-w-[44px] -ml-2"
+            >
+              <ArrowLeft className="h-6 w-6" />
+            </Button>
+            
+            <div className="flex items-center space-x-3 flex-1">
+              <div className="relative">
+                <Avatar className="h-12 w-12">
+                  <AvatarImage 
+                    src={conversationAvatar || 'https://img.dapps.co/avatar/default.svg'} 
+                    alt={conversationTitle} 
+                  />
+                  <AvatarFallback className="text-lg font-semibold">
+                    {conversationTitle.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                {/* Online Status Indicator - Larger for mobile */}
+                <div className="absolute -bottom-0.5 -right-0.5">
+                  <div className={`
+                    w-4 h-4 rounded-full border-2 border-white dark:border-gray-900
+                    ${isOtherUserOnline ? 'bg-green-500' : 'bg-gray-400'}
+                  `} />
+                </div>
+              </div>
+              
+              <div className="flex-1 min-w-0">
+                <h2 className="font-bold text-lg text-gray-900 dark:text-white truncate">
+                  @{conversationTitle}
+                </h2>
+                <p className={`text-sm font-medium ${
+                  isOtherUserOnline 
+                    ? 'text-green-600 dark:text-green-400' 
+                    : 'text-gray-500 dark:text-gray-400'
+                }`}>
+                  {isOtherUserOnline ? 'Online' : 'Offline'}
+                </p>
+              </div>
+            </div>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon"
+                  className="touch-manipulation min-h-[44px] min-w-[44px]"
+                >
+                  <MoreVertical className="h-6 w-6" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                {isUserBlocked ? (
+                  <DropdownMenuItem 
+                    onClick={onUnblockUser}
+                    className="text-green-600 focus:text-green-600"
+                  >
+                    Unblock @{otherUserHandle}
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem 
+                    onClick={onBlockUser}
+                    className="text-red-600 focus:text-red-600"
+                  >
+                    Block @{otherUserHandle}
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+
+        {/* XMTP Security Banner */}
+        <div className="flex items-center justify-center px-4 pb-2">
+          <div className="flex items-center space-x-2 text-xs text-gray-600 dark:text-gray-400">
+            <img 
+              src="/xmtp.png" 
+              alt="XMTP" 
+              className="h-4 w-4 opacity-70"
+            />
+            <span className="font-medium">Secured by XMTP</span>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+
+  // Desktop design with proper spacing
   return (
     <motion.div 
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      className="flex items-center justify-between p-4 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10"
+      className="flex items-center justify-between p-4 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700 sticky z-10"
+      style={{
+        top: '100px', // Move down more to avoid top menu cutoff
+        marginTop: '30px' // Additional spacing
+      }}
     >
-      <div className="flex items-center space-x-3">
+      <div className="flex items-center space-x-4">
         <Button 
           variant="ghost" 
           size="icon"
@@ -60,25 +177,35 @@ const ConversationHeader: React.FC<ConversationHeaderProps> = ({
             </Avatar>
             {/* Online Status Indicator */}
             <div className="absolute -bottom-1 -right-1">
-              {isOtherUserOnline ? (
-                <div className="flex items-center justify-center w-4 h-4 bg-green-500 rounded-full border-2 border-white dark:border-gray-900">
-                  <Wifi className="h-2 w-2 text-white" />
-                </div>
-              ) : (
-                <div className="flex items-center justify-center w-4 h-4 bg-gray-400 rounded-full border-2 border-white dark:border-gray-900">
-                  <WifiOff className="h-2 w-2 text-white" />
-                </div>
-              )}
+              <div className={`
+                w-4 h-4 rounded-full border-2 border-white dark:border-gray-900
+                ${isOtherUserOnline ? 'bg-green-500' : 'bg-gray-400'}
+              `} />
             </div>
           </div>
           
           <div>
             <h2 className="font-semibold text-gray-900 dark:text-white">
-              {conversationTitle}
+              @{conversationTitle}
             </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {isOtherUserOnline ? 'Online' : 'Offline'}
-            </p>
+            <div className="flex items-center space-x-2">
+              <p className={`text-sm ${
+                isOtherUserOnline 
+                  ? 'text-green-600 dark:text-green-400' 
+                  : 'text-gray-500 dark:text-gray-400'
+              }`}>
+                {isOtherUserOnline ? 'Online' : 'Offline'}
+              </p>
+              <span className="text-gray-300 dark:text-gray-600">•</span>
+              <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
+                <img 
+                  src="/xmtp.png" 
+                  alt="XMTP" 
+                  className="h-3 w-3 opacity-70"
+                />
+                <span>Secured by XMTP</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>

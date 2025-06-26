@@ -92,11 +92,12 @@ const ConversationMessages = forwardRef<ConversationMessagesRef, ConversationMes
     <div className="flex-1 overflow-hidden">
       <div
         ref={messagesContainerRef}
-        className={`h-full overflow-y-auto p-4 space-y-4 ${
+        className={`h-full overflow-y-auto p-4 space-y-4 mobile-messages-container ${
           isFloatingMessages ? 'floating-messages' : ''
         }`}
         style={{
-          scrollBehavior: 'smooth'
+          scrollBehavior: 'smooth',
+          paddingBottom: '120px' // Extra space for mobile input
         }}
       >
         {/* Load more indicator */}
@@ -148,11 +149,9 @@ const ConversationMessages = forwardRef<ConversationMessagesRef, ConversationMes
 
                 {isSpecialCommand(message.message_content) ? (
                   <SpecialCommandBubble
-                    message={message}
-                    isFromCurrentUser={isFromCurrentUser}
-                    showAvatar={showAvatar}
-                    onCommandClick={(command: SpecialCommand) => onSpecialCommandClick(command)}
-                    onReply={onReplyToMessage}
+                    message={message.message_content}
+                    isOwn={isFromCurrentUser}
+                    onClick={(command: SpecialCommand) => onSpecialCommandClick(command)}
                   />
                 ) : (
                   <MessageBubble

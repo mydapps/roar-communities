@@ -1082,385 +1082,355 @@ const SpecialEffects: React.FC<SpecialEffectsProps> = ({ effect, onComplete }) =
         )}
       </AnimatePresence>
 
-      {/* Magic Effect - Harry Potter Wingardium Leviosa Experience */}
+      {/* Magic Effect - Spectacular Mobile-Optimized Experience */}
       <AnimatePresence>
         {effect === 'magic' && (
           <motion.div className="absolute inset-0">
             
-            {/* Stage 1: Ron's Incorrect Pronunciation (0-2s) */}
+            {/* Stage 1: Reality Glitch Effect (0-0.8s) - Instant Impact */}
             <motion.div
-              className="absolute inset-0 flex items-center justify-center"
+              className="absolute inset-0"
               initial={{ opacity: 0 }}
-              animate={{ opacity: [0, 1, 1, 0] }}
-              transition={{ duration: 2, times: [0, 0.2, 0.8, 1] }}
+              animate={{ opacity: [0, 1, 0] }}
+              transition={{ duration: 0.8, times: [0, 0.3, 1] }}
             >
-              {/* Confused/struggling magical sparkles */}
-              {[...Array(15)].map((_, i) => (
+              {/* Screen glitch overlay */}
+              <motion.div
+                className="absolute inset-0 bg-gradient-to-r from-purple-500/30 via-pink-500/30 to-blue-500/30"
+                animate={{
+                  opacity: [0, 0.8, 0.3, 0.9, 0],
+                  scale: [1, 1.02, 0.98, 1.01, 1],
+                }}
+                transition={{ duration: 0.8, ease: "easeInOut" }}
+              />
+              
+              {/* Digital glitch lines */}
+              {[...Array(8)].map((_, i) => (
                 <motion.div
-                  key={`confused-sparkle-${i}`}
-                  className="absolute text-xl sm:text-2xl"
+                  key={`glitch-${i}`}
+                  className="absolute w-full h-1 bg-white/80"
                   style={{
-                    left: `${40 + Math.random() * 20}%`,
-                    top: `${40 + Math.random() * 20}%`,
-                    color: '#6b7280',
+                    top: `${10 + i * 12}%`,
+                    filter: 'blur(0.5px)',
                   }}
-                  initial={{ scale: 0, opacity: 0 }}
+                  initial={{ x: '-100%', opacity: 0 }}
                   animate={{ 
-                    scale: [0, 1, 0.5, 0],
-                    opacity: [0, 0.6, 0.3, 0],
-                    rotate: [0, Math.random() * 360],
-                    x: [0, (Math.random() - 0.5) * 50],
-                    y: [0, (Math.random() - 0.5) * 50]
+                    x: ['100%', '-100%', '100%'],
+                    opacity: [0, 1, 0],
                   }}
                   transition={{ 
-                    duration: 1.8,
+                    duration: 0.6,
                     delay: i * 0.05,
-                    ease: "easeOut"
+                    ease: "linear"
                   }}
-                >
-                  ✨
-                </motion.div>
+                />
               ))}
 
-              {/* Ron's incorrect text with magical font */}
+              {/* Reality crack effect */}
               <motion.div
-                className="text-3xl sm:text-5xl font-bold text-red-600 text-center"
-                style={{
-                  fontFamily: 'fantasy, serif',
-                  textShadow: '0 0 20px rgba(220, 38, 38, 0.6)',
-                }}
-                initial={{ scale: 0, y: 20, opacity: 0 }}
-                animate={{ 
-                  scale: [0, 1.2, 1, 0.8],
-                  y: [20, 0, 0, -10],
-                  opacity: [0, 1, 1, 0],
-                }}
-                transition={{ 
-                  duration: 2,
-                  ease: "backOut"
-                }}
-              >
-                "Vigardium Leviosa!"
-              </motion.div>
-
-              {/* Frustrated Ron emoji */}
-              <motion.div
-                className="absolute bottom-1/3 text-4xl sm:text-6xl"
+                className="absolute inset-0 flex items-center justify-center"
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{ 
-                  scale: [0, 1.2, 1],
+                  scale: [0, 1.5, 1],
                   opacity: [0, 1, 0],
                 }}
-                transition={{ 
-                  duration: 2,
-                  delay: 0.5,
-                  ease: "backOut"
-                }}
+                transition={{ duration: 0.8, ease: "backOut" }}
               >
-                😤
+                <div 
+                  className="text-6xl sm:text-8xl font-bold text-white"
+                  style={{
+                    textShadow: '0 0 40px rgba(255, 255, 255, 0.8)',
+                    filter: 'drop-shadow(0 0 20px rgba(139, 92, 246, 0.8))',
+                  }}
+                >
+                  ⚡
+                </div>
               </motion.div>
             </motion.div>
 
-            {/* Stage 2: Hermione's Correction (2-4s) */}
+            {/* Stage 2: Portal Opening (0.8-1.8s) - First AHA Moment */}
             <motion.div
               className="absolute inset-0 flex items-center justify-center"
               initial={{ opacity: 0 }}
-              animate={{ opacity: [0, 0, 1, 1, 0] }}
-              transition={{ duration: 4, times: [0, 0.5, 0.55, 0.9, 1] }}
+              animate={{ opacity: [0, 1, 1] }}
+              transition={{ duration: 2, times: [0.4, 0.5, 1] }}
             >
-              {/* Confident magical aura */}
+              {/* Magical portal background */}
               <motion.div
-                className="absolute rounded-full bg-gradient-to-r from-purple-300 via-blue-300 to-purple-300"
+                className="absolute rounded-full"
                 style={{
-                  width: window.innerWidth < 640 ? '150px' : '200px',
-                  height: window.innerWidth < 640 ? '150px' : '200px',
+                  width: window.innerWidth < 640 ? '250px' : '350px',
+                  height: window.innerWidth < 640 ? '250px' : '350px',
+                  background: 'radial-gradient(circle, rgba(139, 92, 246, 0.8) 0%, rgba(59, 130, 246, 0.6) 30%, rgba(16, 185, 129, 0.4) 60%, transparent 100%)',
+                  filter: 'blur(20px)',
+                }}
+                initial={{ scale: 0, rotate: 0 }}
+                animate={{ 
+                  scale: [0, 1.2, 1],
+                  rotate: [0, 180, 360],
+                }}
+                transition={{ 
+                  duration: 1.2,
+                  delay: 0.8,
+                  ease: "easeOut"
+                }}
+              />
+
+              {/* Portal ring effect */}
+              <motion.div
+                className="absolute rounded-full border-4 border-purple-400"
+                style={{
+                  width: window.innerWidth < 640 ? '200px' : '300px',
+                  height: window.innerWidth < 640 ? '200px' : '300px',
+                  boxShadow: '0 0 50px rgba(139, 92, 246, 0.8), inset 0 0 50px rgba(139, 92, 246, 0.4)',
+                }}
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ 
+                  scale: [0, 1.1, 1],
+                  opacity: [0, 1, 0.8],
+                  rotate: [0, -360],
+                }}
+                transition={{ 
+                  duration: 1,
+                  delay: 0.9,
+                  ease: "backOut"
+                }}
+              />
+
+              {/* Portal center glow */}
+              <motion.div
+                className="absolute text-8xl sm:text-9xl z-10"
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ 
+                  scale: [0, 1.3, 1],
+                  opacity: [0, 1, 1],
+                }}
+                transition={{ 
+                  duration: 0.8,
+                  delay: 1.2,
+                  ease: "backOut"
+                }}
+              >
+                🌀
+              </motion.div>
+            </motion.div>
+
+            {/* Stage 3: Magic Explosion (1.8-3.2s) - Second AHA Moment */}
+            <motion.div
+              className="absolute inset-0 flex items-center justify-center"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 1] }}
+              transition={{ duration: 2, delay: 1.8 }}
+            >
+              {/* Massive magical explosion */}
+              <motion.div
+                className="absolute rounded-full"
+                style={{
+                  width: window.innerWidth < 640 ? '400px' : '600px',
+                  height: window.innerWidth < 640 ? '400px' : '600px',
+                  background: 'radial-gradient(circle, rgba(255, 215, 0, 0.9) 0%, rgba(255, 165, 0, 0.7) 20%, rgba(255, 20, 147, 0.5) 40%, rgba(138, 43, 226, 0.3) 60%, transparent 100%)',
                   filter: 'blur(30px)',
                 }}
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{ 
-                  scale: [0, 1.5, 1.2],
-                  opacity: [0, 0.4, 0.6],
+                  scale: [0, 2.5, 1.8],
+                  opacity: [0, 1, 0.6],
                 }}
                 transition={{ 
-                  duration: 2,
-                  delay: 2.2,
+                  duration: 1.4,
+                  delay: 1.8,
                   ease: "easeOut"
                 }}
               />
 
-              {/* Hermione's correction with elegant font */}
-              <motion.div
-                className="text-3xl sm:text-5xl font-semibold text-purple-700 text-center"
-                style={{
-                  fontFamily: 'serif',
-                  textShadow: '0 0 25px rgba(126, 34, 206, 0.7)',
-                }}
-                initial={{ scale: 0, y: -30, opacity: 0 }}
-                animate={{ 
-                  scale: [0, 1.1, 1],
-                  y: [-30, 0, 0],
-                  opacity: [0, 1, 1],
-                }}
-                transition={{ 
-                  duration: 1.8,
-                  delay: 2.2,
-                  ease: "backOut"
-                }}
-              >
-                "It's Wing-GAR-dium Levi-O-sa"
-              </motion.div>
-
-              {/* Hermione's confident emoji */}
-              <motion.div
-                className="absolute bottom-1/3 text-4xl sm:text-6xl"
-                initial={{ scale: 0, opacity: 0 }}
-                animate={{ 
-                  scale: [0, 1.2, 1],
-                  opacity: [0, 1, 1],
-                }}
-                transition={{ 
-                  duration: 1.5,
-                  delay: 2.8,
-                  ease: "backOut"
-                }}
-              >
-                🧙‍♀️
-              </motion.div>
-
-              {/* Smart sparkles around Hermione's text */}
-              {[...Array(12)].map((_, i) => {
-                const angle = (i / 12) * 2 * Math.PI;
-                const radius = window.innerWidth < 640 ? 120 : 160;
-                const x = Math.cos(angle) * radius;
-                const y = Math.sin(angle) * radius;
+              {/* Magical creatures bursting out */}
+              {[
+                { emoji: '🦄', delay: 1.9, angle: 0 },
+                { emoji: '🐉', delay: 2.0, angle: 72 },
+                { emoji: '🧚‍♀️', delay: 2.1, angle: 144 },
+                { emoji: '🦋', delay: 2.2, angle: 216 },
+                { emoji: '✨', delay: 2.3, angle: 288 },
+              ].map((creature, i) => {
+                const radius = window.innerWidth < 640 ? 120 : 180;
+                const x = Math.cos((creature.angle * Math.PI) / 180) * radius;
+                const y = Math.sin((creature.angle * Math.PI) / 180) * radius;
                 
                 return (
                   <motion.div
-                    key={`smart-sparkle-${i}`}
-                    className="absolute text-lg sm:text-xl text-purple-500"
-                    initial={{ scale: 0, x: 0, y: 0, opacity: 0 }}
-                    animate={{
-                      scale: [0, 1, 0.8],
-                      x: x,
-                      y: y,
-                      opacity: [0, 0.8, 0.6],
-                      rotate: [0, 180],
-                    }}
-                    transition={{
-                      duration: 1.5,
-                      delay: 2.5 + i * 0.05,
-                      ease: "easeOut"
-                    }}
-                  >
-                    ⭐
-                  </motion.div>
-                );
-              })}
-            </motion.div>
-
-            {/* Stage 3: The Magic Works - Feather Effect (4-7s) */}
-            <motion.div
-              className="absolute inset-0 flex items-center justify-center"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: [0, 0, 1] }}
-              transition={{ duration: 7, times: [0, 0.6, 1] }}
-            >
-              {/* Golden magical explosion */}
-              <motion.div
-                className="absolute rounded-full bg-gradient-to-r from-yellow-200 via-yellow-400 to-yellow-200"
-                style={{
-                  width: window.innerWidth < 640 ? '300px' : '400px',
-                  height: window.innerWidth < 640 ? '300px' : '400px',
-                  filter: 'blur(50px)',
-                }}
-                initial={{ scale: 0, opacity: 0 }}
-                animate={{ 
-                  scale: [0, 2, 1.5],
-                  opacity: [0, 0.8, 0.4],
-                }}
-                transition={{ 
-                  duration: 2,
-                  delay: 4.2,
-                  ease: "easeOut"
-                }}
-              />
-
-              {/* The correct spell text - glowing and floating */}
-              <motion.div
-                className="absolute text-4xl sm:text-6xl font-bold text-amber-600 text-center z-10"
-                style={{
-                  fontFamily: 'fantasy, serif',
-                  textShadow: '0 0 30px rgba(245, 158, 11, 0.9)',
-                }}
-                initial={{ scale: 0, y: 0, opacity: 0 }}
-                animate={{ 
-                  scale: [0, 1.3, 1.1, 1],
-                  y: [0, -20, -15, -10],
-                  opacity: [0, 1, 1, 1],
-                }}
-                transition={{ 
-                  duration: 2.5,
-                  delay: 4.3,
-                  ease: "backOut"
-                }}
-              >
-                "Wingardium Leviosa!"
-              </motion.div>
-
-              {/* Magic feather floating gracefully */}
-              <motion.div
-                className="absolute text-6xl sm:text-8xl z-20"
-                initial={{ scale: 0, y: 100, opacity: 0, rotate: 0 }}
-                animate={{ 
-                  scale: [0, 1.2, 1, 1.1, 1],
-                  y: [100, -20, -40, -30, -35],
-                  opacity: [0, 1, 1, 1, 1],
-                  rotate: [0, 5, -3, 2, -1],
-                  x: [0, 10, -5, 3, -2],
-                }}
-                transition={{ 
-                  duration: 2.8,
-                  delay: 4.8,
-                  ease: "easeOut"
-                }}
-              >
-                🪶
-              </motion.div>
-
-              {/* Magical sparkles bursting around */}
-              {[...Array(25)].map((_, i) => {
-                const angle = (i / 25) * 2 * Math.PI;
-                const radius = window.innerWidth < 640 ? 100 + Math.random() * 80 : 150 + Math.random() * 100;
-                const x = Math.cos(angle) * radius;
-                const y = Math.sin(angle) * radius;
-                
-                return (
-                  <motion.div
-                    key={`magic-burst-${i}`}
-                    className="absolute text-xl sm:text-2xl"
+                    key={`creature-${i}`}
+                    className="absolute text-6xl sm:text-8xl z-20"
                     style={{
-                      color: ['#fbbf24', '#f59e0b', '#d97706', '#92400e'][Math.floor(Math.random() * 4)],
-                      filter: 'drop-shadow(0 0 8px rgba(245, 158, 11, 0.8))',
+                      filter: 'drop-shadow(0 0 15px rgba(255, 215, 0, 0.8))',
                     }}
-                    initial={{ scale: 0, x: 0, y: 0, opacity: 0 }}
+                    initial={{ scale: 0, x: 0, y: 0, opacity: 0, rotate: 0 }}
                     animate={{
-                      scale: [0, 1.5, 1, 0.8, 0],
-                      x: [0, x * 0.7, x, x * 1.2, x * 1.5],
-                      y: [0, y * 0.7, y, y * 1.2, y * 1.5],
-                      opacity: [0, 1, 0.8, 0.4, 0],
+                      scale: [0, 1.4, 1.2, 1],
+                      x: [0, x * 0.7, x, x * 1.2],
+                      y: [0, y * 0.7, y, y * 1.2],
+                      opacity: [0, 1, 1, 0.8],
                       rotate: [0, 180, 360],
                     }}
                     transition={{
-                      duration: 2.5,
-                      delay: 4.5 + i * 0.03,
-                      ease: "easeOut"
+                      duration: 1.3,
+                      delay: creature.delay,
+                      ease: "backOut"
                     }}
                   >
-                    {['✨', '⭐', '🌟', '💫', '🔮'][Math.floor(Math.random() * 5)]}
+                    {creature.emoji}
                   </motion.div>
                 );
               })}
 
-              {/* Success celebration - Harry Potter emojis */}
+              {/* Central magic wand with sparkle burst */}
               <motion.div
-                className="absolute bottom-1/4 flex space-x-4 sm:space-x-6"
-                initial={{ scale: 0, opacity: 0 }}
+                className="absolute text-7xl sm:text-9xl z-30"
+                style={{
+                  filter: 'drop-shadow(0 0 25px rgba(255, 215, 0, 1))',
+                }}
+                initial={{ scale: 0, rotate: 0, opacity: 0 }}
                 animate={{ 
-                  scale: [0, 1.2, 1],
-                  opacity: [0, 1, 1],
+                  scale: [0, 1.5, 1.2, 1],
+                  rotate: [0, 360, 720],
+                  opacity: [0, 1, 1, 1],
                 }}
                 transition={{ 
-                  duration: 1.5,
-                  delay: 5.5,
+                  duration: 1.2,
+                  delay: 2.2,
                   ease: "backOut"
                 }}
               >
-                <motion.div 
-                  className="text-4xl sm:text-5xl"
-                  animate={{ 
-                    rotate: [0, 10, -10, 0],
-                    scale: [1, 1.1, 1]
-                  }}
-                  transition={{ 
-                    duration: 2,
-                    delay: 6,
-                    repeat: Infinity,
-                    repeatType: "reverse"
-                  }}
-                >
-                  🧙‍♂️
-                </motion.div>
-                <motion.div 
-                  className="text-4xl sm:text-5xl"
-                  animate={{ 
-                    rotate: [0, -10, 10, 0],
-                    scale: [1, 1.1, 1]
-                  }}
-                  transition={{ 
-                    duration: 2,
-                    delay: 6.2,
-                    repeat: Infinity,
-                    repeatType: "reverse"
-                  }}
-                >
-                  🧙‍♀️
-                </motion.div>
+                🪄
               </motion.div>
+            </motion.div>
+
+            {/* Stage 4: Reality Transformation (3.0-4.0s) - Final AHA Moment */}
+            <motion.div
+              className="absolute inset-0"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 1] }}
+              transition={{ duration: 1, delay: 3.0 }}
+            >
+              {/* Rainbow wave sweep */}
+              <motion.div
+                className="absolute inset-0"
+                style={{
+                  background: 'linear-gradient(45deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3)',
+                  opacity: 0.3,
+                }}
+                initial={{ x: '-100%', skewX: -20 }}
+                animate={{ x: '100%', skewX: 20 }}
+                transition={{ 
+                  duration: 0.8,
+                  delay: 3.0,
+                  ease: "easeInOut"
+                }}
+              />
+
+              {/* Floating magical elements everywhere */}
+              {[...Array(25)].map((_, i) => {
+                const emojis = ['⭐', '✨', '🌟', '💫', '🔮', '🎭', '🎪', '🎨', '🌈', '🦄'];
+                const emoji = emojis[Math.floor(Math.random() * emojis.length)];
+                
+                return (
+                  <motion.div
+                    key={`floating-magic-${i}`}
+                    className="absolute text-3xl sm:text-4xl"
+                    style={{
+                      left: `${Math.random() * 100}%`,
+                      top: `${Math.random() * 100}%`,
+                      filter: 'drop-shadow(0 0 10px rgba(255, 215, 0, 0.8))',
+                    }}
+                    initial={{ scale: 0, opacity: 0, rotate: 0 }}
+                    animate={{ 
+                      scale: [0, 1.2, 1, 0.8, 0],
+                      opacity: [0, 1, 0.8, 0.6, 0],
+                      rotate: [0, 360, 720],
+                      y: [0, -50, -100],
+                    }}
+                    transition={{
+                      duration: 1.5,
+                      delay: 3.1 + i * 0.03,
+                      ease: "easeOut"
+                    }}
+                  >
+                    {emoji}
+                  </motion.div>
+                );
+              })}
 
               {/* Final magical message */}
               <motion.div
-                className="absolute bottom-1/6 text-center"
-                initial={{ opacity: 0, y: 50 }}
+                className="absolute inset-0 flex items-center justify-center"
+                initial={{ opacity: 0, scale: 0 }}
                 animate={{ 
                   opacity: [0, 1, 1],
-                  y: [50, 0, 0],
+                  scale: [0, 1.2, 1],
                 }}
                 transition={{ 
-                  duration: 1.5,
-                  delay: 6.2,
-                  ease: "easeOut"
+                  duration: 1,
+                  delay: 3.5,
+                  ease: "backOut"
                 }}
               >
-                <div 
-                  className="text-2xl sm:text-3xl font-bold text-amber-700"
-                  style={{
-                    textShadow: '0 0 20px rgba(180, 83, 9, 0.6)',
-                    fontFamily: 'fantasy, serif',
-                  }}
-                >
-                  ✨ Magic Achieved! ✨
+                <div className="text-center">
+                  <motion.div
+                    className="text-5xl sm:text-7xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent mb-4"
+                    style={{
+                      filter: 'drop-shadow(0 0 20px rgba(139, 92, 246, 0.5))',
+                    }}
+                    animate={{
+                      scale: [1, 1.05, 1],
+                    }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                  >
+                    ✨ MAGIC! ✨
+                  </motion.div>
+                  
+                  <motion.div
+                    className="text-2xl sm:text-3xl text-amber-500 font-semibold"
+                    style={{
+                      textShadow: '0 0 15px rgba(245, 158, 11, 0.6)',
+                    }}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ 
+                      opacity: [0, 1],
+                      y: [20, 0],
+                    }}
+                    transition={{ 
+                      duration: 0.8,
+                      delay: 4.0,
+                      ease: "easeOut"
+                    }}
+                  >
+                    Reality has been transformed! 🌟
+                  </motion.div>
                 </div>
-                <motion.div
-                  className="text-lg sm:text-xl text-amber-600 mt-2"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: [0, 1] }}
-                  transition={{ delay: 6.7, duration: 0.8 }}
-                  style={{ fontFamily: 'serif' }}
-                >
-                  "It's all in the wrist movement!" 🪄
-                </motion.div>
               </motion.div>
 
-              {/* Gentle magical aura that persists */}
-              {Array.from({ length: 20 }).map((_, i) => (
+              {/* Persistent magical sparkles */}
+              {Array.from({ length: 15 }).map((_, i) => (
                 <motion.div
-                  key={`magical-aura-${i}`}
-                  className="absolute w-1 h-1 bg-amber-400 rounded-full"
+                  key={`persistent-sparkle-${i}`}
+                  className="absolute w-2 h-2 bg-yellow-400 rounded-full"
                   style={{
-                    top: `${20 + Math.random() * 60}%`,
-                    left: `${20 + Math.random() * 60}%`,
-                    filter: 'blur(1px)',
+                    top: `${10 + Math.random() * 80}%`,
+                    left: `${10 + Math.random() * 80}%`,
+                    boxShadow: '0 0 10px rgba(255, 215, 0, 0.8)',
                   }}
                   initial={{ scale: 0, opacity: 0 }}
                   animate={{ 
-                    scale: [0, 2, 0], 
-                    opacity: [0, 0.9, 0] 
+                    scale: [0, 1.5, 1, 1.2, 0], 
+                    opacity: [0, 1, 0.8, 0.6, 0],
                   }}
                   transition={{
-                    delay: 5 + Math.random() * 2,
+                    delay: 3.8 + Math.random() * 0.5,
                     duration: 1.5,
                     repeat: Infinity,
-                    repeatDelay: Math.random() * 3
+                    repeatDelay: Math.random() * 2
                   }}
                 />
               ))}

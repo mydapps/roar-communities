@@ -1,4 +1,4 @@
-import React, { useRef, forwardRef, useImperativeHandle } from 'react';
+import React, { useRef, forwardRef, useImperativeHandle, useEffect, useState } from 'react';
 import { Send, Smile, Plus, ImageIcon, Video, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +8,9 @@ import { MediaUpload, MediaPreview, MediaUploadResponse } from '@/components/ui/
 import EmojiPicker, { EmojiClickData, EmojiStyle, Categories } from 'emoji-picker-react';
 import { Message } from '@/utils/messagingApi';
 import { useDropzone } from 'react-dropzone';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { useMobileKeyboard } from '@/hooks/useMobileKeyboard';
+import { isIOSApp } from '@/utils/deviceUtils';
 
 // Custom emoji configuration
 const customEmojisConfig = [
@@ -84,6 +87,14 @@ const MessageInput = forwardRef<MessageInputRef, MessageInputProps>(({
   onTyping,
 }, ref) => {
   const inputRef = useRef<HTMLInputElement>(null);
+  const isMobile = useIsMobile();
+  const isIOS = isIOSApp();
+  
+  // Mobile keyboard detection
+  const { isKeyboardVisible, safeViewportHeight } = useMobileKeyboard(true);
+  
+  // State for managing input focus and scroll behavior
+  const [inputFocused, setInputFocused] = useState(false);
 
   useImperativeHandle(ref, () => ({
     focus: () => {
@@ -92,6 +103,19 @@ const MessageInput = forwardRef<MessageInputRef, MessageInputProps>(({
       }
     },
   }));
+
+  // Handle mobile keyboard appearance
+  useEffect(() => {
+    if (isMobile && isKeyboardVisible && inputFocused && inputRef.current) {
+      // Scroll input into view when keyboard appears
+      setTimeout(() => {
+        inputRef.current?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center' 
+        });
+      }, 100);
+    }
+  }, [isKeyboardVisible, inputFocused, isMobile]);
 
   const onDrop = (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -122,16 +146,49 @@ const MessageInput = forwardRef<MessageInputRef, MessageInputProps>(({
     onTyping();
   };
 
+  const handleInputFocus = () => {
+    setInputFocused(true);
+  };
+
+  const handleInputBlur = () => {
+    setInputFocused(false);
+  };
+
+  // Dynamic styling based on mobile keyboard state
+  const getContainerStyle = () => {
+    if (!isMobile) {
+      return {
+        position: 'sticky' as const,
+        bottom: 0,
+        zIndex: 20
+      };
+    }
+
+    return {
+      position: 'fixed' as const,
+      bottom: isKeyboardVisible ? '0px' : '0px',
+      left: '0px',
+      right: '0px',
+      zIndex: 30,
+      transform: isKeyboardVisible ? 'translateY(0)' : 'translateY(0)',
+      transition: 'transform 0.2s ease-in-out',
+      ...(isIOS && {
+        paddingBottom: isKeyboardVisible ? '0px' : 'env(safe-area-inset-bottom, 0px)'
+      })
+    };
+  };
+
   return (
     <motion.div
       initial={{ y: 20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      className="p-4 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-t border-gray-200 dark:border-gray-700 flex-shrink-0 sticky bottom-0 md:relative md:bottom-auto z-20 mobile-input-container"
-      style={{
-        position: 'sticky',
-        bottom: 0,
-        zIndex: 20
-      }}
+      className={`
+        p-4 bg-white/95 dark:bg-gray-900/95 backdrop-blur-lg 
+        border-t border-gray-200 dark:border-gray-700 flex-shrink-0
+        ${isMobile ? 'mobile-input-container' : ''}
+        ${isKeyboardVisible ? 'keyboard-visible' : ''}
+      `}
+      style={getContainerStyle()}
     >
       {/* Reply Preview */}
       {replyingTo && (
@@ -225,6 +282,8 @@ const MessageInput = forwardRef<MessageInputRef, MessageInputProps>(({
             value={messageText}
             onChange={handleInputChange}
             onKeyPress={handleKeyPress}
+            onFocus={handleInputFocus}
+            onBlur={handleInputBlur}
             placeholder={
               replyingTo 
                 ? `Reply to ${replyingTo.sender?.handle}...`
@@ -232,7 +291,16 @@ const MessageInput = forwardRef<MessageInputRef, MessageInputProps>(({
                   ? "Drop the image here..." 
                   : "Type a message..."
             }
-            className="pr-12 rounded-full border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:bg-gray-800"
+            className={`
+              pr-12 rounded-full border-gray-300 dark:border-gray-600 
+              focus:ring-2 focus:ring-blue-500 dark:bg-gray-800
+              ${isMobile ? 'text-base' : 'text-sm'}
+              ${isKeyboardVisible ? 'bg-white dark:bg-gray-800' : ''}
+            `}
+            style={{
+              fontSize: isMobile ? '16px' : '14px', // Prevent zoom on iOS
+              minHeight: isMobile ? '44px' : '40px'
+            }}
           />
           
           {/* Emoji Picker */}
@@ -259,7 +327,7 @@ const MessageInput = forwardRef<MessageInputRef, MessageInputProps>(({
                 onEmojiClick={onEmojiClick}
                 autoFocusSearch={false}
                 emojiStyle={EmojiStyle.NATIVE}
-                height={400}
+                height={isMobile && isKeyboardVisible ? 250 : 400}
                 customEmojis={customEmojisConfig}
                 categories={emojiPickerCategoryConfig}
               />
@@ -276,7 +344,7 @@ const MessageInput = forwardRef<MessageInputRef, MessageInputProps>(({
               onSendMessage();
             }}
             size="icon"
-            className="rounded-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-lg"
+            className="rounded-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-lg min-h-[44px] min-w-[44px]"
           >
             {sending ? (
               <div className="flex items-center justify-center">

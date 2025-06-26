@@ -1,6 +1,26 @@
 import { toast } from 'sonner';
 import { createAuthHeaders, debugLog } from './apiBase';
 
+// 🛡️ Enhanced Error Handling for V3
+const handleXMTPError = (error: Error, context: string) => {
+  // V3-specific error messages
+  const v3ErrorMap: Record<string, string> = {
+    'XMTP V3 Client not yet loaded': 'XMTP service is starting up, please try again in a moment',
+    'Target user is not available for messaging': 'This user cannot receive messages yet',
+    'You cannot initiate a conversation with this user': 'This user has blocked you or messaging is restricted'
+  };
+  
+  const userFriendlyMessage = v3ErrorMap[error.message] || error.message;
+  
+  console.error(`XMTP V3 Error in ${context}:`, {
+    original: error.message,
+    userFriendly: userFriendlyMessage,
+    timestamp: new Date().toISOString()
+  });
+  
+  return userFriendlyMessage;
+};
+
 // Conversation interfaces
 export interface ConversationUser {
   id: number;
@@ -16,12 +36,14 @@ export interface Conversation {
   last_message_at: string;
   last_message_preview: string;
   unread_count: number;
+  version?: string; // 🆕 V3 version tracking
 }
 
 export interface ConversationsResponse {
   success: boolean;
   conversations: Conversation[];
   message?: string;
+  version?: string; // 🆕 V3 version tracking
 }
 
 // DM Pricing interfaces
@@ -65,9 +87,10 @@ export interface UpdateDMPricingResponse {
  */
 export const fetchConversations = async (): Promise<ConversationsResponse> => {
   try {
-    debugLog('Fetching conversations');
+    debugLog('Fetching conversations via XMTP V3');
     
-    const response = await fetch('/api/xmtp/conversations', {
+    // ✅ V3 (WORKING) - Updated endpoint
+    const response = await fetch('/api/xmtp/v3/conversations', {
       method: 'GET',
       credentials: 'include',
       headers: createAuthHeaders(),
@@ -78,16 +101,17 @@ export const fetchConversations = async (): Promise<ConversationsResponse> => {
     }
 
     const data = await response.json();
-    debugLog('Conversations fetched successfully', data);
+    debugLog('V3 Conversations fetched successfully', data);
     
     return data;
   } catch (error) {
-    console.error('Error fetching conversations:', error);
-    toast.error('Failed to load conversations');
+    const friendlyMessage = handleXMTPError(error as Error, 'fetchConversations');
+    console.error('Error fetching V3 conversations:', error);
+    toast.error(friendlyMessage);
     return {
       success: false,
       conversations: [],
-      message: 'Failed to load conversations'
+      message: friendlyMessage
     };
   }
 };
@@ -216,9 +240,10 @@ export interface StartConversationResponse {
 
 export const startConversation = async (handle: string): Promise<StartConversationResponse> => {
   try {
-    debugLog('Starting conversation with user', handle);
+    debugLog('Starting conversation via XMTP V3 with user', handle);
     
-    const response = await fetch('/api/xmtp/conversations', {
+    // ✅ V3 (WORKING) - Updated endpoint
+    const response = await fetch('/api/xmtp/v3/conversations', {
       method: 'POST',
       credentials: 'include',
       headers: createAuthHeaders(),
@@ -226,44 +251,25 @@ export const startConversation = async (handle: string): Promise<StartConversati
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      
-      // Handle specific error cases
-      if (response.status === 403) {
-        const errorMessage = errorData.message || 'You cannot initiate a conversation with this user';
-        if (errorMessage.toLowerCase().includes('block')) {
-          throw new Error('This user has blocked you or you have blocked them. You cannot start a conversation.');
-        } else {
-          throw new Error('You cannot initiate a conversation with this user. They may have restricted messaging.');
-        }
-      }
-      
-      throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.message || response.statusText}`);
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const data = await response.json();
-    debugLog('Conversation started successfully', data);
+    debugLog('V3 Conversation started successfully', data);
     
-    // Ensure the response matches our expected structure
-    if (data.success && data.conversation) {
-      return {
-        success: true,
-        conversation: data.conversation,
-        isNew: data.isNew || false,
-        message: data.message
-      };
-    } else {
-      return {
-        success: false,
-        error: data.error || data.message || 'Failed to start conversation'
-      };
-    }
+    return {
+      success: data.success,
+      conversation: data.conversation,
+      isNew: data.isNew,
+      message: data.message
+    };
   } catch (error) {
-    console.error('Error starting conversation:', error);
-    toast.error(error instanceof Error ? error.message : 'Failed to start conversation');
+    const friendlyMessage = handleXMTPError(error as Error, 'startConversation');
+    console.error('Error starting V3 conversation:', error);
+    toast.error(friendlyMessage);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to start conversation'
+      error: friendlyMessage
     };
   }
 };
@@ -300,6 +306,7 @@ export interface Message {
   created_at: string;
   metadata?: any;
   reply_to?: ReplyToMessage | null;
+  xmtp_version?: string; // 🆕 V3 version field
   // For optimistic UI updates
   isOptimistic?: boolean;
   // For compatibility with existing components
@@ -321,6 +328,7 @@ export interface MessagesResponse {
   messages: Message[];
   pagination: MessagesPagination;
   message?: string;
+  version?: string; // 🆕 V3 version tracking
 }
 
 export interface SendMessageRequest {
@@ -339,13 +347,17 @@ export interface SendMessageResponse {
     message_type: string;
     created_at: string;
     reply_to?: number;
+    xmtp_version?: string; // 🆕 V3 version field
+    xmtp_message_id?: string; // 🆕 V3 XMTP ID
   };
   error?: string;
+  version?: string; // 🆕 V3 version tracking
 }
 
 export interface UnreadCountResponse {
   success: boolean;
   unread_count: number;
+  version?: string; // 🆕 V3 version tracking
 }
 
 /**
@@ -367,7 +379,8 @@ export const fetchMessages = async (conversationId: string, page: number = 1): P
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const response = await fetch(`/api/xmtp/conversations/${conversationId}/messages?page=${page}`, {
+      // ✅ V3 (WORKING) - Updated endpoint
+      const response = await fetch(`/api/xmtp/v3/conversations/${conversationId}/messages?page=${page}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -390,25 +403,28 @@ export const fetchMessages = async (conversationId: string, page: number = 1): P
         throw new Error(data.error || 'Failed to fetch messages');
       }
 
-      // Transform API response to match our interface
-      const transformedMessages: Message[] = data.messages.map((msg: any) => ({
+      debugLog(`V3 Messages fetched successfully for conversation ${conversationId}`, {
+        messageCount: data.messages?.length || 0,
+        page,
+        version: data.version // 🆕 V3 version logging
+      });
+
+      // Transform messages to ensure compatibility
+      const transformedMessages = data.messages.map((msg: any) => ({
         id: msg.id,
-        conversation_id: msg.conversation_id?.toString() || conversationId,
+        conversation_id: msg.conversation_id,
         sender_id: msg.sender_id,
         sender_handle: msg.sender_handle,
         sender_avatar: msg.sender_avatar,
         message_content: msg.message_content,
         xmtp_message_id: msg.xmtp_message_id,
-        message_type: msg.message_type || 'text',
-        is_read: msg.is_read || false,
+        message_type: msg.message_type,
+        is_read: msg.is_read,
         created_at: msg.created_at,
-        reply_to: msg.reply_to ? {
-          id: msg.reply_to.id,
-          content: msg.reply_to.content,
-          sender_id: msg.reply_to.sender_id,
-          sender_handle: msg.reply_to.sender_handle
-        } : null,
-        // Compatibility fields for existing components
+        metadata: msg.metadata,
+        reply_to: msg.reply_to,
+        xmtp_version: msg.xmtp_version || 'v3', // 🆕 V3 version field
+        // Compatibility fields
         content: msg.message_content,
         sender: {
           id: msg.sender_id,
@@ -421,20 +437,28 @@ export const fetchMessages = async (conversationId: string, page: number = 1): P
         success: true,
         messages: transformedMessages,
         participants: data.participants,
-        pagination: data.pagination
+        pagination: {
+          page: data.pagination.page,
+          totalPages: data.pagination.totalPages,
+          totalMessages: data.pagination.total
+        }
       };
-
     } catch (error) {
       lastError = error as Error;
-      console.error(`Attempt ${attempt} failed:`, error);
+      console.error(`V3 fetchMessages attempt ${attempt} failed:`, error);
       
-      if (attempt < maxRetries) {
-        // Exponential backoff: wait 1s, 2s, 4s
-        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+      if (attempt === maxRetries) {
+        break;
       }
+      
+      // Wait before retrying
+      await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
     }
   }
 
+  console.error('All V3 fetchMessages attempts failed:', lastError);
+  toast.error('Failed to load messages');
+  
   return {
     success: false,
     messages: [],
@@ -442,94 +466,83 @@ export const fetchMessages = async (conversationId: string, page: number = 1): P
       currentUser: { id: 0, handle: '', username: '', avatar: '' },
       otherUser: { id: 0, handle: '', username: '', avatar: '' }
     },
-    pagination: { page: 1, totalPages: 1, totalMessages: 0 },
-    error: lastError?.message || 'Failed to fetch messages after multiple attempts'
+    pagination: {
+      page: 1,
+      totalPages: 0,
+      totalMessages: 0
+    },
+    error: lastError?.message || 'Failed to fetch messages'
   };
 };
 
 /**
- * Send a message in a conversation with optional reply
+ * Send a message to a conversation
  */
 export const sendMessage = async (conversationId: string, content: string, replyToMessageId?: number): Promise<{
   success: boolean;
   message?: any;
   error?: string;
 }> => {
-  const maxRetries = 2; // Fewer retries for sending to avoid duplicate messages
-  let lastError: Error | null = null;
+  try {
+    debugLog('Sending message via XMTP V3', { conversationId, contentLength: content.length, replyToMessageId });
+    
+    // ✅ V3 (WORKING) - Updated endpoint
+    const response = await fetch(`/api/xmtp/v3/conversations/${conversationId}/messages`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        message_content: content,
+        message_type: 'text',
+        reply_to_message_id: replyToMessageId
+      }),
+    });
 
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      const response = await fetch(`/api/xmtp/conversations/${conversationId}/messages`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          message_content: content,
-          message_type: 'text',
-          reply_to_message_id: replyToMessageId
-        }),
-      });
-
-      if (!response.ok) {
-        if (response.status >= 500 && attempt < maxRetries) {
-          // Server error, retry with shorter backoff for sending
-          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
-          continue;
-        }
-        
-        // Handle specific error cases
-        if (response.status === 403) {
-          const errorData = await response.json().catch(() => ({}));
-          const errorMessage = errorData.message || 'You cannot send messages to this user';
-          if (errorMessage.toLowerCase().includes('block')) {
-            throw new Error('This user has blocked you and you cannot send messages to them.');
-          } else {
-            throw new Error('You cannot send messages to this user. They may have restricted messaging or blocked you.');
-          }
-        }
-        
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to send message');
-      }
-
-      return {
-        success: true,
-        message: data.message
-      };
-
-    } catch (error) {
-      lastError = error as Error;
-      console.error(`Send attempt ${attempt} failed:`, error);
-      
-      if (attempt < maxRetries) {
-        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
-      }
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
     }
-  }
 
-  return {
-    success: false,
-    error: lastError?.message || 'Failed to send message after multiple attempts'
-  };
+    const data = await response.json();
+    
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to send message');
+    }
+
+    debugLog('V3 Message sent successfully', {
+      messageId: data.message?.id,
+      xmtpId: data.message?.xmtp_message_id, // 🆕 V3 XMTP ID
+      version: data.version // 🆕 Version tracking
+    });
+
+    return {
+      success: true,
+      message: data.message
+    };
+  } catch (error) {
+    console.error('V3 sendMessage failed:', error);
+    toast.error('Failed to send message');
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to send message'
+    };
+  }
 };
 
 /**
- * Mark a specific message as read
+ * Mark a message as read
  */
 export const markMessageAsRead = async (messageId: number): Promise<{
   success: boolean;
   error?: string;
 }> => {
   try {
-    const response = await fetch(`/api/xmtp/messages/${messageId}/read`, {
+    debugLog('Marking message as read via XMTP V3', messageId);
+    
+    // ✅ V3 (WORKING) - Updated endpoint
+    const response = await fetch(`/api/xmtp/v3/messages/${messageId}/read`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -538,7 +551,7 @@ export const markMessageAsRead = async (messageId: number): Promise<{
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const data = await response.json();
@@ -547,10 +560,14 @@ export const markMessageAsRead = async (messageId: number): Promise<{
       throw new Error(data.error || 'Failed to mark message as read');
     }
 
-    return { success: true };
+    debugLog('V3 Message marked as read successfully', {
+      messageId,
+      version: data.version // 🆕 Version tracking
+    });
 
+    return { success: true };
   } catch (error) {
-    console.error('Error marking message as read:', error);
+    console.error('V3 markMessageAsRead failed:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to mark message as read'
@@ -563,9 +580,10 @@ export const markMessageAsRead = async (messageId: number): Promise<{
  */
 export const markAllMessagesAsRead = async (conversationId: string): Promise<{ success: boolean; message?: string; updated_count?: number }> => {
   try {
-    debugLog('Marking all messages as read for conversation', conversationId);
+    debugLog('Marking all messages as read via XMTP V3 for conversation', conversationId);
     
-    const response = await fetch(`/api/xmtp/conversations/${conversationId}/mark-all-read`, {
+    // ✅ V3 (WORKING) - Updated endpoint
+    const response = await fetch(`/api/xmtp/v3/conversations/${conversationId}/mark-all-read`, {
       method: 'POST',
       credentials: 'include',
       headers: createAuthHeaders(),
@@ -576,11 +594,11 @@ export const markAllMessagesAsRead = async (conversationId: string): Promise<{ s
     }
 
     const data = await response.json();
-    debugLog('All messages marked as read successfully', data);
+    debugLog('V3 All messages marked as read successfully', data);
     
     return data;
   } catch (error) {
-    console.error('Error marking all messages as read:', error);
+    console.error('Error marking all V3 messages as read:', error);
     return {
       success: false,
       message: 'Failed to mark messages as read'
@@ -589,13 +607,14 @@ export const markAllMessagesAsRead = async (conversationId: string): Promise<{ s
 };
 
 /**
- * Fetch total unread messages count
+ * Fetch unread message count
  */
 export const fetchUnreadCount = async (): Promise<UnreadCountResponse> => {
   try {
-    debugLog('Fetching unread count');
+    debugLog('Fetching unread count via XMTP V3');
     
-    const response = await fetch('/api/xmtp/unread-count', {
+    // ✅ V3 (WORKING) - Updated endpoint
+    const response = await fetch('/api/xmtp/v3/unread-count', {
       method: 'GET',
       credentials: 'include',
       headers: createAuthHeaders(),
@@ -606,11 +625,14 @@ export const fetchUnreadCount = async (): Promise<UnreadCountResponse> => {
     }
 
     const data = await response.json();
-    debugLog('Unread count fetched successfully', data);
+    debugLog('V3 Unread count fetched successfully', {
+      count: data.unread_count,
+      version: data.version // 🆕 Version tracking
+    });
     
     return data;
   } catch (error) {
-    console.error('Error fetching unread count:', error);
+    console.error('Error fetching V3 unread count:', error);
     return {
       success: false,
       unread_count: 0
