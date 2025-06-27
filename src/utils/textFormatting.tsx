@@ -1,5 +1,6 @@
 import React from 'react';
 import sanitizeHtml from 'sanitize-html';
+import { YoutubeEmbed } from '@/components/feed/post/YoutubeEmbed';
 
 /**
  * Process text content to convert mentions, community references, URLs, and media markdown to interactive elements
@@ -10,17 +11,33 @@ import sanitizeHtml from 'sanitize-html';
 export const processTextContent = (content: string, onImageClick?: (imageUrl: string) => void): React.ReactNode => {
   if (!content) return null;
   
+  // Add debugging for video content
+  if (content.includes('![video]') || content.includes('/video/')) {
+    console.log('🎥 DEBUG: Processing content with video:', content);
+  }
+  
   // Updated regex to handle both newline and non-newline image markdown cases
-  // This handles ![](url) with optional newline before it
-  const mediaMarkdownRegex = /(\n?!\[\]\(([^)]+)\))/g; 
+  // This handles ![](url) and ![alt](url) with optional newline before it
+  const mediaMarkdownRegex = /(\n?!\[([^\]]*)\]\(([^)]+)\))/g; 
   const parts = content.split(mediaMarkdownRegex);
   
+  // Debug the split results for video content
+  if (content.includes('![video]') || content.includes('/video/')) {
+    console.log('🎥 DEBUG: Split parts:', parts);
+    console.log('🎥 DEBUG: Regex matches:', content.match(mediaMarkdownRegex));
+  }
+  
   return parts.map((part, index) => {
-    // Check if this part is a captured media URL (from group 2 of the split regex)
-    // The split results in [text, full_markdown, url, text, full_markdown, url, ...]
-    // So, the URL is at index `i` where `i % 3 === 2`
-    if (index % 3 === 2 && part) { 
+    // Check if this part is a captured media URL (from group 3 of the split regex)
+    // The split results in [text, full_markdown, alt_text, url, text, full_markdown, alt_text, url, ...]
+    // So, the URL is at index `i` where `i % 4 === 3`
+    if (index % 4 === 3 && part) { 
       const mediaUrl = part.trim(); // This is the captured URL - trim to remove any whitespace
+      
+      // Debug for video URLs
+      if (mediaUrl.includes('/video/') || mediaUrl.includes('mp4')) {
+        console.log('🎥 DEBUG: Processing video URL:', mediaUrl);
+      }
       
       // Skip if the URL is empty after trimming
       if (!mediaUrl) {
@@ -30,8 +47,16 @@ export const processTextContent = (content: string, onImageClick?: (imageUrl: st
       // Check for common image/video extensions to determine type
       const extension = mediaUrl.split('.').pop()?.toLowerCase();
       
+      // Also check if URL contains '/video/' (for dapps.co video uploads)
+      const isVideoUrl = mediaUrl.includes('/video/');
+      
+      // Debug video detection
+      if (mediaUrl.includes('/video/') || mediaUrl.includes('mp4')) {
+        console.log('🎥 DEBUG: Video detection - extension:', extension, 'isVideoUrl:', isVideoUrl);
+      }
+      
       // Determine media type
-      if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension || '')) {
+      if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension || '') && !isVideoUrl) {
         return (
           <div key={index} className="mt-2 max-w-xs sm:max-w-sm md:max-w-md"> 
             <img 
@@ -46,7 +71,8 @@ export const processTextContent = (content: string, onImageClick?: (imageUrl: st
             />
           </div>
         );
-      } else if (['mp4', 'webm', 'mov'].includes(extension || '')) {
+      } else if (['mp4', 'webm', 'mov'].includes(extension || '') || isVideoUrl) {
+        console.log('🎥 DEBUG: Rendering video element for:', mediaUrl);
         return (
           <div key={index} className="mt-2 max-w-xs sm:max-w-sm md:max-w-md"> 
             <video 
@@ -55,6 +81,7 @@ export const processTextContent = (content: string, onImageClick?: (imageUrl: st
               preload="metadata"
               className="rounded-md w-full h-auto border border-border/20"
               onError={(e) => {
+                console.log('🎥 DEBUG: Video failed to load:', mediaUrl);
                 e.currentTarget.style.display = 'none'; 
               }}
             >
@@ -79,11 +106,11 @@ export const processTextContent = (content: string, onImageClick?: (imageUrl: st
           </div>
         );
       }
-    } else if (index % 3 === 0) { 
+    } else if (index % 4 === 0) { 
       // This is a regular text part (before or between media)
     return processTextPart(part, index);
     } else {
-      // This is the full markdown tag part, ignore it as we process the URL separately
+      // This is the full markdown tag part or alt text, ignore it as we process the URL separately
       return null;
     }
   });
@@ -361,49 +388,65 @@ const processTextPart = (text: string, key: number): React.ReactNode => {
       // Skip URLs that are part of image markdown
       if (!text.substring(Math.max(0, matchIndex - 5), matchIndex).includes('](')) {
         const originalUrl = match[0];
-        let finalUrl = originalUrl;
-        let isExternal = false;
+        
+        // Check for YouTube URL and extract video ID
+        const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+        const youtubeMatch = originalUrl.match(youtubeRegex);
+        
+        if (youtubeMatch && youtubeMatch[1]) {
+          // Render YouTube embed for comments
+          const videoId = youtubeMatch[1];
+          result.push(
+            <div key={`${key}-${matchIndex}`} className="mt-2 max-w-xs sm:max-w-sm md:max-w-md">
+              <YoutubeEmbed videoId={videoId} title="YouTube video" />
+            </div>
+          );
+        } else {
+          // Handle regular URLs
+          let finalUrl = originalUrl;
+          let isExternal = false;
 
-        try {
-          const parsedUrl = new URL(originalUrl);
-          // Check if the origin is different from the current window's origin
-          // Or if it simply starts with http/https (basic external check)
-          if (parsedUrl.origin !== window.location.origin || /^https?:\/\//.test(originalUrl)) {
-            isExternal = true;
-            if (!parsedUrl.searchParams.has('loadIn')) {
-              parsedUrl.searchParams.append('loadIn', 'defaultBrowser');
-              finalUrl = parsedUrl.toString();
-            }
-          }
-        } catch (e) {
-          // If URL parsing fails, treat it as potentially external if it starts with http/https
-          if (/^https?:\/\//.test(originalUrl)) {
-            isExternal = true;
-            // Attempt simple appending if URL object failed
-            if (!originalUrl.includes('loadIn=defaultBrowser')) {
-              if (originalUrl.includes('?')) {
-                finalUrl = `${originalUrl}&loadIn=defaultBrowser`;
-              } else {
-                finalUrl = `${originalUrl}?loadIn=defaultBrowser`;
+          try {
+            const parsedUrl = new URL(originalUrl);
+            // Check if the origin is different from the current window's origin
+            // Or if it simply starts with http/https (basic external check)
+            if (parsedUrl.origin !== window.location.origin || /^https?:\/\//.test(originalUrl)) {
+              isExternal = true;
+              if (!parsedUrl.searchParams.has('loadIn')) {
+                parsedUrl.searchParams.append('loadIn', 'defaultBrowser');
+                finalUrl = parsedUrl.toString();
               }
             }
+          } catch (e) {
+            // If URL parsing fails, treat it as potentially external if it starts with http/https
+            if (/^https?:\/\//.test(originalUrl)) {
+              isExternal = true;
+              // Attempt simple appending if URL object failed
+              if (!originalUrl.includes('loadIn=defaultBrowser')) {
+                if (originalUrl.includes('?')) {
+                  finalUrl = `${originalUrl}&loadIn=defaultBrowser`;
+                } else {
+                  finalUrl = `${originalUrl}?loadIn=defaultBrowser`;
+                }
+              }
+            }
+            // If it doesn't start with http/https and parsing failed, treat as internal/relative
           }
-          // If it doesn't start with http/https and parsing failed, treat as internal/relative
-        }
 
-        result.push(
-          <a 
-            key={`${key}-${matchIndex}`}
-            href={finalUrl}
-            target={isExternal ? "_blank" : "_self"} 
-            rel={isExternal ? "noopener noreferrer" : ""}
-            onClick={(e) => e.stopPropagation()}
-            className="text-primary hover:underline"
-          >
-            {/* Optionally shorten displayed URL if needed, but keep it simple for now */}
-            {originalUrl} 
-          </a>
-        );
+          result.push(
+            <a 
+              key={`${key}-${matchIndex}`}
+              href={finalUrl}
+              target={isExternal ? "_blank" : "_self"} 
+              rel={isExternal ? "noopener noreferrer" : ""}
+              onClick={(e) => e.stopPropagation()}
+              className="text-primary hover:underline"
+            >
+              {/* Optionally shorten displayed URL if needed, but keep it simple for now */}
+              {originalUrl} 
+            </a>
+          );
+        }
       } else {
         // This URL is likely part of a markdown link, so keep it as is
         result.push(
