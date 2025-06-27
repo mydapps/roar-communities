@@ -95,7 +95,7 @@ const getTabConfig = () => [
 ];
 
 // Enhanced Empty State Component
-const EmptyState = ({ activeTab, searchQuery }: { activeTab: string, searchQuery: string }) => {
+const EmptyState = ({ activeTab, searchQuery, onTabChange }: { activeTab: string, searchQuery: string, onTabChange: (tab: string) => void }) => {
   const getEmptyStateContent = () => {
     if (searchQuery) {
       return {
@@ -112,7 +112,7 @@ const EmptyState = ({ activeTab, searchQuery }: { activeTab: string, searchQuery
           icon: Users,
           title: 'Join your first community',
           description: 'Start by exploring popular communities and investing in the ones you believe in.',
-          action: { text: 'Explore Popular', onClick: () => {} }
+          action: { text: 'Explore Popular', onClick: () => onTabChange('popular') }
         };
       default:
         return {
@@ -536,7 +536,7 @@ const EmptyState = ({ activeTab, searchQuery }: { activeTab: string, searchQuery
               
                                  {/* Enhanced Empty State */}
                  {currentCommunities.length === 0 && !isLoading && (
-                   <EmptyState activeTab={activeTab} searchQuery="" />
+                   <EmptyState activeTab={activeTab} searchQuery="" onTabChange={setActiveTab} />
                  )}
               </>
           )}

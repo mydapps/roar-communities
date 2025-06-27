@@ -62,7 +62,7 @@ const CommunityRewardsSection: React.FC<CommunityRewardsSectionProps> = ({
               <li>40% is split among the next 7 top posts</li>
               <li>
                 {minShareReward !== null 
-                  ? `You must hold at least ${minShareReward} shares to be eligible for rewards`
+                  ? `You must hold at least ${minShareReward} ${minShareReward === 1 ? 'share' : 'shares'} to be eligible for rewards`
                   : `You must hold at least 5 shares to be eligible for rewards`}
               </li>
             </ul>
