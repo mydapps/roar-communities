@@ -2,7 +2,7 @@ import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Users, ChevronRight, Plus, Minus, TrendingUp, TrendingDown, Crown, Gift, Sparkles, Zap } from 'lucide-react';
+import { Users, ChevronRight, Plus, Minus, TrendingUp, TrendingDown, Crown, Gift, Sparkles, Zap, Info } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -23,6 +23,7 @@ interface CommunityCardProps {
   userShares?: number;
   onBuy?: () => void;
   onSell?: () => void;
+  onRewardPoolInfo?: () => void;
   isLoggedIn?: boolean;
 }
 
@@ -42,6 +43,7 @@ const CommunityCard: React.FC<CommunityCardProps> = ({
   userShares,
   onBuy,
   onSell,
+  onRewardPoolInfo,
   isLoggedIn = true
 }) => {
   const formatNumber = (num: number): string => {
@@ -191,11 +193,32 @@ const CommunityCard: React.FC<CommunityCardProps> = ({
                  )}
                </div>
                <div>
-                 <p className={`text-xs font-semibold uppercase tracking-wider ${
-                   rewardPool > 0 ? 'text-emerald-700' : 'text-orange-700'
-                 }`}>
-                   {rewardPool > 0 ? 'Reward Pool' : 'Reward Pool'}
-                 </p>
+                 <div className="flex items-center gap-1.5">
+                   <p className={`text-xs font-semibold uppercase tracking-wider ${
+                     rewardPool > 0 ? 'text-emerald-700' : 'text-orange-700'
+                   }`}>
+                     {rewardPool > 0 ? 'Reward Pool' : 'Reward Pool'}
+                   </p>
+                   {onRewardPoolInfo && (
+                     <TooltipProvider>
+                       <Tooltip>
+                         <TooltipTrigger asChild>
+                           <Button
+                             variant="ghost"
+                             size="sm"
+                             onClick={onRewardPoolInfo}
+                             className="h-5 w-5 p-0 hover:bg-transparent"
+                           >
+                             <Info className="h-3.5 w-3.5 text-muted-foreground hover:text-primary transition-colors cursor-pointer" />
+                           </Button>
+                         </TooltipTrigger>
+                         <TooltipContent>
+                           <p>Learn how rewards work</p>
+                         </TooltipContent>
+                       </Tooltip>
+                     </TooltipProvider>
+                   )}
+                 </div>
                  <div className="flex items-baseline gap-2">
                    {rewardPool > 0 ? (
                      <>

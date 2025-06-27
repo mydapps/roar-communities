@@ -1,4 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
+import { useFirstTimeVisitor } from '@/hooks/useFirstTimeVisitor';
+import CommunitiesOnboarding from '@/components/communities/CommunitiesOnboarding';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -142,8 +144,11 @@ const EmptyState = ({ activeTab, searchQuery }: { activeTab: string, searchQuery
   );
 };
 
-const CommunitiesPage = () => {
-
+  const CommunitiesPage = () => {
+    // First-time visitor tracking
+    const { isFirstTime, isLoading: isLoadingVisitor, markAsVisited } = useFirstTimeVisitor();
+    const [showOnboarding, setShowOnboarding] = useState(false);
+    const [onboardingStartSlide, setOnboardingStartSlide] = useState(0);
   
   // State for trading dialog
   const [selectedCommunity, setSelectedCommunity] = useState<Community | null>(null);
@@ -301,6 +306,30 @@ const CommunitiesPage = () => {
     }
     navigate('/create-community');
   };
+
+  // Handle onboarding
+  useEffect(() => {
+    if (!isLoadingVisitor && isFirstTime) {
+      setOnboardingStartSlide(0);
+      setShowOnboarding(true);
+    }
+  }, [isFirstTime, isLoadingVisitor]);
+
+  const handleOnboardingComplete = () => {
+    markAsVisited();
+    setShowOnboarding(false);
+  };
+
+  const handleOnboardingClose = () => {
+    markAsVisited();
+    setShowOnboarding(false);
+  };
+
+  // Handle reward pool info click
+  const handleRewardPoolInfo = () => {
+    setOnboardingStartSlide(2); // Start at the third slide (0-indexed)
+    setShowOnboarding(true);
+  };
   
   // Handle trade success
   const handleTradeSuccess = () => {
@@ -315,13 +344,13 @@ const CommunitiesPage = () => {
       setTradeLoading(true);
       const result = await buySharesConfirm(communityName, quantity);
       
-             if (result && result.status === 'SUCCESS') {
+      if (result && result.status === 'SUCCESS') {
          toast.success(`Successfully bought ${quantity} shares in ${communityName}!`);
          handleTradeSuccess();
-         setTradeDialogOpen(false);
-       } else {
+          setTradeDialogOpen(false);
+      } else {
          toast.error(result?.message || 'Failed to buy shares. Please try again.');
-       }
+      }
     } catch (error) {
       console.error('Error buying shares:', error);
       toast.error('An error occurred while buying shares. Please try again.');
@@ -336,13 +365,13 @@ const CommunitiesPage = () => {
       setTradeLoading(true);
       const result = await sellSharesConfirm(communityName, quantity);
       
-             if (result && result.status === 'SUCCESS') {
+      if (result && result.status === 'SUCCESS') {
          toast.success(`Successfully sold ${quantity} shares in ${communityName}!`);
          handleTradeSuccess();
-         setTradeDialogOpen(false);
-       } else {
+          setTradeDialogOpen(false);
+      } else {
          toast.error(result?.message || 'Failed to sell shares. Please try again.');
-       }
+      }
     } catch (error) {
       console.error('Error selling shares:', error);
       toast.error('An error occurred while selling shares. Please try again.');
@@ -452,104 +481,113 @@ const CommunitiesPage = () => {
                          {description}
                        </span>
                     )}
-                  </div>
-                </TabsTrigger>
+      </div>
+            </TabsTrigger>
               ))}
-            </TabsList>
-          </div>
+          </TabsList>
+        </div>
 
           {/* Enhanced Content Section */}
           <div className="mt-6">
-            {isLoading && currentCommunities.length === 0 ? (
-              <CommunityCardSkeleton count={6} />
-            ) : (
+          {isLoading && currentCommunities.length === 0 ? (
+            <CommunityCardSkeleton count={6} />
+          ) : (
               <>
                 {/* Communities Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 auto-rows-fr">
-                  {currentCommunities.map((community) => (
-                    <CommunityCard 
-                      key={community.name}
-                      name={community.name}
-                      description={community.description || ''}
-                      members={community.membersCount || 0}
-                      pricePerShare={community.sharePrice?.buyPrice || 0}
-                      priceChange={community.priceChange?.change24h || 0}
-                      priceChangePercent={community.priceChange?.change24hPercent || '0%'}
-                      rewardPool={community.rewards?.available_rewards || 0}
-                      lastDistributed={community.rewards?.last_distributed || ''}
-                      marketCap={parseFloat(community.marketCap || '0')}
-                      image={community.image || ''}
-                      isMember={!!community.userShares && community.userShares > 0}
-                      isAdmin={!!community.isAdmin}
-                      userShares={community.userShares && community.userShares > 0 ? community.userShares : undefined}
-                      onBuy={() => handleTradeAction(community, 'buy')}
-                      onSell={() => handleTradeAction(community, 'sell')}
-                      isLoggedIn={isLoggedIn}
-                    />
-                  ))}
+              {currentCommunities.map((community) => (
+                <CommunityCard 
+                  key={community.name}
+                  name={community.name}
+                  description={community.description || ''}
+                  members={community.membersCount || 0}
+                  pricePerShare={community.sharePrice?.buyPrice || 0}
+                  priceChange={community.priceChange?.change24h || 0}
+                  priceChangePercent={community.priceChange?.change24hPercent || '0%'}
+                  rewardPool={community.rewards?.available_rewards || 0}
+                  lastDistributed={community.rewards?.last_distributed || ''}
+                  marketCap={parseFloat(community.marketCap || '0')}
+                  image={community.image || ''}
+                  isMember={!!community.userShares && community.userShares > 0}
+                  isAdmin={!!community.isAdmin}
+                  userShares={community.userShares && community.userShares > 0 ? community.userShares : undefined}
+                  onBuy={() => handleTradeAction(community, 'buy')}
+                  onSell={() => handleTradeAction(community, 'sell')}
+                  onRewardPoolInfo={handleRewardPoolInfo}
+                  isLoggedIn={isLoggedIn}
+                />
+              ))}
                 </div>
-                
+              
                 {/* Load More Section */}
-                {currentCommunities.length > 0 && (
-                  <div 
-                    ref={loadMoreRef} 
+              {currentCommunities.length > 0 && (
+                <div 
+                  ref={loadMoreRef} 
                     className="flex justify-center py-8 mt-8"
-                  >
-                    {isLoading && !isRefreshing && (
+                >
+                  {isLoading && !isRefreshing && (
                       <div className="flex items-center justify-center space-x-3 bg-background/80 backdrop-blur-sm px-6 py-3 rounded-full border border-border/20">
                         <Loader2 className="h-5 w-5 animate-spin text-primary" />
                         <span className="text-sm font-medium">Loading more communities...</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-                
+                    </div>
+                  )}
+                </div>
+              )}
+              
                                  {/* Enhanced Empty State */}
                  {currentCommunities.length === 0 && !isLoading && (
                    <EmptyState activeTab={activeTab} searchQuery="" />
                  )}
               </>
-            )}
-          </div>
-        </Tabs>
+          )}
+        </div>
+      </Tabs>
 
         {/* Trade Sheet (unchanged functionality) */}
-        {selectedCommunity && (
-          <TradeSheet
-            open={tradeDialogOpen}
-            onOpenChange={setTradeDialogOpen}
-            community={{
-              community: selectedCommunity.name,
-              shares: selectedCommunity.userShares || 0,
-              image: selectedCommunity.image || '',
-              currentPrice: {
-                eth: selectedCommunity.sharePrice?.buyPrice || 0.001,
-                usd: selectedCommunity.usdPrice || 2.5
-              },
-              value: {
-                eth: (selectedCommunity.userShares || 0) * (selectedCommunity.sharePrice?.buyPrice || 0),
-                usd: (selectedCommunity.userShares || 0) * (selectedCommunity.usdPrice || 0)
-              }
-            }}
-            action={tradeAction}
-            userEthBalance={userEthBalance}
-            loadingAction={tradeLoading}
-            onBuyConfirm={handleBuySharesConfirm}
-            onSellConfirm={handleSellSharesConfirm}
-            forceSuccessVisible={tradeSuccess}
-            onBalanceUpdate={(newBalance) => setUserEthBalance(newBalance)}
-          />
-        )}
-        
+      {selectedCommunity && (
+        <TradeSheet
+          open={tradeDialogOpen}
+          onOpenChange={setTradeDialogOpen}
+          community={{
+            community: selectedCommunity.name,
+            shares: selectedCommunity.userShares || 0,
+            image: selectedCommunity.image || '',
+            currentPrice: {
+              eth: selectedCommunity.sharePrice?.buyPrice || 0.001,
+              usd: selectedCommunity.usdPrice || 2.5
+            },
+            value: {
+              eth: (selectedCommunity.userShares || 0) * (selectedCommunity.sharePrice?.buyPrice || 0),
+              usd: (selectedCommunity.userShares || 0) * (selectedCommunity.usdPrice || 0)
+            }
+          }}
+          action={tradeAction}
+          userEthBalance={userEthBalance}
+          loadingAction={tradeLoading}
+          onBuyConfirm={handleBuySharesConfirm}
+          onSellConfirm={handleSellSharesConfirm}
+          forceSuccessVisible={tradeSuccess}
+          onBalanceUpdate={(newBalance) => setUserEthBalance(newBalance)}
+        />
+      )}
+      
         {/* Enhanced Mobile FAB */}
-        <Button 
-          onClick={handleCreateCommunity}
-          size="icon" 
+      <Button 
+        onClick={handleCreateCommunity}
+        size="icon" 
           className="md:hidden fixed bottom-28 right-4 z-50 h-16 w-16 rounded-full bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white shadow-xl hover:shadow-2xl transition-all duration-300 group"
-        >
+      >
           <Plus className="h-7 w-7 group-hover:rotate-90 transition-transform duration-300" />
-        </Button>
+      </Button>
       </div>
+      
+      {/* Communities Onboarding */}
+      <CommunitiesOnboarding 
+        isOpen={showOnboarding}
+        onClose={handleOnboardingClose}
+        onComplete={handleOnboardingComplete}
+        startSlide={onboardingStartSlide}
+      />
     </div>
   );
 };
