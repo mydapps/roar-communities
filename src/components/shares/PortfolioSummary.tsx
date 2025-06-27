@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Wallet, SendHorizontal, Loader2, History } from 'lucide-react';
+import { Wallet, SendHorizontal, Loader2, History, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   Tooltip,
@@ -18,6 +18,7 @@ interface PortfolioSummaryProps {
   isLoadingBalance?: boolean;
   onDepositClick: () => void;
   onSendClick: () => void;
+  onWalletInfoClick?: () => void;
 }
 
 export const PortfolioSummary = ({
@@ -26,7 +27,8 @@ export const PortfolioSummary = ({
   ethBalance,
   isLoadingBalance = false,
   onDepositClick,
-  onSendClick
+  onSendClick,
+  onWalletInfoClick
 }: PortfolioSummaryProps) => {
   const [ethPrice, setEthPrice] = useState<number>(0);
   const [isPriceLoading, setIsPriceLoading] = useState<boolean>(true);
@@ -83,7 +85,26 @@ export const PortfolioSummary = ({
           </Tooltip>
 
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-primary">Your ETH Balance</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl font-semibold text-primary">Your ETH Balance</h2>
+            {onWalletInfoClick && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onWalletInfoClick}
+                    className="h-6 w-6 p-0 text-muted-foreground hover:text-primary"
+                  >
+                    <Info className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>About your wallet</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
           {isLoadingBalance && (
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <Loader2 className="h-3 w-3 animate-spin" />
