@@ -67,6 +67,8 @@ const ConversationPage = () => {
     setIsEmojiPickerOpen,
     isMediaPopoverOpen,
     setIsMediaPopoverOpen,
+    isMobileMediaPopoverOpen,
+    setIsMobileMediaPopoverOpen,
     uploadedMedia,
     setUploadedMedia,
     replyingTo,
@@ -108,6 +110,7 @@ const ConversationPage = () => {
   // Additional refs for child components
   const messagesRef = useRef<ConversationMessagesRef>(null);
   const messageInputRef = useRef<MessageInputRef>(null);
+  const mobileScrollContainerRef = useRef<HTMLDivElement>(null);
   const [participants, setParticipants] = useState<ConversationParticipants | null>(null);
   const [apiToken, setApiToken] = useState<string | null>(null);
 
@@ -428,7 +431,20 @@ const ConversationPage = () => {
     setReplyingTo(null);
     setSending(true);
 
-    setTimeout(() => messagesRef.current?.scrollToBottom(), 50);
+    // Mobile requires different scroll approach due to layout differences
+    const isMobile = window.innerWidth < 768;
+    setTimeout(() => {
+      if (isMobile && mobileScrollContainerRef.current) {
+        // Mobile: scroll the outer container directly
+        mobileScrollContainerRef.current.scrollTo({
+          top: mobileScrollContainerRef.current.scrollHeight,
+          behavior: 'smooth'
+        });
+      } else {
+        // Desktop: use the messages ref
+        messagesRef.current?.scrollToBottom();
+      }
+    }, isMobile ? 100 : 50);
 
     try {
       const result = await sendMessage(conversationId, messageToSend, replyingTo?.id);
@@ -472,6 +488,7 @@ const ConversationPage = () => {
   const handleMediaUploaded = (media: MediaUploadResponse) => {
     setUploadedMedia(media);
     setIsMediaPopoverOpen(false);
+    setIsMobileMediaPopoverOpen(false);
     toast.success('Media uploaded successfully');
   };
 
@@ -609,7 +626,20 @@ const ConversationPage = () => {
       new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
     ));
 
-    setTimeout(() => messagesRef.current?.scrollToBottom(), 50);
+    // Mobile requires different scroll approach due to layout differences
+    const isMobile = window.innerWidth < 768;
+    setTimeout(() => {
+      if (isMobile && mobileScrollContainerRef.current) {
+        // Mobile: scroll the outer container directly
+        mobileScrollContainerRef.current.scrollTo({
+          top: mobileScrollContainerRef.current.scrollHeight,
+          behavior: 'smooth'
+        });
+      } else {
+        // Desktop: use the messages ref
+        messagesRef.current?.scrollToBottom();
+      }
+    }, isMobile ? 100 : 50);
 
     try {
       const result = await sendMessage(conversationId, commandMessage);
@@ -667,7 +697,7 @@ const ConversationPage = () => {
 
         {/* Mobile Messages - Single scrollable container */}
         <div className="flex-1 bg-white dark:bg-gray-900" style={{ height: 'calc(100vh - 240px)' }}>
-          <div className="h-full overflow-y-auto pb-4">
+          <div ref={mobileScrollContainerRef} className="h-full overflow-y-auto pb-4">
             <ConversationMessages
               ref={messagesRef}
               messages={messages}
@@ -701,7 +731,7 @@ const ConversationPage = () => {
               replyingTo={replyingTo}
               uploadedMedia={uploadedMedia}
               isEmojiPickerOpen={isEmojiPickerOpen}
-              isMediaPopoverOpen={isMediaPopoverOpen}
+              isMediaPopoverOpen={isMobileMediaPopoverOpen}
               onMessageTextChange={setMessageText}
               onSendMessage={handleSendMessage}
               onEmojiClick={handleEmojiClick}
@@ -709,7 +739,7 @@ const ConversationPage = () => {
               onRemoveMedia={removeMedia}
               onCancelReply={cancelReply}
               onSetEmojiPickerOpen={setIsEmojiPickerOpen}
-              onSetMediaPopoverOpen={setIsMediaPopoverOpen}
+              onSetMediaPopoverOpen={setIsMobileMediaPopoverOpen}
               onFileUpload={handleFileUpload}
               onTyping={handleTyping}
             />

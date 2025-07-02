@@ -229,7 +229,16 @@ const MessageInput = forwardRef<MessageInputRef, MessageInputProps>(({
             <Button 
               variant="ghost" 
               size="icon" 
-              className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 touch-manipulation min-h-[44px] min-w-[44px]"
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+              }}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onSetMediaPopoverOpen(!isMediaPopoverOpen);
+              }}
+              className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 touch-manipulation min-h-[44px] min-w-[44px] relative z-[9999]"
               style={{ touchAction: 'manipulation' }}
             >
               <Plus className="h-5 w-5" />
@@ -241,36 +250,59 @@ const MessageInput = forwardRef<MessageInputRef, MessageInputProps>(({
             align="start"
             sideOffset={8}
             collisionPadding={16}
+            onInteractOutside={(e) => {
+              // Prevent auto-close on file input interactions and media uploads
+              const target = e.target as Element;
+              if (target instanceof HTMLInputElement && target.type === 'file') {
+                e.preventDefault();
+                return;
+              }
+              // Prevent closing when clicking on media upload buttons
+              if (target.closest('[data-media-upload]')) {
+                e.preventDefault();
+                return;
+              }
+            }}
+            onPointerDownOutside={(e) => {
+              const target = e.target as Element;
+              if (target.closest('[data-media-upload]')) {
+                e.preventDefault();
+              }
+            }}
           >
             <div className="grid gap-2">
-              <MediaUpload
-                onMediaUploaded={onMediaUploaded}
-                acceptedTypes="image"
-                disabled={!!uploadedMedia}
-              >
-                <Button 
-                  variant="ghost" 
-                  className="w-full justify-start min-h-[44px] touch-manipulation"
-                  style={{ touchAction: 'manipulation' }}
+              <div data-media-upload>
+                <MediaUpload
+                  onMediaUploaded={onMediaUploaded}
+                  acceptedTypes="image"
+                  disabled={!!uploadedMedia}
                 >
-                  <ImageIcon className="h-4 w-4 mr-2" />
-                  Image
-                </Button>
-              </MediaUpload>
-              <MediaUpload
-                onMediaUploaded={onMediaUploaded}
-                acceptedTypes="video"
-                disabled={!!uploadedMedia}
-              >
-                <Button 
-                  variant="ghost" 
-                  className="w-full justify-start min-h-[44px] touch-manipulation"
-                  style={{ touchAction: 'manipulation' }}
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start min-h-[44px] touch-manipulation"
+                    style={{ touchAction: 'manipulation' }}
+                  >
+                    <ImageIcon className="h-4 w-4 mr-2" />
+                    Image
+                  </Button>
+                </MediaUpload>
+              </div>
+              <div data-media-upload>
+                <MediaUpload
+                  onMediaUploaded={onMediaUploaded}
+                  acceptedTypes="video"
+                  disabled={!!uploadedMedia}
                 >
-                  <Video className="h-4 w-4 mr-2" />
-                  Video
-                </Button>
-              </MediaUpload>
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start min-h-[44px] touch-manipulation"
+                    style={{ touchAction: 'manipulation' }}
+                  >
+                    <Video className="h-4 w-4 mr-2" />
+                    Video
+                  </Button>
+                </MediaUpload>
+              </div>
             </div>
           </PopoverContent>
         </Popover>

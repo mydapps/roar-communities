@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
-import { Eye, CheckCircle2, Play, Reply, MoreHorizontal } from 'lucide-react';
+import { Eye, CheckCircle2, Play, Reply, MoreHorizontal, Copy, Check } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useImageViewer } from '@/components/contexts/ImageViewerContext';
 import { type Message, type ReplyToMessage } from '@/utils/messagingApi';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 interface MessageBubbleProps {
   message: Message;
@@ -50,11 +52,13 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
 }) => {
   const imageViewerContext = useImageViewer();
   const { openImageViewer } = imageViewerContext;
+  const navigate = useNavigate();
   const [showVideoDialog, setShowVideoDialog] = useState(false);
   const [selectedVideoUrl, setSelectedVideoUrl] = useState<string | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [showActions, setShowActions] = useState(false);
   const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
+  const [isCopied, setIsCopied] = useState(false);
   
   const renderMessageStatus = () => {
     if (!isOwn) return null;
@@ -111,6 +115,64 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
         return <img key={index} src={emojiMap.get(part)} alt={part} className="inline-block h-5 w-5 mx-0.5" />;
       }
       return part;
+    });
+  };
+
+  // New function to render clickable mentions and community links
+  const renderTextWithMentions = (text: string) => {
+    // Combined regex for @mentions and /c/community patterns
+    const mentionRegex = /(@[a-zA-Z0-9_-]+)|(?:^|\s)(\/c\/[a-zA-Z0-9_-]+)/g;
+    const parts = text.split(mentionRegex);
+
+    return parts.map((part, index) => {
+      if (!part) return null;
+
+      // Handle @username mentions
+      if (part.startsWith('@')) {
+        const username = part.slice(1); // Remove @ symbol
+        return (
+          <button
+            key={index}
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/u/${username}`);
+            }}
+            className={`inline font-medium hover:underline transition-colors ${
+              isOwn 
+                ? 'text-blue-100 hover:text-white' 
+                : 'text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300'
+            }`}
+            style={{ touchAction: 'manipulation' }}
+          >
+            {part}
+          </button>
+        );
+      }
+
+      // Handle /c/community links
+      if (part.startsWith('/c/')) {
+        const communityName = part.slice(3); // Remove /c/ prefix
+        return (
+          <button
+            key={index}
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/c/${communityName}`);
+            }}
+            className={`inline font-medium hover:underline transition-colors ${
+              isOwn 
+                ? 'text-green-100 hover:text-white' 
+                : 'text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300'
+            }`}
+            style={{ touchAction: 'manipulation' }}
+          >
+            {part}
+          </button>
+        );
+      }
+
+      // Process emojis in regular text parts
+      return <span key={index}>{renderContentWithEmojis(part)}</span>;
     });
   };
 
@@ -230,7 +292,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
           }
 
           if (part.trim()) {
-            return <p key={index} className="text-sm leading-relaxed break-words">{renderContentWithEmojis(part)}</p>;
+            return <p key={index} className="text-sm leading-relaxed break-words">{renderTextWithMentions(part)}</p>;
           }
           
           return null;
@@ -267,6 +329,31 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
       onReply(message);
     }
     setShowActions(false);
+  };
+
+  const handleCopy = async () => {
+    try {
+      const textToCopy = message.content || message.message_content || '';
+      // Remove markdown patterns for cleaner copy
+      const cleanText = textToCopy
+        .replace(/!\[\]\(https?:\/\/img\.dapps\.co\/[^)]+\)/g, '[Image]')
+        .replace(/!\[video\]\(https?:\/\/img\.dapps\.co\/[^)]+\)/g, '[Video]')
+        .trim();
+      
+      await navigator.clipboard.writeText(cleanText);
+      setIsCopied(true);
+      toast.success('Message copied to clipboard');
+      
+      // Reset copy state after 2 seconds
+      setTimeout(() => {
+        setIsCopied(false);
+      }, 2000);
+      
+      setShowActions(false);
+    } catch (error) {
+      console.error('Failed to copy message:', error);
+      toast.error('Failed to copy message');
+    }
   };
 
   const renderReplyPreview = () => {
@@ -414,6 +501,18 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
                 >
                   <Reply className="h-4 w-4 text-blue-500" />
                 </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleCopy}
+                  className="h-8 w-8 p-0 rounded-full hover:bg-green-100 dark:hover:bg-green-900"
+                >
+                  {isCopied ? (
+                    <Check className="h-4 w-4 text-green-600" />
+                  ) : (
+                    <Copy className="h-4 w-4 text-green-600" />
+                  )}
+                </Button>
               </div>
             </motion.div>
           )}
@@ -431,7 +530,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-32 p-1 z-[9999]" side={isOwn ? 'left' : 'right'}>
+            <PopoverContent className="w-36 p-1 z-[8888]" side={isOwn ? 'left' : 'right'}>
               <Button
                 size="sm"
                 variant="ghost"
@@ -440,6 +539,24 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
               >
                 <Reply className="h-4 w-4 mr-2" />
                 Reply
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleCopy}
+                className="w-full justify-start text-left"
+              >
+                {isCopied ? (
+                  <>
+                    <Check className="h-4 w-4 mr-2 text-green-600" />
+                    <span className="text-green-600">Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copy
+                  </>
+                )}
               </Button>
             </PopoverContent>
           </Popover>
