@@ -403,49 +403,49 @@ const processTextPart = (text: string, key: number): React.ReactNode => {
           );
         } else {
           // Handle regular URLs
-          let finalUrl = originalUrl;
-          let isExternal = false;
+        let finalUrl = originalUrl;
+        let isExternal = false;
 
-          try {
-            const parsedUrl = new URL(originalUrl);
-            // Check if the origin is different from the current window's origin
-            // Or if it simply starts with http/https (basic external check)
-            if (parsedUrl.origin !== window.location.origin || /^https?:\/\//.test(originalUrl)) {
-              isExternal = true;
-              if (!parsedUrl.searchParams.has('loadIn')) {
-                parsedUrl.searchParams.append('loadIn', 'defaultBrowser');
-                finalUrl = parsedUrl.toString();
-              }
+        try {
+          const parsedUrl = new URL(originalUrl);
+          // Check if the origin is different from the current window's origin
+          // Or if it simply starts with http/https (basic external check)
+          if (parsedUrl.origin !== window.location.origin || /^https?:\/\//.test(originalUrl)) {
+            isExternal = true;
+            if (!parsedUrl.searchParams.has('loadIn')) {
+              parsedUrl.searchParams.append('loadIn', 'defaultBrowser');
+              finalUrl = parsedUrl.toString();
             }
-          } catch (e) {
-            // If URL parsing fails, treat it as potentially external if it starts with http/https
-            if (/^https?:\/\//.test(originalUrl)) {
-              isExternal = true;
-              // Attempt simple appending if URL object failed
-              if (!originalUrl.includes('loadIn=defaultBrowser')) {
-                if (originalUrl.includes('?')) {
-                  finalUrl = `${originalUrl}&loadIn=defaultBrowser`;
-                } else {
-                  finalUrl = `${originalUrl}?loadIn=defaultBrowser`;
-                }
-              }
-            }
-            // If it doesn't start with http/https and parsing failed, treat as internal/relative
           }
+        } catch (e) {
+          // If URL parsing fails, treat it as potentially external if it starts with http/https
+          if (/^https?:\/\//.test(originalUrl)) {
+            isExternal = true;
+            // Attempt simple appending if URL object failed
+            if (!originalUrl.includes('loadIn=defaultBrowser')) {
+              if (originalUrl.includes('?')) {
+                finalUrl = `${originalUrl}&loadIn=defaultBrowser`;
+              } else {
+                finalUrl = `${originalUrl}?loadIn=defaultBrowser`;
+              }
+            }
+          }
+          // If it doesn't start with http/https and parsing failed, treat as internal/relative
+        }
 
-          result.push(
-            <a 
-              key={`${key}-${matchIndex}`}
-              href={finalUrl}
-              target={isExternal ? "_blank" : "_self"} 
-              rel={isExternal ? "noopener noreferrer" : ""}
-              onClick={(e) => e.stopPropagation()}
-              className="text-primary hover:underline"
-            >
-              {/* Optionally shorten displayed URL if needed, but keep it simple for now */}
-              {originalUrl} 
-            </a>
-          );
+        result.push(
+          <a 
+            key={`${key}-${matchIndex}`}
+            href={finalUrl}
+            target={isExternal ? "_blank" : "_self"} 
+            rel={isExternal ? "noopener noreferrer" : ""}
+            onClick={(e) => e.stopPropagation()}
+            className="text-primary hover:underline"
+          >
+            {/* Optionally shorten displayed URL if needed, but keep it simple for now */}
+            {originalUrl} 
+          </a>
+        );
         }
       } else {
         // This URL is likely part of a markdown link, so keep it as is

@@ -86,7 +86,7 @@ export const PortfolioSummary = ({
 
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h2 className="text-xl font-semibold text-primary">Your ETH Balance</h2>
+          <h2 className="text-xl font-semibold text-primary">Your ETH Balance</h2>
             {onWalletInfoClick && (
               <Tooltip>
                 <TooltipTrigger asChild>

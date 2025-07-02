@@ -362,44 +362,11 @@ body {
     overflow: hidden !important;
   }
 
-  /* Mobile conversation page fixes */
-  .mobile-conversation-container {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 1000;
-    overflow: hidden;
-    background: #f9fafb; /* Light mode background */
-  }
-
-  .dark .mobile-conversation-container {
-    background: #030712; /* Dark mode background */
-  }
-
-  /* Hide any background elements on mobile conversation pages */
-  .mobile-conversation-container::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: inherit;
-    z-index: -1;
-  }
-
-  .mobile-messages-container {
+  /* Mobile conversation improvements */
+  .mobile-input-container {
     -webkit-overflow-scrolling: touch !important;
     touch-action: pan-y !important;
     overscroll-behavior: contain !important;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-  }
-
-  .mobile-messages-container::-webkit-scrollbar {
-    display: none;
   }
 
   /* Improve mobile touch responsiveness */
@@ -454,47 +421,5 @@ body {
     overscroll-behavior: none !important;
   }
 
-  /* Enhanced mobile keyboard handling */
-  .mobile-input-container {
-    position: fixed !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    z-index: 30 !important;
-    background: rgba(255, 255, 255, 0.98) !important;
-    backdrop-filter: blur(12px) !important;
-    border-top: 1px solid rgba(0, 0, 0, 0.1) !important;
-    transition: transform 0.2s ease-in-out !important;
-  }
 
-  .dark .mobile-input-container {
-    background: rgba(17, 24, 39, 0.98) !important;
-    border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
-  }
-
-  /* When keyboard is visible */
-  .keyboard-visible {
-    transform: translateY(0) !important;
-  }
-
-  /* Improved mobile messages container */
-  .mobile-messages-container {
-    overscroll-behavior: contain !important;
-    overscroll-behavior-y: contain !important;
-    -webkit-overflow-scrolling: touch !important;
-    scroll-padding-bottom: 120px !important;
-  }
-
-  /* Prevent pull-to-refresh on conversation pages */
-  .mobile-conversation-container {
-    overscroll-behavior: none !important;
-    overscroll-behavior-y: none !important;
-  }
-
-  /* Ensure proper scrolling on mobile conversation pages */
-  .mobile-messages-container {
-    overscroll-behavior: contain !important;
-    overscroll-behavior-y: contain !important;
-    -webkit-overflow-scrolling: touch !important;
-  }
 } 

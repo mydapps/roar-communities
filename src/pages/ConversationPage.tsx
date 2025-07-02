@@ -375,7 +375,11 @@ const ConversationPage = () => {
     if (!messageText.trim() && !uploadedMedia) return;
     if (!conversationId) return;
 
-    const messageToSend = messageText.trim();
+    // Include uploaded media markdown in message content
+    let messageToSend = messageText.trim();
+    if (uploadedMedia && uploadedMedia.markdown) {
+      messageToSend += (messageToSend.length > 0 ? "\n\n" : "") + uploadedMedia.markdown;
+    }
     const userAvatar = localStorage.getItem('dapps_user_avatar');
     const avatarUrl = userAvatar ? `https://img.dapps.co/avatar/${userAvatar}.svg` : 'https://img.dapps.co/avatar/default.svg';
         
@@ -630,93 +634,192 @@ const ConversationPage = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-950 mobile-conversation-container" {...getRootProps()}>
-      <input {...getInputProps()} />
-      
-      {/* Header */}
-      <ConversationHeader
-        conversationTitle={conversationTitle}
-        conversationAvatar={conversationAvatar}
-        isOtherUserOnline={isOtherUserOnline}
-        otherUserHandle={otherUserHandle}
-        isUserBlocked={isUserBlocked}
-        onBack={handleBack}
-        onBlockUser={() => setIsBlockModalOpen(true)}
-        onUnblockUser={handleUnblockUser}
-      />
-
-      {/* Content container with proper spacing for fixed mobile header */}
-      <div className="flex flex-col flex-1 md:mt-0 mt-[140px]">
-        {/* Payment Status Banner */}
-        {paymentStatus?.has_paid && (
-          <PaymentStatusBanner
-            paymentStatus={paymentStatus}
-            timeRemaining={timeRemaining}
-          />
-        )}
-            
-        {/* Messages */}
-        <ConversationMessages
-          ref={messagesRef}
-          messages={messages}
-          loading={loading}
-          hasMore={hasMore}
-          currentUserHandle={currentUserHandle}
-          replyingTo={replyingTo}
-          isFloatingMessages={isFloatingMessages}
-          messageRefs={messageRefs}
-          onReplyToMessage={handleReplyToMessage}
-                    onReplyClick={handleReplyClick}
-          onSpecialCommandClick={handleSpecialCommandClick}
-          onLoadMore={handleLoadMore}
-        />
-
-        {/* Input Area or Blocked Interface */}
-      {isUserBlocked ? (
-          <BlockedUserInterface
+    <>
+      {/* Mobile Layout - Completely separate structure */}
+      <div className="md:hidden fixed inset-0 bg-gradient-to-br from-gray-50 via-gray-50 to-blue-50 dark:from-gray-950 dark:via-gray-950 dark:to-gray-900"
+           style={{ top: '80px' }}
+           {...getRootProps()}>
+        <input {...getInputProps()} />
+        
+        {/* Mobile Header */}
+        <div className="flex-shrink-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+          <ConversationHeader
+            conversationTitle={conversationTitle}
+            conversationAvatar={conversationAvatar}
+            isOtherUserOnline={isOtherUserOnline}
             otherUserHandle={otherUserHandle}
-            isBlocking={isBlocking}
+            isUserBlocked={isUserBlocked}
+            onBack={handleBack}
+            onBlockUser={() => setIsBlockModalOpen(true)}
             onUnblockUser={handleUnblockUser}
           />
-      ) : (
-          <MessageInput
-            ref={messageInputRef}
-            messageText={messageText}
-            sending={sending}
-            replyingTo={replyingTo}
-            uploadedMedia={uploadedMedia}
-            isEmojiPickerOpen={isEmojiPickerOpen}
-            isMediaPopoverOpen={isMediaPopoverOpen}
-            onMessageTextChange={setMessageText}
-            onSendMessage={handleSendMessage}
-            onEmojiClick={handleEmojiClick}
-                  onMediaUploaded={handleMediaUploaded}
-            onRemoveMedia={removeMedia}
-            onCancelReply={cancelReply}
-            onSetEmojiPickerOpen={setIsEmojiPickerOpen}
-            onSetMediaPopoverOpen={setIsMediaPopoverOpen}
-            onFileUpload={handleFileUpload}
-            onTyping={handleTyping}
-          />
-              )}
         </div>
-      
-      {/* Modals */}
-      <ConversationModals
-        isBlockModalOpen={isBlockModalOpen}
-        otherUserHandle={otherUserHandle}
-        isBlocking={isBlocking}
-        onSetBlockModalOpen={setIsBlockModalOpen}
-        onBlockUser={handleBlockUser}
-      />
-      
-      {/* Special Effects */}
-      <SpecialEffects 
-        effect={currentEffect} 
-        onComplete={handleEffectComplete} 
-      />
-    </div>
-  );
-};
+
+        {/* Mobile Payment Status Banner */}
+        {paymentStatus?.has_paid && (
+          <div className="flex-shrink-0">
+            <PaymentStatusBanner
+              paymentStatus={paymentStatus}
+              timeRemaining={timeRemaining}
+            />
+          </div>
+        )}
+
+        {/* Mobile Messages - Single scrollable container */}
+        <div className="flex-1 bg-white dark:bg-gray-900" style={{ height: 'calc(100vh - 240px)' }}>
+          <div className="h-full overflow-y-auto pb-4">
+            <ConversationMessages
+              ref={messagesRef}
+              messages={messages}
+              loading={loading}
+              hasMore={hasMore}
+              currentUserHandle={currentUserHandle}
+              replyingTo={replyingTo}
+              isFloatingMessages={isFloatingMessages}
+              messageRefs={messageRefs}
+              onReplyToMessage={handleReplyToMessage}
+              onReplyClick={handleReplyClick}
+              onSpecialCommandClick={handleSpecialCommandClick}
+              onLoadMore={handleLoadMore}
+            />
+          </div>
+        </div>
+
+        {/* Mobile Input - Fixed at bottom */}
+        <div className="absolute bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 mobile-input-container">
+          {isUserBlocked ? (
+            <BlockedUserInterface
+              otherUserHandle={otherUserHandle}
+              isBlocking={isBlocking}
+              onUnblockUser={handleUnblockUser}
+            />
+          ) : (
+            <MessageInput
+              ref={messageInputRef}
+              messageText={messageText}
+              sending={sending}
+              replyingTo={replyingTo}
+              uploadedMedia={uploadedMedia}
+              isEmojiPickerOpen={isEmojiPickerOpen}
+              isMediaPopoverOpen={isMediaPopoverOpen}
+              onMessageTextChange={setMessageText}
+              onSendMessage={handleSendMessage}
+              onEmojiClick={handleEmojiClick}
+              onMediaUploaded={handleMediaUploaded}
+              onRemoveMedia={removeMedia}
+              onCancelReply={cancelReply}
+              onSetEmojiPickerOpen={setIsEmojiPickerOpen}
+              onSetMediaPopoverOpen={setIsMediaPopoverOpen}
+              onFileUpload={handleFileUpload}
+              onTyping={handleTyping}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Desktop Layout - Hidden on mobile */}
+      <div className="hidden md:flex flex-col h-[calc(100vh-80px)] bg-gradient-to-br from-gray-50 via-gray-50 to-blue-50 dark:from-gray-950 dark:via-gray-950 dark:to-gray-900"
+           {...getRootProps()}>
+        <input {...getInputProps()} />
+        
+        {/* Desktop Content - Centered with proper layout */}
+        <div className="flex justify-center w-full flex-1 min-h-0">
+          <div className="flex flex-col flex-1 max-w-4xl w-full mx-4 lg:mx-8 h-full">
+            
+            {/* Desktop Header */}
+            <div className="flex-shrink-0">
+              <div className="bg-white dark:bg-gray-900 rounded-t-xl shadow-sm border border-gray-200 dark:border-gray-800 border-b-0 mt-8">
+                <ConversationHeader
+                  conversationTitle={conversationTitle}
+                  conversationAvatar={conversationAvatar}
+                  isOtherUserOnline={isOtherUserOnline}
+                  otherUserHandle={otherUserHandle}
+                  isUserBlocked={isUserBlocked}
+                  onBack={handleBack}
+                  onBlockUser={() => setIsBlockModalOpen(true)}
+                  onUnblockUser={handleUnblockUser}
+                />
+              </div>
+            </div>
+            
+            {/* Desktop Payment Status Banner */}
+            {paymentStatus?.has_paid && (
+              <div className="flex-shrink-0">
+                <PaymentStatusBanner
+                  paymentStatus={paymentStatus}
+                  timeRemaining={timeRemaining}
+                />
+              </div>
+            )}
+            
+            {/* Desktop Messages Container - Scrollable */}
+            <div className="flex-1 min-h-0 bg-white dark:bg-gray-900 border-l border-r border-gray-200 dark:border-gray-800 shadow-sm">
+              <ConversationMessages
+                ref={messagesRef}
+                messages={messages}
+                loading={loading}
+                hasMore={hasMore}
+                currentUserHandle={currentUserHandle}
+                replyingTo={replyingTo}
+                isFloatingMessages={isFloatingMessages}
+                messageRefs={messageRefs}
+                onReplyToMessage={handleReplyToMessage}
+                onReplyClick={handleReplyClick}
+                onSpecialCommandClick={handleSpecialCommandClick}
+                onLoadMore={handleLoadMore}
+              />
+            </div>
+
+            {/* Desktop Input Area - Fixed at bottom */}
+            <div className="flex-shrink-0 bg-white dark:bg-gray-900 rounded-b-xl shadow-sm border border-gray-200 dark:border-gray-800 border-t-0">
+              {isUserBlocked ? (
+                <BlockedUserInterface
+                  otherUserHandle={otherUserHandle}
+                  isBlocking={isBlocking}
+                  onUnblockUser={handleUnblockUser}
+                />
+              ) : (
+                <MessageInput
+                  ref={messageInputRef}
+                  messageText={messageText}
+                  sending={sending}
+                  replyingTo={replyingTo}
+                  uploadedMedia={uploadedMedia}
+                  isEmojiPickerOpen={isEmojiPickerOpen}
+                  isMediaPopoverOpen={isMediaPopoverOpen}
+                  onMessageTextChange={setMessageText}
+                  onSendMessage={handleSendMessage}
+                  onEmojiClick={handleEmojiClick}
+                  onMediaUploaded={handleMediaUploaded}
+                  onRemoveMedia={removeMedia}
+                  onCancelReply={cancelReply}
+                  onSetEmojiPickerOpen={setIsEmojiPickerOpen}
+                  onSetMediaPopoverOpen={setIsMediaPopoverOpen}
+                  onFileUpload={handleFileUpload}
+                  onTyping={handleTyping}
+                />
+              )}
+                         </div>
+           </div>
+         </div>
+       </div>
+       
+       {/* Modals */}
+       <ConversationModals
+         isBlockModalOpen={isBlockModalOpen}
+         otherUserHandle={otherUserHandle}
+         isBlocking={isBlocking}
+         onSetBlockModalOpen={setIsBlockModalOpen}
+         onBlockUser={handleBlockUser}
+       />
+       
+       {/* Special Effects */}
+       <SpecialEffects 
+         effect={currentEffect} 
+         onComplete={handleEffectComplete} 
+       />
+     </>
+   );
+ };
 
 export default ConversationPage; 

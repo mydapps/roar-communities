@@ -49,7 +49,6 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   replyToMessage,
 }) => {
   const imageViewerContext = useImageViewer();
-  console.log('MessageBubble: imageViewerContext:', imageViewerContext);
   const { openImageViewer } = imageViewerContext;
   const [showVideoDialog, setShowVideoDialog] = useState(false);
   const [selectedVideoUrl, setSelectedVideoUrl] = useState<string | null>(null);
@@ -141,12 +140,8 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
                 onClick={(e) => {
                   e.stopPropagation();
                   e.preventDefault();
-                  console.log('Image container clicked:', url);
-                  console.log('Opening ImageViewer with images:', [url]);
-                  console.log('imageViewerContext:', imageViewerContext);
                   try {
                     openImageViewer([url], 0);
-                    console.log('ImageViewer opened successfully');
                   } catch (error) {
                     console.error('Error opening ImageViewer:', error);
                   }
@@ -154,12 +149,8 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
                 onTouchEnd={(e) => {
                   e.stopPropagation();
                   e.preventDefault();
-                  console.log('Image container touched:', url);
-                  console.log('Opening ImageViewer with images:', [url]);
-                  console.log('imageViewerContext:', imageViewerContext);
                   try {
                     openImageViewer([url], 0);
-                    console.log('ImageViewer opened successfully');
                   } catch (error) {
                     console.error('Error opening ImageViewer:', error);
                   }
@@ -192,7 +183,6 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
                 onClick={(e) => {
                   e.stopPropagation();
                   e.preventDefault();
-                  console.log('Video container clicked:', url);
                   setSelectedVideoUrl(url);
                   setShowVideoDialog(true);
                 }}
@@ -210,7 +200,6 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
                   const touchDuration = Date.now() - (touchStartTime || 0);
                   
                   if (touchDuration < 500) { // Less than 500ms = tap
-                    console.log('Video container touched:', url);
                     setSelectedVideoUrl(url);
                     setShowVideoDialog(true);
                   }

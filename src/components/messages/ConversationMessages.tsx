@@ -89,15 +89,14 @@ const ConversationMessages = forwardRef<ConversationMessagesRef, ConversationMes
   }, [hasMore, loading, onLoadMore]);
 
   return (
-    <div className="flex-1 overflow-hidden">
+    <div className="h-full">
       <div
         ref={messagesContainerRef}
-        className={`h-full overflow-y-auto p-4 space-y-4 mobile-messages-container ${
+        className={`h-full overflow-y-auto p-4 space-y-4 ${
           isFloatingMessages ? 'floating-messages' : ''
         }`}
         style={{
           scrollBehavior: 'smooth',
-          paddingBottom: '120px' // Extra space for mobile input
         }}
       >
         {/* Load more indicator */}

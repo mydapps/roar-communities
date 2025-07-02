@@ -920,16 +920,7 @@ const RequestInvitePage = () => {
           <Card className="mb-8 overflow-hidden animate-slide-up" style={{ animationDelay: '0.2s' }}>
             <CardHeader className="pb-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-full">
-                  <Mail className="h-5 w-5 text-blue-600" />
-                </div>
-                <div>
-                  <CardTitle className="text-lg">Secure Your Invite Delivery</CardTitle>
-                  <CardDescription className="flex items-center gap-2 mt-1">
-                    <Shield className="h-4 w-4 text-green-500" />
-                    Adding your email ensures we can send you the invite code
-                  </CardDescription>
-                </div>
+                
               </div>
             </CardHeader>
             
@@ -943,11 +934,10 @@ const RequestInvitePage = () => {
                   <Mail className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
                   <div className="flex-1">
                     <p className="font-medium text-amber-900 dark:text-amber-100">
-                      📧 Connect Your Email for Instant Delivery
+                      📧 Get notified when it's your turn
                     </p>
                     <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
-                      We'll send your invite code directly to your email when you reach the front of the queue. 
-                      This ensures you don't miss your exclusive access opportunity!
+                      We'll email your invite code when you reach the front of the queue.
                     </p>
                   </div>
                 </div>
@@ -966,14 +956,13 @@ const RequestInvitePage = () => {
                   ) : (
                     <>
                       <Plus className="h-5 w-5" />
-                      Connect Email Address
+                      Connect Email
                     </>
                   )}
                 </Button>
                 
                 <p className="text-xs text-muted-foreground text-center">
-                  🔐 Your email is securely encrypted and only used for invite delivery. 
-                  We respect your privacy.
+                  🔐 Your email is secure and only used for invite delivery.
                 </p>
               </motion.div>
             </CardContent>

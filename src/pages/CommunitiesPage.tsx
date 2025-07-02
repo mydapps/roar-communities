@@ -144,7 +144,7 @@ const EmptyState = ({ activeTab, searchQuery, onTabChange }: { activeTab: string
   );
 };
 
-  const CommunitiesPage = () => {
+const CommunitiesPage = () => {
     // First-time visitor tracking
     const { isFirstTime, isLoading: isLoadingVisitor, markAsVisited } = useFirstTimeVisitor();
     const [showOnboarding, setShowOnboarding] = useState(false);
@@ -537,7 +537,7 @@ const EmptyState = ({ activeTab, searchQuery, onTabChange }: { activeTab: string
                                  {/* Enhanced Empty State */}
                  {currentCommunities.length === 0 && !isLoading && (
                    <EmptyState activeTab={activeTab} searchQuery="" onTabChange={setActiveTab} />
-                 )}
+              )}
               </>
           )}
         </div>

@@ -111,9 +111,9 @@ const CommunityCard: React.FC<CommunityCardProps> = ({
                <Avatar className="h-14 w-14 ring-2 ring-background group-hover/avatar:ring-primary/40 transition-all duration-300 shadow-lg">
                  <AvatarImage src={image} alt={name} className="object-cover" />
                  <AvatarFallback className="bg-gradient-to-br from-primary/30 to-primary/20 text-primary font-bold text-lg">
-                   {name.charAt(0).toUpperCase()}
-                 </AvatarFallback>
-               </Avatar>
+                {name.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
                {/* Pulsing effect for high reward communities */}
                {isHighReward && (
                  <div className="absolute -top-1 -right-1 h-5 w-5 bg-gradient-to-r from-emerald-400 to-green-500 rounded-full flex items-center justify-center animate-pulse shadow-lg">
@@ -121,15 +121,15 @@ const CommunityCard: React.FC<CommunityCardProps> = ({
                  </div>
                )}
              </div>
-           </Link>
-           
+          </Link>
+          
            <div className="flex-1 min-w-0">
              <div className="flex items-start justify-between gap-2 mb-2">
                <Link to={`/c/${name}`} className="group/title flex-1">
                  <h3 className="font-bold text-base leading-tight truncate group-hover/title:text-primary transition-colors mb-1">
                    {name}
                  </h3>
-               </Link>
+            </Link>
                <div className="flex items-center gap-1 shrink-0">
                  {isAdmin && (
                    <TooltipProvider>
@@ -137,8 +137,8 @@ const CommunityCard: React.FC<CommunityCardProps> = ({
                        <TooltipTrigger>
                          <Badge className="bg-gradient-to-r from-amber-100 to-orange-100 text-amber-800 border-amber-300 px-2 py-0.5 text-xs font-semibold shadow-sm">
                            <Crown className="h-3 w-3 mr-1" />
-                           Admin
-                         </Badge>
+                  Admin
+                </Badge>
                        </TooltipTrigger>
                        <TooltipContent>
                          <p>Community Administrator</p>
@@ -148,10 +148,10 @@ const CommunityCard: React.FC<CommunityCardProps> = ({
                  )}
                  {isMember && !isAdmin && (
                    <Badge className="bg-primary text-primary-foreground border-primary/20 px-2 py-0.5 text-xs font-semibold shadow-sm">
-                     Member
-                   </Badge>
-                 )}
-               </div>
+                  Member
+                </Badge>
+              )}
+            </div>
              </div>
              
              {/* Community Stats */}
@@ -168,9 +168,9 @@ const CommunityCard: React.FC<CommunityCardProps> = ({
                  {truncatedDescription}
                </p>
              )}
-           </div>
-         </div>
-
+          </div>
+        </div>
+        
                           {/* PROMINENT REWARDS SECTION - Always show for alignment */}
          <div className={`relative p-3 rounded-xl border-2 transition-all duration-300 flex-shrink-0 ${
            rewardPool > 0 
@@ -192,7 +192,7 @@ const CommunityCard: React.FC<CommunityCardProps> = ({
                    <Sparkles className="h-3.5 w-3.5 text-white animate-pulse" />
                  )}
                </div>
-               <div>
+          <div>
                  <div className="flex items-center gap-1.5">
                    <p className={`text-xs font-semibold uppercase tracking-wider ${
                      rewardPool > 0 ? 'text-emerald-700' : 'text-orange-700'
@@ -288,9 +288,9 @@ const CommunityCard: React.FC<CommunityCardProps> = ({
                    <p className="text-xs text-primary/70">
                      ~{formatCurrency(userShares * priceInUsd)}
                    </p>
-                 </div>
-               </div>
-             </div>
+              </div>
+            </div>
+          </div>
            ) : isLoggedIn && (
              /* Simple conversion message for non-members */
              <div className="bg-gradient-to-br from-blue-50/50 to-indigo-50/30 border border-blue-200/50 rounded-lg p-3 mt-2 text-center">
@@ -299,18 +299,18 @@ const CommunityCard: React.FC<CommunityCardProps> = ({
                  <p className="text-sm font-semibold text-blue-700">New Community</p>
                </div>
                <p className="text-xs text-blue-600">Join early for maximum growth potential</p>
-             </div>
-           )}
+            </div>
+          )}
         </div>
-
+        
                           {/* Action Section - Pushed to bottom */}
          <div className="mt-auto pt-3 flex-shrink-0">
            <div className="flex items-center justify-between gap-3">
              <div className="flex gap-2">
                {/* STANDOUT JOIN BUTTON */}
-               <Button 
-                 size="sm" 
-                 onClick={onBuy} 
+            <Button 
+              size="sm" 
+              onClick={onBuy} 
                  className={`${
                    isMember 
                      ? 'bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 hover:from-blue-600 hover:via-blue-700 hover:to-blue-800' 
@@ -322,21 +322,21 @@ const CommunityCard: React.FC<CommunityCardProps> = ({
                 <span className="relative z-10 font-bold">
                   {isMember ? 'Buy More' : 'Join Now'}
                 </span>
-              </Button>
+            </Button>
               
-                             {isMember && isLoggedIn && (
-                 <Button 
-                   size="sm" 
-                   onClick={onSell} 
-                   variant="outline" 
+            {isMember && isLoggedIn && (
+              <Button 
+                size="sm" 
+                onClick={onSell} 
+                variant="outline" 
                    className="border-2 border-rose-200 text-rose-600 hover:bg-rose-50 hover:border-rose-300 dark:border-rose-800/50 dark:text-rose-400 dark:hover:bg-rose-950/30 group/sell px-3 py-2 font-semibold transition-all duration-300"
-                 >
+              >
                   <Minus className="h-4 w-4 mr-1.5 group-hover/sell:rotate-180 transition-transform duration-300" />
-                  Sell
-                </Button>
-              )}
-            </div>
-            
+                Sell
+              </Button>
+            )}
+          </div>
+          
             <Button 
               asChild 
               variant="ghost" 
@@ -346,8 +346,8 @@ const CommunityCard: React.FC<CommunityCardProps> = ({
               <Link to={`/c/${name}`} className="flex items-center gap-1.5">
                 <span className="text-sm font-medium">View</span>
                 <ChevronRight className="h-4 w-4 group-hover/view:translate-x-1 transition-transform duration-200" />
-              </Link>
-            </Button>
+            </Link>
+          </Button>
           </div>
         </div>
       </div>

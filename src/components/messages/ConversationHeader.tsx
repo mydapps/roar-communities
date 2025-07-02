@@ -44,8 +44,8 @@ const ConversationHeader: React.FC<ConversationHeaderProps> = ({
         animate={{ y: 0, opacity: 1 }}
         className={`
           flex flex-col bg-white dark:bg-gray-900 
-          border-b border-gray-200 dark:border-gray-700 fixed top-0 left-0 right-0 z-50
-          ${isIOS ? 'pt-12' : 'pt-4'}
+          border-b border-gray-200 dark:border-gray-700
+          ${isIOS ? 'pt-12' : 'pt-6'}
         `}
         style={{
           paddingTop: isIOS ? 'max(env(safe-area-inset-top, 0px), 48px)' : '16px'
@@ -87,13 +87,6 @@ const ConversationHeader: React.FC<ConversationHeaderProps> = ({
                 <h2 className="font-bold text-lg text-gray-900 dark:text-white truncate">
                   @{conversationTitle}
                 </h2>
-                <p className={`text-sm font-medium ${
-                  isOtherUserOnline 
-                    ? 'text-green-600 dark:text-green-400' 
-                    : 'text-gray-500 dark:text-gray-400'
-                }`}>
-                  {isOtherUserOnline ? 'Online' : 'Offline'}
-                </p>
               </div>
             </div>
             
@@ -148,11 +141,7 @@ const ConversationHeader: React.FC<ConversationHeaderProps> = ({
     <motion.div 
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      className="flex items-center justify-between p-4 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-gray-700 sticky z-10"
-      style={{
-        top: '100px', // Move down more to avoid top menu cutoff
-        marginTop: '30px' // Additional spacing
-      }}
+      className="flex items-center justify-between p-4 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700"
     >
       <div className="flex items-center space-x-4">
         <Button 
@@ -188,23 +177,13 @@ const ConversationHeader: React.FC<ConversationHeaderProps> = ({
             <h2 className="font-semibold text-gray-900 dark:text-white">
               @{conversationTitle}
             </h2>
-            <div className="flex items-center space-x-2">
-              <p className={`text-sm ${
-                isOtherUserOnline 
-                  ? 'text-green-600 dark:text-green-400' 
-                  : 'text-gray-500 dark:text-gray-400'
-              }`}>
-                {isOtherUserOnline ? 'Online' : 'Offline'}
-              </p>
-              <span className="text-gray-300 dark:text-gray-600">•</span>
-              <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
-                <img 
-                  src="/xmtp.png" 
-                  alt="XMTP" 
-                  className="h-3 w-3 opacity-70"
-                />
-                <span>Secured by XMTP</span>
-              </div>
+            <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
+              <img 
+                src="/xmtp.png" 
+                alt="XMTP" 
+                className="h-3 w-3 opacity-70"
+              />
+              <span>Secured by XMTP</span>
             </div>
           </div>
         </div>

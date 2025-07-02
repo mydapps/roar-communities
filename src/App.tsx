@@ -4,6 +4,8 @@ import { HelmetProvider } from 'react-helmet-async';
 import { Loader2 } from 'lucide-react';
 import MainLayout from '@/components/layout/MainLayout';
 import Index from '@/pages/Index';
+import Index2 from '@/pages/Index2';
+import Index3 from '@/pages/Index3';
 import FeedPage from '@/pages/FeedPage';
 import CommunitiesPage from '@/pages/CommunitiesPage';
 import CommunityPage from '@/pages/CommunityPage';
@@ -100,7 +102,10 @@ function App() {
           {/* Public routes - accessible outside MainLayout */}
           <Route path="/" element={<Index />} />
           <Route path="/index" element={<Index />} />
+          <Route path="/index2" element={<Index2 />} />
+          <Route path="/index3" element={<Index3 />} />
           <Route path="/invite/:code" element={<Index />} />
+          <Route path="/index3/invite/:code" element={<Index3 />} />
           <Route path="request-invite" element={<RequestInvitePage />} />
           <Route path="avatar-handle" element={<AvatarHandlePage />} />
           <Route path="login" element={<LoginPage />} />

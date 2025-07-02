@@ -540,8 +540,8 @@ const CommunityPage = () => {
           />
       )}
       
-    <div className="flex flex-col md:flex-row gap-4 animate-fade-in max-w-full overflow-x-hidden pt-4 md:pt-0">
-      <div className="flex-1 order-2 md:order-1">
+    <div className="flex flex-col md:flex-row gap-6 lg:gap-8 animate-fade-in max-w-full overflow-x-hidden pt-4 md:pt-0">
+      <div className="flex-1 order-2 md:order-1 md:px-4 lg:px-6 xl:px-8">
         {/* Remove the Mobile sticky header - it's now in CommunityHeader */}
         {/* {isMobile && ( ... old header code ... )} */}
         
@@ -562,7 +562,7 @@ const CommunityPage = () => {
         )}
         
         {/* Use the new CommunityTabs component within the main Tabs wrapper */} 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className={`w-full ${isMobile ? 'mb-6 mt-8' : ''}`}>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className={`w-full ${isMobile ? 'mb-6 mt-8' : 'mt-4'}`}>
             {/* Render the extracted Tabs List component */} 
             <CommunityTabs 
               isMobile={isMobile}
@@ -636,7 +636,7 @@ const CommunityPage = () => {
       
       {/* Desktop Sidebar (Header only now) */} 
       {!isMobile && (
-        <div className="w-full md:w-80 order-1 md:order-2 flex-shrink-0">
+        <div className="w-full md:w-80 lg:w-[336px] xl:w-96 order-1 md:order-2 flex-shrink-0 md:pl-2 lg:pl-4">
           <CommunityHeader 
             isMobile={isMobile}
             community={community}
