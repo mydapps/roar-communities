@@ -115,7 +115,7 @@ const ConversationPage = () => {
   const [apiToken, setApiToken] = useState<string | null>(null);
 
   // WebSocket integration
-  const { markAsRead, joinConversation, leaveConversation, sendMessage: sendWebSocketMessage, setMessageHandlers } = useWebSocket();
+  const { connect, markAsRead, joinConversation, leaveConversation, sendMessage: sendWebSocketMessage, setMessageHandlers } = useWebSocket();
 
   // Set page title
   useTitle(`Chat with ${conversationTitle} - dapps.co`);
@@ -184,6 +184,11 @@ const ConversationPage = () => {
     }
   };
 
+  // Initialize WebSocket connection on mount
+  useEffect(() => {
+    connect();
+  }, [connect]);
+
   // WebSocket message handlers
   useEffect(() => {
     if (!conversationId) return;
@@ -226,7 +231,8 @@ const ConversationPage = () => {
           return newMessages;
         });
         
-        setTimeout(() => messagesRef.current?.scrollToBottom(), 100);
+        // Scroll to bottom when new message arrives from other user
+        setTimeout(() => ensureScrollToBottom(), 100);
           markAsRead(parseInt(conversationId), message.id);
           
           if (paymentStatus?.has_paid) {
@@ -320,7 +326,8 @@ const ConversationPage = () => {
           setIsUserBlocked(blockStatus.isBlocked);
         }
         
-        setTimeout(() => messagesRef.current?.scrollToBottom(true), 100);
+        // Initial scroll to bottom when conversation loads (force immediate scroll)
+        setTimeout(() => ensureScrollToBottom(true), 150);
       }
     } catch (error) {
       console.error('Error loading messages:', error);
@@ -431,20 +438,8 @@ const ConversationPage = () => {
     setReplyingTo(null);
     setSending(true);
 
-    // Mobile requires different scroll approach due to layout differences
-    const isMobile = window.innerWidth < 768;
-    setTimeout(() => {
-      if (isMobile && mobileScrollContainerRef.current) {
-        // Mobile: scroll the outer container directly
-        mobileScrollContainerRef.current.scrollTo({
-          top: mobileScrollContainerRef.current.scrollHeight,
-          behavior: 'smooth'
-        });
-      } else {
-        // Desktop: use the messages ref
-        messagesRef.current?.scrollToBottom();
-      }
-    }, isMobile ? 100 : 50);
+    // Scroll to bottom after adding message (with retry for mobile)
+    setTimeout(() => ensureScrollToBottom(), 100);
 
     try {
       const result = await sendMessage(conversationId, messageToSend, replyingTo?.id);
@@ -626,20 +621,8 @@ const ConversationPage = () => {
       new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
     ));
 
-    // Mobile requires different scroll approach due to layout differences
-    const isMobile = window.innerWidth < 768;
-    setTimeout(() => {
-      if (isMobile && mobileScrollContainerRef.current) {
-        // Mobile: scroll the outer container directly
-        mobileScrollContainerRef.current.scrollTo({
-          top: mobileScrollContainerRef.current.scrollHeight,
-          behavior: 'smooth'
-        });
-      } else {
-        // Desktop: use the messages ref
-        messagesRef.current?.scrollToBottom();
-      }
-    }, isMobile ? 100 : 50);
+    // Scroll to bottom after adding special command message (with retry for mobile)
+    setTimeout(() => ensureScrollToBottom(), 100);
 
     try {
       const result = await sendMessage(conversationId, commandMessage);
@@ -659,6 +642,88 @@ const ConversationPage = () => {
     setPage(prev => prev + 1);
   };
 
+  // Create unified scroll to bottom function for mobile and desktop
+  const scrollToBottom = (force = false) => {
+    const isMobile = window.innerWidth < 768;
+    
+    if (isMobile) {
+      // Mobile: scroll to the very bottom of the mobile container
+      if (mobileScrollContainerRef.current) {
+        const container = mobileScrollContainerRef.current;
+        setTimeout(() => {
+          container.scrollTo({
+            top: container.scrollHeight,
+            behavior: force ? 'auto' : 'smooth'
+          });
+        }, 10);
+      }
+    } else {
+      // Desktop: use the messages ref
+      messagesRef.current?.scrollToBottom(force);
+    }
+  };
+
+  // Enhanced scroll to bottom with multiple retry attempts for mobile
+  const ensureScrollToBottom = (force = false, retries = 2) => {
+    const isMobile = window.innerWidth < 768;
+    
+    if (isMobile) {
+      // Mobile: Direct scrolling with retries
+      const scrollMobileContainer = () => {
+        if (mobileScrollContainerRef.current) {
+          const container = mobileScrollContainerRef.current;
+          container.scrollTo({
+            top: container.scrollHeight,
+            behavior: force ? 'auto' : 'smooth'
+          });
+        }
+      };
+      
+      // Immediate scroll
+      scrollMobileContainer();
+      
+      // Retry attempts for mobile DOM timing
+      if (retries > 0) {
+        setTimeout(() => {
+          scrollMobileContainer();
+          if (retries > 1) {
+            setTimeout(scrollMobileContainer, 100);
+          }
+        }, 50);
+      }
+    } else {
+      // Desktop: use existing logic
+      messagesRef.current?.scrollToBottom(force);
+    }
+  };
+
+  // Mobile keyboard handling for better scroll behavior
+  useEffect(() => {
+    if (window.innerWidth >= 768) return; // Only for mobile
+    
+    const handleViewportChange = () => {
+      // When mobile keyboard shows/hides, ensure we stay scrolled to bottom
+      setTimeout(() => {
+        if (mobileScrollContainerRef.current) {
+          const container = mobileScrollContainerRef.current;
+          const isAtBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 100;
+          if (isAtBottom) {
+            scrollToBottom(true);
+          }
+        }
+      }, 100);
+    };
+
+    // Listen for viewport changes (keyboard show/hide)
+    window.addEventListener('resize', handleViewportChange);
+    window.addEventListener('orientationchange', handleViewportChange);
+    
+    return () => {
+      window.removeEventListener('resize', handleViewportChange);
+      window.removeEventListener('orientationchange', handleViewportChange);
+    };
+  }, []);
+
   if (!conversationId) {
     return <div>Invalid conversation</div>;
   }
@@ -669,50 +734,49 @@ const ConversationPage = () => {
       <div className="md:hidden fixed inset-0 bg-gradient-to-br from-gray-50 via-gray-50 to-blue-50 dark:from-gray-950 dark:via-gray-950 dark:to-gray-900"
            style={{ top: '80px' }}
            {...getRootProps()}>
-        <input {...getInputProps()} />
-        
+      <input {...getInputProps()} />
+      
         {/* Mobile Header */}
         <div className="flex-shrink-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-          <ConversationHeader
-            conversationTitle={conversationTitle}
-            conversationAvatar={conversationAvatar}
-            isOtherUserOnline={isOtherUserOnline}
-            otherUserHandle={otherUserHandle}
-            isUserBlocked={isUserBlocked}
-            onBack={handleBack}
-            onBlockUser={() => setIsBlockModalOpen(true)}
-            onUnblockUser={handleUnblockUser}
-          />
+      <ConversationHeader
+        conversationTitle={conversationTitle}
+        conversationAvatar={conversationAvatar}
+        isOtherUserOnline={isOtherUserOnline}
+        otherUserHandle={otherUserHandle}
+        isUserBlocked={isUserBlocked}
+        onBack={handleBack}
+        onBlockUser={() => setIsBlockModalOpen(true)}
+        onUnblockUser={handleUnblockUser}
+      />
         </div>
 
         {/* Mobile Payment Status Banner */}
         {paymentStatus?.has_paid && (
           <div className="flex-shrink-0">
-            <PaymentStatusBanner
-              paymentStatus={paymentStatus}
-              timeRemaining={timeRemaining}
-            />
+          <PaymentStatusBanner
+            paymentStatus={paymentStatus}
+            timeRemaining={timeRemaining}
+          />
           </div>
         )}
-
+            
         {/* Mobile Messages - Single scrollable container */}
-        <div className="flex-1 bg-white dark:bg-gray-900" style={{ height: 'calc(100vh - 240px)' }}>
-          <div ref={mobileScrollContainerRef} className="h-full overflow-y-auto pb-4">
-            <ConversationMessages
-              ref={messagesRef}
-              messages={messages}
-              loading={loading}
-              hasMore={hasMore}
-              currentUserHandle={currentUserHandle}
-              replyingTo={replyingTo}
-              isFloatingMessages={isFloatingMessages}
-              messageRefs={messageRefs}
-              onReplyToMessage={handleReplyToMessage}
-              onReplyClick={handleReplyClick}
-              onSpecialCommandClick={handleSpecialCommandClick}
-              onLoadMore={handleLoadMore}
-            />
-          </div>
+        <div ref={mobileScrollContainerRef} className="flex-1 overflow-y-auto bg-white dark:bg-gray-900 p-4" style={{ height: 'calc(100vh - 240px)' }}>
+          <ConversationMessages
+            ref={messagesRef}
+            messages={messages}
+            loading={loading}
+            hasMore={hasMore}
+            currentUserHandle={currentUserHandle}
+            replyingTo={replyingTo}
+            isFloatingMessages={isFloatingMessages}
+            messageRefs={messageRefs}
+            onReplyToMessage={handleReplyToMessage}
+            onReplyClick={handleReplyClick}
+            onSpecialCommandClick={handleSpecialCommandClick}
+            onLoadMore={handleLoadMore}
+            isMobile={true}
+          />
         </div>
 
         {/* Mobile Input - Fixed at bottom */}
@@ -784,72 +848,72 @@ const ConversationPage = () => {
             
             {/* Desktop Messages Container - Scrollable */}
             <div className="flex-1 min-h-0 bg-white dark:bg-gray-900 border-l border-r border-gray-200 dark:border-gray-800 shadow-sm">
-              <ConversationMessages
-                ref={messagesRef}
-                messages={messages}
-                loading={loading}
-                hasMore={hasMore}
-                currentUserHandle={currentUserHandle}
-                replyingTo={replyingTo}
-                isFloatingMessages={isFloatingMessages}
-                messageRefs={messageRefs}
-                onReplyToMessage={handleReplyToMessage}
-                onReplyClick={handleReplyClick}
-                onSpecialCommandClick={handleSpecialCommandClick}
-                onLoadMore={handleLoadMore}
-              />
+        <ConversationMessages
+          ref={messagesRef}
+          messages={messages}
+          loading={loading}
+          hasMore={hasMore}
+          currentUserHandle={currentUserHandle}
+          replyingTo={replyingTo}
+          isFloatingMessages={isFloatingMessages}
+          messageRefs={messageRefs}
+          onReplyToMessage={handleReplyToMessage}
+                    onReplyClick={handleReplyClick}
+          onSpecialCommandClick={handleSpecialCommandClick}
+          onLoadMore={handleLoadMore}
+        />
             </div>
 
             {/* Desktop Input Area - Fixed at bottom */}
             <div className="flex-shrink-0 bg-white dark:bg-gray-900 rounded-b-xl shadow-sm border border-gray-200 dark:border-gray-800 border-t-0">
-              {isUserBlocked ? (
-                <BlockedUserInterface
-                  otherUserHandle={otherUserHandle}
-                  isBlocking={isBlocking}
-                  onUnblockUser={handleUnblockUser}
-                />
-              ) : (
-                <MessageInput
-                  ref={messageInputRef}
-                  messageText={messageText}
-                  sending={sending}
-                  replyingTo={replyingTo}
-                  uploadedMedia={uploadedMedia}
-                  isEmojiPickerOpen={isEmojiPickerOpen}
-                  isMediaPopoverOpen={isMediaPopoverOpen}
-                  onMessageTextChange={setMessageText}
-                  onSendMessage={handleSendMessage}
-                  onEmojiClick={handleEmojiClick}
+      {isUserBlocked ? (
+          <BlockedUserInterface
+            otherUserHandle={otherUserHandle}
+            isBlocking={isBlocking}
+            onUnblockUser={handleUnblockUser}
+          />
+      ) : (
+          <MessageInput
+            ref={messageInputRef}
+            messageText={messageText}
+            sending={sending}
+            replyingTo={replyingTo}
+            uploadedMedia={uploadedMedia}
+            isEmojiPickerOpen={isEmojiPickerOpen}
+            isMediaPopoverOpen={isMediaPopoverOpen}
+            onMessageTextChange={setMessageText}
+            onSendMessage={handleSendMessage}
+            onEmojiClick={handleEmojiClick}
                   onMediaUploaded={handleMediaUploaded}
-                  onRemoveMedia={removeMedia}
-                  onCancelReply={cancelReply}
-                  onSetEmojiPickerOpen={setIsEmojiPickerOpen}
-                  onSetMediaPopoverOpen={setIsMediaPopoverOpen}
-                  onFileUpload={handleFileUpload}
-                  onTyping={handleTyping}
-                />
+            onRemoveMedia={removeMedia}
+            onCancelReply={cancelReply}
+            onSetEmojiPickerOpen={setIsEmojiPickerOpen}
+            onSetMediaPopoverOpen={setIsMediaPopoverOpen}
+            onFileUpload={handleFileUpload}
+            onTyping={handleTyping}
+          />
               )}
                          </div>
            </div>
          </div>
-       </div>
-       
-       {/* Modals */}
-       <ConversationModals
-         isBlockModalOpen={isBlockModalOpen}
-         otherUserHandle={otherUserHandle}
-         isBlocking={isBlocking}
-         onSetBlockModalOpen={setIsBlockModalOpen}
-         onBlockUser={handleBlockUser}
-       />
-       
-       {/* Special Effects */}
-       <SpecialEffects 
-         effect={currentEffect} 
-         onComplete={handleEffectComplete} 
-       />
+        </div>
+      
+      {/* Modals */}
+      <ConversationModals
+        isBlockModalOpen={isBlockModalOpen}
+        otherUserHandle={otherUserHandle}
+        isBlocking={isBlocking}
+        onSetBlockModalOpen={setIsBlockModalOpen}
+        onBlockUser={handleBlockUser}
+      />
+      
+      {/* Special Effects */}
+      <SpecialEffects 
+        effect={currentEffect} 
+        onComplete={handleEffectComplete} 
+      />
      </>
-   );
- };
+  );
+};
 
 export default ConversationPage; 

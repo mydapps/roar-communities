@@ -112,7 +112,7 @@ const ConversationPage = () => {
   const [apiToken, setApiToken] = useState<string | null>(null);
 
   // WebSocket integration
-  const { markAsRead, joinConversation, leaveConversation, sendMessage: sendWebSocketMessage, setMessageHandlers } = useWebSocket();
+  const { connect, markAsRead, joinConversation, leaveConversation, sendMessage: sendWebSocketMessage, setMessageHandlers } = useWebSocket();
 
   // Set page title
   useTitle(`Chat with ${conversationTitle} - dapps.co`);
@@ -180,6 +180,11 @@ const ConversationPage = () => {
       console.error(error);
     }
   };
+
+  // Initialize WebSocket connection on mount
+  useEffect(() => {
+    connect();
+  }, [connect]);
 
   // WebSocket message handlers
   useEffect(() => {

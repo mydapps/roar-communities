@@ -272,36 +272,36 @@ const MessageInput = forwardRef<MessageInputRef, MessageInputProps>(({
           >
             <div className="grid gap-2">
               <div data-media-upload>
-                <MediaUpload
-                  onMediaUploaded={onMediaUploaded}
-                  acceptedTypes="image"
-                  disabled={!!uploadedMedia}
+              <MediaUpload
+                onMediaUploaded={onMediaUploaded}
+                acceptedTypes="image"
+                disabled={!!uploadedMedia}
+              >
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start min-h-[44px] touch-manipulation"
+                  style={{ touchAction: 'manipulation' }}
                 >
-                  <Button 
-                    variant="ghost" 
-                    className="w-full justify-start min-h-[44px] touch-manipulation"
-                    style={{ touchAction: 'manipulation' }}
-                  >
-                    <ImageIcon className="h-4 w-4 mr-2" />
-                    Image
-                  </Button>
-                </MediaUpload>
+                  <ImageIcon className="h-4 w-4 mr-2" />
+                  Image
+                </Button>
+              </MediaUpload>
               </div>
               <div data-media-upload>
-                <MediaUpload
-                  onMediaUploaded={onMediaUploaded}
-                  acceptedTypes="video"
-                  disabled={!!uploadedMedia}
+              <MediaUpload
+                onMediaUploaded={onMediaUploaded}
+                acceptedTypes="video"
+                disabled={!!uploadedMedia}
+              >
+                <Button 
+                  variant="ghost" 
+                  className="w-full justify-start min-h-[44px] touch-manipulation"
+                  style={{ touchAction: 'manipulation' }}
                 >
-                  <Button 
-                    variant="ghost" 
-                    className="w-full justify-start min-h-[44px] touch-manipulation"
-                    style={{ touchAction: 'manipulation' }}
-                  >
-                    <Video className="h-4 w-4 mr-2" />
-                    Video
-                  </Button>
-                </MediaUpload>
+                  <Video className="h-4 w-4 mr-2" />
+                  Video
+                </Button>
+              </MediaUpload>
               </div>
             </div>
           </PopoverContent>

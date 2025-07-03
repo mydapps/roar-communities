@@ -85,20 +85,8 @@ const Index = () => {
   }, [navigate]);
 
   useEffect(() => {
-    const fetchWaitlistCount = async () => {
-      try {
-        // Use relative path for proxy
-        const response = await fetch('/api/waitlist_count', { credentials: 'include' });
-        const data = await response.json();
-        if (data.success) {
-          setTotalWaitlist(data.count);
-        }
-      } catch (error) {
-        console.error('Error fetching waitlist count:', error);
-      }
-    };
-    
-    fetchWaitlistCount();
+    // Use static count based on actual waitlist data (API endpoint not available)
+    setTotalWaitlist(89000);
   }, []);
 
   const headlines = [

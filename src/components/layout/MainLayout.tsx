@@ -27,6 +27,13 @@ const MainLayout = () => {
   // Determine if we are on the communities page
   const isOnCommunitiesPage = location.pathname === '/communities';
   
+  // Check if we're on a landing/public page where sidebar shouldn't render
+  const isPublicPage = location.pathname === '/' || 
+                      location.pathname === '/invite' ||
+                      location.pathname.startsWith('/invite/') ||
+                      location.pathname === '/login' ||
+                      location.pathname === '/signup';
+  
   // Determine if pull-to-refresh should be disabled for the current page
   const disablePullToRefresh = 
     location.pathname === '/communities' || 
@@ -37,10 +44,16 @@ const MainLayout = () => {
     /^\/messages\/[^/]+$/.test(location.pathname); // Disable on conversation pages /messages/conversationId
   
   useEffect(() => {
+    // Only check login status on authenticated pages, not on public landing pages
+    if (isPublicPage) {
+      setIsLoggedIn(false);
+      return;
+    }
+    
     // Check if user is logged in
     const userId = localStorage.getItem('dapps_user_id');
     setIsLoggedIn(!!userId);
-  }, [location]);
+  }, [location, isPublicPage]);
   
   // Add global search keyboard shortcut
   useEffect(() => {
@@ -108,7 +121,7 @@ const MainLayout = () => {
       {/* It takes remaining space (flex-1) and hides overflow for its children */}
       <div className="flex flex-1 overflow-hidden"> 
         {/* Sidebar (conditionally rendered) */}
-        {isLoggedIn && !isMobileAppUser && (
+        {isLoggedIn && !isMobileAppUser && !isPublicPage && (
           // Sidebar takes fixed width, content area takes rest
           <div className="hidden md:block flex-shrink-0 w-64 border-r border-border/40">
             <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -174,7 +187,7 @@ const MainLayout = () => {
       </div> {/* End flex-1 overflow-hidden div */}
       
       {/* Mobile Bottom Navigation - outside the main scroll area */}
-      {(isMobile || isMobileAppUser) && isLoggedIn && <MobileBottomNav />}
+      {(isMobile || isMobileAppUser) && isLoggedIn && !isPublicPage && <MobileBottomNav />}
     </div>
   );
 };

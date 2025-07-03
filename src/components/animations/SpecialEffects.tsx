@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface SpecialEffectsProps {
-  effect: 'buzz' | 'eth' | 'btc' | 'base' | 'sol' | 'dapps' | 'heart' | 'roar' | 'yoga' | 'magic' | null;
+  effect: 'buzz' | 'eth' | 'btc' | 'base' | 'sol' | 'dapps' | 'heart' | 'roar' | 'yoga' | 'magic' | 'gm' | null;
   onComplete: () => void;
 }
 
@@ -26,7 +26,7 @@ const SpecialEffects: React.FC<SpecialEffectsProps> = ({ effect, onComplete }) =
       }, 1000);
     } else {
       // For other effects, complete after animation duration
-      const duration = effect === 'dapps' ? 5000 : effect === 'roar' ? 4000 : effect === 'yoga' ? 6000 : effect === 'magic' ? 7000 : 3000; // DAPPS gets 5s, ROAR gets 4s, YOGA gets 6s, MAGIC gets 7s
+      const duration = effect === 'dapps' ? 5000 : effect === 'roar' ? 4000 : effect === 'yoga' ? 6000 : effect === 'magic' ? 7000 : effect === 'gm' ? 4000 : 3000; // DAPPS gets 5s, ROAR gets 4s, YOGA gets 6s, MAGIC gets 7s, GM gets 4s
       timeout = setTimeout(() => {
         onComplete();
       }, duration);
@@ -1434,6 +1434,254 @@ const SpecialEffects: React.FC<SpecialEffectsProps> = ({ effect, onComplete }) =
                   }}
                 />
               ))}
+            </motion.div>
+
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* GM Effect - The Network Awakening: Your GM Lights Up Web3 */}
+      <AnimatePresence>
+        {effect === 'gm' && (
+          <motion.div className="absolute inset-0">
+            
+            {/* Dark background for better contrast */}
+            <motion.div
+              className="absolute inset-0 bg-black/60"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 0.8, 0.6] }}
+              transition={{ duration: 4, times: [0, 0.25, 1] }}
+            />
+
+            {/* Stage 1: You Start the GM (0-0.8s) */}
+            <motion.div
+              className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ 
+                scale: [0, 1.2, 1],
+                opacity: [0, 1, 1]
+              }}
+              transition={{ duration: 0.8, ease: "backOut" }}
+            >
+              {/* You - the starting point */}
+              <div 
+                className="relative text-6xl sm:text-8xl"
+                style={{
+                  filter: 'drop-shadow(0 0 30px rgba(34, 197, 94, 0.9))',
+                }}
+              >
+                😊
+                {/* Your energy pulse */}
+                <motion.div
+                  className="absolute inset-0 rounded-full border-4 border-green-400"
+                  animate={{
+                    scale: [1, 3, 5],
+                    opacity: [0.8, 0.4, 0],
+                  }}
+                  transition={{
+                    duration: 1.2,
+                    delay: 0.5,
+                    ease: "easeOut"
+                  }}
+                />
+              </div>
+            </motion.div>
+
+            {/* Stage 2: Perfect Network Grid - GM Spreads Through Network (0.8-2.2s) */}
+            {/* Perfectly aligned network nodes using polar coordinates */}
+            {(() => {
+              const center = { x: 50, y: 50 };
+              const networks = [
+                // Inner ring - 4 major ecosystems
+                ...Array.from({ length: 4 }, (_, i) => {
+                  const angle = (i * 90) * Math.PI / 180;
+                  const radius = 20;
+                  return {
+                    x: center.x + Math.cos(angle) * radius,
+                    y: center.y + Math.sin(angle) * radius,
+                    delay: 0.9 + i * 0.15,
+                    size: 'text-5xl sm:text-6xl',
+                    emoji: ['🌍', '⟠', '₿', '◎'][i],
+                  };
+                }),
+                // Middle ring - 8 protocols  
+                ...Array.from({ length: 8 }, (_, i) => {
+                  const angle = (i * 45) * Math.PI / 180;
+                  const radius = 35;
+                  return {
+                    x: center.x + Math.cos(angle) * radius,
+                    y: center.y + Math.sin(angle) * radius,
+                    delay: 1.5 + i * 0.08,
+                    size: 'text-3xl sm:text-4xl',
+                    emoji: ['🚀', '💎', '🔥', '⚡', '🌟', '✨', '💫', '🎉'][i],
+                  };
+                }),
+                // Outer ring - 12 communities
+                ...Array.from({ length: 12 }, (_, i) => {
+                  const angle = (i * 30) * Math.PI / 180;
+                  const radius = 48;
+                  return {
+                    x: center.x + Math.cos(angle) * radius,
+                    y: center.y + Math.sin(angle) * radius,
+                    delay: 1.9 + i * 0.05,
+                    size: 'text-2xl sm:text-3xl',
+                    emoji: ['🔵', '🟣', '🟡', '🟠', '🔴', '🟢', '⭐', '💠', '🔮', '⚪', '🌈', '💯'][i],
+                  };
+                }),
+              ];
+              
+              return networks.map((node, i) => (
+                <motion.div
+                  key={`network-node-${i}`}
+                  className={`absolute ${node.size} transform -translate-x-1/2 -translate-y-1/2`}
+                  style={{
+                    left: `${node.x}%`,
+                    top: `${node.y}%`,
+                    filter: 'drop-shadow(0 0 15px rgba(59, 130, 246, 0.8))',
+                  }}
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ 
+                    scale: [0, 1.4, 1],
+                    opacity: [0, 1, 0.9]
+                  }}
+                  transition={{ 
+                    duration: 0.6,
+                    delay: node.delay,
+                    ease: "backOut"
+                  }}
+                >
+                  {node.emoji}
+                  
+                  {/* Perfect connection lines to center */}
+                  <motion.div
+                    className="absolute top-1/2 left-1/2 w-0.5 bg-gradient-to-b from-blue-400 to-transparent origin-top"
+                    style={{
+                      height: Math.sqrt(Math.pow(node.x - 50, 2) + Math.pow(node.y - 50, 2)) * (window.innerWidth < 640 ? 4 : 6),
+                      transform: `translate(-50%, -50%) rotate(${Math.atan2(50 - node.y, 50 - node.x) * 180 / Math.PI + 90}deg)`,
+                    }}
+                    initial={{ scaleY: 0, opacity: 0 }}
+                    animate={{ 
+                      scaleY: [0, 1, 0.8],
+                      opacity: [0, 0.8, 0.4]
+                    }}
+                    transition={{ 
+                      duration: 0.8,
+                      delay: node.delay + 0.2,
+                      ease: "easeOut"
+                    }}
+                  />
+                </motion.div>
+              ));
+            })()}
+
+            {/* Stage 3: Network Wave & Clear Message (1.8-4.0s) */}
+            <motion.div
+              className="absolute inset-0"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 1, 1] }}
+              transition={{ duration: 2.2, delay: 1.8, times: [0, 0.2, 1] }}
+            >
+              {/* Expanding network wave */}
+              <motion.div
+                className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
+                initial={{ scale: 0 }}
+                animate={{ scale: [0, 20] }}
+                transition={{ duration: 1.2, delay: 1.8, ease: "easeOut" }}
+              >
+                <div 
+                  className="w-20 h-20 rounded-full border-2 border-green-400/60"
+                  style={{
+                    background: 'radial-gradient(circle, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0) 70%)',
+                  }}
+                />
+              </motion.div>
+
+              {/* High Contrast GM Message with Background */}
+              <motion.div
+                className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
+                initial={{ scale: 0, y: 20, opacity: 0 }}
+                animate={{ 
+                  scale: [0, 1.2, 1],
+                  y: [20, 0, 0],
+                  opacity: [0, 1, 1]
+                }}
+                transition={{ 
+                  duration: 0.8,
+                  delay: 2.0,
+                  ease: "backOut"
+                }}
+              >
+                <div className="text-center">
+                  {/* Main GM message with strong background */}
+                  <div 
+                    className="relative px-8 py-4 rounded-2xl"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.2))',
+                      backdropFilter: 'blur(20px)',
+                      border: '2px solid rgba(16, 185, 129, 0.3)',
+                    }}
+                  >
+                    <div 
+                      className="text-4xl sm:text-6xl font-bold mb-2 text-white"
+                      style={{
+                        textShadow: '0 0 30px rgba(16, 185, 129, 0.8), 0 2px 10px rgba(0, 0, 0, 0.9)',
+                        filter: 'drop-shadow(0 0 20px rgba(16, 185, 129, 0.8))',
+                      }}
+                    >
+                      GM Web3! 
+                    </div>
+                    <motion.div
+                      className="text-lg sm:text-xl font-medium text-green-300"
+                      style={{
+                        textShadow: '0 0 15px rgba(34, 197, 94, 0.8), 0 2px 5px rgba(0, 0, 0, 0.8)',
+                      }}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: [0, 1], y: [10, 0] }}
+                      transition={{ delay: 2.3, duration: 0.5 }}
+                    >
+                      You just lit up the network! 🌐
+                    </motion.div>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* Better positioned floating GM messages */}
+              {['GM!', 'gm 🌅', 'GM fren!', '☀️ GM', 'gm wagmi'].map((msg, i) => {
+                const positions = [
+                  { x: 20, y: 25 },
+                  { x: 75, y: 20 },
+                  { x: 15, y: 75 },
+                  { x: 80, y: 80 },
+                  { x: 50, y: 85 },
+                ];
+                return (
+                  <motion.div
+                    key={`floating-gm-${i}`}
+                    className="absolute text-base sm:text-lg font-semibold text-green-300 px-3 py-2 rounded-full transform -translate-x-1/2 -translate-y-1/2"
+                    style={{
+                      left: `${positions[i].x}%`,
+                      top: `${positions[i].y}%`,
+                      background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(16, 185, 129, 0.3))',
+                      backdropFilter: 'blur(15px)',
+                      border: '1px solid rgba(34, 197, 94, 0.5)',
+                      textShadow: '0 0 10px rgba(34, 197, 94, 0.8), 0 1px 3px rgba(0, 0, 0, 0.8)',
+                    }}
+                    initial={{ scale: 0, y: 20, opacity: 0 }}
+                    animate={{ 
+                      scale: [0, 1.1, 1],
+                      y: [20, 0, -5],
+                      opacity: [0, 1, 0.9]
+                    }}
+                    transition={{ 
+                      duration: 0.6,
+                      delay: 2.1 + i * 0.1,
+                      ease: "backOut"
+                    }}
+                  >
+                    {msg}
+                  </motion.div>
+                );
+              })}
             </motion.div>
 
           </motion.div>

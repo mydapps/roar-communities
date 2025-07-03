@@ -39,6 +39,7 @@ const SpecialCommandBubble: React.FC<SpecialCommandBubbleProps> = ({
       roar: { bg: 'from-amber-500 via-orange-500 to-red-600', text: 'text-white' },
       roars: { bg: 'from-amber-500 via-orange-500 to-red-600', text: 'text-white' },
       magic: { bg: 'from-purple-600 via-indigo-600 to-amber-500', text: 'text-white' },
+      gm: { bg: 'from-orange-400 via-yellow-500 to-amber-500', text: 'text-white' },
     };
     return colors[command] || { bg: 'from-gray-500 to-gray-600', text: 'text-white' };
   };
@@ -204,6 +205,8 @@ const SpecialCommandBubble: React.FC<SpecialCommandBubbleProps> = ({
           </motion.div>
         </>
       )}
+
+
       </motion.div>
     </div>
   );

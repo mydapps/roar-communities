@@ -16,8 +16,8 @@ class WebSocketClient {
   private reconnectTimer: NodeJS.Timeout | null = null;
 
   constructor() {
-    // Auto-connect when client is created
-    this.connect();
+    // Don't auto-connect - require explicit connect() call
+    // This prevents unwanted connections on public pages
   }
 
   async connect() {

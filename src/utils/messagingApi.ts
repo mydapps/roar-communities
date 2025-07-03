@@ -611,6 +611,32 @@ export const markAllMessagesAsRead = async (conversationId: string): Promise<{ s
  */
 export const fetchUnreadCount = async (): Promise<UnreadCountResponse> => {
   try {
+    // Safety check: Don't make API calls if user isn't properly logged in
+    const userId = localStorage.getItem('dapps_user_id');
+    if (!userId) {
+      debugLog('Skipping unread count fetch - user not logged in');
+      return {
+        success: false,
+        unread_count: 0
+      };
+    }
+
+    // Additional safety check: Don't make calls on public pages
+    const currentPath = window.location.pathname;
+    const isPublicPage = currentPath === '/' || 
+                        currentPath === '/invite' ||
+                        currentPath.startsWith('/invite/') ||
+                        currentPath === '/login' ||
+                        currentPath === '/signup';
+    
+    if (isPublicPage) {
+      debugLog('Skipping unread count fetch - on public page:', currentPath);
+      return {
+        success: false,
+        unread_count: 0
+      };
+    }
+    
     debugLog('Fetching unread count via XMTP V3');
     
     // ✅ V3 (WORKING) - Updated endpoint
@@ -812,12 +838,34 @@ export const estimateDMPayment = async (recipientHandle: string, amount: number)
       }),
     });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
     const data = await response.json();
     debugLog('DM payment estimate response', data);
+    
+    // Handle error responses
+    if (!response.ok || !data.success) {
+      let errorMessage = data.message || 'Failed to estimate DM payment';
+      
+      // Handle specific error types
+      if (data.error === 'INSUFFICIENT_BALANCE') {
+        const shortfall = data.details?.shortfall || 'unknown';
+        errorMessage = `Insufficient ETH balance. You need ${shortfall} more ETH to complete this transaction.`;
+        
+        // Show more detailed error for insufficient balance
+        toast.error(errorMessage, {
+          description: `Current balance: ${data.details?.currentBalance || '0'} ETH\nRequired: ${data.details?.requiredAmount || 'unknown'} ETH`
+        });
+      } else if (data.error === 'ESTIMATION_FAILED') {
+        errorMessage = 'Unable to estimate transaction cost. Please try again later.';
+        toast.error(errorMessage);
+      } else {
+        toast.error(errorMessage);
+      }
+      
+      return {
+        success: false,
+        error: errorMessage
+      };
+    }
     
     // Transform API response to match expected interface
     if (data.success && data.totalCost && data.estimatedGasFee) {

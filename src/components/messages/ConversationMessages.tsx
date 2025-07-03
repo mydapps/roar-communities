@@ -18,6 +18,7 @@ interface ConversationMessagesProps {
   onReplyClick: (messageId: number) => void;
   onSpecialCommandClick: (command: SpecialCommand) => void;
   onLoadMore: () => void;
+  isMobile?: boolean;
 }
 
 export interface ConversationMessagesRef {
@@ -37,19 +38,42 @@ const ConversationMessages = forwardRef<ConversationMessagesRef, ConversationMes
   onReplyClick,
   onSpecialCommandClick,
   onLoadMore,
+  isMobile = false,
 }, ref) => {
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = (force = false) => {
+    if (isMobile) {
+      // On mobile, scrolling is handled by the parent container
+      // This function shouldn't be called directly on mobile
+      return;
+    }
+    
     if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: force ? 'auto' : 'smooth' });
+      // For desktop, use scrollIntoView
+      const behavior = force ? 'auto' : 'smooth';
+      messagesEndRef.current.scrollIntoView({ 
+        behavior, 
+        block: 'end',
+        inline: 'nearest'
+      });
+      
+      // Additional scroll attempt for desktop timing issues
+      setTimeout(() => {
+        if (messagesEndRef.current) {
+          messagesEndRef.current.scrollIntoView({ 
+            behavior: 'auto', 
+            block: 'end' 
+          });
+        }
+      }, 50);
     }
   };
 
   const scrollToMessage = (messageId: number) => {
     const messageElement = messageRefs.current.get(messageId);
-    if (messageElement && messagesContainerRef.current) {
+    if (messageElement) {
       messageElement.scrollIntoView({ 
         behavior: 'smooth', 
         block: 'center' 
@@ -88,6 +112,113 @@ const ConversationMessages = forwardRef<ConversationMessagesRef, ConversationMes
     return () => observer.disconnect();
   }, [hasMore, loading, onLoadMore]);
 
+  // Mobile layout - no nested scroll container
+  if (isMobile) {
+    return (
+      <div className="space-y-4">
+        {/* Load more indicator */}
+        {hasMore && (
+          <div className="flex items-center justify-center py-4">
+            <div className="flex items-center space-x-2 text-gray-500 dark:text-gray-400">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="text-sm">Loading more messages...</span>
+            </div>
+          </div>
+        )}
+
+        {/* Messages */}
+        <AnimatePresence initial={false}>
+          {messages.map((message, index) => {
+            const isFromCurrentUser = message.sender?.handle === currentUserHandle;
+            const showAvatar = !isFromCurrentUser && (
+              index === 0 || 
+              messages[index - 1]?.sender?.handle !== message.sender?.handle
+            );
+
+            return (
+              <motion.div
+                key={`${message.id}-${message.isOptimistic ? 'optimistic' : 'confirmed'}`}
+                ref={(el) => {
+                  if (el && message.id) {
+                    messageRefs.current.set(message.id, el);
+                  }
+                }}
+                data-message-id={message.id}
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: -10, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="message-container"
+              >
+                {/* Reply indicator */}
+                {message.reply_to && (
+                  <div className="mb-2 ml-12">
+                    <button
+                      onClick={() => onReplyClick(message.reply_to!.id)}
+                      className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                    >
+                      <Reply className="h-3 w-3" />
+                      <span>Replying to message</span>
+                    </button>
+                  </div>
+                )}
+
+                {isSpecialCommand(message.message_content) ? (
+                  <SpecialCommandBubble
+                    message={message.message_content}
+                    isOwn={isFromCurrentUser}
+                    onClick={(command: SpecialCommand) => onSpecialCommandClick(command)}
+                  />
+                ) : (
+                  <MessageBubble
+                    message={message}
+                    isOwn={isFromCurrentUser}
+                    currentUserId={message.sender_id}
+                    showAvatar={showAvatar}
+                    onReply={onReplyToMessage}
+                  />
+                )}
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
+
+        {/* Reply preview */}
+        {replyingTo && (
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="sticky bottom-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mx-4"
+          >
+            <div className="flex items-center space-x-2 text-sm">
+              <Reply className="h-4 w-4 text-blue-600" />
+              <span className="text-blue-600 font-medium">
+                Replying to {replyingTo.sender?.handle}
+              </span>
+            </div>
+            <p className="text-gray-700 dark:text-gray-300 text-sm mt-1 truncate">
+              {replyingTo.message_content}
+            </p>
+          </motion.div>
+        )}
+
+        {/* Loading indicator for sending */}
+        {loading && messages.length === 0 && (
+          <div className="flex items-center justify-center py-8">
+            <div className="flex items-center space-x-3">
+              <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+              <span className="text-gray-600 dark:text-gray-400">Loading conversation...</span>
+            </div>
+          </div>
+        )}
+
+        {/* Mobile scroll anchor - positioned at the very bottom */}
+        <div ref={messagesEndRef} className="h-1" />
+      </div>
+    );
+  }
+
+  // Desktop layout - with scroll container
   return (
     <div className="h-full">
       <div

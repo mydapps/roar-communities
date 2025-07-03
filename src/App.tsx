@@ -100,11 +100,12 @@ function App() {
           <ErrorBoundary>
         <Routes>
           {/* Public routes - accessible outside MainLayout */}
-          <Route path="/" element={<Index />} />
-          <Route path="/index" element={<Index />} />
+          <Route path="/" element={<Index3 />} />
+          <Route path="/index" element={<Index3 />} />
+          <Route path="/index-old" element={<Index />} />
           <Route path="/index2" element={<Index2 />} />
           <Route path="/index3" element={<Index3 />} />
-          <Route path="/invite/:code" element={<Index />} />
+          <Route path="/invite/:code" element={<Index3 />} />
           <Route path="/index3/invite/:code" element={<Index3 />} />
           <Route path="request-invite" element={<RequestInvitePage />} />
           <Route path="avatar-handle" element={<AvatarHandlePage />} />

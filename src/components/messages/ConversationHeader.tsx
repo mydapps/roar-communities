@@ -177,13 +177,13 @@ const ConversationHeader: React.FC<ConversationHeaderProps> = ({
             <h2 className="font-semibold text-gray-900 dark:text-white">
               @{conversationTitle}
             </h2>
-            <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
-              <img 
-                src="/xmtp.png" 
-                alt="XMTP" 
-                className="h-3 w-3 opacity-70"
-              />
-              <span>Secured by XMTP</span>
+              <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
+                <img 
+                  src="/xmtp.png" 
+                  alt="XMTP" 
+                  className="h-3 w-3 opacity-70"
+                />
+                <span>Secured by XMTP</span>
             </div>
           </div>
         </div>

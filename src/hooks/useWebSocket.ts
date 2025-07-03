@@ -2,6 +2,15 @@ import { useCallback, useEffect } from 'react';
 import { webSocketClient } from '../utils/webSocketClient';
 
 export function useWebSocket() {
+  const connect = useCallback(async () => {
+    try {
+      console.log('🔗 Initiating WebSocket connection');
+      await webSocketClient.connect();
+    } catch (error) {
+      console.error('❌ Error connecting WebSocket:', error);
+    }
+  }, []);
+
   const markAsRead = useCallback(async (conversationId: number, messageId: number) => {
     try {
       console.log('📖 Marking message as read via WebSocket:', { conversationId, messageId });
@@ -54,6 +63,7 @@ export function useWebSocket() {
   }, []);
 
   return {
+    connect,
     markAsRead,
     joinConversation,
     leaveConversation,
