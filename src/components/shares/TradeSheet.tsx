@@ -501,13 +501,13 @@ export const TradeSheet = ({
 
             {/* Balance Display for Buy Orders */}
             {action === 'buy' && (
-              <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <span className="text-sm font-medium">Your Balance</span>
+              <div className="flex justify-between items-center p-3 bg-blue-50 dark:bg-blue-950/50 rounded-lg border border-blue-200 dark:border-blue-800">
+                <span className="text-sm font-medium text-blue-800 dark:text-blue-200">Your Balance</span>
                 <div className="text-right">
                   {isLoadingBalance ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin text-blue-600 dark:text-blue-400" />
                   ) : (
-                    <span className="font-medium">{formatNumber(parseFloat(userBalance), 6)} ETH</span>
+                    <span className="font-medium text-blue-900 dark:text-blue-100">{formatNumber(parseFloat(userBalance), 6)} ETH</span>
                   )}
                 </div>
               </div>
@@ -515,7 +515,7 @@ export const TradeSheet = ({
 
             {/* Error Message */}
             {errorMessage && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm">
+              <div className="bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-200 px-3 py-2 rounded-lg text-sm">
                 {errorMessage}
               </div>
             )}
@@ -578,12 +578,12 @@ export const TradeSheet = ({
               </div>
             </div>
 
-            <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
+            <div className="bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 p-3 rounded-lg">
               <div className="flex items-start gap-2">
-                <Info className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
-                <div className="text-sm text-blue-700">
+                <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
+                <div className="text-sm text-blue-700 dark:text-blue-200">
                   <p className="font-medium">Transaction Details</p>
-                  <p className="text-xs mt-1">
+                  <p className="text-xs mt-1 text-blue-600 dark:text-blue-300">
                     {action === 'buy' 
                       ? "You're investing in this community and becoming a member."
                       : "Your shares will be sold at the current market price."}

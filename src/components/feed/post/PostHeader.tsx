@@ -133,11 +133,12 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
         
         <div className="flex items-center gap-1">
           {ipfsHash && onVerifyIpfs && typeof ipfsSheetOpen !== 'undefined' && setIpfsSheetOpen && (
-        <IpfsButton 
+            <IpfsButton 
               ipfsHash={ipfsHash}
+              postCode={postCode}
               onVerify={onVerifyIpfs}
-          open={ipfsSheetOpen} 
-          onOpenChange={setIpfsSheetOpen} 
+              open={ipfsSheetOpen} 
+              onOpenChange={setIpfsSheetOpen} 
             />
           )}
 
