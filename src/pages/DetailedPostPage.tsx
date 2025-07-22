@@ -98,6 +98,7 @@ const DetailedPostPage = () => {
           upvotes: apiReply.upvotes,
           meow_count: apiReply.has_meowed ? 1 : 0,
           has_meowed: apiReply.has_meowed,
+          is_system_message: apiReply.is_system_message || false, // Map system message flag
           // Check both possible field names for nested replies
           sub_replies: apiReply.sub_replies 
             ? apiReply.sub_replies.map(mapApiReplyToCommentReply)

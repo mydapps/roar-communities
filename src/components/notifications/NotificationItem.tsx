@@ -15,7 +15,11 @@ const NotificationItem: React.FC<NotificationItemProps> = ({ notification, onCli
   const getIcon = () => {
     switch (notification.type) {
       case 'roar':
-        return <Star className="h-5 w-5 text-amber-500" />;
+        return <span className="text-lg">🦁</span>;
+      case 'tip':
+        return <span className="text-lg">💎</span>;
+      case 'follow':
+        return <span className="text-lg">👥</span>;
       case 'reply':
         return <MessageSquare className="h-5 w-5 text-blue-500" />;
       case 'tag':

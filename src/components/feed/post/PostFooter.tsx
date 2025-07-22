@@ -5,6 +5,7 @@ import { RoarButton } from './RoarButton';
 import { MirrorButton } from './MirrorButton';
 import { CommentButton } from './CommentButton';
 import { ShareButton } from './ShareButton';
+import { TipButton } from '@/components/tip/TipButton';
 import { ImageViewer } from './ImageViewer';
 import { useLocation } from 'react-router-dom';
 import { isMobile } from '@/utils/responsive';
@@ -34,6 +35,12 @@ interface PostFooterProps {
   hideComments?: boolean;
   avatar?: string;
   onTriggerMobileCommentInput?: () => void;
+
+  // Tipping props
+  tipSheetOpen: boolean;
+  setTipSheetOpen: (open: boolean) => void;
+  tipCount?: number;
+  hasUserTipped?: boolean;
 }
 
 export const PostFooter: React.FC<PostFooterProps> = ({
@@ -59,7 +66,13 @@ export const PostFooter: React.FC<PostFooterProps> = ({
   isLoggedIn,
   hideComments = false,
   avatar,
-  onTriggerMobileCommentInput
+  onTriggerMobileCommentInput,
+
+  // Tipping props
+  tipSheetOpen,
+  setTipSheetOpen,
+  tipCount = 0,
+  hasUserTipped = false
 }) => {
   const location = useLocation();
   
@@ -124,6 +137,17 @@ export const PostFooter: React.FC<PostFooterProps> = ({
             postCode={postCode}
             community={community}
           />
+
+          {/* Tip Button */}
+          {postCode && (
+            <TipButton
+              postCode={postCode}
+              receiverHandle={username}
+              onTipClick={() => setTipSheetOpen(true)}
+              tipCount={tipCount}
+              hasUserTipped={hasUserTipped}
+            />
+          )}
         </div>
         
         <ShareButton 

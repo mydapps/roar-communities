@@ -71,6 +71,7 @@ const notificationTypes = [
   { id: 'newFollowers', apiType: 'follow', label: 'New Followers', icon: UserPlus },
   { id: 'postRoars', apiType: 'roar', label: 'Roars on your posts', icon: ThumbsUp },
   { id: 'commentReplies', apiType: 'reply', label: 'Replies to your comments', icon: MessageSquareText },
+  { id: 'tipNotifications', apiType: 'tip', label: 'Tips received', icon: LayoutGrid },
   { id: 'communityUpdates', apiType: 'community_invite', label: 'Community Updates', icon: LayoutGrid },
 ];
 

@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { PostHeader } from './post/PostHeader';
 import { PostContent } from './post/PostContent';
 import { PostFooter } from './post/PostFooter';
+import { TipSheet } from '@/components/tip/TipSheet';
 import { usePostMedia } from './post/usePostMedia';
 import { CommentSection } from './post/CommentSection';
 import { fetchReplies, CommentReply } from '@/utils/commentApi';
@@ -59,6 +60,8 @@ export interface PostProps {
   is_poll?: boolean;
   poll_data?: PollData | null;
   onTriggerMobileCommentInput?: () => void;
+  tipCount?: number; // Number of tips this post has received
+  hasUserTipped?: boolean; // Whether current user has tipped this post
 }
 
 export const Post = ({ 
@@ -88,6 +91,8 @@ export const Post = ({
   is_poll = false,
   poll_data = null,
   onTriggerMobileCommentInput,
+  tipCount = 0,
+  hasUserTipped = false,
 }: PostProps) => {
   const navigate = useNavigate();
   const [localRoared, setLocalRoared] = useState(roared);
@@ -109,6 +114,7 @@ export const Post = ({
   const [showHideWarnModal, setShowHideWarnModal] = useState(false);
   const [notInCommunitySheetOpen, setNotInCommunitySheetOpen] = useState(false);
   const [sheetCommunityName, setSheetCommunityName] = useState("");
+  const [tipSheetOpen, setTipSheetOpen] = useState(false);
   const isMobile = useIsMobile();
   
   // Image viewer hook
@@ -640,6 +646,10 @@ export const Post = ({
           hideComments={hideComments}
           avatar={avatar}
           onTriggerMobileCommentInput={onTriggerMobileCommentInput}
+          tipSheetOpen={tipSheetOpen}
+          setTipSheetOpen={setTipSheetOpen}
+          tipCount={tipCount}
+          hasUserTipped={hasUserTipped}
         >
           {showComments && !hideComments && (
             <div onClick={(e) => e.stopPropagation()} className="w-full">
@@ -705,6 +715,17 @@ export const Post = ({
         onOpenChange={setNotInCommunitySheetOpen}
         communityName={sheetCommunityName}
       />
+
+      {/* Tip Sheet */}
+      {postCode && (
+        <TipSheet
+          isOpen={tipSheetOpen}
+          onClose={() => setTipSheetOpen(false)}
+          postCode={postCode}
+          receiverHandle={username}
+          receiverAvatar={avatar}
+        />
+      )}
     </>
   );
 };

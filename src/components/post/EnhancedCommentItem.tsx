@@ -538,190 +538,226 @@ export const EnhancedCommentItem = ({
     }
   };
   
+  // Check if this is a system message
+  const isSystemMessage = comment.is_system_message || comment.handle === 'System';
+
   return (
     <div 
       id={`comment-${commentRealId}`}
       className={`${level > 1 ? 'ml-8 border-l-2 border-primary/10 pl-4' : ''} scroll-mt-4`}
     >
-      <div className="flex gap-3 group">
-        <Link to={`/u/${comment.handle?.split('.')[0] || 'unknown'}`} onClick={(e) => e.stopPropagation()}>
-          <Avatar className="h-8 w-8 flex-shrink-0">
-            <AvatarImage src={getAvatarUrl(comment.avatar_url)} />
-            <AvatarFallback>{comment.handle?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
-          </Avatar>
-        </Link>
-        
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <Link 
-              to={`/u/${comment.handle?.split('.')[0] || 'unknown'}`}
-              className="font-medium text-sm hover:underline"
-              onClick={handleUsernameClick}
-            >
-              {formatUsername(comment.handle)}
-            </Link>
-            
-            {isPostAuthor && (
-              <span className="bg-primary/10 text-primary text-xs px-1.5 py-0.5 rounded-full font-medium">
-                OP
-              </span>
-            )}
-            
-            <span className="text-muted-foreground text-xs">·</span>
-            <span className="text-muted-foreground text-xs">{comment.time_ago}</span>
-          </div>
+      {isSystemMessage ? (
+        // System message layout - stylish design with panache
+        <div className="relative">
+          {/* Subtle glow background */}
+          <div className="absolute inset-0 bg-gradient-to-r from-amber-500/5 via-orange-500/5 to-amber-500/5 rounded-xl blur-sm"></div>
           
-          <div 
-            className="text-sm whitespace-pre-wrap break-words mt-1 prose prose-sm max-w-none dark:prose-invert prose-p:my-1 prose-strong:font-semibold prose-em:italic"
-          >
-            {processTextContent(comment.content, handleImageClick)}
-          </div>
-          
-          <div className="flex items-center gap-3 mt-2">
-            <Button 
-              variant={comment.has_meowed ? "meow-active" : "meow"} 
-              size="sm" 
-              onClick={handleMeow}
-              disabled={readOnly}
-              className="h-8 px-2 text-xs gap-1.5 rounded-full"
-            >
-              <div className="relative">
-                <div className={`transition-all duration-300 ${meowAnimating ? 'scale-125' : ''}`}>
-                  <Cat className={`h-3.5 w-3.5 ${comment.has_meowed ? 'text-amber-500' : ''}`} />
-                </div>
-                {meowAnimating && (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="animate-ping absolute h-5 w-5 rounded-full bg-amber-500/30"></div>
-                    <div className="animate-ping delay-75 absolute h-7 w-7 rounded-full bg-amber-500/20"></div>
-                  </div>
-                )}
+          <div className="relative flex gap-4 bg-gradient-to-r from-amber-50/30 via-orange-50/20 to-amber-50/30 dark:from-amber-900/10 dark:via-orange-900/10 dark:to-amber-900/10 rounded-xl p-4 border border-amber-200/30 dark:border-amber-800/30 shadow-sm">
+            {/* Celebration icon with enhanced styling */}
+            <div className="h-10 w-10 flex-shrink-0 bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/50 dark:to-orange-900/50 rounded-full flex items-center justify-center shadow-sm border border-amber-200/50 dark:border-amber-700/50">
+              <span className="text-xl animate-pulse">🎉</span>
+            </div>
+            
+            <div className="flex-1 min-w-0 space-y-1">
+              {/* Timestamp with subtle styling */}
+              <div className="flex items-center">
+                <span className="text-xs text-amber-600/70 dark:text-amber-400/70 font-medium bg-amber-100/50 dark:bg-amber-900/30 px-2 py-0.5 rounded-full">
+                  {comment.time_ago}
+                </span>
               </div>
-              <span className={comment.has_meowed ? 'text-amber-500 font-medium' : ''}>
-                {comment.meow_count}
-              </span>
-            </Button>
+              
+              {/* Message content with enhanced typography */}
+              <div className="text-sm font-medium text-amber-900 dark:text-amber-100 leading-relaxed">
+                {comment.content}
+              </div>
+            </div>
             
-            {/* Always show the Reply button regardless of level, but disable in read-only mode */}
-            {!readOnly && (
+            {/* Decorative accent line */}
+            <div className="absolute left-4 right-4 bottom-0 h-px bg-gradient-to-r from-transparent via-amber-300/40 dark:via-amber-600/40 to-transparent"></div>
+          </div>
+        </div>
+      ) : (
+        // Regular comment layout
+        <div className="flex gap-3 group">
+          <Link to={`/u/${comment.handle?.split('.')[0] || 'unknown'}`} onClick={(e) => e.stopPropagation()}>
+            <Avatar className="h-8 w-8 flex-shrink-0">
+              <AvatarImage src={getAvatarUrl(comment.avatar_url)} />
+              <AvatarFallback>{comment.handle?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
+            </Avatar>
+          </Link>
+          
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Link 
+                to={`/u/${comment.handle?.split('.')[0] || 'unknown'}`}
+                className="font-medium text-sm hover:underline"
+                onClick={handleUsernameClick}
+              >
+                {formatUsername(comment.handle)}
+              </Link>
+              
+              {isPostAuthor && (
+                <span className="bg-primary/10 text-primary text-xs px-1.5 py-0.5 rounded-full font-medium">
+                  OP
+                </span>
+              )}
+              
+              <span className="text-muted-foreground text-xs">·</span>
+              <span className="text-muted-foreground text-xs">{comment.time_ago}</span>
+            </div>
+          
+            <div 
+              className="text-sm whitespace-pre-wrap break-words mt-1 prose prose-sm max-w-none dark:prose-invert prose-p:my-1 prose-strong:font-semibold prose-em:italic"
+            >
+              {processTextContent(comment.content, handleImageClick)}
+            </div>
+            
+            <div className="flex items-center gap-3 mt-2">
+              <Button 
+                variant={comment.has_meowed ? "meow-active" : "meow"} 
+                size="sm" 
+                onClick={handleMeow}
+                disabled={readOnly}
+                className="h-8 px-2 text-xs gap-1.5 rounded-full"
+              >
+                <div className="relative">
+                  <div className={`transition-all duration-300 ${meowAnimating ? 'scale-125' : ''}`}>
+                    <Cat className={`h-3.5 w-3.5 ${comment.has_meowed ? 'text-amber-500' : ''}`} />
+                  </div>
+                  {meowAnimating && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="animate-ping absolute h-5 w-5 rounded-full bg-amber-500/30"></div>
+                      <div className="animate-ping delay-75 absolute h-7 w-7 rounded-full bg-amber-500/20"></div>
+                    </div>
+                  )}
+                </div>
+                <span className={comment.has_meowed ? 'text-amber-500 font-medium' : ''}>
+                  {comment.meow_count}
+                </span>
+              </Button>
+              
+              {/* Always show the Reply button regardless of level, but disable in read-only mode */}
+              {!readOnly && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={handleReplyClick}
+                  className="h-8 px-2 text-xs gap-1.5 rounded-full hover:bg-secondary/80"
+                >
+                  {isReplying && !isMobile ? 'Cancel' : 'Reply'}
+                </Button>
+              )}
+              
+              {/* Share button - only visible on hover/focus */}
               <Button 
                 variant="ghost" 
                 size="sm" 
-                onClick={handleReplyClick}
-                className="h-8 px-2 text-xs gap-1.5 rounded-full hover:bg-secondary/80"
+                onClick={handleShareComment}
+                className="h-8 px-2 text-xs gap-1.5 rounded-full hover:bg-secondary/80 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                title="Share comment"
               >
-                {isReplying && !isMobile ? 'Cancel' : 'Reply'}
+                <Share2 className="h-3.5 w-3.5" />
               </Button>
-            )}
+            </div>
             
-            {/* Share button - only visible on hover/focus */}
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={handleShareComment}
-              className="h-8 px-2 text-xs gap-1.5 rounded-full hover:bg-secondary/80 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-              title="Share comment"
-            >
-              <Share2 className="h-3.5 w-3.5" />
-            </Button>
-          </div>
-          
-          {isReplying && !isMobile && !readOnly && (
-            <form onSubmit={handleSubmitReply} className="mt-3 space-y-2">
-              <div className="relative">
-              <Textarea 
-                  ref={replyInputRef}
-                placeholder={`Reply to ${formatUsername(comment.handle)}...`}
-                value={replyContent}
-                  onChange={handleReplyContentChange}
-                className="min-h-[60px] text-sm"
-                  onKeyDown={handleReplyKeyDown}
-                  onBlur={(e) => {
-                    if (suggestionsContainerRef.current && 
-                        !suggestionsContainerRef.current.contains(e.relatedTarget as Node | null)) {
-                      setShowSuggestions(false);
-                      setHighlightedIndex(-1);
-                    }
-                  }}
-                  onFocus={(e) => {
-                    const triggerInfo = getTriggerInfo(e.target);
-                    if (triggerInfo && triggerInfo.query === mentionQuery && mentionType) {
-                       if(suggestions.length > 0) setShowSuggestions(true);
-                    }
-                  }}
-                />
-                {showSuggestions && (
-                  <div 
-                    ref={suggestionsContainerRef}
-                    className="absolute z-10 w-full mt-1 bg-background border border-border rounded-lg shadow-lg md:w-auto md:max-w-xs"
-                  >
-                    <MentionSuggestionsList
-                      suggestions={suggestions}
-                      isLoading={mentionLoading}
-                      onSelect={handleReplySuggestionSelect}
-                      mentionType={mentionType}
-                      highlightedIndex={highlightedIndex}
-                      onItemHover={setHighlightedIndex}
-                    />
-                  </div>
-                )}
-              </div>
-              
-              {/* Media Upload and Preview for inline reply */}
-              {uploadedMedia && (
-                <div className="mt-2">
-                  <MediaPreview media={uploadedMedia} onRemove={removeMedia} />
-                    </div>
-              )}
-              {/* Container for media buttons and submit button */}
-              <div className="flex items-center justify-between pt-2">
-                {/* Container for media icons + emoji icon */}
-                <div className="flex items-center space-x-1">
-                      <MediaUpload
-                        onMediaUploaded={handleMediaUploaded}
-                        acceptedTypes="image"
-                    disabled={!!uploadedMedia || isSending}
-                      >
-                    <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700 h-8 w-8 disabled:opacity-50" disabled={!!uploadedMedia || isSending} title="Upload Image">
-                      <ImageIcon className="h-4 w-4" />
-                        </Button>
-                      </MediaUpload>
-                      <MediaUpload
-                        onMediaUploaded={handleMediaUploaded}
-                        acceptedTypes="video"
-                    disabled={!!uploadedMedia || isSending}
-                      >
-                    <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700 h-8 w-8 disabled:opacity-50" disabled={!!uploadedMedia || isSending} title="Upload Video">
-                      <VideoIcon className="h-4 w-4" />
-                        </Button>
-                      </MediaUpload>
-                  <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
-                    <PopoverTrigger asChild>
-                      <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700 h-8 w-8" disabled={isSending} title="Add Emoji">
-                        <Smile className="h-4 w-4" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 border-0 z-50" side="top" align="end">
-                      <EmojiPicker
-                        onEmojiClick={onEmojiClickReply}
-                        autoFocusSearch={false}
-                        emojiStyle={EmojiStyle.NATIVE}
-                        height={300}
-                        customEmojis={customEmojisConfig}
-                        categories={emojiPickerCategoryConfig}
+            {isReplying && !isMobile && !readOnly && (
+              <form onSubmit={handleSubmitReply} className="mt-3 space-y-2">
+                <div className="relative">
+                <Textarea 
+                    ref={replyInputRef}
+                  placeholder={`Reply to ${formatUsername(comment.handle)}...`}
+                  value={replyContent}
+                    onChange={handleReplyContentChange}
+                  className="min-h-[60px] text-sm"
+                    onKeyDown={handleReplyKeyDown}
+                    onBlur={(e) => {
+                      if (suggestionsContainerRef.current && 
+                          !suggestionsContainerRef.current.contains(e.relatedTarget as Node | null)) {
+                        setShowSuggestions(false);
+                        setHighlightedIndex(-1);
+                      }
+                    }}
+                    onFocus={(e) => {
+                      const triggerInfo = getTriggerInfo(e.target);
+                      if (triggerInfo && triggerInfo.query === mentionQuery && mentionType) {
+                         if(suggestions.length > 0) setShowSuggestions(true);
+                      }
+                    }}
+                  />
+                  {showSuggestions && (
+                    <div 
+                      ref={suggestionsContainerRef}
+                      className="absolute z-10 w-full mt-1 bg-background border border-border rounded-lg shadow-lg md:w-auto md:max-w-xs"
+                    >
+                      <MentionSuggestionsList
+                        suggestions={suggestions}
+                        isLoading={mentionLoading}
+                        onSelect={handleReplySuggestionSelect}
+                        mentionType={mentionType}
+                        highlightedIndex={highlightedIndex}
+                        onItemHover={setHighlightedIndex}
                       />
-                    </PopoverContent>
-                  </Popover>
+                    </div>
+                  )}
                 </div>
-                {/* Submit Button */}
-                <Button type="submit" size="sm" disabled={isSending || (!replyContent.trim() && !uploadedMedia)} className="h-8">
-                  {isSending ? <Loader2 className="animate-spin h-4 w-4" /> : <Send className="h-4 w-4" />}
-                  Post
-                </Button>
-              </div>
-            </form>
-          )}
+                
+                {/* Media Upload and Preview for inline reply */}
+                {uploadedMedia && (
+                  <div className="mt-2">
+                    <MediaPreview media={uploadedMedia} onRemove={removeMedia} />
+                      </div>
+                )}
+                {/* Container for media buttons and submit button */}
+                <div className="flex items-center justify-between pt-2">
+                  {/* Container for media icons + emoji icon */}
+                  <div className="flex items-center space-x-1">
+                        <MediaUpload
+                          onMediaUploaded={handleMediaUploaded}
+                          acceptedTypes="image"
+                      disabled={!!uploadedMedia || isSending}
+                        >
+                      <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700 h-8 w-8 disabled:opacity-50" disabled={!!uploadedMedia || isSending} title="Upload Image">
+                        <ImageIcon className="h-4 w-4" />
+                          </Button>
+                        </MediaUpload>
+                        <MediaUpload
+                          onMediaUploaded={handleMediaUploaded}
+                          acceptedTypes="video"
+                      disabled={!!uploadedMedia || isSending}
+                        >
+                      <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700 h-8 w-8 disabled:opacity-50" disabled={!!uploadedMedia || isSending} title="Upload Video">
+                        <VideoIcon className="h-4 w-4" />
+                          </Button>
+                        </MediaUpload>
+                    <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700 h-8 w-8" disabled={isSending} title="Add Emoji">
+                          <Smile className="h-4 w-4" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0 border-0 z-50" side="top" align="end">
+                        <EmojiPicker
+                          onEmojiClick={onEmojiClickReply}
+                          autoFocusSearch={false}
+                          emojiStyle={EmojiStyle.NATIVE}
+                          height={300}
+                          customEmojis={customEmojisConfig}
+                          categories={emojiPickerCategoryConfig}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  {/* Submit Button */}
+                  <Button type="submit" size="sm" disabled={isSending || (!replyContent.trim() && !uploadedMedia)} className="h-8">
+                    {isSending ? <Loader2 className="animate-spin h-4 w-4" /> : <Send className="h-4 w-4" />}
+                    Post
+                  </Button>
+                </div>
+              </form>
+            )}
+          </div>
         </div>
-      </div>
+      )}
       
       {comment.sub_replies && comment.sub_replies.length > 0 && (
         <div className="mt-4 space-y-4">
