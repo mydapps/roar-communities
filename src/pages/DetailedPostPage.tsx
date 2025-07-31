@@ -25,6 +25,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { usePreventZoom } from '@/hooks/usePreventZoom';
 import { NotInCommunitySheet } from '@/components/community/NotInCommunitySheet';
 import { sanitizeHtml } from '@/utils/sanitizeHtml';
+import { useTip } from '@/contexts/TipContext';
 
 // Helper function to convert HTML to plain text
 const getPlainText = (htmlString: string | undefined | null): string => {
@@ -40,6 +41,7 @@ const DetailedPostPage = () => {
   const { communityId, postId, handle } = useParams<{ communityId?: string; postId: string; handle?: string }>();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { setOnTipSuccess } = useTip();
   
   const [post, setPost] = useState<PostDetails | null>(null);
   const [originalPost, setOriginalPost] = useState<OriginalPost | null>(null);
@@ -65,6 +67,88 @@ const DetailedPostPage = () => {
       mobileCommentsSectionRef.current.triggerCommentInput();
     }
   }, []);
+  
+  // Handle optimistic tip success - immediately add system message to comments
+  const handleTipSuccess = useCallback((tipData: {
+    senderHandle: string;
+    receiverHandle: string;
+    amount: number;
+    asset: string;
+    usdValue?: number;
+    parentReplyId?: number;
+  }) => {
+    // Create optimistic system message
+    let systemMessage: string;
+    if (tipData.asset === 'roar') {
+      systemMessage = `🦁 @${tipData.senderHandle} tipped @${tipData.receiverHandle} ${tipData.amount} ROAR tokens!`;
+    } else {
+      const usdText = tipData.usdValue ? ` (~$${tipData.usdValue.toFixed(2)})` : '';
+      systemMessage = `💎 @${tipData.senderHandle} tipped @${tipData.receiverHandle} ${tipData.amount} ETH${usdText}!`;
+    }
+    
+    // Create optimistic system comment reply
+    const optimisticSystemReply: CommentReply = {
+      id: Date.now() + Math.random(), // Temporary optimistic ID
+      uid: 0, // System user ID
+      handle: 'System',
+      avatar_url: '', // System has no avatar
+      content: systemMessage,
+      created_on: new Date().toISOString(),
+      time_ago: 'just now',
+      upvotes: 0,
+      meow_count: 0,
+      has_meowed: false,
+      is_system_message: true, // Mark as system message
+      sub_replies: undefined
+    };
+    
+    if (tipData.parentReplyId) {
+      // For reply tips, add as sub-reply to the tipped comment
+      setReplies(prevReplies => 
+        prevReplies.map(reply => {
+          if (reply.id === tipData.parentReplyId) {
+            return {
+              ...reply,
+              sub_replies: [...(reply.sub_replies || []), optimisticSystemReply]
+            };
+          }
+          // Also check sub-replies in case it's a nested reply
+          if (reply.sub_replies) {
+            const updatedSubReplies = reply.sub_replies.map(subReply => {
+              if (subReply.id === tipData.parentReplyId) {
+                return {
+                  ...subReply,
+                  sub_replies: [...(subReply.sub_replies || []), optimisticSystemReply]
+                };
+              }
+              return subReply;
+            });
+            if (updatedSubReplies.some(sr => sr.sub_replies?.includes(optimisticSystemReply))) {
+              return { ...reply, sub_replies: updatedSubReplies };
+            }
+          }
+          return reply;
+        })
+      );
+    } else {
+      // For post tips, add as top-level comment
+      setReplies(prevReplies => [optimisticSystemReply, ...prevReplies]);
+      setReplyCount(prevCount => prevCount + 1);
+    }
+    
+    // Show success toast
+    const tipText = tipData.asset === 'roar' 
+      ? `${tipData.amount} ROAR tokens`
+      : `${tipData.amount} ETH${tipData.usdValue ? ` ($${tipData.usdValue.toFixed(2)})` : ''}`;
+    toast.success(`Successfully tipped ${tipText} to @${tipData.receiverHandle}!`, {
+      description: tipData.parentReplyId ? 'Your tip reply will appear shortly' : 'Your tip comment will appear shortly'
+    });
+  }, [setReplies, setReplyCount]);
+  
+  // Set up tip success callback when component mounts
+  useEffect(() => {
+    setOnTipSuccess(handleTipSuccess);
+  }, [setOnTipSuccess, handleTipSuccess]);
   
   const loadPost = useCallback(async () => {
     if (!postId) {
@@ -587,6 +671,7 @@ const DetailedPostPage = () => {
           is_poll={post.is_poll}
           poll_data={post.poll_data}
           onTriggerMobileCommentInput={triggerMobileCommentInput}
+          onTipSuccess={handleTipSuccess}
         />
       </div>
       
@@ -598,7 +683,7 @@ const DetailedPostPage = () => {
               initialReplies={replies}
               initialReplyCount={replyCount}
               postAuthorHandle={post.author?.handle || (post.handle || '')}
-              readOnly={!isLoggedIn}
+              readOnly={false}
             />
           )}
           

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useFocusableInput } from '@/hooks/useFocusableInput';
 import { 
   Heart, 
   Sparkles, 
@@ -25,28 +26,22 @@ import confetti from 'canvas-confetti';
 import { getWalletBalance, type WalletBalanceResponse } from '@/utils/communityApi';
 import { fetchEthPrice } from '@/utils/apiBase';
 
-// Custom hook for mobile-friendly input handling
-const useMobileInputFocus = () => {
-  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
-    // Scroll input into view on mobile with delay for keyboard
-    setTimeout(() => {
-      e.target.scrollIntoView({ 
-        behavior: 'smooth', 
-        block: 'center',
-        inline: 'nearest'
-      });
-    }, 300);
-  };
-  
-  return handleFocus;
-};
-
 interface TipSheetProps {
   isOpen: boolean;
   onClose: () => void;
   postCode: string;
   receiverHandle: string;
   receiverAvatar?: string;
+  replyId?: number; // Optional: if provided, this is a reply tip
+  tipType?: 'post' | 'reply'; // Explicit tip type for clarity
+  onTipSuccess?: (tipData: {
+    senderHandle: string;
+    receiverHandle: string;
+    amount: number;
+    asset: string;
+    usdValue?: number;
+    parentReplyId?: number;
+  }) => void; // Callback for optimistic UI updates
 }
 
 interface TipLimits {
@@ -84,23 +79,31 @@ export const TipSheet: React.FC<TipSheetProps> = ({
   onClose,
   postCode,
   receiverHandle,
-  receiverAvatar
+  receiverAvatar,
+  replyId,
+  tipType = 'post',
+  onTipSuccess
 }) => {
   const isMobile = useIsMobile();
-  const [activeTab, setActiveTab] = useState<'eth' | 'roar'>('roar');
+  
+  const [activeTab, setActiveTab] = useState<'roar' | 'eth'>('roar');
   const [customAmount, setCustomAmount] = useState('');
   const [selectedPreset, setSelectedPreset] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [tipLimits, setTipLimits] = useState<TipLimits | null>(null);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [successData, setSuccessData] = useState<any>(null);
-  const [successAmount, setSuccessAmount] = useState<number>(0);
-  const [successAsset, setSuccessAsset] = useState<'roar' | 'eth'>('roar');
+  
+  const [successState, setSuccessState] = useState<{
+    show: boolean;
+    data: any;
+    amount: number;
+    asset: 'roar' | 'eth';
+  } | null>(null);
   const [walletBalance, setWalletBalance] = useState<WalletBalanceResponse | null>(null);
   const [ethPrice, setEthPrice] = useState<number>(0);
 
-  // Mobile input focus handler
-  const handleMobileFocus = useMobileInputFocus();
+  // Use focusable input hooks to prevent cursor loss
+  const roarInput = useFocusableInput();
+  const ethInput = useFocusableInput();
 
   // Memoize ETH presets to prevent recalculation on selection changes
   const ethPresets = React.useMemo(() => getETHPresets(ethPrice), [ethPrice]);
@@ -108,7 +111,6 @@ export const TipSheet: React.FC<TipSheetProps> = ({
   // Load user limits when sheet opens
   useEffect(() => {
     if (isOpen) {
-      console.log('TipSheet opened for post:', postCode, 'receiver:', receiverHandle);
       loadTipLimits();
     }
   }, [isOpen, postCode, receiverHandle]);
@@ -220,22 +222,22 @@ export const TipSheet: React.FC<TipSheetProps> = ({
       displayAmount = amount; // Keep USD for display
     }
     
-    setSuccessAmount(displayAmount);
-    setSuccessAsset(activeTab);
     setIsLoading(true);
+
+    // Determine API endpoint and request body based on tip type
+    const apiEndpoint = tipType === 'reply' ? '/api/tip-reply' : '/api/tip';
+    const requestBody = tipType === 'reply' 
+      ? { replyId, asset: activeTab, amount: finalAmount }
+      : { postCode, asset: activeTab, amount: finalAmount };
 
     // For ETH tips, show immediate optimistic success (blockchain takes time)
     if (activeTab === 'eth') {
       // Send API request in background without waiting
-      fetch('/api/tip', {
+      fetch(apiEndpoint, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          postCode,
-          asset: activeTab,
-          amount: finalAmount
-        })
+        body: JSON.stringify(requestBody)
       }).catch(error => {
         console.error('Background ETH tip error:', error);
         // Don't show error to user since they already saw success
@@ -245,13 +247,30 @@ export const TipSheet: React.FC<TipSheetProps> = ({
       // Show immediate success after brief loading animation
       setTimeout(() => {
         setIsLoading(false);
-        setSuccessData({ success: true, isOnChain: true });
         
         // Trigger spectacular success animations
         triggerSuccessEffects();
         
-        // Show success state
-        setShowSuccess(true);
+        // Set all success state at once to prevent multiple re-renders
+        setSuccessState({
+          show: true,
+          data: { success: true, isOnChain: true },
+          amount: displayAmount,
+          asset: activeTab
+        });
+        
+        // Call onTipSuccess callback for optimistic UI updates
+        if (onTipSuccess) {
+          const currentUserHandle = localStorage.getItem('dapps_user_handle') || 'user';
+          onTipSuccess({
+            senderHandle: currentUserHandle,
+            receiverHandle: receiverHandle,
+            amount: finalAmount, // ETH amount
+            asset: activeTab,
+            usdValue: displayAmount, // USD value for display
+            parentReplyId: tipType === 'reply' ? replyId : undefined
+          });
+        }
         
         // Reset form
         setSelectedPreset(null);
@@ -266,35 +285,43 @@ export const TipSheet: React.FC<TipSheetProps> = ({
 
     // For ROAR tips, wait for actual response (instant off-chain)
     try {
-      const response = await fetch('/api/tip', {
+      const response = await fetch(apiEndpoint, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          postCode,
-          asset: activeTab,
-          amount: finalAmount
-        })
+        body: JSON.stringify(requestBody)
       });
 
       const data = await response.json();
 
       if (data.success) {
-        setSuccessData(data);
-        
         // Trigger spectacular success animations BEFORE showing success
         triggerSuccessEffects();
         
-        // Show success state
-        setShowSuccess(true);
+        // Set all success state at once to prevent multiple re-renders
+        setSuccessState({
+          show: true,
+          data: data,
+          amount: displayAmount,
+          asset: activeTab
+        });
         
-        // Reset form
+        // Call onTipSuccess callback for optimistic UI updates
+        if (onTipSuccess) {
+          const currentUserHandle = localStorage.getItem('dapps_user_handle') || 'user';
+          onTipSuccess({
+            senderHandle: currentUserHandle,
+            receiverHandle: receiverHandle,
+            amount: finalAmount, // ROAR amount
+            asset: activeTab,
+            parentReplyId: tipType === 'reply' ? replyId : undefined
+          });
+        }
+        
+        // Reset form and reload limits
         setSelectedPreset(null);
         setCustomAmount('');
-        
-        // Reload limits for next tip
-        await loadTipLimits();
-        
+        loadTipLimits();
       } else {
         toast.error(data.message || 'Failed to send tip');
       }
@@ -363,8 +390,7 @@ export const TipSheet: React.FC<TipSheetProps> = ({
   };
 
   const handleClose = () => {
-    setShowSuccess(false);
-    setSuccessData(null);
+    setSuccessState(null);
     setSelectedPreset(null);
     setCustomAmount('');
     onClose();
@@ -385,7 +411,7 @@ export const TipSheet: React.FC<TipSheetProps> = ({
   };
 
   const SheetContent_Internal = () => {
-    if (showSuccess) {
+    if (successState?.show) {
       return (
         <div className="p-6 space-y-6">
           <motion.div
@@ -450,22 +476,22 @@ export const TipSheet: React.FC<TipSheetProps> = ({
               className="space-y-3"
             >
                              <h3 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-                 {successAsset === 'eth' ? 'Tip Submitted! ⚡' : 'Tip Sent Successfully! 🎉'}
+                 {successState?.asset === 'eth' ? 'Tip Submitted! ⚡' : 'Tip Sent Successfully! 🎉'}
                </h3>
               
                                <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-4 border border-green-200 dark:border-green-800 relative">
                    <div className="text-center">
                      <p className="text-lg font-semibold text-green-800 dark:text-green-200">
-                       {successAsset === 'roar' 
-                         ? `${successAmount.toLocaleString()} 🦁 ROAR sent!`
-                         : `$${successAmount.toFixed(2)} ⚡ ETH sent!`
+                                       {successState?.asset === 'roar'
+                ? `${successState.amount.toLocaleString()} 🦁 ROAR sent!`
+                : `$${successState.amount.toFixed(2)} ⚡ ETH sent!`
                        }
                      </p>
                      <p className="text-sm text-green-700 dark:text-green-300 mt-1">
                        to @{receiverHandle}
                      </p>
                    </div>
-                   {successAsset === 'eth' && (
+                   {successState?.asset === 'eth' && (
                      <motion.div
                        animate={{ rotate: 360 }}
                        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
@@ -474,7 +500,7 @@ export const TipSheet: React.FC<TipSheetProps> = ({
                        ⚡
                      </motion.div>
                    )}
-                   {successAsset === 'eth' && (
+                   {successState?.asset === 'eth' && (
                      <motion.div
                        initial={{ opacity: 0, y: 10 }}
                        animate={{ opacity: 1, y: 0 }}
@@ -492,7 +518,7 @@ export const TipSheet: React.FC<TipSheetProps> = ({
                  transition={{ delay: 0.6 }}
                  className="text-muted-foreground text-sm leading-relaxed max-w-sm mx-auto"
                >
-                 {successAsset === 'eth' ? (
+                 {successState?.asset === 'eth' ? (
                    <>
                      ⚡ <strong>Tip Sent!</strong> Your tip is being processed on the blockchain and should complete in a few seconds.
                      You're supporting amazing creators! 🚀
@@ -568,13 +594,16 @@ export const TipSheet: React.FC<TipSheetProps> = ({
           )}
 
           {/* ROAR Presets */}
-          <div className="grid grid-cols-2 gap-3">
+          <motion.div 
+            className="grid grid-cols-2 gap-3"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+          >
             {ROAR_PRESETS.map((preset, index) => (
               <motion.button
                 key={preset.value}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1, duration: 0.3 }}
+                layout
                 onClick={() => {
                   setSelectedPreset(preset.value);
                   setCustomAmount('');
@@ -584,15 +613,11 @@ export const TipSheet: React.FC<TipSheetProps> = ({
                   "hover:scale-105 hover:shadow-lg transform",
                   "flex flex-col items-center gap-2 text-white",
                   selectedPreset === preset.value 
-                    ? "border-white shadow-xl scale-105" 
-                    : "border-transparent hover:border-white/50"
+                    ? "border-white shadow-xl scale-105 opacity-100" 
+                    : "border-transparent hover:border-white/50 opacity-90"
                 )}
-                style={{
-                  background: selectedPreset === preset.value 
-                    ? `linear-gradient(135deg, var(--tw-gradient-stops))` 
-                    : `linear-gradient(135deg, var(--tw-gradient-stops))`,
-                  opacity: selectedPreset === preset.value ? 1 : 0.9
-                }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
               >
                 <div className={`absolute inset-0 bg-gradient-to-br ${preset.gradient}`} />
                 <div className="relative z-10 flex flex-col items-center gap-2">
@@ -602,32 +627,40 @@ export const TipSheet: React.FC<TipSheetProps> = ({
                   </div>
                   <span className="text-xs opacity-80 text-center">{preset.description}</span>
                 </div>
-                {selectedPreset === preset.value && (
-                  <motion.div
-                    initial={{ scale: 0, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    className="absolute top-2 right-2 bg-white/20 rounded-full p-1"
-                  >
-                    <CheckCircle2 className="w-4 h-4 text-white" />
-                  </motion.div>
-                )}
+                <AnimatePresence mode="wait">
+                  {selectedPreset === preset.value && (
+                    <motion.div
+                      key="checkmark"
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0, opacity: 0 }}
+                      transition={{ type: "spring", duration: 0.3 }}
+                      className="absolute top-2 right-2 bg-white/20 rounded-full p-1"
+                    >
+                      <CheckCircle2 className="w-4 h-4 text-white" />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </motion.button>
             ))}
-          </div>
+          </motion.div>
 
           {/* Custom ROAR Amount */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Custom Amount</label>
             <Input
+              ref={roarInput.inputRef}
               type="number"
               inputMode="numeric"
               placeholder="Enter ROAR amount"
               value={customAmount}
               onChange={(e) => {
+                roarInput.handleChange(e);
                 setCustomAmount(e.target.value);
                 setSelectedPreset(null);
               }}
-              onFocus={handleMobileFocus}
+              onFocus={roarInput.handleFocus}
+              onBlur={roarInput.handleBlur}
               className="text-center border-2 focus:border-primary transition-colors text-lg h-12 font-medium"
               min="1"
               step="1"
@@ -662,7 +695,12 @@ export const TipSheet: React.FC<TipSheetProps> = ({
           )}
 
           {/* ETH Presets */}
-                    <div className="grid grid-cols-2 gap-3">
+          <motion.div 
+            className="grid grid-cols-2 gap-3"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+          >
             {ethPresets.map((preset, index) => {
               const userEthBalance = parseFloat(walletBalance?.balance.eth || '0');
               const userUsdBalance = userEthBalance * ethPrice;
@@ -671,9 +709,7 @@ export const TipSheet: React.FC<TipSheetProps> = ({
               return (
                 <motion.button
                 key={preset.usdValue}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1, duration: 0.3 }}
+                layout
                 onClick={() => {
                   setSelectedPreset(preset.usdValue);
                   setCustomAmount('');
@@ -684,16 +720,14 @@ export const TipSheet: React.FC<TipSheetProps> = ({
                   "hover:scale-105 hover:shadow-lg transform",
                   "flex flex-col items-center gap-2 text-white",
                   !isAffordable && "opacity-50 cursor-not-allowed",
+                  isAffordable && selectedPreset === preset.usdValue && "opacity-100",
+                  isAffordable && selectedPreset !== preset.usdValue && "opacity-90",
                   selectedPreset === preset.usdValue 
                     ? "border-white shadow-xl scale-105" 
                     : "border-transparent hover:border-white/50"
                 )}
-                style={{
-                  background: selectedPreset === preset.usdValue 
-                    ? `linear-gradient(135deg, var(--tw-gradient-stops))` 
-                    : `linear-gradient(135deg, var(--tw-gradient-stops))`,
-                  opacity: !isAffordable ? 0.5 : (selectedPreset === preset.usdValue ? 1 : 0.9)
-                }}
+                whileHover={isAffordable ? { scale: 1.02 } : {}}
+                whileTap={isAffordable ? { scale: 0.98 } : {}}
               >
                 <div className={`absolute inset-0 bg-gradient-to-br ${preset.gradient}`} />
                 <div className="relative z-10 flex flex-col items-center gap-2">
@@ -709,33 +743,41 @@ export const TipSheet: React.FC<TipSheetProps> = ({
                     </span>
                   )}
                 </div>
-                {selectedPreset === preset.usdValue && (
-                  <motion.div
-                    initial={{ scale: 0, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    className="absolute top-2 right-2 bg-white/20 rounded-full p-1"
-                  >
-                    <CheckCircle2 className="w-4 h-4 text-white" />
-                  </motion.div>
-                )}
+                <AnimatePresence mode="wait">
+                  {selectedPreset === preset.usdValue && (
+                    <motion.div
+                      key="checkmark-eth"
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0, opacity: 0 }}
+                      transition={{ type: "spring", duration: 0.3 }}
+                      className="absolute top-2 right-2 bg-white/20 rounded-full p-1"
+                    >
+                      <CheckCircle2 className="w-4 h-4 text-white" />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </motion.button>
             );
           })}
-          </div>
+          </motion.div>
 
           {/* Custom ETH Amount */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Custom Amount (USD)</label>
             <Input
+              ref={ethInput.inputRef}
               type="number"
               inputMode="decimal"
               placeholder="Enter USD amount"
               value={customAmount}
               onChange={(e) => {
+                ethInput.handleChange(e);
                 setCustomAmount(e.target.value);
                 setSelectedPreset(null);
               }}
-              onFocus={handleMobileFocus}
+              onFocus={ethInput.handleFocus}
+              onBlur={ethInput.handleBlur}
               className="text-center border-2 focus:border-primary transition-colors text-lg h-12 font-medium"
               step="0.01"
               min="0.01"
@@ -795,7 +837,9 @@ export const TipSheet: React.FC<TipSheetProps> = ({
       <Sheet open={isOpen} onOpenChange={handleClose}>
         <SheetContent side="bottom" className="rounded-t-2xl">
           <SheetHeader>
-            <SheetTitle className="sr-only">Tip {receiverHandle}</SheetTitle>
+                            <SheetTitle className="sr-only">
+                  {tipType === 'reply' ? 'Tip Comment by' : 'Tip Post by'} {receiverHandle}
+                </SheetTitle>
           </SheetHeader>
           <SheetContent_Internal />
         </SheetContent>
@@ -807,7 +851,9 @@ export const TipSheet: React.FC<TipSheetProps> = ({
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="sr-only">Tip {receiverHandle}</DialogTitle>
+                          <DialogTitle className="sr-only">
+                  {tipType === 'reply' ? 'Tip Comment by' : 'Tip Post by'} {receiverHandle}
+                </DialogTitle>
         </DialogHeader>
         <SheetContent_Internal />
       </DialogContent>

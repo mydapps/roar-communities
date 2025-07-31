@@ -22,6 +22,7 @@ import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ShareDialog } from '@/components/community/ShareDialog';
+import { EncryptedCommunityAccess } from '@/components/community/EncryptedCommunityAccess';
 import { toast } from "sonner";
 import { 
   ArrowUp, 
@@ -131,7 +132,7 @@ const CommunityPage = () => {
   
   debugLog("CommunityPage rendering, id:", id, "activeTab:", activeTab, "isLoggedIn:", isLoggedIn);
   
-  const { data: communityData, loading: communityLoading, error: communityError, refetch } = useCommunityData(id);
+  const { data: communityData, loading: communityLoading, error: communityError, isEncryptedAccess: communityEncryptedAccess, refetch } = useCommunityData(id);
   
   debugLog("Community data:", communityData);
   if (communityData?.community?.rewards) {
@@ -141,7 +142,7 @@ const CommunityPage = () => {
   
   const { members, loading: membersLoading, hasMore: hasMoreMembers, loadMore: loadMoreMembers } = useCommunityMembers(id);
   
-  const { posts, loading: postsLoading, error: postsError, hasMore: hasMorePosts, loadMore: loadMorePosts, loadingElementRef, fetchPosts } = useCommunityPosts(id);
+  const { posts, loading: postsLoading, error: postsError, hasMore: hasMorePosts, loadMore: loadMorePosts, loadingElementRef, fetchPosts, isEncryptedAccess: postsEncryptedAccess } = useCommunityPosts(id);
   
   const allPosts = useMemo(() => {
     const combined = [...localPosts, ...posts];
@@ -498,8 +499,58 @@ const CommunityPage = () => {
       </div>
     );
   }
+
+  // 🔒 Handle Encrypted Community Access (403 Forbidden)
+  if (communityEncryptedAccess || postsEncryptedAccess) {
+    const handleJoinEncryptedCommunity = () => {
+      setTradeAction("buy");
+      setTradeSheetOpen(true);
+    };
+
+    // Create a temporary community object for the TradeSheet
+    const tempCommunity = {
+      community: id || 'Community',
+      shares: 0,
+      description: '',
+      image: '',
+      value: {
+        eth: 0,
+        usd: 0
+      }
+    };
+
+    return (
+      <>
+        {helmetContent}
+        <EncryptedCommunityAccess
+          communityName={id || 'Community'}
+          memberCount={members?.length || 0}
+          onJoinClick={handleJoinEncryptedCommunity}
+          isLoading={tradeLoading}
+        />
+        
+        {/* Hidden TradeSheet for encrypted community joining */}
+        <TradeSheet
+          open={tradeSheetOpen}
+          onOpenChange={setTradeSheetOpen}
+          community={tempCommunity}
+          action={tradeAction}
+          userEthBalance={userEthBalance}
+          onBuyConfirm={async () => {
+            setTradeSuccess(true);
+            setTradeSheetOpen(false);
+            // Refetch community data after successful purchase
+            setTimeout(() => {
+              refetch();
+              fetchPosts(1);
+            }, 1000);
+          }}
+        />
+      </>
+    );
+  }
   
-  if (communityError) {
+  if (communityError && communityError !== 'ENCRYPTED_COMMUNITY_ACCESS') {
     return (
       <div className="h-[50vh] flex items-center justify-center">
         {helmetContent}

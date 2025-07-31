@@ -392,6 +392,11 @@ const ConversationPage = () => {
       is_read: false,
       created_at: new Date().toISOString(),
       isOptimistic: true,
+      reply_to: replyingTo ? {
+        id: replyingTo.id,
+        content: replyingTo.message_content,
+        sender_handle: replyingTo.sender?.handle || 'Unknown'
+      } : undefined,
       sender: {
         id: currentUserId,
         handle: currentUserHandle,

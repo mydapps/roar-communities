@@ -39,11 +39,20 @@ export interface Conversation {
   version?: string; // 🆕 V3 version tracking
 }
 
+// 🆕 Pagination interface for XMTP V3
+export interface ConversationsPagination {
+  page: number;
+  limit: number;
+  total: number;
+  pages: number;
+}
+
 export interface ConversationsResponse {
   success: boolean;
   conversations: Conversation[];
   message?: string;
   version?: string; // 🆕 V3 version tracking
+  pagination?: ConversationsPagination; // 🆕 Pagination support
 }
 
 // DM Pricing interfaces
@@ -83,14 +92,19 @@ export interface UpdateDMPricingResponse {
 }
 
 /**
- * Fetch user's conversations
+ * Fetch user's conversations with pagination support
+ * @param page - Page number (1-based, default: 1)
+ * @param limit - Items per page (default: 20, max recommended: 50)
  */
-export const fetchConversations = async (): Promise<ConversationsResponse> => {
+export const fetchConversations = async (
+  page: number = 1, 
+  limit: number = 20
+): Promise<ConversationsResponse> => {
   try {
-    debugLog('Fetching conversations via XMTP V3');
+    debugLog('Fetching conversations via XMTP V3', { page, limit });
     
-    // ✅ V3 (WORKING) - Updated endpoint
-    const response = await fetch('/api/xmtp/v3/conversations', {
+    // ✅ V3 (WORKING) - Updated endpoint with pagination
+    const response = await fetch(`/api/xmtp/v3/conversations?page=${page}&limit=${limit}`, {
       method: 'GET',
       credentials: 'include',
       headers: createAuthHeaders(),
@@ -111,7 +125,13 @@ export const fetchConversations = async (): Promise<ConversationsResponse> => {
     return {
       success: false,
       conversations: [],
-      message: friendlyMessage
+      message: friendlyMessage,
+      pagination: {
+        page: 1,
+        limit: 20,
+        total: 0,
+        pages: 0
+      }
     };
   }
 };

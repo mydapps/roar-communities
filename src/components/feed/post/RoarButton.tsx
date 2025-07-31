@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { toggleRoar } from '@/utils/api';
 import { toast } from 'sonner';
+import { toggleRoar } from '@/utils/postApi';
 import { NotInCommunitySheet } from '@/components/community/NotInCommunitySheet';
 
 interface RoarButtonProps {
@@ -23,17 +23,61 @@ export const RoarButton = ({
 }: RoarButtonProps) => {
   const [localActive, setLocalActive] = useState(active);
   const [localCount, setLocalCount] = useState(count);
-  const [roarAnimation, setRoarAnimation] = useState(false);
-  const [roarWavesAnimation, setRoarWavesAnimation] = useState(false);
-  const [roarTextAnimation, setRoarTextAnimation] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [notInCommunitySheetOpen, setNotInCommunitySheetOpen] = useState(false);
   const [communityName, setCommunityName] = useState("");
+
+  // 🎨 **ELEGANT ROAR ANIMATION STATES** 🎨
+  const [roarStage, setRoarStage] = useState<'idle' | 'building' | 'peak' | 'settling'>('idle');
+  const [showRipples, setShowRipples] = useState(false);
+  const [lionScale, setLionScale] = useState(1);
+  const [glowIntensity, setGlowIntensity] = useState(0);
 
   useEffect(() => {
     setLocalActive(active);
     setLocalCount(count);
   }, [active, count]);
+
+  // 🎯 **REFINED ROAR ANIMATION SEQUENCE** 🎯
+  const triggerElegantRoar = () => {
+    // 📱 **Subtle Haptic Feedback**
+    if (navigator.vibrate) {
+      navigator.vibrate([80, 40, 120]); // Refined, professional haptic
+    }
+
+    // 🦁 **Stage 1: Building (Elegant buildup)**
+    setRoarStage('building');
+    setLionScale(1.15);
+    setGlowIntensity(0.3);
+    
+    setTimeout(() => {
+      // ⚡ **Stage 2: Peak (Controlled power)**
+      setRoarStage('peak');
+      setLionScale(1.3);
+      setShowRipples(true);
+      setGlowIntensity(0.6);
+      
+      // Refined haptic for peak
+      if (navigator.vibrate) {
+        navigator.vibrate([150]);
+      }
+    }, 150);
+    
+    setTimeout(() => {
+      // 🎨 **Stage 3: Settling (Graceful return)**
+      setRoarStage('settling');
+      setLionScale(1.1);
+      setGlowIntensity(0.2);
+    }, 450);
+    
+    // 🔄 **Return to elegant idle state**
+    setTimeout(() => {
+      setRoarStage('idle');
+      setLionScale(1);
+      setShowRipples(false);
+      setGlowIntensity(0);
+    }, 750);
+  };
 
   const handleClick = async () => {
     // Prevent double-clicks and API race conditions
@@ -58,25 +102,17 @@ export const RoarButton = ({
     setLocalActive(newRoarState);
     setLocalCount(prev => newRoarState ? prev + 1 : prev - 1);
     
-    // Only animate when adding a roar, not removing it
+    // 🎨 **TRIGGER ELEGANT ROAR ANIMATION** 🎨
     if (newRoarState) {
-      setRoarWavesAnimation(true);
-      setTimeout(() => setRoarAnimation(true), 50);
-      setTimeout(() => setRoarTextAnimation(true), 100);
-      
-      setTimeout(() => setRoarWavesAnimation(false), 1500);
-      setTimeout(() => setRoarAnimation(false), 1800);
-      setTimeout(() => setRoarTextAnimation(false), 2000);
+      triggerElegantRoar();
     }
 
     // Only send API request if handleApiCall is true and postCode is available
-    // This prevents double API calls when used in Post component
     if (handleApiCall && postCode) {
       try {
         const result = await toggleRoar(postCode);
         
-        // Check if the result is an error object indicating the user is not part of the community
-        if (result && typeof result === 'object' && 'errCode' in result && result.errCode === "004") {
+        if (typeof result === 'object' && 'errCode' in result && result.errCode === "004") {
           // Reset the local state that was optimistically updated
           setLocalActive(!newRoarState);
           setLocalCount(prev => !newRoarState ? prev + 1 : prev - 1);
@@ -112,28 +148,76 @@ export const RoarButton = ({
         variant="ghost" 
         size="sm" 
         onClick={handleClick}
-        className={`gap-2 hover:text-primary hover:bg-primary/10 px-3 rounded-full transition-colors ${localActive ? 'text-primary bg-primary/5' : ''}`}
+        className={`gap-2 hover:text-primary hover:bg-primary/10 px-3 rounded-full transition-all duration-200 ${
+          localActive ? 'text-primary bg-primary/5' : ''
+        }`}
         disabled={processing}
       >
         <div className="relative">
+          {/* 🦁 **ELEGANT LION WITH REFINED TRANSFORMATIONS** */}
           <span 
-            className={`text-lg transition-transform ${roarAnimation ? 'scale-150' : ''} ${
-              !localActive ? 'opacity-70' : ''
+            className={`text-lg relative z-10 transition-all duration-300 ease-out ${
+              !localActive ? 'opacity-70' : 'opacity-100'
             }`} 
+            style={{
+              transform: `scale(${lionScale}) ${roarStage === 'peak' ? 'rotate(3deg)' : 'rotate(0deg)'}`,
+              filter: `brightness(${1 + glowIntensity * 0.3}) saturate(${1 + glowIntensity * 0.2})`,
+              textShadow: glowIntensity > 0 ? 
+                `0 0 ${8 + glowIntensity * 12}px rgba(251, 191, 36, ${glowIntensity * 0.8})` : 'none'
+            }}
             role="img" 
             aria-label="lion"
           >
             🦁
           </span>
-          {roarWavesAnimation && (
+
+          {/* 🌊 **ELEGANT RIPPLE EFFECTS** */}
+          {showRipples && (
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="animate-ping absolute h-5 w-5 rounded-full bg-primary/30"></div>
-              <div className="animate-ping delay-75 absolute h-6 w-6 rounded-full bg-primary/20"></div>
+              {/* Subtle, professional ripples */}
+              <div 
+                className="absolute animate-ping rounded-full border-2"
+                style={{
+                  width: '20px',
+                  height: '20px',
+                  borderColor: `rgba(251, 191, 36, ${0.4 * glowIntensity})`,
+                  animationDuration: '0.8s'
+                }}
+              />
+              <div 
+                className="absolute animate-ping rounded-full border"
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderColor: `rgba(251, 191, 36, ${0.25 * glowIntensity})`,
+                  animationDuration: '0.8s',
+                  animationDelay: '0.1s'
+                }}
+              />
+            </div>
+          )}
+
+          {/* ✨ **SUBTLE GLOW BACKGROUND** */}
+          {glowIntensity > 0 && (
+            <div className="absolute inset-0 -m-1">
+              <div 
+                className="absolute inset-0 rounded-full blur-sm"
+                style={{
+                  backgroundColor: `rgba(251, 191, 36, ${glowIntensity * 0.15})`,
+                  animation: 'pulse 0.6s ease-out'
+                }}
+              />
             </div>
           )}
         </div>
-        <span className={`transition-transform ${roarTextAnimation ? 'scale-110 text-primary font-medium' : ''} ${
+
+        {/* 📊 **REFINED ROAR COUNT** */}
+        <span className={`transition-all duration-300 ${
+          roarStage === 'peak' ? 'scale-110 font-semibold' : 'scale-100'
+        } ${
           localActive ? 'text-primary font-medium' : ''
+        } ${
+          glowIntensity > 0.4 ? 'text-amber-600' : ''
         }`}>
           {localCount}
         </span>

@@ -676,6 +676,7 @@ export const EnhancedCommentsSection = ({
                   <EnhancedCommentItem 
                     comment={reply}
                     postAuthorHandle={postAuthorHandle}
+                    postCode={postCode}
                     onMeowChange={handleMeowChange}
                     onReply={handleReplyToComment}
                     isAuthorReplying={reply.handle === postAuthorHandle}

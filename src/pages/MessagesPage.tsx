@@ -2,57 +2,98 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
     Plus, Settings, MessageCircle, Search, Sparkles, Zap, Lock, 
-    Users, ChevronRight, Clock, Mail, ImageIcon, VideoIcon 
+    Users, ChevronRight, Clock, Mail, ImageIcon, VideoIcon, Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { fetchConversations, checkOnlineStatus, type Conversation, type OnlineStatusResponse } from '@/utils/messagingApi';
+import { fetchConversations, checkOnlineStatus, type Conversation, type OnlineStatusResponse, type ConversationsPagination } from '@/utils/messagingApi';
 import { useTitle } from '@/hooks/useTitle';
 import { formatDistanceToNow } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useIsMobile } from '@/hooks/use-mobile';
 import NewMessageDialog from '@/components/messages/NewMessageDialog';
 import MessageSettingsDialog from '@/components/messages/MessageSettingsDialog';
+import { tagSession } from '@/utils/inspectlet';
 
 const MessagesPage = () => {
   useTitle('Messages - dapps.co');
   
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [showNewMessage, setShowNewMessage] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [totalUnread, setTotalUnread] = useState(0);
   const [onlineStatuses, setOnlineStatuses] = useState<Record<string, boolean>>({});
+  const [pagination, setPagination] = useState<ConversationsPagination | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
 
   useEffect(() => {
-    loadConversations();
+    loadConversations(1, true); // Reset on initial load
   }, []);
 
-  const loadConversations = async () => {
-    setLoading(true);
+  const loadConversations = async (page: number = 1, reset: boolean = false) => {
+    if (reset) {
+      setLoading(true);
+      setCurrentPage(1);
+    } else {
+      setLoadingMore(true);
+    }
+    
     try {
-      const response = await fetchConversations();
+      const response = await fetchConversations(page, 20);
       if (response.success) {
-        // Sort conversations by last message time (most recent first)
-        const sortedConversations = response.conversations.sort((a, b) => {
-          const dateA = new Date(a.last_message_at).getTime();
-          const dateB = new Date(b.last_message_at).getTime();
-          return dateB - dateA; // Descending order (newest first)
+        const newConversations = response.conversations;
+        
+        if (reset) {
+          // Reset conversations for first page
+          setConversations(newConversations);
+        } else {
+          // Append conversations for pagination (avoiding duplicates)
+          setConversations(prev => {
+            const existingIds = new Set(prev.map(conv => conv.id));
+            const uniqueNew = newConversations.filter(conv => !existingIds.has(conv.id));
+            return [...prev, ...uniqueNew];
+          });
+        }
+        
+        setPagination(response.pagination || null);
+        setCurrentPage(page);
+        
+        // Calculate total unread from all loaded conversations
+        const allConversations = reset ? newConversations : [...conversations, ...newConversations];
+        setTotalUnread(allConversations.reduce((sum, conv) => sum + conv.unread_count, 0));
+        
+        // Load online statuses for new conversations
+        if (newConversations.length > 0) {
+          loadOnlineStatuses(newConversations);
+        }
+
+        // Track pagination analytics
+        tagSession({
+          event: 'messages_pagination',
+          action: reset ? 'initial_load' : 'load_more',
+          page: page,
+          conversations_loaded: newConversations.length,
+          total_conversations: response.pagination?.total || 0,
+          has_unread: allConversations.some(conv => conv.unread_count > 0),
+          timestamp: new Date().toISOString()
         });
-        
-        setConversations(sortedConversations);
-        setTotalUnread(sortedConversations.reduce((sum, conv) => sum + conv.unread_count, 0));
-        
-        // Load online statuses for all users
-        loadOnlineStatuses(sortedConversations);
       }
     } finally {
       setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  const loadMoreConversations = () => {
+    if (pagination && currentPage < pagination.pages && !loadingMore) {
+      loadConversations(currentPage + 1, false);
     }
   };
 
@@ -73,7 +114,7 @@ const MessagesPage = () => {
         statusMap[result.handle] = result.isOnline;
       });
       
-      setOnlineStatuses(statusMap);
+      setOnlineStatuses(prev => ({ ...prev, ...statusMap }));
       console.log('🟢 Online statuses loaded:', statusMap);
     } catch (error) {
       console.error('Error loading online statuses:', error);
@@ -314,13 +355,55 @@ const MessagesPage = () => {
           </motion.div>
         ))}
       </AnimatePresence>
+      
+      {/* Pagination Controls */}
+      {pagination && pagination.pages > 1 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="flex flex-col items-center space-y-4 pt-6"
+        >
+          {/* Pagination Info */}
+          <div className="text-sm text-muted-foreground text-center">
+            Showing {conversations.length} of {pagination.total} conversations
+            {pagination.pages > 1 && (
+              <span className="block mt-1">
+                Page {pagination.page} of {pagination.pages}
+              </span>
+            )}
+          </div>
+          
+          {/* Load More Button */}
+          {currentPage < pagination.pages && (
+            <Button
+              onClick={loadMoreConversations}
+              variant="outline"
+              disabled={loadingMore}
+              className="min-w-[140px]"
+            >
+              {loadingMore ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Loading...
+                </>
+              ) : (
+                <>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Load More
+                </>
+              )}
+            </Button>
+          )}
+        </motion.div>
+      )}
     </div>
   );
 
   const handleNewMessageSuccess = (conversationId: string, otherUser: any) => {
     setShowNewMessage(false);
     // Refresh conversations list to ensure proper sorting after new conversation
-    loadConversations();
+    loadConversations(1, true);
     navigate(`/messages/${conversationId}`, { state: { otherUser } });
   };
 
@@ -347,6 +430,11 @@ const MessagesPage = () => {
         >
           <MessageCircle className="w-7 h-7 mr-3 text-primary" />
           Messages
+          {totalUnread > 0 && (
+            <Badge className="ml-3 bg-primary text-primary-foreground animate-pulse">
+              {totalUnread}
+            </Badge>
+          )}
         </motion.h1>
         <div className="flex items-center space-x-2">
           <Button

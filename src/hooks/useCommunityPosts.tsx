@@ -56,6 +56,7 @@ export const useCommunityPosts = (communityName: string | undefined) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState<boolean>(true);
+  const [isEncryptedAccess, setIsEncryptedAccess] = useState<boolean>(false);
   const currentPage = useRef<number>(1);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadingElementRef = useRef<HTMLDivElement | null>(null);
@@ -72,6 +73,7 @@ export const useCommunityPosts = (communityName: string | undefined) => {
     isFetchingRef.current = true;
     if(pageToFetch === 1) setLoading(true);
       setError(null);
+      setIsEncryptedAccess(false);
     
     try {
       const url = `/api/fetch_posts?c=${encodeURIComponent(communityName)}&page=${pageToFetch}&limit=${limit}`;
@@ -79,6 +81,13 @@ export const useCommunityPosts = (communityName: string | undefined) => {
           method: 'GET',
           credentials: 'include'
       });
+
+      // 🔒 Handle 403 Forbidden specifically for encrypted communities
+      if (response.status === 403) {
+        setIsEncryptedAccess(true);
+        setError('ENCRYPTED_COMMUNITY_ACCESS');
+        return;
+      }
 
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`);
@@ -90,8 +99,10 @@ export const useCommunityPosts = (communityName: string | undefined) => {
       setHasMore(fetchedPosts.length === limit);
       currentPage.current = pageToFetch;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unknown error occurred');
-      console.error("Failed to fetch community posts:", err);
+      if (!isEncryptedAccess) {
+        setError(err instanceof Error ? err.message : 'An unknown error occurred');
+        console.error("Failed to fetch community posts:", err);
+      }
     } finally {
       setLoading(false);
       isFetchingRef.current = false;
@@ -182,6 +193,7 @@ export const useCommunityPosts = (communityName: string | undefined) => {
     loadMore,
     loadingElementRef,
     fetchPosts,
-    refetch
+    refetch,
+    isEncryptedAccess
   };
 };

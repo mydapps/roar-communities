@@ -389,8 +389,8 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
         onClick={handleReplyPreviewClick}
       >
         <div className="flex items-center space-x-1 mb-1">
-          <Reply className="h-3 w-3 text-gray-500" />
-          <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
+          <Reply className="h-3 w-3 text-gray-500 dark:text-gray-300" />
+          <span className="text-xs font-medium text-gray-700 dark:text-gray-200">
             {replyAuthor}
           </span>
         </div>
@@ -402,17 +402,17 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
               alt="Reply preview" 
               className="w-8 h-8 rounded object-cover"
             />
-            <span className="text-xs text-gray-500 dark:text-gray-400">Photo</span>
+            <span className="text-xs text-gray-600 dark:text-gray-300">Photo</span>
           </div>
         ) : videoMatch ? (
           <div className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-gray-300 dark:bg-gray-600 rounded flex items-center justify-center">
               <Play className="h-3 w-3 text-gray-600 dark:text-gray-300" />
             </div>
-            <span className="text-xs text-gray-500 dark:text-gray-400">Video</span>
+            <span className="text-xs text-gray-600 dark:text-gray-300">Video</span>
           </div>
         ) : (
-          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+          <p className="text-xs text-gray-600 dark:text-gray-300 truncate">
             {replyContent.length > 50 ? `${replyContent.substring(0, 50)}...` : replyContent}
           </p>
         )}

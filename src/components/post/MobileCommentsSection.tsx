@@ -29,9 +29,10 @@ export interface MobileCommentsSectionRef {
 }
 
 // Memoized comment item to prevent unnecessary renders
-const MemoizedCommentItem = memo(({ 
+const MemoizedCommentItem = React.memo(({
   comment,
   postAuthorHandle,
+  postCode,
   onMeowChange,
   onReply,
   onOpenMobileReply,
@@ -40,6 +41,7 @@ const MemoizedCommentItem = memo(({
 }: {
   comment: CommentReply;
   postAuthorHandle: string;
+  postCode?: string;
   onMeowChange: (commentId: number, newState: boolean) => void;
   onReply: (parentId: number, content: string) => Promise<void>;
   onOpenMobileReply: (id: number, handle: string, avatar: string, content: string, level2ParentId?: number) => void;
@@ -50,6 +52,7 @@ const MemoizedCommentItem = memo(({
     <EnhancedCommentItem 
       comment={comment}
       postAuthorHandle={postAuthorHandle}
+      postCode={postCode}
       onMeowChange={onMeowChange}
       onReply={onReply}
       isMobile={true}
@@ -450,6 +453,7 @@ export const MobileCommentsSection = forwardRef<MobileCommentsSectionRef, Mobile
             key={reply.id}
             comment={reply}
             postAuthorHandle={postAuthorHandle}
+            postCode={postCode}
             onMeowChange={handleMeowChange}
             onReply={handleReplySubmit}
             onOpenMobileReply={handleOpenMobileReply}

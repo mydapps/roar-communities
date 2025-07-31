@@ -62,6 +62,14 @@ export interface PostProps {
   onTriggerMobileCommentInput?: () => void;
   tipCount?: number; // Number of tips this post has received
   hasUserTipped?: boolean; // Whether current user has tipped this post
+  onTipSuccess?: (tipData: {
+    senderHandle: string;
+    receiverHandle: string;
+    amount: number;
+    asset: string;
+    usdValue?: number;
+    parentReplyId?: number;
+  }) => void; // Callback for optimistic tip UI updates
 }
 
 export const Post = ({ 
@@ -93,6 +101,7 @@ export const Post = ({
   onTriggerMobileCommentInput,
   tipCount = 0,
   hasUserTipped = false,
+  onTipSuccess,
 }: PostProps) => {
   const navigate = useNavigate();
   const [localRoared, setLocalRoared] = useState(roared);
@@ -724,6 +733,7 @@ export const Post = ({
           postCode={postCode}
           receiverHandle={username}
           receiverAvatar={avatar}
+          onTipSuccess={onTipSuccess}
         />
       )}
     </>

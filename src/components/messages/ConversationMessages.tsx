@@ -150,18 +150,7 @@ const ConversationMessages = forwardRef<ConversationMessagesRef, ConversationMes
                 transition={{ duration: 0.2 }}
                 className="message-container"
               >
-                {/* Reply indicator */}
-                {message.reply_to && (
-                  <div className="mb-2 ml-12">
-                    <button
-                      onClick={() => onReplyClick(message.reply_to!.id)}
-                      className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-                    >
-                      <Reply className="h-3 w-3" />
-                      <span>Replying to message</span>
-                    </button>
-                  </div>
-                )}
+
 
                 {isSpecialCommand(message.message_content) ? (
                   <SpecialCommandBubble
@@ -176,6 +165,8 @@ const ConversationMessages = forwardRef<ConversationMessagesRef, ConversationMes
                     currentUserId={message.sender_id}
                     showAvatar={showAvatar}
                     onReply={onReplyToMessage}
+                    onReplyClick={onReplyClick}
+                    replyToMessage={message.reply_to}
                   />
                 )}
               </motion.div>
@@ -183,24 +174,7 @@ const ConversationMessages = forwardRef<ConversationMessagesRef, ConversationMes
           })}
         </AnimatePresence>
 
-        {/* Reply preview */}
-        {replyingTo && (
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            className="sticky bottom-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mx-4"
-          >
-            <div className="flex items-center space-x-2 text-sm">
-              <Reply className="h-4 w-4 text-blue-600" />
-              <span className="text-blue-600 font-medium">
-                Replying to {replyingTo.sender?.handle}
-              </span>
-            </div>
-            <p className="text-gray-700 dark:text-gray-300 text-sm mt-1 truncate">
-              {replyingTo.message_content}
-            </p>
-          </motion.div>
-        )}
+
 
         {/* Loading indicator for sending */}
         {loading && messages.length === 0 && (
@@ -264,18 +238,7 @@ const ConversationMessages = forwardRef<ConversationMessagesRef, ConversationMes
                 transition={{ duration: 0.2 }}
                 className="message-container"
               >
-                {/* Reply indicator */}
-                {message.reply_to && (
-                  <div className="mb-2 ml-12">
-                    <button
-                      onClick={() => onReplyClick(message.reply_to!.id)}
-                      className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-                    >
-                      <Reply className="h-3 w-3" />
-                      <span>Replying to message</span>
-                    </button>
-                  </div>
-                )}
+
 
                 {isSpecialCommand(message.message_content) ? (
                   <SpecialCommandBubble
@@ -290,6 +253,8 @@ const ConversationMessages = forwardRef<ConversationMessagesRef, ConversationMes
                     currentUserId={message.sender_id}
                     showAvatar={showAvatar}
                     onReply={onReplyToMessage}
+                    onReplyClick={onReplyClick}
+                    replyToMessage={message.reply_to}
                   />
                 )}
               </motion.div>
@@ -297,24 +262,7 @@ const ConversationMessages = forwardRef<ConversationMessagesRef, ConversationMes
           })}
         </AnimatePresence>
 
-        {/* Reply preview */}
-        {replyingTo && (
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            className="sticky bottom-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mx-4"
-          >
-            <div className="flex items-center space-x-2 text-sm">
-              <Reply className="h-4 w-4 text-blue-600" />
-              <span className="text-blue-600 font-medium">
-                Replying to {replyingTo.sender?.handle}
-              </span>
-            </div>
-            <p className="text-gray-700 dark:text-gray-300 text-sm mt-1 truncate">
-              {replyingTo.message_content}
-            </p>
-          </motion.div>
-        )}
+
 
         {/* Loading indicator for sending */}
         {loading && messages.length === 0 && (

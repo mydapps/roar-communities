@@ -11,6 +11,7 @@ import {
 import { motion } from 'framer-motion';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { isIOSApp } from '@/utils/deviceUtils';
+import { useNavigate } from 'react-router-dom';
 
 interface ConversationHeaderProps {
   conversationTitle: string;
@@ -35,6 +36,14 @@ const ConversationHeader: React.FC<ConversationHeaderProps> = ({
 }) => {
   const isMobile = useIsMobile();
   const isIOS = isIOSApp();
+  const navigate = useNavigate();
+
+  // 🎯 Navigate to user profile
+  const handleProfileClick = () => {
+    if (otherUserHandle) {
+      navigate(`/u/${otherUserHandle}`);
+    }
+  };
 
   // Mobile-first design
   if (isMobile) {
@@ -65,7 +74,10 @@ const ConversationHeader: React.FC<ConversationHeaderProps> = ({
             
             <div className="flex items-center space-x-3 flex-1">
               <div className="relative">
-                <Avatar className="h-12 w-12">
+                <Avatar 
+                  className="h-12 w-12 cursor-pointer hover:ring-2 hover:ring-primary/20 transition-all"
+                  onClick={handleProfileClick}
+                >
                   <AvatarImage 
                     src={conversationAvatar || 'https://img.dapps.co/avatar/default.svg'} 
                     alt={conversationTitle} 
@@ -84,7 +96,10 @@ const ConversationHeader: React.FC<ConversationHeaderProps> = ({
               </div>
               
               <div className="flex-1 min-w-0">
-                <h2 className="font-bold text-lg text-gray-900 dark:text-white truncate">
+                <h2 
+                  className="font-bold text-lg text-gray-900 dark:text-white truncate cursor-pointer hover:underline"
+                  onClick={handleProfileClick}
+                >
                   @{conversationTitle}
                 </h2>
               </div>
@@ -155,7 +170,10 @@ const ConversationHeader: React.FC<ConversationHeaderProps> = ({
         
         <div className="flex items-center space-x-3">
           <div className="relative">
-            <Avatar className="h-10 w-10">
+            <Avatar 
+              className="h-10 w-10 cursor-pointer hover:ring-2 hover:ring-primary/20 transition-all"
+              onClick={handleProfileClick}
+            >
               <AvatarImage 
                 src={conversationAvatar || 'https://img.dapps.co/avatar/default.svg'} 
                 alt={conversationTitle} 
@@ -174,7 +192,10 @@ const ConversationHeader: React.FC<ConversationHeaderProps> = ({
           </div>
           
           <div>
-            <h2 className="font-semibold text-gray-900 dark:text-white">
+            <h2 
+              className="font-semibold text-gray-900 dark:text-white cursor-pointer hover:underline"
+              onClick={handleProfileClick}
+            >
               @{conversationTitle}
             </h2>
               <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">

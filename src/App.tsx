@@ -39,6 +39,7 @@ import TermsOfServicePage from '@/pages/TermsOfServicePage';
 import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
 import TransactionHistoryPage from '@/pages/TransactionHistoryPage';
 import AccountInactivePage from '@/pages/AccountInactivePage';
+import MarketingNotificationsPage from '@/pages/MarketingNotificationsPage';
 import PostWarningPage from '@/pages/PostWarningPage';
 import ErrorBoundary from '@/components/shared/ErrorBoundary';
 import { ImageViewerProvider } from '@/components/contexts/ImageViewerContext';
@@ -46,6 +47,9 @@ import { ThemeProvider } from '@/contexts/ThemeContext';
 import MessagesPage from '@/pages/MessagesPage';
 import ConversationPage from '@/pages/ConversationPage';
 import PaidConversationPage from '@/pages/PaidConversationPage';
+import InspectletTracker from '@/components/analytics/InspectletTracker';
+import { TipProvider } from '@/contexts/TipContext';
+import { SharedTipSheet } from '@/components/tip/SharedTipSheet';
 
 
 // Lazy loaded components
@@ -96,7 +100,9 @@ function App() {
       <PrivyAuthProvider>
         <ThemeProvider>
         <ImageViewerProvider>
+          <TipProvider>
           <PageViewTracker />
+            <InspectletTracker />
           <ErrorBoundary>
         <Routes>
           {/* Public routes - accessible outside MainLayout */}
@@ -206,6 +212,13 @@ function App() {
               </ProtectedRoute>
             } />
 
+            {/* Admin Marketing Notifications Route (UID 1, 2, 3 only) */}
+            <Route path="admin/marketing-notifications" element={
+              <ProtectedRoute>
+                <MarketingNotificationsPage />
+              </ProtectedRoute>
+            } />
+
               
             
             {/* 404 route */}
@@ -213,7 +226,10 @@ function App() {
           </Route>
         </Routes>
         <Toaster position="top-right" />
+        {/* Global Shared TipSheet */}
+        <SharedTipSheet />
         </ErrorBoundary>
+        </TipProvider>
         </ImageViewerProvider>
         </ThemeProvider>
       </PrivyAuthProvider>

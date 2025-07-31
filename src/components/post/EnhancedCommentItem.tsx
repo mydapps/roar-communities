@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Cat, Send, Loader2, ImageIcon, VideoIcon, Smile, Share2 } from 'lucide-react';
+import { Cat, Send, Loader2, ImageIcon, VideoIcon, Smile, Share2, MoreHorizontal, MessageSquare, Heart, ChevronDown, ChevronUp } from 'lucide-react';
 import { CommentReply } from '@/utils/commentApi';
 import { Link, useLocation } from 'react-router-dom';
 import { processTextContent } from '@/utils/textFormatting';
@@ -19,10 +19,14 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useImageViewer } from '@/components/contexts/ImageViewerContext';
+import { TipButton } from '@/components/tip/TipButton';
+import { TipSheet } from '@/components/tip/TipSheet';
+import { useTip } from '@/contexts/TipContext';
 
 interface EnhancedCommentItemProps {
   comment: CommentReply;
   postAuthorHandle: string;
+  postCode?: string; // Add postCode for comment tipping
   level?: number;
   maxLevel?: number;
   onMeowChange: (commentId: number, newState: boolean) => void;
@@ -39,6 +43,7 @@ interface EnhancedCommentItemProps {
 export const EnhancedCommentItem = ({
   comment,
   postAuthorHandle,
+  postCode,
   level = 1,
   maxLevel = 3,
   onMeowChange,
@@ -55,6 +60,10 @@ export const EnhancedCommentItem = ({
   const [replyContent, setReplyContent] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [meowAnimating, setMeowAnimating] = useState(false);
+  const [isTogglingMeow, setIsTogglingMeow] = useState(false); // NEW: Prevent multiple clicks
+  const [meowStage, setMeowStage] = useState<'idle' | 'preparing' | 'meowing' | 'celebrating'>('idle'); // NEW: Animation stages
+  const [showMeowText, setShowMeowText] = useState(false); // NEW: Show "Meow!" text
+  const [showParticles, setShowParticles] = useState(false); // NEW: Particle effects
   const [uploadedMedia, setUploadedMedia] = useState<MediaUploadResponse | null>(null);
   const replyInputRef = useRef<HTMLTextAreaElement>(null);
   
@@ -73,6 +82,9 @@ export const EnhancedCommentItem = ({
   
   // Image viewer hook
   const { openImageViewer } = useImageViewer();
+  
+  // Tip functionality
+  const { openTipSheet } = useTip();
   
   // Location hook for sharing
   const location = useLocation();
@@ -113,13 +125,97 @@ export const EnhancedCommentItem = ({
   const commentRealId = getRealIdIfAvailable(comment.id);
   const currentLevel2ParentId = level === 2 ? commentRealId : level2ParentId;
   
-  const handleMeow = () => {
-    if (!comment.has_meowed) {
-      setMeowAnimating(true);
-      setTimeout(() => setMeowAnimating(false), 1000);
+  // 🐱 SPECTACULAR MEOW ANIMATION SYSTEM
+  const triggerMeowAnimation = useCallback(() => {
+    // Stage 1: Preparing (cat gets ready)
+    setMeowStage('preparing');
+    
+    // Haptic feedback on mobile
+    if ('vibrate' in navigator) {
+      navigator.vibrate(50);
     }
     
-    onMeowChange(comment.id, !comment.has_meowed);
+    setTimeout(() => {
+      // Stage 2: Meowing (the main event!)
+      setMeowStage('meowing');
+      setShowMeowText(true);
+      setShowParticles(true);
+    }, 200);
+    
+    setTimeout(() => {
+      // Stage 3: Celebrating
+      setMeowStage('celebrating');
+    }, 800);
+    
+    setTimeout(() => {
+      // Stage 4: Return to normal
+      setMeowStage('idle');
+      setShowMeowText(false);
+      setShowParticles(false);
+    }, 1800);
+  }, []);
+  
+  const handleMeow = useCallback(async () => {
+    // 🛡️ PREVENT MULTIPLE CLICKS
+    if (isTogglingMeow) return;
+    
+    setIsTogglingMeow(true);
+    const wasAlreadyMeowed = comment.has_meowed;
+    
+    try {
+      // 🚀 INSTANT VISUAL FEEDBACK (only animate when meowing, not un-meowing)
+      if (!wasAlreadyMeowed) {
+        triggerMeowAnimation();
+      }
+      
+      // 🎯 API CALL
+      await onMeowChange(comment.id, !comment.has_meowed);
+      
+    } catch (error) {
+      console.error('Meow failed:', error);
+      // Reset animation state on error
+      setMeowStage('idle');
+      setShowMeowText(false);
+      setShowParticles(false);
+    } finally {
+      // 🔓 RE-ENABLE BUTTON
+      setIsTogglingMeow(false);
+    }
+  }, [comment.has_meowed, comment.id, isTogglingMeow, onMeowChange, triggerMeowAnimation]);
+  
+  // 🎨 GET ANIMATION CLASSES
+  const getCatAnimationClasses = () => {
+    switch (meowStage) {
+      case 'preparing':
+        return 'scale-110 -rotate-6 transition-all duration-200';
+      case 'meowing':
+        return 'scale-150 rotate-12 transition-all duration-300';
+      case 'celebrating':
+        return 'scale-125 -rotate-3 transition-all duration-200';
+      default:
+        return 'transition-all duration-200';
+    }
+  };
+  
+  // 🎊 PARTICLE ANIMATION COMPONENT
+  const MeowParticles = () => {
+    if (!showParticles) return null;
+    
+    return (
+      <div className="absolute inset-0 pointer-events-none">
+        {/* Heart particles */}
+        <div className="absolute top-1 left-1 animate-bounce text-red-400 text-xs">💖</div>
+        <div className="absolute top-0 right-1 animate-bounce delay-150 text-amber-400 text-xs">🐾</div>
+        <div className="absolute bottom-1 left-0 animate-bounce delay-300 text-pink-400 text-xs">✨</div>
+        
+        {/* Ripple effects */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="animate-ping absolute h-6 w-6 rounded-full bg-amber-500/40"></div>
+          <div className="animate-ping delay-75 absolute h-8 w-8 rounded-full bg-amber-400/30"></div>
+          <div className="animate-ping delay-150 absolute h-10 w-10 rounded-full bg-amber-300/20"></div>
+        </div>
+      </div>
+    );
   };
   
   // Handle successful media upload
@@ -617,22 +713,28 @@ export const EnhancedCommentItem = ({
                 variant={comment.has_meowed ? "meow-active" : "meow"} 
                 size="sm" 
                 onClick={handleMeow}
-                disabled={readOnly}
-                className="h-8 px-2 text-xs gap-1.5 rounded-full"
+                disabled={readOnly || isTogglingMeow}
+                className={`h-8 px-2 text-xs gap-1.5 rounded-full relative overflow-hidden ${
+                  isTogglingMeow ? 'cursor-wait opacity-80' : ''
+                }`}
               >
                 <div className="relative">
-                  <div className={`transition-all duration-300 ${meowAnimating ? 'scale-125' : ''}`}>
-                    <Cat className={`h-3.5 w-3.5 ${comment.has_meowed ? 'text-amber-500' : ''}`} />
+                  {/* 🐱 SPECTACULAR CAT ANIMATION */}
+                  <div className={`${getCatAnimationClasses()}`}>
+                    <Cat className={`h-3.5 w-3.5 ${
+                      comment.has_meowed || meowStage !== 'idle' ? 'text-amber-500' : ''
+                    }`} />
                   </div>
-                  {meowAnimating && (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="animate-ping absolute h-5 w-5 rounded-full bg-amber-500/30"></div>
-                      <div className="animate-ping delay-75 absolute h-7 w-7 rounded-full bg-amber-500/20"></div>
-                    </div>
-                  )}
+                  
+                  {/* 🎊 AMAZING PARTICLE EFFECTS */}
+                  <MeowParticles />
                 </div>
-                <span className={comment.has_meowed ? 'text-amber-500 font-medium' : ''}>
-                  {comment.meow_count}
+                
+                {/* 📝 DYNAMIC TEXT WITH PERSONALITY */}
+                <span className={`transition-all duration-300 ${
+                  comment.has_meowed ? 'text-amber-500 font-medium' : ''
+                } ${showMeowText ? 'text-amber-500 font-bold animate-pulse' : ''}`}>
+                  {showMeowText ? 'Meow! 🐱' : (isTogglingMeow ? '...' : comment.meow_count)}
                 </span>
               </Button>
               
@@ -646,6 +748,24 @@ export const EnhancedCommentItem = ({
                 >
                   {isReplying && !isMobile ? 'Cancel' : 'Reply'}
                 </Button>
+              )}
+              
+              {/* Tip button - only show for non-system messages and non-read-only mode */}
+              {!isSystemMessage && !readOnly && (
+                <TipButton
+                  postCode={postCode || ''}
+                  receiverHandle={comment.handle || ''}
+                  onTipClick={() => openTipSheet({
+                    postCode: postCode || '',
+                    receiverHandle: comment.handle || '',
+                    receiverAvatar: comment.avatar_url,
+                    replyId: comment.id,
+                    tipType: 'reply'
+                  })}
+                  tipCount={0} // TODO: Add tip count to comment data
+                  hasUserTipped={false} // TODO: Add user tip status to comment data
+                  className="h-8 px-2 text-xs gap-1.5 rounded-full"
+                />
               )}
               
               {/* Share button - only visible on hover/focus */}
@@ -766,6 +886,7 @@ export const EnhancedCommentItem = ({
               key={reply.id}
               comment={reply}
               postAuthorHandle={postAuthorHandle}
+              postCode={postCode}
               level={level + 1}
               maxLevel={maxLevel}
               onMeowChange={onMeowChange}

@@ -7,6 +7,7 @@ import {
   Notification,
   NotificationPagination
 } from '@/utils/notificationApi';
+import { updateFaviconNotificationCount, clearFaviconNotifications } from '@/utils/faviconNotifications';
 import { toast } from 'sonner';
 
 interface NotificationsState {
@@ -42,6 +43,9 @@ export const useNotifications = (): UseNotificationsReturn => {
     try {
       const count = await getUnreadNotificationsCount();
       setState(prev => ({ ...prev, unreadCount: count }));
+      
+      // Update favicon with notification count
+      await updateFaviconNotificationCount(count);
     } catch (error) {
       console.error('Error fetching unread count:', error);
     }
@@ -118,13 +122,17 @@ export const useNotifications = (): UseNotificationsReturn => {
       
       if (response.success) {
         // Update local state to mark this notification as seen
+        const newUnreadCount = Math.max(0, state.unreadCount - 1);
         setState(prev => ({
           ...prev,
           notifications: prev.notifications.map(notification =>
             notification.id === id ? { ...notification, seen: true } : notification
           ),
-          unreadCount: Math.max(0, prev.unreadCount - 1)
+          unreadCount: newUnreadCount
         }));
+        
+        // Update favicon with new count
+        await updateFaviconNotificationCount(newUnreadCount);
       }
     } catch (error) {
       console.error('Error marking notification as seen:', error);
@@ -143,6 +151,9 @@ export const useNotifications = (): UseNotificationsReturn => {
           notifications: prev.notifications.map(notification => ({ ...notification, seen: true })),
           unreadCount: 0
         }));
+        
+        // Clear favicon notifications
+        await clearFaviconNotifications();
         
         // toast.success('All notifications marked as read');
       }
@@ -163,6 +174,11 @@ export const useNotifications = (): UseNotificationsReturn => {
       return () => clearInterval(interval);
     }
   }, [refreshNotifications, fetchUnreadCount]);
+
+  // Update favicon when unread count changes
+  useEffect(() => {
+    updateFaviconNotificationCount(state.unreadCount);
+  }, [state.unreadCount]);
 
   return {
     ...state,

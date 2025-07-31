@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { shouldRefreshAuth } from '@/utils/apiBase';
+import { trackLogin, trackSignup, resetInspectlet } from '@/utils/inspectlet';
 
 interface PrivyAuthProviderProps {
   children: ReactNode;
@@ -241,6 +242,21 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
                 const registeredStatus = data.registered ? data.registered.toString() : "0";
                 localStorage.setItem('dapps_user_registered', registeredStatus); 
                 debugLog('Authentication successful, stored user info. Registered status:', registeredStatus);
+                
+                // Track authentication event for Inspectlet analytics
+                // Determine if this is a new user signup or existing user login
+                const isNewUser = registeredStatus === "0" && !data.handle && !data.avatar;
+                if (isNewUser) {
+                  trackSignup('privy');
+                } else {
+                  trackLogin('privy');
+                }
+                
+                // Fire custom authentication success event for other components
+                const authSuccessEvent = new CustomEvent('dapps_auth_success', {
+                  detail: { userId: userIdStr, handle: data.handle, registered: registeredStatus === "1" }
+                });
+                document.dispatchEvent(authSuccessEvent);
               } catch (storageError) {
                 console.error('[Auth] CRITICAL ERROR storing user info in localStorage:', storageError, 'Data received:', data);
                 setAuthError('Could not save session');
