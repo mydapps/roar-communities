@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { shouldRefreshAuth } from '@/utils/apiBase';
-import { trackLogin, trackSignup, resetInspectlet } from '@/utils/inspectlet';
+
 
 interface PrivyAuthProviderProps {
   children: ReactNode;
@@ -243,14 +243,7 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
                 localStorage.setItem('dapps_user_registered', registeredStatus); 
                 debugLog('Authentication successful, stored user info. Registered status:', registeredStatus);
                 
-                // Track authentication event for Inspectlet analytics
-                // Determine if this is a new user signup or existing user login
-                const isNewUser = registeredStatus === "0" && !data.handle && !data.avatar;
-                if (isNewUser) {
-                  trackSignup('privy');
-                } else {
-                  trackLogin('privy');
-                }
+
                 
                 // Fire custom authentication success event for other components
                 const authSuccessEvent = new CustomEvent('dapps_auth_success', {

@@ -16,7 +16,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useIsMobile } from '@/hooks/use-mobile';
 import NewMessageDialog from '@/components/messages/NewMessageDialog';
 import MessageSettingsDialog from '@/components/messages/MessageSettingsDialog';
-import { tagSession } from '@/utils/inspectlet';
+
 
 const MessagesPage = () => {
   useTitle('Messages - dapps.co');
@@ -74,16 +74,7 @@ const MessagesPage = () => {
           loadOnlineStatuses(newConversations);
         }
 
-        // Track pagination analytics
-        tagSession({
-          event: 'messages_pagination',
-          action: reset ? 'initial_load' : 'load_more',
-          page: page,
-          conversations_loaded: newConversations.length,
-          total_conversations: response.pagination?.total || 0,
-          has_unread: allConversations.some(conv => conv.unread_count > 0),
-          timestamp: new Date().toISOString()
-        });
+
       }
     } finally {
       setLoading(false);

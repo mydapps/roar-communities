@@ -367,6 +367,86 @@ export interface SNIWalletRefreshResponse {
 }
 
 /**
+ * SHM Wallet Status Response interface
+ */
+export interface SHMWalletStatusResponse {
+  success: boolean;
+  data: {
+    wallets: Array<{
+      wallet: string;
+      shm_balance: number;
+      date: string;
+      status: number;
+    }>;
+    max_balance: number;
+    eligible_for_booster: boolean;
+    required_balance: number;
+    boost_multiplier: string;
+    blockchain: string;
+  };
+}
+
+/**
+ * SHM Wallet Submit Response interface
+ */
+export interface SHMWalletSubmitResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    wallet: string;
+    shm_balance: number;
+    eligible_for_booster: boolean;
+    required_balance: number;
+    boost_multiplier: string;
+    blockchain: string;
+  };
+}
+
+/**
+ * SHM Wallet Refresh Response interface
+ */
+export interface SHMWalletRefreshResponse {
+  success: boolean;
+  message: string;
+  data: {
+    refresh_results: Array<{
+      wallet: string;
+      new_balance?: number;
+      success: boolean;
+      error?: string;
+    }>;
+    max_balance: number;
+    eligible_for_booster: boolean;
+    required_balance: number;
+    boost_multiplier: string;
+    blockchain: string;
+  };
+}
+
+/**
+ * SHM Check Existing Wallets Response interface
+ */
+export interface SHMCheckExistingResponse {
+  success: boolean;
+  data: {
+    existing_wallets: Array<{
+      wallet: string;
+      enb_balance?: number;
+      sni_balance?: number;
+      shm_balance: number;
+      source: string;
+    }>;
+    total_wallets: number;
+    max_shm_balance: number;
+    eligible_for_booster: boolean;
+    required_balance: number;
+    boost_multiplier: string;
+    blockchain: string;
+    message: string;
+  };
+}
+
+/**
  * Fetch status of all golden boosters
  * @returns Promise that resolves to golden booster status data
  */
@@ -620,6 +700,118 @@ export const refreshSNIWalletBalances = async (): Promise<SNIWalletRefreshRespon
     return data;
   } catch (error) {
     console.error('Error refreshing SNI wallet balances:', error);
+    return null;
+  }
+};
+
+/**
+ * Fetch SHM wallet status for the current user
+ * @returns Promise that resolves to the wallet status data
+ */
+export const fetchSHMWalletStatus = async (): Promise<SHMWalletStatusResponse | null> => {
+  try {
+    // Use relative path for proxy
+    const response = await fetch(`/api/shm_wallet/status`, {
+      method: 'GET',
+      credentials: 'include', // Important for cookie-based auth
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Error fetching SHM wallet status:', errorData);
+      return null;
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching SHM wallet status:', error);
+    return null;
+  }
+};
+
+/**
+ * Submit SHM wallet address
+ * @param wallet The Ethereum wallet address to submit
+ * @returns Promise that resolves to the submit response
+ */
+export const submitSHMWallet = async (wallet: string): Promise<SHMWalletSubmitResponse | null> => {
+  try {
+    // Use relative path for proxy
+    const response = await fetch(`/api/shm_wallet/submit`, {
+      method: 'POST',
+      credentials: 'include', // Important for cookie-based auth
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ wallet })
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Error submitting SHM wallet:', errorData);
+      return errorData;
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error submitting SHM wallet:', error);
+    return null;
+  }
+};
+
+/**
+ * Refresh SHM wallet balances
+ * @returns Promise that resolves to the refresh response
+ */
+export const refreshSHMWalletBalances = async (): Promise<SHMWalletRefreshResponse | null> => {
+  try {
+    // Use relative path for proxy
+    const response = await fetch(`/api/shm_wallet/refresh`, {
+      method: 'POST',
+      credentials: 'include', // Important for cookie-based auth
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Error refreshing SHM wallet balances:', errorData);
+      return null;
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error refreshing SHM wallet balances:', error);
+    return null;
+  }
+};
+
+/**
+ * Check existing wallets for SHM balance
+ * @returns Promise that resolves to the check existing response
+ */
+export const checkExistingSHMWallets = async (): Promise<SHMCheckExistingResponse | null> => {
+  try {
+    // Use relative path for proxy
+    const response = await fetch(`/api/shm_wallet/check_existing`, {
+      method: 'GET',
+      credentials: 'include', // Important for cookie-based auth
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Error checking existing SHM wallets:', errorData);
+      return null;
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error checking existing SHM wallets:', error);
     return null;
   }
 };

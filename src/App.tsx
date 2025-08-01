@@ -1,5 +1,7 @@
 import React, { useEffect, lazy, Suspense, useCallback } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+
+
 import { HelmetProvider } from 'react-helmet-async';
 import { Loader2 } from 'lucide-react';
 import MainLayout from '@/components/layout/MainLayout';
@@ -47,7 +49,7 @@ import { ThemeProvider } from '@/contexts/ThemeContext';
 import MessagesPage from '@/pages/MessagesPage';
 import ConversationPage from '@/pages/ConversationPage';
 import PaidConversationPage from '@/pages/PaidConversationPage';
-import InspectletTracker from '@/components/analytics/InspectletTracker';
+
 import { TipProvider } from '@/contexts/TipContext';
 import { SharedTipSheet } from '@/components/tip/SharedTipSheet';
 
@@ -102,7 +104,7 @@ function App() {
         <ImageViewerProvider>
           <TipProvider>
           <PageViewTracker />
-            <InspectletTracker />
+
           <ErrorBoundary>
         <Routes>
           {/* Public routes - accessible outside MainLayout */}

@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { useTitle } from '@/hooks/useTitle';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { useDropzone } from 'react-dropzone';
-import { EmojiClickData } from 'emoji-picker-react';
+
 import * as apiBase from '@/utils/apiBase';
 
 // Component imports
@@ -63,8 +63,6 @@ const ConversationPage = () => {
     setPage,
     hasMore,
     setHasMore,
-    isEmojiPickerOpen,
-    setIsEmojiPickerOpen,
     isMediaPopoverOpen,
     setIsMediaPopoverOpen,
     isMobileMediaPopoverOpen,
@@ -476,13 +474,7 @@ const ConversationPage = () => {
     }
   };
         
-  // Handle emoji click
-  const handleEmojiClick = (emojiData: EmojiClickData) => {
-    const emoji = emojiData.emoji;
-    setMessageText(prev => prev + emoji);
-    setIsEmojiPickerOpen(false);
-    messageInputRef.current?.focus();
-  };
+
 
   // Handle media upload
   const handleMediaUploaded = (media: MediaUploadResponse) => {
@@ -799,15 +791,12 @@ const ConversationPage = () => {
               sending={sending}
               replyingTo={replyingTo}
               uploadedMedia={uploadedMedia}
-              isEmojiPickerOpen={isEmojiPickerOpen}
               isMediaPopoverOpen={isMobileMediaPopoverOpen}
               onMessageTextChange={setMessageText}
               onSendMessage={handleSendMessage}
-              onEmojiClick={handleEmojiClick}
               onMediaUploaded={handleMediaUploaded}
               onRemoveMedia={removeMedia}
               onCancelReply={cancelReply}
-              onSetEmojiPickerOpen={setIsEmojiPickerOpen}
               onSetMediaPopoverOpen={setIsMobileMediaPopoverOpen}
               onFileUpload={handleFileUpload}
               onTyping={handleTyping}
@@ -884,15 +873,12 @@ const ConversationPage = () => {
             sending={sending}
             replyingTo={replyingTo}
             uploadedMedia={uploadedMedia}
-            isEmojiPickerOpen={isEmojiPickerOpen}
             isMediaPopoverOpen={isMediaPopoverOpen}
             onMessageTextChange={setMessageText}
             onSendMessage={handleSendMessage}
-            onEmojiClick={handleEmojiClick}
-                  onMediaUploaded={handleMediaUploaded}
+            onMediaUploaded={handleMediaUploaded}
             onRemoveMedia={removeMedia}
             onCancelReply={cancelReply}
-            onSetEmojiPickerOpen={setIsEmojiPickerOpen}
             onSetMediaPopoverOpen={setIsMediaPopoverOpen}
             onFileUpload={handleFileUpload}
             onTyping={handleTyping}

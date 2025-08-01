@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertTriangle, Lock, MessageSquare, ChevronLeft } from 'lucide-react';
+import { AlertTriangle, Lock, MessageSquare } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
@@ -602,10 +602,7 @@ const DetailedPostPage = () => {
         <meta name="format-detection" content="telephone=no" />
       </Helmet>
       
-      <div className="flex items-center justify-between mb-2 px-2 md:px-0">
-        <Button variant="outline" size="sm" onClick={goBack} className="md:hidden">
-          <ChevronLeft className="h-4 w-4 mr-1" /> Back
-        </Button>
+      <div className="mb-2 px-2 md:px-0">
         <div className="hidden md:block">
           <Breadcrumb>
             <BreadcrumbList>
@@ -629,7 +626,7 @@ const DetailedPostPage = () => {
                    <BreadcrumbSeparator />
                    <BreadcrumbItem>
                      <BreadcrumbLink asChild>
-                       <Link to={`/${handle}`}>{handle}</Link>
+                       <Link to={`/u/${handle}`}>{handle}</Link>
                      </BreadcrumbLink>
                    </BreadcrumbItem>
                  </>

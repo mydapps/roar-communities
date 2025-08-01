@@ -31,7 +31,11 @@ import {
   refreshENBWalletBalances,
   submitSNIWallet,
   fetchSNIWalletStatus,
-  refreshSNIWalletBalances
+  refreshSNIWalletBalances,
+  submitSHMWallet,
+  fetchSHMWalletStatus,
+  refreshSHMWalletBalances,
+  checkExistingSHMWallets
 } from '@/utils/apiBase';
 import type { 
   AvailableBoostersResponse, 
@@ -45,7 +49,11 @@ import type {
   ENBWalletRefreshResponse,
   SNIWalletStatusResponse,
   SNIWalletSubmitResponse,
-  SNIWalletRefreshResponse
+  SNIWalletRefreshResponse,
+  SHMWalletStatusResponse,
+  SHMWalletSubmitResponse,
+  SHMWalletRefreshResponse,
+  SHMCheckExistingResponse
 } from '@/utils/apiBase';
 import { BoosterDisplay } from '@/components/shared/BoosterDisplay';
 import { BoosterDetailModal } from '@/components/shared/BoosterDetailModal';
@@ -1070,6 +1078,245 @@ const SNIWalletModal: React.FC<SNIWalletModalProps> = ({ isOpen, onClose, onSucc
   );
 };
 
+// SHM Wallet Modal Props
+interface SHMWalletModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+const SHMWalletModal: React.FC<SHMWalletModalProps> = ({ isOpen, onClose, onSuccess }) => {
+  const [isLinking, setIsLinking] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [walletStatus, setWalletStatus] = useState<SHMWalletStatusResponse | null>(null);
+  const [isLoadingStatus, setIsLoadingStatus] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const { linkWallet } = useLinkAccount({
+    onSuccess: (wallet, linkedAccount) => {
+      console.log('[shm_wallet] 🎉 Wallet linked successfully!');
+      console.log('[shm_wallet] Wallet:', wallet);
+      console.log('[shm_wallet] Account:', linkedAccount);
+      
+      if ((wallet as any).address) {
+        console.log('[shm_wallet] Auto-submitting wallet address:', (wallet as any).address);
+        handleWalletSubmit((wallet as any).address);
+      } else {
+        console.error('[shm_wallet] ❌ Latest wallet has no address field');
+        toast.error('Wallet address not found');
+      }
+      setIsLinking(false);
+    },
+    onError: (error) => {
+      console.error('[shm_wallet] ❌ Wallet linking failed:', error);
+      toast.error('Failed to link wallet. Please try again.');
+      setIsLinking(false);
+    }
+  });
+
+  const handleLinkWallet = async () => {
+    console.log('[shm_wallet] 🔗 Starting wallet linking...');
+    setIsLinking(true);
+    try {
+      linkWallet();
+    } catch (error) {
+      console.error('[shm_wallet] ❌ Exception during wallet linking:', error);
+      setIsLinking(false);
+      toast.error('Failed to initiate wallet linking');
+    }
+  };
+
+  const handleWalletSubmit = async (walletAddress: string) => {
+    console.log('[shm_wallet] 📤 Starting wallet submission process...');
+    setIsSubmitting(true);
+    try {
+      const result = await submitSHMWallet(walletAddress);
+      
+      if (result && result.success) {
+        if (result.data?.eligible_for_booster) {
+          toast.success(`🎉 Shardeum wallet connected! 3x boost activated!`);
+          onSuccess();
+          onClose();
+        } else {
+          await loadWalletStatus();
+          // Modal will show the status, no need for toast
+        }
+      } else {
+        toast.error(result?.message || 'Failed to verify Shardeum wallet');
+      }
+    } catch (error) {
+      toast.error('Failed to connect wallet. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const loadWalletStatus = async () => {
+    setIsLoadingStatus(true);
+    try {
+      const result = await fetchSHMWalletStatus();
+      if (result && result.success) {
+        setWalletStatus(result);
+      }
+    } catch (error) {
+      console.error('[shm_wallet] ❌ Exception loading wallet status:', error);
+    } finally {
+      setIsLoadingStatus(false);
+    }
+  };
+
+  const handleRefreshBalances = async () => {
+    setIsRefreshing(true);
+    try {
+      const result = await refreshSHMWalletBalances();
+      if (result && result.success) {
+        await loadWalletStatus();
+        
+        if (result.data?.eligible_for_booster) {
+          toast.success(`🎉 SHM balance verified! 3x boost activated!`);
+          onSuccess();
+          onClose();
+        } else {
+          toast.success('SHM balances updated');
+        }
+      } else {
+        toast.error('Failed to refresh SHM balances');
+      }
+    } catch (error) {
+      toast.error('Failed to refresh SHM balances. Please try again.');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      loadWalletStatus();
+    }
+  }, [isOpen]);
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Trophy className="h-5 w-5 text-amber-500" />
+            SHM Token Holder Boost
+          </DialogTitle>
+          <DialogDescription>
+            Connect your external wallet to verify you hold 10+ SHM tokens for a 3x boost.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="space-y-4">
+          {/* Requirements */}
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40 rounded-lg p-3">
+            <h4 className="font-medium text-amber-800 dark:text-amber-200 mb-2">Requirements:</h4>
+            <ul className="text-sm text-amber-700 dark:text-amber-300 space-y-1">
+              <li>• Hold at least 10 SHM tokens</li>
+              <li>• Connect external wallet (MetaMask, etc.)</li>
+              <li>• Wallet must contain SHM tokens on Shardeum</li>
+            </ul>
+          </div>
+
+          {/* Current Wallet Status */}
+          {isLoadingStatus ? (
+            <div className="flex items-center justify-center py-6 text-gray-500">
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              Loading wallet status...
+            </div>
+          ) : walletStatus?.data?.wallets && walletStatus.data.wallets.length > 0 ? (
+            <div className="space-y-3">
+              <h4 className="font-medium">Connected Wallets:</h4>
+              {walletStatus.data.wallets.map((wallet, index) => (
+                <div key={index} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-mono text-gray-600 dark:text-gray-400">
+                      {wallet.wallet.slice(0, 6)}...{wallet.wallet.slice(-4)}
+                    </span>
+                    <Badge variant={Number(wallet.shm_balance) >= 10 ? "default" : "secondary"}>
+                      {Number(wallet.shm_balance).toFixed(2)} SHM
+                    </Badge>
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    Last updated: {new Date(wallet.date).toLocaleDateString()}
+                  </div>
+                </div>
+              ))}
+              
+              {walletStatus.data.eligible_for_booster && (
+                <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span className="text-sm font-medium">Eligible for 3x Boost!</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-6 text-gray-500">
+              <Wallet className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+              <p className="text-sm">No SHM wallets connected yet</p>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex flex-col gap-2">
+            <Button 
+              onClick={handleLinkWallet} 
+              disabled={isLinking || isSubmitting}
+              className="w-full"
+            >
+              {isLinking ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Connecting Wallet...
+                </>
+              ) : (
+                <>
+                  <Wallet className="mr-2 h-4 w-4" />
+                  Connect New Wallet
+                </>
+              )}
+            </Button>
+            
+            {walletStatus?.data?.wallets && walletStatus.data.wallets.length > 0 && (
+              <Button 
+                variant="outline" 
+                onClick={handleRefreshBalances}
+                disabled={isRefreshing || isSubmitting}
+                className="w-full"
+              >
+                {isRefreshing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Refreshing...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Refresh Balances
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+
+          {/* Info */}
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+            <div className="flex items-start gap-2">
+              <Info className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                <p>SHM tokens are on the Shardeum network. Connect your wallet to verify your balance.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 const getIconComponent = (iconName: string): React.ReactNode => {
   const icons: Record<string, LucideIcon> = {
     Twitter: Twitter,
@@ -1113,9 +1360,10 @@ interface BoosterCardProps {
   isProcessing: boolean;
   showENBModal?: () => void;
   showSNIModal?: () => void;
+  showSHMModal?: () => void;
 }
 
-const BoosterCard: React.FC<BoosterCardProps> = ({ activity, onClaim, isProcessing, showENBModal, showSNIModal }) => {
+const BoosterCard: React.FC<BoosterCardProps> = ({ activity, onClaim, isProcessing, showENBModal, showSNIModal, showSHMModal }) => {
   const [claiming, setClaiming] = useState(false);
   const navigate = useNavigate();
   
@@ -1178,6 +1426,14 @@ const BoosterCard: React.FC<BoosterCardProps> = ({ activity, onClaim, isProcessi
     if (activity.id === "sni_token_holder" && activity.eligible === false) {
       if (showSNIModal) {
         showSNIModal();
+        return;
+      }
+    }
+    
+    // Special handling for SHM token holder booster
+    if (activity.id === "shm_token_holder" && activity.eligible === false) {
+      if (showSHMModal) {
+        showSHMModal();
         return;
       }
     }
@@ -1668,6 +1924,9 @@ const BoosterPage: React.FC = () => {
   
   // SNI Wallet Modal state
   const [showSNIWalletModal, setShowSNIWalletModal] = useState(false);
+  
+  // SHM Wallet Modal state
+  const [showSHMWalletModal, setShowSHMWalletModal] = useState(false);
   
   // Function to fetch all booster data
   const fetchData = async () => {
@@ -2557,6 +2816,7 @@ const BoosterPage: React.FC = () => {
                     isProcessing={isProcessing}
                     showENBModal={() => setShowENBWalletModal(true)}
                     showSNIModal={() => setShowSNIWalletModal(true)}
+                    showSHMModal={() => setShowSHMWalletModal(true)}
                   />
                 </motion.div>
               ))}
@@ -2601,6 +2861,7 @@ const BoosterPage: React.FC = () => {
                     isProcessing={isProcessing}
                     showENBModal={() => setShowENBWalletModal(true)}
                     showSNIModal={() => setShowSNIWalletModal(true)}
+                    showSHMModal={() => setShowSHMWalletModal(true)}
                   />
                 </motion.div>
               ))}
@@ -2714,6 +2975,16 @@ const BoosterPage: React.FC = () => {
       <SNIWalletModal
         isOpen={showSNIWalletModal}
         onClose={() => setShowSNIWalletModal(false)}
+        onSuccess={() => {
+          // Refresh booster data when wallet is successfully linked and eligible
+          fetchData();
+        }}
+      />
+      
+      {/* SHM Wallet Modal */}
+      <SHMWalletModal
+        isOpen={showSHMWalletModal}
+        onClose={() => setShowSHMWalletModal(false)}
         onSuccess={() => {
           // Refresh booster data when wallet is successfully linked and eligible
           fetchData();

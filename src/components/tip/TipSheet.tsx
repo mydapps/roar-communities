@@ -46,10 +46,6 @@ interface TipSheetProps {
 
 interface TipLimits {
   maxPerTransaction: number;
-  maxPerDay: number;
-  currentDailyUsage: number;
-  remainingDailyLimit: number;
-  currentTipCount: number;
   userROARBalance: number;
 }
 
@@ -181,10 +177,7 @@ export const TipSheet: React.FC<TipSheetProps> = ({
         return;
       }
       
-      if (amount > tipLimits.remainingDailyLimit) {
-        toast.error(`Daily limit exceeded. You can tip ${tipLimits.remainingDailyLimit} more ROAR today`);
-        return;
-      }
+
     } else if (activeTab === 'eth') {
       if (!walletBalance) {
         toast.error('Unable to load wallet balance');
@@ -586,10 +579,7 @@ export const TipSheet: React.FC<TipSheetProps> = ({
                 <span>Your Balance:</span>
                 <span className="font-medium">{tipLimits.userROARBalance.toLocaleString()} 🦁</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span>Daily Remaining:</span>
-                <span className="font-medium">{tipLimits.remainingDailyLimit.toLocaleString()} 🦁</span>
-              </div>
+
             </div>
           )}
 

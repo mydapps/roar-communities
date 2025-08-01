@@ -20,7 +20,6 @@ export const useConversationState = () => {
   const [hasMore, setHasMore] = useState(false);
   
   // UI state
-  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   const [isMediaPopoverOpen, setIsMediaPopoverOpen] = useState(false);
   const [isMobileMediaPopoverOpen, setIsMobileMediaPopoverOpen] = useState(false);
   const [uploadedMedia, setUploadedMedia] = useState<MediaUploadResponse | null>(null);
@@ -118,8 +117,6 @@ export const useConversationState = () => {
     setPage,
     hasMore,
     setHasMore,
-    isEmojiPickerOpen,
-    setIsEmojiPickerOpen,
     isMediaPopoverOpen,
     setIsMediaPopoverOpen,
     isMobileMediaPopoverOpen,

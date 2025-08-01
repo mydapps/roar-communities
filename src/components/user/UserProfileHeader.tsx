@@ -102,49 +102,98 @@ const UserProfileHeader: React.FC<UserProfileHeaderProps> = ({
           <div className="space-y-4 mt-4">
             {/* Action buttons - beautifully stacked for mobile */}
             {!isOwnProfile && (
-              <div className="bg-card/95 backdrop-blur-sm rounded-2xl p-4 border border-border/30 shadow-lg">
-                {/* Follows you badge - prominent when applicable */}
-                {profile.is_followed_by && (
-                  <div className="mb-3">
-                    <Badge className="bg-primary/15 text-primary border-primary/30 px-3 py-1 text-sm font-medium">
-                      ✨ Follows you
-                    </Badge>
-                  </div>
-                )}
-                
-                {/* Primary action: Follow button - full width for easy tapping */}
-                <div className="space-y-3">
+              <div className="bg-card/95 backdrop-blur-sm rounded-2xl p-5 border border-border/30 shadow-lg">
+                {/* Clean Primary CTA with integrated status */}
+                <div className="space-y-4">
                   {profile.is_following ? (
-                    <Button 
-                      onClick={onUnfollow}
-                      variant="outline"
-                      size="lg"
-                      className="w-full h-12 text-base font-medium border-primary/30 hover:bg-primary/5 shadow-sm"
-                    >
-                      Following
-                    </Button>
+                    /* When following: Message is primary CTA */
+                    <>
+                      <div className="space-y-3">
+                        {/* Subtle follows you indicator integrated into button area */}
+                        {profile.is_followed_by && (
+                          <div className="text-center">
+                            <span className="text-xs text-muted-foreground bg-muted/50 px-3 py-1 rounded-full">
+                              ✨ Follows you
+                            </span>
+                          </div>
+                        )}
+                        
+                        <DMButton 
+                          userHandle={profile.handle}
+                          size="lg"
+                          className="w-full h-12 text-base font-medium bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg"
+                        />
+                      </div>
+                      
+                      {/* Clean secondary actions with proper share button */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <Button 
+                          onClick={onUnfollow}
+                          variant="outline"
+                          size="lg"
+                          className="h-11 text-sm font-medium border-primary/30 hover:bg-primary/5"
+                        >
+                          Following
+                        </Button>
+                        <UserProfileShare 
+                          handle={profile.handle}
+                          triggerComponent={
+                            <Button 
+                              variant="outline" 
+                              size="lg"
+                              className="h-11 w-full text-sm font-medium border-border/30 hover:bg-muted/50"
+                            >
+                              Share
+                            </Button>
+                          }
+                        />
+                      </div>
+                    </>
                   ) : (
-                    <Button 
-                      onClick={onFollow}
-                      size="lg"
-                      className="w-full h-12 text-base font-medium bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg"
-                    >
-                      Follow
-                    </Button>
+                    /* When not following: Follow is primary CTA */
+                    <>
+                      <div className="space-y-3">
+                        {/* Subtle follows you indicator integrated into button area */}
+                        {profile.is_followed_by && (
+                          <div className="text-center">
+                            <span className="text-xs text-muted-foreground bg-muted/50 px-3 py-1 rounded-full">
+                              ✨ Follows you
+                            </span>
+                          </div>
+                        )}
+                        
+                        <Button 
+                          onClick={onFollow}
+                          size="lg"
+                          className="w-full h-12 text-base font-medium bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg"
+                        >
+                          Follow
+                        </Button>
+                      </div>
+                      
+                      {/* Clean secondary actions with proper share button */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <DMButton 
+                          userHandle={profile.handle}
+                          variant="outline"
+                          size="lg"
+                          className="h-11 text-sm font-medium"
+                        />
+                        <UserProfileShare 
+                          handle={profile.handle}
+                          triggerComponent={
+                            <Button 
+                              variant="outline" 
+                              size="lg"
+                              className="h-11 w-full text-sm font-medium border-border/30 hover:bg-muted/50"
+                            >
+                              Share
+                            </Button>
+                          }
+                        />
+                      </div>
+                    </>
                   )}
-                  
-                  {/* Secondary actions: Message and Share - side by side with proper spacing */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <DMButton 
-                      userHandle={profile.handle}
-                      variant="outline"
-                      size="lg"
-                      className="h-11 text-sm font-medium"
-                    />
-                    <div className="flex justify-end">
-                      <UserProfileShare handle={profile.handle} />
-                    </div>
-                  </div>
                 </div>
               </div>
             )}
