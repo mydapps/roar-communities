@@ -1,9 +1,13 @@
 import React, { useEffect, lazy, Suspense, useCallback } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+
+
 import { HelmetProvider } from 'react-helmet-async';
 import { Loader2 } from 'lucide-react';
 import MainLayout from '@/components/layout/MainLayout';
 import Index from '@/pages/Index';
+import Index2 from '@/pages/Index2';
+import Index3 from '@/pages/Index3';
 import FeedPage from '@/pages/FeedPage';
 import CommunitiesPage from '@/pages/CommunitiesPage';
 import CommunityPage from '@/pages/CommunityPage';
@@ -26,17 +30,35 @@ import NotificationsPage from '@/pages/NotificationsPage';
 import SuccessfulOnboarding from '@/pages/SuccessfulOnboarding';
 import RequestInvitePage from '@/pages/RequestInvitePage';
 import RoarFarmingPage from '@/pages/RoarFarmingPage';
+import RoarLeaderboardPage from '@/pages/RoarLeaderboardPage';
 import BoosterPage from '@/pages/BoosterPage';
+import RoarsPage from '@/pages/RoarsPage';
 import AuthTestPage from '@/pages/AuthTestPage';
 import { validateAuthentication } from '@/utils/apiBase';
 import FollowSuggestionsPage from '@/pages/FollowSuggestionsPage';
 import DeviceProvider from '@/components/providers/DeviceProvider';
 import TermsOfServicePage from '@/pages/TermsOfServicePage';
+import RoaredPostsPage from '@/pages/RoaredPostsPage';
 import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
+import TransactionHistoryPage from '@/pages/TransactionHistoryPage';
+import AccountInactivePage from '@/pages/AccountInactivePage';
+import MarketingNotificationsPage from '@/pages/MarketingNotificationsPage';
+import PostWarningPage from '@/pages/PostWarningPage';
+import ErrorBoundary from '@/components/shared/ErrorBoundary';
+import { ImageViewerProvider } from '@/components/contexts/ImageViewerContext';
+import { ThemeProvider } from '@/contexts/ThemeContext';
+import MessagesPage from '@/pages/MessagesPage';
+import ConversationPage from '@/pages/ConversationPage';
+import PaidConversationPage from '@/pages/PaidConversationPage';
+
+import { TipProvider } from '@/contexts/TipContext';
+import { SharedTipSheet } from '@/components/tip/SharedTipSheet';
+
 
 // Lazy loaded components
 const LazyMySharesPage = lazy(() => import('@/pages/MySharesPage'));
 const LazyReferralPage = lazy(() => import('@/pages/ReferralPage'));
+const LazySettingsPage = lazy(() => import('@/pages/SettingsPage'));
 
 // Invalid auth event handler
 const createInvalidAuthEvent = () => {
@@ -79,18 +101,28 @@ function App() {
       <ZoomDisabledHelmet />
       <DeviceProvider>
       <PrivyAuthProvider>
-        <PageViewTracker />
+        <ThemeProvider>
+        <ImageViewerProvider>
+          <TipProvider>
+          <PageViewTracker />
+
+          <ErrorBoundary>
         <Routes>
-          {/* Public routes - accessible to everyone */}
-          <Route path="/" element={<Index />} />
-          <Route path="/index" element={<Index />} />
-          <Route path="/invite/:code" element={<Index />} />
+          {/* Public routes - accessible outside MainLayout */}
+          <Route path="/" element={<Index3 />} />
+          <Route path="/index" element={<Index3 />} />
+          <Route path="/index-old" element={<Index />} />
+          <Route path="/index2" element={<Index2 />} />
+          <Route path="/index3" element={<Index3 />} />
+          <Route path="/invite/:code" element={<Index3 />} />
+          <Route path="/index3/invite/:code" element={<Index3 />} />
           <Route path="request-invite" element={<RequestInvitePage />} />
           <Route path="avatar-handle" element={<AvatarHandlePage />} />
           <Route path="login" element={<LoginPage />} />
           <Route path="/auth-test" element={<AuthTestPage />} />
             <Route path="/terms" element={<TermsOfServicePage />} />
             <Route path="/privacy" element={<PrivacyPolicyPage />} />
+          <Route path="/account-inactive" element={<AccountInactivePage />} />
           
           {/* Mixed access routes with MainLayout */}
           <Route element={<MainLayout />}>
@@ -105,99 +137,109 @@ function App() {
                 <FeedPage />
               </ProtectedRoute>
             } />
-            <Route path="communities" element={
+            <Route path="roared-posts" element={
               <ProtectedRoute>
-                <CommunitiesPage />
+                <RoaredPostsPage />
               </ProtectedRoute>
             } />
-            <Route path="c/:id" element={
-              <ProtectedRoute>
-                <CommunityPage />
-              </ProtectedRoute>
-            } />
-            <Route path="create-community" element={
-              <ProtectedRoute>
-                <CreateCommunityPage />
-              </ProtectedRoute>
-            } />
-            <Route path="u/:handle" element={
-              <ProtectedRoute>
-                <UserProfilePage />
-              </ProtectedRoute>
-            } />
-            <Route path="edit-profile" element={
-              <ProtectedRoute>
-                <EditProfilePage />
-              </ProtectedRoute>
-            } />
+            <Route path="communities" element={<CommunitiesPage />} />
+            <Route path="c/:id" element={<CommunityPage />} />
+            <Route path="create-community" element={<CreateCommunityPage />} />
+            <Route path="u/:handle" element={<UserProfilePage />} />
+            <Route path="edit-profile" element={<EditProfilePage />} />
             <Route path="my-shares" element={
-              <ProtectedRoute>
                 <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>}>
                   <LazyMySharesPage />
                 </Suspense>
-              </ProtectedRoute>
             } />
-            <Route path="wallet" element={
-              <ProtectedRoute>
-                <WalletPage />
-              </ProtectedRoute>
-            } />
-            <Route path="account" element={
-              <ProtectedRoute>
-                <AccountPage />
-              </ProtectedRoute>
-            } />
-            <Route path="search" element={
-              <ProtectedRoute>
-                <SearchPage />
-              </ProtectedRoute>
-            } />
+            <Route path="wallet" element={<WalletPage />} />
+            <Route path="account" element={<AccountPage />} />
+            <Route path="search" element={<SearchPage />} />
             <Route path="referral" element={
-              <ProtectedRoute>
                 <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>}>
                   <LazyReferralPage />
                 </Suspense>
-              </ProtectedRoute>
             } />
-            <Route path="notifications" element={
-              <ProtectedRoute>
-                <NotificationsPage />
-              </ProtectedRoute>
-            } />
-            <Route path="roar-farming" element={
-              <ProtectedRoute>
-                <RoarFarmingPage />
-              </ProtectedRoute>
-            } />
-            <Route path="boosters" element={
-              <ProtectedRoute>
-                <BoosterPage />
-              </ProtectedRoute>
-            } />
+            <Route path="notifications" element={<NotificationsPage />} />
+            <Route path="roar-farming" element={<RoarFarmingPage />} />
+            <Route path="roar-leaderboard" element={<RoarLeaderboardPage />} />
+            <Route path="roars/:username" element={<RoarsPage />} />
+            <Route path="boosters" element={<BoosterPage />} />
             <Route path="successful-onboarding" element={
-              <ProtectedRoute>
-                {localStorage.getItem('dapps_show_onboarding') === '1' ? (
+              localStorage.getItem('dapps_show_onboarding') === '1' ? (
                   <SuccessfulOnboarding />
                 ) : (
                   <Navigate to="/feed" replace />
-                )}
-              </ProtectedRoute>
+              )
             } />
-            <Route path="follow-suggestions" element={
+            <Route path="follow-suggestions" element={<FollowSuggestionsPage />} />
+            
+            {/* Add Transaction History Route */}
+            <Route path="transactions" element={
               <ProtectedRoute>
-                <FollowSuggestionsPage />
+                <TransactionHistoryPage />
               </ProtectedRoute>
             } />
+
+            {/* Add Settings Page Route */}
+            <Route path="settings" element={
+              <ProtectedRoute>
+                <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>}>
+                  <LazySettingsPage />
+                </Suspense>
+              </ProtectedRoute>
+            } />
+
+            {/* Add Post Warning Route */}
+            <Route path="/c/:communityName/warning/:postCode" element={
+              <ProtectedRoute>
+                <PostWarningPage />
+              </ProtectedRoute>
+            } />
+
+            {/* Messages Routes */}
+            <Route path="messages" element={
+              <ProtectedRoute>
+                <MessagesPage />
+              </ProtectedRoute>
+            } />
+            <Route path="messages/:conversationId" element={
+              <ProtectedRoute>
+                <ConversationPage />
+              </ProtectedRoute>
+            } />
+            <Route path="messages/paid/:handle" element={
+              <ProtectedRoute>
+                <PaidConversationPage />
+              </ProtectedRoute>
+            } />
+
+            {/* Admin Marketing Notifications Route (UID 1, 2, 3 only) */}
+            <Route path="admin/marketing-notifications" element={
+              <ProtectedRoute>
+                <MarketingNotificationsPage />
+              </ProtectedRoute>
+            } />
+
+              
             
             {/* 404 route */}
             <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>
         <Toaster position="top-right" />
+        {/* Global Shared TipSheet */}
+        <SharedTipSheet />
+        </ErrorBoundary>
+        </TipProvider>
+        </ImageViewerProvider>
+        </ThemeProvider>
       </PrivyAuthProvider>
       </DeviceProvider>
     </HelmetProvider>

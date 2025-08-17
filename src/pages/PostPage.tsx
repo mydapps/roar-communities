@@ -643,6 +643,9 @@ const PostPage = () => {
           video={post.video} 
           disableNavigation={true}
           onToggleComments={focusCommentInput}
+          // Tipping functionality
+          tipCount={0} // TODO: Add tip count from API if available
+          hasUserTipped={false} // TODO: Add from API if available
         />
       </div>
       

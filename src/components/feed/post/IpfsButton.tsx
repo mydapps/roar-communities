@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ShieldCheck, ExternalLink } from 'lucide-react';
@@ -11,10 +10,11 @@ interface IpfsButtonProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   ipfsHash: string;
+  postCode?: string;
   onVerify: () => void;
 }
 
-export const IpfsButton = ({ open, onOpenChange, ipfsHash, onVerify }: IpfsButtonProps) => {
+export const IpfsButton = ({ open, onOpenChange, ipfsHash, postCode, onVerify }: IpfsButtonProps) => {
   const mobile = isMobile();
   
   if (mobile) {
@@ -31,14 +31,9 @@ export const IpfsButton = ({ open, onOpenChange, ipfsHash, onVerify }: IpfsButto
               <ShieldCheck className="h-5 w-5 text-primary" />
               Freedom of Expression
             </DrawerTitle>
-            <DrawerDescription>
-              This post is stored on IPFS, a decentralized storage network. 
-              This ensures that your content remains censorship-resistant and 
-              permanently available.
-            </DrawerDescription>
           </DrawerHeader>
           
-          <IpfsContent ipfsHash={ipfsHash} />
+          <IpfsContent ipfsHash={ipfsHash} postCode={postCode} />
           
           <DrawerFooter className="flex-row justify-between gap-2 p-4 border-t">
             <DrawerClose asChild>
@@ -70,14 +65,9 @@ export const IpfsButton = ({ open, onOpenChange, ipfsHash, onVerify }: IpfsButto
             <ShieldCheck className="h-5 w-5 text-primary" />
             Freedom of Expression
           </SheetTitle>
-          <SheetDescription>
-            This post is stored on IPFS, a decentralized storage network. 
-            This ensures that your content remains censorship-resistant and 
-            permanently available.
-          </SheetDescription>
         </SheetHeader>
         
-        <IpfsContent ipfsHash={ipfsHash} />
+        <IpfsContent ipfsHash={ipfsHash} postCode={postCode} />
         
         <SheetFooter className="flex flex-row justify-between gap-2 mt-6">
           <SheetClose asChild>

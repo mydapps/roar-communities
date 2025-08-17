@@ -14,11 +14,33 @@ export default defineConfig(({ mode }) => ({
       cert: fs.readFileSync('./localhost+2.pem'),
     },
     proxy: {
+      // API proxy with cookie forwarding (handles API, SSE, and WebSocket endpoints)
       '/api': {
         target: 'https://api.dapps.co',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
-      },
+        secure: true,
+        ws: true, // Enable WebSocket proxying
+        configure: (proxy, options) => {
+          // Forward cookies for all API requests
+          proxy.on('proxyReq', (proxyReq, req, res) => {
+            if (req.headers.cookie) {
+              proxyReq.setHeader('cookie', req.headers.cookie);
+            }
+            // Log WebSocket requests for debugging
+            if (req.url?.includes('/ws')) {
+              console.log('WebSocket proxy URL:', req.url);
+              console.log('WebSocket proxy request headers:', req.headers);
+            }
+          });
+          
+          proxy.on('error', (err, req, res) => {
+            if (req.url?.includes('/ws')) {
+              console.error('WebSocket proxy error:', err);
+            }
+          });
+        }
+      }
     },
     fs: {
       // Allow serving files from one level up to the project root

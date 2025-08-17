@@ -10,8 +10,7 @@ import { Badge } from '@/components/ui/badge'; // Adjusted import path
 import { formatNumber } from '@/utils/formatUtils'; // Assuming a utility for formatting numbers exists or create one
 import { ReferralGasEstimateResponse } from '@/utils/apiBase'; // Import the type
 
-// Helper to get explorer URL (Replace with your actual explorer URL structure if different)
-const getExplorerUrl = (txHash: string) => `https://etherscan.io/tx/${txHash}`;
+import { getExplorerUrl, getExplorerName } from '@/utils/explorerUtils';
 
 interface WithdrawalSheetProps {
   open: boolean;

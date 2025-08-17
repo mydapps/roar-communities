@@ -17,6 +17,7 @@ export interface Post {
   upvotes: number;
   comments: number;
   roar: number; // 1 if user has already roared this post, 0 if not
+  has_tipped?: number; // 1 if user has tipped this post directly, 0 if not - NEW FIELD
   ipfs: string;
   engagement: number;
   roarable: number;
@@ -39,6 +40,29 @@ export interface Post {
   original_author_avatar?: string;
   original_created_on?: string;
   original_images?: string[];
+  is_poll: boolean; // True if the post is a poll
+  poll_data: PollData | null; // Null if not a poll or data not available
+}
+
+/**
+ * Interface for a single option in a newly created poll (response from /api/create_post)
+ */
+export interface CreatedPollOption {
+  id: number;
+  option_text: string;
+  option_image_url: string | null;
+  option_sequence: number;
+}
+
+/**
+ * Interface for the response of the create_post API
+ */
+export interface CreatePostResponse {
+  status: "SUCCESS" | "ERROR" | string; // Allow for other status strings
+  communityName: string;
+  postCode: string;
+  message?: string; // Optional error message
+  created_poll_options?: CreatedPollOption[];
 }
 
 /**
@@ -113,6 +137,7 @@ export interface FetchPostsOptions {
   personal?: boolean;
   trending?: boolean;
   global?: boolean;
+  limit?: number;
 }
 
 /**
@@ -137,7 +162,7 @@ export const setupMirrorListener = (callback: () => void) => {
  */
 export const fetchPosts = async (options: FetchPostsOptions): Promise<Post[]> => {
   try {
-    const { page, personal, trending, global } = options;
+    const { page, personal, trending, global, limit } = options;
     
     // Construct API URL based on options
     let url = `/api/fetch_posts?page=${page}`;
@@ -149,6 +174,9 @@ export const fetchPosts = async (options: FetchPostsOptions): Promise<Post[]> =>
     }
     if (global) {
       url += '&global=1';
+    }
+    if (limit && limit > 0) {
+      url += `&limit=${limit}`;
     }
     
     console.log(`Fetching posts from: ${url}`);
@@ -215,6 +243,39 @@ export const fetchPost = async (postCode: string): Promise<{
   } catch (error) {
     console.error('Error fetching post:', error);
     toast.error('Failed to load post. Please try again.');
+    throw error;
+  }
+};
+
+/**
+ * Fetch posts that the current user has upvoted (roared)
+ */
+export const fetchUserUpvotedPosts = async (page: number = 1): Promise<Post[]> => {
+  try {
+    const response = await fetch(`/api/user_upvoted_posts?page=${page}`, {
+      method: 'GET',
+      headers: createAuthHeaders(),
+      credentials: 'include'
+    });
+    
+    console.log(`User upvoted posts API response status: ${response.status}`);
+    
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Authentication required to view your upvoted posts');
+      }
+      const errorText = await response.text();
+      console.error(`Failed response body: ${errorText}`);
+      throw new Error(`Failed to fetch upvoted posts: ${errorText}`);
+    }
+    
+    const data: Post[] = await response.json();
+    console.log(`User upvoted posts API response:`, data);
+    
+    return data;
+  } catch (error) {
+    console.error('Error fetching user upvoted posts:', error);
+    toast.error('Failed to load your upvoted posts. Please try again.');
     throw error;
   }
 };
@@ -318,25 +379,33 @@ export const mirrorPost = async (params: {
   }
 };
 
+// --- NEW INTERFACE FOR createPost PARAMETERS ---
+interface CreatePostServiceParams {
+  body: string;
+  community?: string;
+  media?: Array<{ // Assuming media items have at least a url and type
+    url: string;
+    type: 'image' | 'video';
+    // Add other fields from MediaUploadResponse if they are passed and needed
+  }>;
+  is_poll?: boolean;
+  poll_options?: Array<{
+    text: string;
+    imageUrl?: string;
+  }>;
+}
+// --- END NEW INTERFACE ---
+
 /**
  * Create a new post in a community
  */
-export const createPost = async (params: {
-  body: string;
-  community?: string;
-  mediaUrls?: string[];
-}): Promise<boolean | any> => {
+export const createPost = async (params: CreatePostServiceParams): Promise<CreatePostResponse> => {
   try {
-    const { body, community, mediaUrls } = params;
-
-    if (!body || body.trim() === '') {
-      throw new Error('Post content is required');
-    }
+    const { body, community, media, is_poll, poll_options } = params;
     
-    console.log('Creating post:', params);
+    console.log('Creating post with params:', params);
     
-    // Send the post body which already includes embedded media URLs
-    const requestBody: Record<string, any> = {
+    const requestBody: any = {
       body: body.trim()
     };
     
@@ -344,13 +413,24 @@ export const createPost = async (params: {
       requestBody.community = community;
     }
     
-    // Only include separate mediaUrls if specifically needed by the API
-    // Most cases this isn't needed since we now embed them in the body
-    if (mediaUrls && mediaUrls.length > 0 && !body.includes('![]')) {
-      requestBody.mediaUrls = mediaUrls;
+    if (media && media.length > 0) {
+      requestBody.media = media.map(m => ({
+        url: m.url,
+        type: m.type,
+        // Potentially map other fields if your backend expects them
+        // e.g., originalUrl: m.originalUrl, displayUrl: m.displayUrl
+      }));
+    }
+
+    if (is_poll && poll_options) {
+      requestBody.is_poll = true;
+      requestBody.poll_options = poll_options.map(opt => ({
+        text: opt.text,
+        imageUrl: opt.imageUrl
+      }));
     }
     
-    console.log('Request payload:', JSON.stringify(requestBody));
+    console.log('Constructed request payload for /api/create_post:', JSON.stringify(requestBody));
     
     const response = await fetch(`/api/create_post`, {
       method: 'POST',
@@ -363,45 +443,79 @@ export const createPost = async (params: {
     
     const contentType = response.headers.get("content-type");
     let data;
-    
     if (contentType && contentType.indexOf("application/json") !== -1) {
       data = await response.json();
-      console.log('Create post API response:', data);
-      
-      // If request wasn't successful, return the error response directly
+    } else {
+        const textResponse = await response.text();
+        console.error('Non-JSON response from create_post:', textResponse);
+        // Try to parse as JSON anyway, or handle as plain text error
+        try {
+            data = JSON.parse(textResponse); 
+        } catch (e) {
+            // If it's not JSON and not a 2xx, it's an error
       if (!response.ok) {
-        console.error('Create post API error response (JSON):', data);
-        return data; // Return the error object with status and error message
-      }
-      
-      // Extract the post code from the response if available
-      if (data.postCode || data.post_code || data.code) {
-        const postCode = data.postCode || data.post_code || data.code;
-        console.log('Extracted post code from response:', postCode);
+                toast.error(`Failed to create post: ${textResponse || response.statusText}`);
+                return {
+                    status: 'ERROR',
+                    message: `Error ${response.status}: ${textResponse || response.statusText}`,
+                    communityName: '',
+                    postCode: ''
+                };
+            }
+            // If it's a 2xx but not JSON, this is unexpected for create_post
+            console.error('Successful HTTP response from create_post was not JSON:', textResponse);
+            toast.error('Unexpected response from server.');
+            return {
+                status: 'ERROR',
+                message: 'Unexpected response format from server.',
+                communityName: '',
+                postCode: ''
+            };
+        }
+    }
+    
+    console.log('Create post API response data:', data);
+
+    if (response.ok) {
+      // Assuming 'data' is now the parsed JSON object
+      if (data.status === "SUCCESS" || data.success === true) { 
         return {
           status: "SUCCESS",
-          postCode: postCode
+          postCode: data.postCode, 
+          communityName: data.communityName || '', 
+          message: data.message, 
+          created_poll_options: data.created_poll_options 
+        };
+      } else {
+        console.warn('Post creation HTTP 2xx but API indicated failure:', data);
+        toast.error(data.message || 'Post creation failed.');
+        return {
+          status: data.status || "ERROR",
+          message: data.message || 'Post creation failed.',
+          communityName: data.communityName || '',
+          postCode: data.postCode || '' 
         };
       }
     } else {
-      const errorText = await response.text();
-      console.error('Create post API error response (text):', errorText);
-      
-      if (!response.ok) {
+      const errorText = data.message || JSON.stringify(data) || response.statusText;
+      console.error('Failed to create post (HTTP error):', errorText);
+      toast.error(`Failed to create post: ${errorText}`);
         return {
           status: 'ERROR',
-          error: `Error ${response.status}: ${errorText}`
+        message: `Error ${response.status}: ${errorText}`,
+        communityName: '', 
+        postCode: '' 
         };
-      }
-      
-      data = { success: true };
     }
-    
-    // Return the raw response if it has a status property, otherwise return boolean success
-    return data.status === "SUCCESS" ? data : (data.success === true);
   } catch (error) {
-    console.error('Error creating post:', error);
-    throw error;
+    console.error('Error creating post (catch block):', error);
+    toast.error('An unexpected error occurred while creating the post.');
+    return {
+      status: 'ERROR',
+      message: error instanceof Error ? error.message : 'An unknown error occurred.',
+      communityName: '',
+      postCode: ''
+    };
   }
 };
 
@@ -654,3 +768,22 @@ export const hidePostFromUser = async (postCode: string): Promise<HidePostRespon
     return { success: false, message: `Network error: ${message}` };
   }
 };
+
+// --- NEW POLL DATA INTERFACES ---
+export interface PollDataOption {
+  option_id: number;
+  text: string;
+  imageUrl: string | null;
+  vote_count: number;
+  percentage: number;
+}
+
+export interface PollData {
+  is_active: boolean;
+  poll_end_time: string; // ISO date string
+  total_votes: number;
+  user_has_voted: boolean;
+  chosen_option_id: number | null;
+  options: PollDataOption[];
+}
+// --- END NEW POLL DATA INTERFACES ---

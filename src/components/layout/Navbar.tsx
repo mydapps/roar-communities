@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Menu, Search, User, Gift, Sparkles, LogOut, ArrowLeft, Home } from 'lucide-react';
+import { Menu, Search, User, Gift, Sparkles, LogOut, ArrowLeft, Home, Moon, Sun, Heart } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   DropdownMenu, 
@@ -20,6 +20,7 @@ import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { getUserProfile } from '@/utils/userApi';
 import { useDevice } from '@/components/providers/DeviceProvider';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface NavbarProps {
   onMenuClick: () => void;
@@ -37,6 +38,7 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
   const [searchFocused, setSearchFocused] = useState(false);
   const [userHandle, setUserHandle] = useState('');
   const [roarBalance, setRoarBalance] = useState('0');
+  const { theme, toggleTheme, isTransitioning } = useTheme();
   
   const isFeedPage = location.pathname === '/feed';
   const isHomePage = location.pathname === '/' || location.pathname === '/index';
@@ -301,6 +303,12 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
+                    <Link to="/roared-posts" className="cursor-pointer flex items-center gap-2">
+                      <Heart className="h-4 w-4 text-primary fill-current" />
+                      <span>Roared Posts</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
                     <Link to={`/u/${localStorage.getItem('dapps_user_handle') || ''}`} className="cursor-pointer flex items-center gap-2">
                       <User className="h-4 w-4" />
                       <span>Profile</span>
@@ -310,6 +318,129 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
                     <Link to="/edit-profile" className="cursor-pointer flex items-center gap-2">
                       <Sparkles className="h-4 w-4" />
                       <span>Edit Profile</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    onClick={toggleTheme}
+                    className="cursor-pointer flex items-center gap-2 relative overflow-hidden group"
+                    disabled={isTransitioning}
+                  >
+                    <motion.div
+                      whileTap={{ scale: 0.85 }}
+                      whileHover={{ scale: 1.1 }}
+                      animate={{ 
+                        rotate: theme === 'dark' ? 360 : 0,
+                        scale: isTransitioning ? [1, 1.3, 0.9, 1] : 1,
+                        y: isTransitioning ? [0, -4, 0] : 0
+                      }}
+                      transition={{ 
+                        duration: isTransitioning ? 0.8 : 0.5, 
+                        ease: "easeInOut",
+                        times: isTransitioning ? [0, 0.3, 0.7, 1] : undefined
+                      }}
+                      className="relative flex items-center justify-center w-4 h-4"
+                    >
+                      {theme === 'light' ? (
+                        <motion.div
+                          initial={{ scale: 0, rotate: -180 }}
+                          animate={{ scale: 1, rotate: 0 }}
+                          transition={{ duration: 0.6, ease: "backOut" }}
+                        >
+                          <Moon className="h-4 w-4 text-blue-400 drop-shadow-lg" />
+                        </motion.div>
+                      ) : (
+                        <motion.div
+                          initial={{ scale: 0, rotate: 180 }}
+                          animate={{ scale: 1, rotate: 0 }}
+                          transition={{ duration: 0.6, ease: "backOut" }}
+                          className="relative"
+                        >
+                          <Sun className="h-4 w-4 text-yellow-500 drop-shadow-lg" />
+                          <motion.div
+                            animate={{ 
+                              scale: [1, 1.4, 1],
+                              opacity: [0.3, 0.8, 0.3]
+                            }}
+                            transition={{ 
+                              duration: 2.5, 
+                              repeat: Infinity,
+                              ease: "easeInOut"
+                            }}
+                            className="absolute inset-0 rounded-full bg-yellow-400/30"
+                          />
+                        </motion.div>
+                      )}
+                      
+                      {/* Magical sparkles around the icon */}
+                      {isTransitioning && (
+                        <>
+                          {[...Array(8)].map((_, i) => (
+                            <motion.div
+                              key={i}
+                              initial={{ scale: 0, x: 0, y: 0 }}
+                              animate={{ 
+                                scale: [0, 1.5, 0],
+                                x: [0, (Math.cos(i * 45 * Math.PI / 180) * 25)],
+                                y: [0, (Math.sin(i * 45 * Math.PI / 180) * 25)]
+                              }}
+                              transition={{ 
+                                duration: 1,
+                                delay: i * 0.08,
+                                ease: "easeOut"
+                              }}
+                              className="absolute w-1 h-1 bg-gradient-to-r from-yellow-400 to-blue-400 rounded-full"
+                              style={{
+                                boxShadow: '0 0 6px currentColor'
+                              }}
+                            />
+                          ))}
+                        </>
+                      )}
+                    </motion.div>
+                    
+                    <motion.span 
+                      className="flex items-center gap-1 font-medium"
+                      animate={{
+                        color: isTransitioning 
+                          ? ["currentColor", "#3b82f6", "#8b5cf6", "currentColor"]
+                          : "currentColor"
+                      }}
+                      transition={{ duration: 0.8 }}
+                    >
+                      {theme === 'light' ? 'Dark Mode' : 'Light Mode'}
+                      {isTransitioning && (
+                        <motion.div
+                          animate={{ 
+                            rotate: 360,
+                            scale: [1, 1.3, 1]
+                          }}
+                          transition={{ 
+                            rotate: { duration: 1.2, repeat: Infinity, ease: "linear" },
+                            scale: { duration: 0.8, repeat: Infinity, ease: "easeInOut" }
+                          }}
+                          className="w-3 h-3 border-2 border-blue-400 border-t-yellow-400 rounded-full shadow-lg"
+                        />
+                      )}
+                    </motion.span>
+                    
+                    {/* Background glow effect */}
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0 }}
+                      whileHover={{ 
+                        opacity: 0.1, 
+                        scale: 1,
+                        background: theme === 'dark' 
+                          ? 'linear-gradient(45deg, #3b82f6, #8b5cf6)' 
+                          : 'linear-gradient(45deg, #f59e0b, #3b82f6)'
+                      }}
+                      className="absolute inset-0 rounded-md"
+                      transition={{ duration: 0.4 }}
+                    />
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/settings" className="cursor-pointer flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      <span>Settings</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>

@@ -6,7 +6,7 @@ interface ShareOptions {
   text?: string;
 }
 
-export const shareToSocialMedia = (platform: SharePlatform, options: ShareOptions): Promise<boolean> => {
+export const shareToSocialMedia = async (platform: SharePlatform, options: ShareOptions): Promise<boolean> => {
   const { url, title = "", text = "" } = options;
   const encodedUrl = encodeURIComponent(url);
   const encodedTitle = encodeURIComponent(title);
@@ -36,8 +36,13 @@ export const shareToSocialMedia = (platform: SharePlatform, options: ShareOption
       shareUrl = `https://warpcast.com/~/compose?text=${encodedText}%20${encodedUrl}`;
       break;
     case 'copy':
-      navigator.clipboard.writeText(url);
-      return Promise.resolve(true);
+      try {
+        await navigator.clipboard.writeText(url);
+        return true;
+      } catch (error) {
+        console.error('Failed to copy to clipboard:', error);
+        return false;
+      }
     case 'native':
       if (navigator.share) {
         return navigator.share({
@@ -49,15 +54,20 @@ export const shareToSocialMedia = (platform: SharePlatform, options: ShareOption
           .catch(() => false);
       } else {
         // Fallback to copy if Web Share API is not available
-        navigator.clipboard.writeText(url);
-        return Promise.resolve(true);
+        try {
+          await navigator.clipboard.writeText(url);
+          return true;
+        } catch (error) {
+          console.error('Failed to copy to clipboard as fallback:', error);
+          return false;
+        }
       }
   }
   
   if (shareUrl) {
     window.open(shareUrl, '_blank', 'noopener,noreferrer');
-    return Promise.resolve(true);
+    return true;
   }
   
-  return Promise.resolve(false);
+  return false;
 };

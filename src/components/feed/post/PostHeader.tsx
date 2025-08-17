@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, EyeOff, AlertTriangle, Loader2, Pin, PinOff } from 'lucide-react';
+import { MoreHorizontal, EyeOff, AlertTriangle, Loader2, Pin, PinOff, ShieldAlert, Share } from 'lucide-react';
 
 interface PostHeaderProps {
   username: string;
@@ -31,6 +31,8 @@ interface PostHeaderProps {
   isAdmin?: boolean;
   isPinned?: boolean;
   onTogglePin?: () => void;
+  onAdminHideWarn?: () => void;
+  onShare?: () => void;
 }
 
 export const PostHeader: React.FC<PostHeaderProps> = ({
@@ -49,6 +51,8 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
   isAdmin = false,
   isPinned = false,
   onTogglePin,
+  onAdminHideWarn,
+  onShare,
 }) => {
   const navigate = useNavigate();
 
@@ -81,6 +85,12 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
   };
 
   const avatarUrl = avatar ? `https://img.dapps.co/avatar/${avatar}.svg` : undefined;
+
+  const handleShareClick = () => {
+    if (onShare) {
+      onShare();
+    }
+  };
 
   return (
     <CardHeader className="pb-2">
@@ -123,11 +133,12 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
         
         <div className="flex items-center gap-1">
           {ipfsHash && onVerifyIpfs && typeof ipfsSheetOpen !== 'undefined' && setIpfsSheetOpen && (
-        <IpfsButton 
+            <IpfsButton 
               ipfsHash={ipfsHash}
+              postCode={postCode}
               onVerify={onVerifyIpfs}
-          open={ipfsSheetOpen} 
-          onOpenChange={setIpfsSheetOpen} 
+              open={ipfsSheetOpen} 
+              onOpenChange={setIpfsSheetOpen} 
             />
           )}
 
@@ -144,6 +155,14 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+              <DropdownMenuItem 
+                onSelect={handleShareClick}
+                className="cursor-pointer"
+              >
+                <Share className="mr-2 h-4 w-4" />
+                <span>Share</span>
+              </DropdownMenuItem>
+              {(isOwner && onHidePost) || (isAdmin && onTogglePin) || (isAdmin && !isOwner && onAdminHideWarn) || onReportPost ? <DropdownMenuSeparator /> : null}
               {isOwner && onHidePost && (
                 <DropdownMenuItem 
                   onSelect={onHidePost}
@@ -165,7 +184,19 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
                   </DropdownMenuItem>
                 </>
               )}
-              {((isOwner && onHidePost) || (isAdmin && onTogglePin)) && onReportPost && <DropdownMenuSeparator />}
+              {isAdmin && !isOwner && onAdminHideWarn && (
+                <>
+                  {((isOwner && onHidePost) || (isAdmin && onTogglePin)) && <DropdownMenuSeparator />}
+                  <DropdownMenuItem 
+                    onSelect={onAdminHideWarn} 
+                    className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
+                  >
+                    <ShieldAlert className="mr-2 h-4 w-4" />
+                    <span>Hide & Warn User</span>
+                  </DropdownMenuItem>
+                </>
+              )}
+              {( (isOwner && onHidePost) || (isAdmin && onTogglePin) || (isAdmin && !isOwner && onAdminHideWarn) ) && onReportPost && <DropdownMenuSeparator />}
               {onReportPost && (
                 <DropdownMenuItem onSelect={onReportPost} className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10">
                   <AlertTriangle className="mr-2 h-4 w-4" />

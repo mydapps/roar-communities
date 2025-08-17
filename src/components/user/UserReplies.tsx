@@ -151,6 +151,9 @@ export const UserReplies: React.FC<UserRepliesProps> = ({ handle }) => {
                   : (replyData.post.image === 1 && replyData.post.image_url ? [replyData.post.image_url] : undefined)}
                 video={replyData.post.has_video === 1 ? replyData.post.image_url : undefined}
                 hideComments={true}
+                // Tipping functionality
+                tipCount={0} // TODO: Add tip count from API if available
+                hasUserTipped={replyData.post.has_tipped === 1}
               />
               
               {/* User's reply */}

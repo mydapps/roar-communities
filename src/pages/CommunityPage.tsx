@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePreventZoom } from '@/hooks/usePreventZoom';
 import { useCommunityData } from '@/hooks/useCommunityData';
@@ -22,6 +22,7 @@ import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ShareDialog } from '@/components/community/ShareDialog';
+import { EncryptedCommunityAccess } from '@/components/community/EncryptedCommunityAccess';
 import { toast } from "sonner";
 import { 
   ArrowUp, 
@@ -114,6 +115,7 @@ const debugLog = (message: string, ...args: any[]) => {
 const CommunityPage = () => {
   usePreventZoom();
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [tradeSheetOpen, setTradeSheetOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("posts");
@@ -125,9 +127,12 @@ const CommunityPage = () => {
   const [previousHasShares, setPreviousHasShares] = useState(false);
   const [tradeSuccess, setTradeSuccess] = useState(false);
   
-  debugLog("CommunityPage rendering, id:", id, "activeTab:", activeTab);
+  // Check if user is logged in using dapps_user_id
+  const isLoggedIn = !!localStorage.getItem('dapps_user_id');
   
-  const { data: communityData, loading: communityLoading, error: communityError, refetch } = useCommunityData(id);
+  debugLog("CommunityPage rendering, id:", id, "activeTab:", activeTab, "isLoggedIn:", isLoggedIn);
+  
+  const { data: communityData, loading: communityLoading, error: communityError, isEncryptedAccess: communityEncryptedAccess, refetch } = useCommunityData(id);
   
   debugLog("Community data:", communityData);
   if (communityData?.community?.rewards) {
@@ -137,7 +142,7 @@ const CommunityPage = () => {
   
   const { members, loading: membersLoading, hasMore: hasMoreMembers, loadMore: loadMoreMembers } = useCommunityMembers(id);
   
-  const { posts, loading: postsLoading, error: postsError, hasMore: hasMorePosts, loadMore: loadMorePosts, loadingElementRef, fetchPosts } = useCommunityPosts(id);
+  const { posts, loading: postsLoading, error: postsError, hasMore: hasMorePosts, loadMore: loadMorePosts, loadingElementRef, fetchPosts, isEncryptedAccess: postsEncryptedAccess } = useCommunityPosts(id);
   
   const allPosts = useMemo(() => {
     const combined = [...localPosts, ...posts];
@@ -182,48 +187,80 @@ const CommunityPage = () => {
   const communityMetadata = useMemo(() => {
     if (!community) {
       return { 
-        title: 'Community | dapps.co',
-        description: 'Join communities on dapps.co. Buy, sell, and discuss with other members.',
-        imageUrl: 'https://dapps.co/og-default.jpg',
+        title: 'Community | dapps.co - decentralized community network',
+        description: 'Join communities on dapps.co. Invest in communities like stocks, earn from your content, speak without fear. The social platform where users capture the value they create.',
+        imageUrl: 'https://dapps.co/og-community-image.png',
         url: window.location.href,
         priceInfo: ''
       };
     }
     
-    const title = `${community.name} Community | dapps.co`;
-    const description = community.description || `Join the ${community.name} community on dapps.co. Buy, sell, and discuss with other members.`;
-    const imageUrl = community.image || 'https://dapps.co/og-default.jpg';
-    const url = `${window.location.origin}/c/${community.name.toLowerCase().replace(/\s+/g, '-')}`;
-    const priceInfo = community.prices 
+    const title = `${community.name} Community | dapps.co - decentralized community network`;
+    
+    // Create a more descriptive description with community stats
+    const memberCount = community.members_count || 0;
+    const priceInfo = community.prices?.buy_price 
+      ? ` Current share price: ${community.prices.buy_price} ETH ($${community.prices.buy_price_usd?.toFixed(2) || '0.00'}).`
+      : '';
+    
+    const description = community.description 
+      ? `${community.description} Join ${memberCount} members in the ${community.name} community on dapps.co.${priceInfo} Invest in communities like stocks, earn from your participation.`
+      : `Join the ${community.name} community on dapps.co with ${memberCount} members. Invest in communities like stocks, earn from your participation, speak without fear.${priceInfo}`;
+    
+    // Use community image with fallback to default community OG image
+    const imageUrl = community.image || 'https://dapps.co/og-community-image.png';
+    
+    // Create clean URL slug from community name
+    const communitySlug = community.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    const url = `https://dapps.co/c/${communitySlug}`;
+    
+    const priceInfoDetail = community.prices 
       ? `Current price: ${community.prices.buy_price} ETH ($${community.prices.buy_price_usd?.toFixed(2) || '0.00'})` 
       : '';
     
-    return { title, description, imageUrl, url, priceInfo };
+    return { title, description, imageUrl, url, priceInfo: priceInfoDetail };
   }, [community]);
   
   const helmetContent = (
     <Helmet>
+      {/* Primary Meta Tags */}
       <title>{communityMetadata.title}</title>
+      <meta name="title" content={communityMetadata.title} />
       <meta name="description" content={communityMetadata.description} />
+      <meta name="keywords" content={`${community?.name || 'community'}, crypto community, social investing, community shares, dapps.co, web3, blockchain, decentralized social`} />
       
-      {/* OpenGraph Tags */}
+      {/* Open Graph / Facebook */}
+      <meta property="og:type" content="website" />
+      <meta property="og:url" content={communityMetadata.url} />
       <meta property="og:title" content={communityMetadata.title} />
       <meta property="og:description" content={communityMetadata.description} />
       <meta property="og:image" content={communityMetadata.imageUrl} />
-      <meta property="og:url" content={communityMetadata.url} />
-      <meta property="og:type" content="website" />
+      <meta property="og:image:width" content="1200" />
+      <meta property="og:image:height" content="630" />
       <meta property="og:site_name" content="dapps.co" />
       
-      {/* Twitter Card Tags */}
-      <meta name="twitter:card" content="summary_large_image" />
-      <meta name="twitter:title" content={communityMetadata.title} />
-      <meta name="twitter:description" content={communityMetadata.description} />
-      <meta name="twitter:image" content={communityMetadata.imageUrl} />
+      {/* Twitter */}
+      <meta property="twitter:card" content="summary_large_image" />
+      <meta property="twitter:url" content={communityMetadata.url} />
+      <meta property="twitter:title" content={communityMetadata.title} />
+      <meta property="twitter:description" content={communityMetadata.description} />
+      <meta property="twitter:image" content={communityMetadata.imageUrl} />
+      <meta property="twitter:site" content="@dapps_co" />
+      <meta property="twitter:creator" content="@dapps_co" />
       
       {/* Additional Meta Tags */}
-      <meta name="keywords" content={`${community?.name || 'community'}, crypto, social, dapps.co`} />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <meta name="theme-color" content="#31bcc3" />
       <meta name="author" content="dapps.co" />
       <link rel="canonical" href={communityMetadata.url} />
+      
+      {/* Community-specific meta tags */}
+      {community?.prices?.buy_price && (
+        <meta name="price" content={`${community.prices.buy_price} ETH`} />
+      )}
+      {community?.members_count && (
+        <meta name="members" content={community.members_count.toString()} />
+      )}
     </Helmet>
   );
   
@@ -259,6 +296,9 @@ const CommunityPage = () => {
         toast.success('Successfully purchased shares!');
         fetchWalletBalance();
         
+        // IMPORTANT FIX: Refetch community data to update user shares state
+        refetch();
+        
         // IMPORTANT FIX: First set success to true, then set loading to false after delay
         // This ensures proper state sequence for the success screen
         setTradeSuccess(true);
@@ -288,7 +328,7 @@ const CommunityPage = () => {
       setTradeSuccess(false);
       toast.error('An error occurred while purchasing shares');
     }
-  }, [fetchWalletBalance, resetTradeState]);
+  }, [fetchWalletBalance, resetTradeState, refetch]);
   
   const handleSellSharesConfirm = useCallback(async (communityName: string, quantity: number) => {
     try {
@@ -299,6 +339,9 @@ const CommunityPage = () => {
       if (result && result.status === 'SUCCESS') {
         toast.success('Successfully sold shares!');
         fetchWalletBalance();
+        
+        // IMPORTANT FIX: Refetch community data to update user shares state
+        refetch();
         
         // IMPORTANT FIX: First set success to true, then set loading to false after delay
         // This ensures proper state sequence for the success screen
@@ -329,9 +372,14 @@ const CommunityPage = () => {
       setTradeSuccess(false);
       toast.error('An error occurred while selling shares');
     }
-  }, [fetchWalletBalance, resetTradeState]);
+  }, [fetchWalletBalance, resetTradeState, refetch]);
   
   const handleBuyAction = useCallback(() => {
+    if (!isLoggedIn) {
+      navigate('/index');
+      return;
+    }
+    
     // Close sheet first to reset its state
     setTradeSheetOpen(false);
     
@@ -343,9 +391,14 @@ const CommunityPage = () => {
       // Fetch fresh balance when opening the modal
       fetchWalletBalance();
     }, 50);
-  }, [resetTradeState, fetchWalletBalance]);
+  }, [isLoggedIn, navigate, resetTradeState, fetchWalletBalance]);
   
   const handleSellAction = useCallback(() => {
+    if (!isLoggedIn) {
+      navigate('/index');
+      return;
+    }
+    
     // Close sheet first to reset its state
     setTradeSheetOpen(false);
     
@@ -355,7 +408,7 @@ const CommunityPage = () => {
       setTradeAction('sell');
       setTradeSheetOpen(true);
     }, 50);
-  }, [resetTradeState]);
+  }, [isLoggedIn, navigate, resetTradeState]);
   
   const handleRoar = useCallback(async (postCode: string) => {
     if (!postCode) {
@@ -446,8 +499,58 @@ const CommunityPage = () => {
       </div>
     );
   }
+
+  // 🔒 Handle Encrypted Community Access (403 Forbidden)
+  if (communityEncryptedAccess || postsEncryptedAccess) {
+    const handleJoinEncryptedCommunity = () => {
+      setTradeAction("buy");
+      setTradeSheetOpen(true);
+    };
+
+    // Create a temporary community object for the TradeSheet
+    const tempCommunity = {
+      community: id || 'Community',
+      shares: 0,
+      description: '',
+      image: '',
+      value: {
+        eth: 0,
+        usd: 0
+      }
+    };
+
+    return (
+      <>
+        {helmetContent}
+        <EncryptedCommunityAccess
+          communityName={id || 'Community'}
+          memberCount={members?.length || 0}
+          onJoinClick={handleJoinEncryptedCommunity}
+          isLoading={tradeLoading}
+        />
+        
+        {/* Hidden TradeSheet for encrypted community joining */}
+        <TradeSheet
+          open={tradeSheetOpen}
+          onOpenChange={setTradeSheetOpen}
+          community={tempCommunity}
+          action={tradeAction}
+          userEthBalance={userEthBalance}
+          onBuyConfirm={async () => {
+            setTradeSuccess(true);
+            setTradeSheetOpen(false);
+            // Refetch community data after successful purchase
+            setTimeout(() => {
+              refetch();
+              fetchPosts(1);
+            }, 1000);
+          }}
+        />
+      </>
+    );
+  }
   
-  if (communityError) {
+  if (communityError && communityError !== 'ENCRYPTED_COMMUNITY_ACCESS') {
     return (
       <div className="h-[50vh] flex items-center justify-center">
         {helmetContent}
@@ -488,27 +591,29 @@ const CommunityPage = () => {
           />
       )}
       
-    <div className="flex flex-col md:flex-row gap-4 animate-fade-in max-w-full overflow-x-hidden pt-4 md:pt-0">
-      <div className="flex-1 order-2 md:order-1">
+    <div className="flex flex-col md:flex-row gap-6 lg:gap-8 animate-fade-in max-w-full overflow-x-hidden pt-4 md:pt-0">
+      <div className="flex-1 order-2 md:order-1 md:px-4 lg:px-6 xl:px-8">
         {/* Remove the Mobile sticky header - it's now in CommunityHeader */}
         {/* {isMobile && ( ... old header code ... )} */}
         
-        {/* Keep Create Post Card */}
-        <Card className="mb-6 bg-gradient-to-br from-primary/5 to-secondary/5 border-primary/20 mt-6 md:mt-8">
-          <CardContent className={`pt-6 ${isMobile ? 'mt-12' : ''}`}>
-            <h2 className="text-xl font-semibold mb-3 flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              What's on your mind?
-            </h2>
-            <CreatePostCard 
-              onPostCreated={handlePostCreated}
-              communityName={community?.name || id || ''}
-            />
-          </CardContent>
-        </Card>
+        {/* Only show Create Post Card for logged in users */}
+        {isLoggedIn && (
+          <Card className="mb-6 bg-gradient-to-br from-primary/5 to-secondary/5 border-primary/20 mt-6 md:mt-8">
+            <CardContent className={`pt-6 ${isMobile ? 'mt-12' : ''}`}>
+              <h2 className="text-xl font-semibold mb-3 flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" />
+                What's on your mind?
+              </h2>
+              <CreatePostCard 
+                onPostCreated={handlePostCreated}
+                communityName={community?.name || id || ''}
+              />
+            </CardContent>
+          </Card>
+        )}
         
         {/* Use the new CommunityTabs component within the main Tabs wrapper */} 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className={`w-full ${isMobile ? 'mb-6 mt-8' : ''}`}>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className={`w-full ${isMobile ? 'mb-6 mt-8' : 'mt-4'}`}>
             {/* Render the extracted Tabs List component */} 
             <CommunityTabs 
               isMobile={isMobile}
@@ -519,16 +624,13 @@ const CommunityPage = () => {
             
              {/* Replace inline posts rendering with CommunityPostsFeed component */} 
             <TabsContent value="posts" className="animate-fade-in mt-0">
-              <div className="mb-6">
-                <CreatePostCard onPostCreated={handlePostCreated} communityName={community?.name} />
-              </div>
                 <CommunityPostsFeed 
                   posts={allPosts}
                   loading={postsLoading}
                   hasMore={hasMorePosts}
                   loadingElementRef={loadingElementRef}
                   handleRoar={handleRoar}
-                isLoggedIn={!!user}
+                isLoggedIn={isLoggedIn}
                 isAdmin={isAdmin}
                 onPostUpdated={handlePostUpdated}
                 />
@@ -585,7 +687,7 @@ const CommunityPage = () => {
       
       {/* Desktop Sidebar (Header only now) */} 
       {!isMobile && (
-        <div className="w-full md:w-80 order-1 md:order-2 flex-shrink-0">
+        <div className="w-full md:w-80 lg:w-[336px] xl:w-96 order-1 md:order-2 flex-shrink-0 md:pl-2 lg:pl-4">
           <CommunityHeader 
             isMobile={isMobile}
             community={community}
@@ -627,6 +729,7 @@ const CommunityPage = () => {
         onBuyConfirm={handleBuySharesConfirm}
         onSellConfirm={handleSellSharesConfirm}
         forceSuccessVisible={tradeSuccess}
+        onBalanceUpdate={(newBalance) => setUserEthBalance(newBalance)}
       />
     </div>
   );

@@ -38,6 +38,8 @@ import { EthMigrationSheet } from '@/components/eth/EthMigrationSheet';
 import { usePortfolio } from '@/hooks/usePortfolio';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import confetti from 'canvas-confetti';
+import { MySharesOnboarding } from '@/components/shares/MySharesOnboarding';
+import { useFirstTimeVisitorWithKey } from '@/hooks/useFirstTimeVisitorWithKey';
 
 // Define interfaces for the new API responses
 interface EthMigrationCheckResponse {
@@ -65,6 +67,10 @@ const MySharesPage = () => {
   const [loadingAction, setLoadingAction] = useState(false);
   const [precheckData, setPrecheckData] = useState<SharePrecheckResponse | null>(null);
   const isMobile = useIsMobile();
+  
+  // My Shares onboarding state
+  const { isFirstTime: isFirstTimeMyShares, isLoading: isLoadingFirstTime, markAsVisited: markMySharesVisited } = useFirstTimeVisitorWithKey('dapps_my_shares_visited');
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
 
   // --- ETH Migration State ---
   const [migrationCheckData, setMigrationCheckData] = useState<EthMigrationCheckResponse | null>(null);
@@ -98,6 +104,13 @@ const MySharesPage = () => {
     // Fetch ETH migration status
     fetchEthMigrationStatus();
   }, []);
+
+  // Auto-open onboarding for first-time visitors
+  useEffect(() => {
+    if (!isLoadingFirstTime && isFirstTimeMyShares) {
+      setOnboardingOpen(true);
+    }
+  }, [isFirstTimeMyShares, isLoadingFirstTime]);
 
   // Development-only logging helper
   const debugLog = (message: string, ...args: any[]) => {
@@ -231,6 +244,10 @@ const MySharesPage = () => {
     triggerSuccessAnimation();
   };
 
+  const handleWalletInfoClick = () => {
+    setOnboardingOpen(true);
+  };
+
   const handleRefresh = () => {
     // Force refresh the wallet balance
     fetchWalletBalance(true);
@@ -307,6 +324,7 @@ const MySharesPage = () => {
           setSelectedCommunity(null);
           setSendOpen(true);
         }}
+        onWalletInfoClick={handleWalletInfoClick}
       />
 
       {/* --- ETH Migration Prompt --- */}
@@ -451,6 +469,7 @@ const MySharesPage = () => {
         onSellConfirm={handleSellSharesConfirm}
         loadingAction={loadingAction}
         precheckData={precheckData}
+        onBalanceUpdate={(newBalance) => setUserEthBalance(newBalance)}
       />
 
       <ShareTransferSheet
@@ -469,6 +488,15 @@ const MySharesPage = () => {
           fetchWalletBalance(true);
           fetchEthMigrationStatus();
           setIsMigrationSheetOpen(false);
+        }}
+      />
+
+      <MySharesOnboarding 
+        isOpen={onboardingOpen}
+        onClose={() => setOnboardingOpen(false)}
+        onComplete={() => {
+          markMySharesVisited();
+          setOnboardingOpen(false);
         }}
       />
     </div>

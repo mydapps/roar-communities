@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter, DrawerClose } from '@/components/ui/drawer';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { XIcon, SendIcon, ImageIcon, VideoIcon, UsersIcon, BoldIcon, ItalicIcon, UnderlineIcon, Loader2 } from 'lucide-react';
+import { XIcon, SendIcon, ImageIcon, VideoIcon, UsersIcon, BoldIcon, ItalicIcon, UnderlineIcon, Loader2, BarChartBigIcon, Trash2Icon, ImagePlusIcon, AlertTriangleIcon, Smile, PlusIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { CommunitySelector } from './CommunitySelector';
@@ -13,6 +13,14 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { RichTextEditor } from '@/components/editor/RichTextEditor';
 import { Editor } from '@tiptap/react';
+import { Input } from '@/components/ui/input';
+import { v4 as uuidv4 } from 'uuid';
+import EmojiPicker, { EmojiClickData, EmojiStyle, Categories } from 'emoji-picker-react';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 // --- NEW IMPORTS FOR MENTIONS ---
 import { MentionSuggestionsList, SuggestionItem } from '@/components/mentions/MentionSuggestionsList';
@@ -81,13 +89,36 @@ async function uploadFileUtil(file: File): Promise<MediaUploadResponse> {
   }
 }
 
+// --- POLL FEATURE TYPES ---
+interface PollOptionInput {
+  id: string;
+  text: string;
+  imageFile?: File | null;
+  imageUrl?: string | null;
+  imagePreviewUrl?: string | null; // For local preview before upload completes
+  isUploadingImage?: boolean;
+  imageUploadError?: string | null;
+}
+
+export interface CreatePostPayload {
+  body: string; // This will be the poll question if is_poll is true
+  community?: string;
+  media?: MediaUploadResponse[]; // For regular posts with media attachments, not for poll option images
+  is_poll?: boolean;
+  poll_options?: Array<{
+    text: string;
+    imageUrl?: string; // Only include if image is successfully uploaded
+  }>;
+}
+// --- END POLL FEATURE TYPES ---
+
 interface CreatePostModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   userAvatarUrl: string;
   userHandle: string;
   communityName?: string;
-  onPostSubmit: (content: string, community: string | undefined, media: MediaUploadResponse[]) => Promise<boolean>;
+  onPostSubmit: (payload: CreatePostPayload) => Promise<boolean>; // Updated signature
   initialContent?: string;
 }
 
@@ -101,14 +132,31 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   initialContent = '',
 }) => {
   const isMobile = useIsMobile();
-  const [content, setContent] = useState(initialContent);
+  const [hasMounted, setHasMounted] = useState(false); // Added state to track client-side mount
+  const [content, setContent] = useState(initialContent); // This will be the poll question if poll is active
   const [selectedCommunity, setSelectedCommunity] = useState(communityName || '');
   const [showCommunitySelector, setShowCommunitySelector] = useState(false);
-  const [uploadedMedia, setUploadedMedia] = useState<MediaUploadResponse[]>([]);
+  const [uploadedMedia, setUploadedMedia] = useState<MediaUploadResponse[]>([]); // For regular post media
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const editorInstanceRef = useRef<Editor | null>(null);
   const [isPasting, setIsPasting] = useState(false);
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+
+  // --- POLL STATE ---
+  const [isPollMode, setIsPollMode] = useState(false);
+  const [pollOptions, setPollOptions] = useState<PollOptionInput[]>([]);
+  const [pollError, setPollError] = useState<string | null>(null);
+  const pollOptionImageUploadRefs = useRef<Record<string, HTMLInputElement>>({}); // To trigger file inputs
+  
+  // --- NEW MOBILE UX STATE FOR POLL OPTIONS ---
+  const [focusedPollOption, setFocusedPollOption] = useState<string | null>(null);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const pollOptionInputRefs = useRef<Record<string, HTMLInputElement>>({});
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  // --- END NEW MOBILE UX STATE ---
+  
+  // --- END POLL STATE ---
 
   // --- NEW STATE FOR MENTIONS ---
   const [mentionState, setMentionState] = useState<MentionState>({
@@ -123,6 +171,45 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   });
   const suggestionsListRef = useRef<HTMLDivElement>(null);
   // --- END NEW STATE FOR MENTIONS ---
+
+  // --- Start Emoji Config ---
+  const customEmojisConfig = [
+    { id: 'angry', names: ['angry'], imgUrl: '/emojis/angry.png' },
+    { id: 'bitcoin', names: ['bitcoin'], imgUrl: '/emojis/bitcoin.png' },
+    { id: 'cool', names: ['cool'], imgUrl: '/emojis/cool.png' },
+    { id: 'ethereum', names: ['ethereum'], imgUrl: '/emojis/ethereum.png' },
+    { id: 'happy', names: ['happy'], imgUrl: '/emojis/happy.png' },
+    { id: 'mindblown', names: ['mindblown'], imgUrl: '/emojis/mindblown.png' },
+    { id: 'party', names: ['party'], imgUrl: '/emojis/party.png' },
+    { id: 'sad', names: ['sad'], imgUrl: '/emojis/sad.png' },
+    { id: 'scared', names: ['scared'], imgUrl: '/emojis/scared.png' },
+    { id: 'sleepy', names: ['sleepy'], imgUrl: '/emojis/sleepy.png' },
+    { id: 'solana', names: ['solana'], imgUrl: '/emojis/solana.png' },
+    { id: 'thinking', names: ['thinking'], imgUrl: '/emojis/thinking.png' },
+    { id: 'angelic', names: ['angelic'], imgUrl: '/emojis/angelic.png' },
+    { id: 'devilish', names: ['devilish'], imgUrl: '/emojis/devilish.png' },
+    { id: 'inlove', names: ['inlove'], imgUrl: '/emojis/inlove.png' },
+    { id: 'pleading', names: ['pleading'], imgUrl: '/emojis/pleading.png' },
+    { id: 'surprised', names: ['surprised'], imgUrl: '/emojis/surprised.png' },
+  ];
+
+  const emojiPickerCategoryConfig = [
+    { category: Categories.SUGGESTED, name: 'Suggested' },
+    { category: Categories.CUSTOM, name: 'Roar Emojis' },
+    { category: Categories.SMILEYS_PEOPLE, name: 'Smileys & People' },
+    { category: Categories.ANIMALS_NATURE, name: 'Animals & Nature' },
+    { category: Categories.FOOD_DRINK, name: 'Food & Drink' },
+    { category: Categories.TRAVEL_PLACES, name: 'Travel & Places' },
+    { category: Categories.ACTIVITIES, name: 'Activities' },
+    { category: Categories.OBJECTS, name: 'Objects' },
+    { category: Categories.SYMBOLS, name: 'Symbols' },
+    { category: Categories.FLAGS, name: 'Flags' },
+  ];
+  // --- End Emoji Config ---
+
+  useEffect(() => {
+    setHasMounted(true); // Set to true after component has mounted client-side
+  }, []);
 
   useEffect(() => {
     if (open) {
@@ -144,11 +231,22 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
         selectedIndex: 0,
         triggerPos: null,
       });
+      setIsPollMode(false); // Reset poll mode on open
+      setPollOptions([]);    // Clear poll options
+      setPollError(null);    // Clear poll errors
+      
+      // Reset mobile UX state
+      setFocusedPollOption(null);
+      setIsKeyboardVisible(false);
     } else {
         // Optional: Clear editor content when modal closes if desired
         // editorInstanceRef.current?.commands.clearContent();
+        
+        // Reset mobile UX state when closing
+        setFocusedPollOption(null);
+        setIsKeyboardVisible(false);
     }
-  }, [open, initialContent, communityName, editorInstanceRef.current]);
+  }, [open, initialContent, communityName]); // Removed editorInstanceRef.current from deps as it can cause issues. Manage focus separately if needed.
 
   const handleContentChange = (htmlContent: string) => {
     setContent(htmlContent);
@@ -356,28 +454,283 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
     setTimeout(() => editorInstanceRef.current?.commands.focus(), 50);
   };
 
-  const handleSubmit = async () => {
-    const currentHtmlContent = editorInstanceRef.current?.getHTML() || '';
-    const currentTextContent = editorInstanceRef.current?.getText() || '';
-    const isEmpty = !currentTextContent.trim();
+  // --- POLL LOGIC FUNCTIONS ---
+  const handleTogglePollMode = () => {
+    const newPollMode = !isPollMode;
+    setIsPollMode(newPollMode);
+    if (newPollMode) {
+      initializePollOptions();
+      setUploadedMedia([]); // Clear regular media when switching to poll mode
+      setError(null); // Clear general errors
+    } else {
+      setPollOptions([]);
+      setPollError(null);
+    }
+  };
+
+  const initializePollOptions = () => {
+    setPollOptions([
+      { id: uuidv4(), text: '', imageFile: null, imageUrl: null, imagePreviewUrl: null, isUploadingImage: false, imageUploadError: null },
+      { id: uuidv4(), text: '', imageFile: null, imageUrl: null, imagePreviewUrl: null, isUploadingImage: false, imageUploadError: null },
+    ]);
+    setPollError(null);
+  };
+
+  const handleAddPollOption = () => {
+    if (pollOptions.length < 4) {
+      setPollOptions(prev => [...prev, { id: uuidv4(), text: '', imageFile: null, imageUrl: null, imagePreviewUrl: null, isUploadingImage: false, imageUploadError: null }]);
+      setPollError(null);
+    }
+  };
+
+  const handleRemovePollOption = (optionId: string) => {
+    if (pollOptions.length > 2) {
+      setPollOptions(prev => prev.filter(opt => opt.id !== optionId));
+      setPollError(null);
+    }
+  };
+
+  const handlePollOptionTextChange = (optionId: string, newText: string) => {
+    setPollOptions(prev => prev.map(opt => opt.id === optionId ? { ...opt, text: newText } : opt));
+  };
+
+  // --- ENHANCED MOBILE-FIRST FOCUS MANAGEMENT FOR POLL OPTIONS ---
+  const handlePollOptionFocus = (optionId: string) => {
+    setFocusedPollOption(optionId);
+    setPollError(null); // Clear errors when user starts typing
     
-    // Use the full uploadedMedia array now
-    if (isEmpty && uploadedMedia.length === 0) { 
-      setError('Please write something or add media to your post.');
+    // Enhanced mobile keyboard handling
+    if (isMobile) {
+      // Trigger keyboard detection earlier for smoother UX
+      setTimeout(() => {
+        setIsKeyboardVisible(true);
+        
+        // Auto-scroll to focused input with better timing
+        const focusedInput = pollOptionInputRefs.current[optionId];
+        const scrollContainer = scrollContainerRef.current;
+        
+        if (focusedInput && scrollContainer) {
+          // Improved scroll calculation for mobile poll creation
+          const inputRect = focusedInput.getBoundingClientRect();
+          const containerRect = scrollContainer.getBoundingClientRect();
+          
+          // Calculate optimal scroll position considering mobile keyboard
+          const targetPosition = inputRect.top - containerRect.top + scrollContainer.scrollTop - 80;
+          
+          scrollContainer.scrollTo({
+            top: Math.max(0, targetPosition),
+            behavior: 'smooth'
+          });
+        }
+      }, 150); // Optimized timing for keyboard appearance
+    }
+  };
+
+  const handlePollOptionBlur = () => {
+    // Small delay to allow for focus to move to another poll option
+    setTimeout(() => {
+      setFocusedPollOption(null);
+      
+      // Reset keyboard visibility if no poll options are focused on mobile
+      if (isMobile) {
+        const anyPollInputFocused = Object.values(pollOptionInputRefs.current).some(
+          input => input === document.activeElement
+        );
+        
+        if (!anyPollInputFocused) {
+          setTimeout(() => setIsKeyboardVisible(false), 200);
+        }
+      }
+    }, 100);
+  };
+  // --- END ENHANCED MOBILE-FIRST FOCUS MANAGEMENT ---
+
+  const handlePollOptionImageSelected = async (optionId: string, file: File) => {
+    if (!file.type.startsWith('image/')) {
+      toast.error('Only image files are allowed for poll options.');
+      setPollOptions(prev => prev.map(opt => opt.id === optionId ? { ...opt, imageUploadError: 'Only images allowed.' } : opt));
       return;
     }
+
+    setPollOptions(prev => prev.map(opt => opt.id === optionId ? {
+      ...opt, 
+      imageFile: file, 
+      imagePreviewUrl: URL.createObjectURL(file),
+      isUploadingImage: true, 
+      imageUploadError: null,
+      imageUrl: null // Clear previous imageUrl if re-uploading
+    } : opt));
+
+    try {
+      const uploadResponse = await uploadFileUtil(file);
+      // If uploadFileUtil resolves without error, it means success
+      // uploadFileUtil should throw an error if response.success is false or HTTP fails
+      setPollOptions(prev => prev.map(opt => opt.id === optionId ? {
+        ...opt, 
+        imageUrl: uploadResponse.url, // Assuming url is always present on success from uploadFileUtil
+        isUploadingImage: false,
+        imageFile: null
+      } : opt));
+      toast.success(`Image added to option.`);
+    } catch (uploadError: any) {
+      console.error('Poll option image upload error:', uploadError);
+      const errorMessage = uploadError.message || 'Image upload failed.';
+      setPollOptions(prev => prev.map(opt => opt.id === optionId ? {
+        ...opt, 
+        isUploadingImage: false, 
+        imageUploadError: errorMessage,
+        imagePreviewUrl: null
+      } : opt));
+      toast.error(errorMessage);
+    }
+  };
+
+  const validatePoll = (): boolean => {
+    if (pollOptions.length < 2) {
+      setPollError('Polls require at least 2 options.');
+      return false;
+    }
+    if (pollOptions.length > 4) {
+      setPollError('Polls can have a maximum of 4 options.');
+      return false;
+    }
+    if (pollOptions.some(opt => !opt.text.trim() && !opt.imageUrl)) {
+      setPollError('Each poll option must have either text or an image.');
+      return false;
+    }
+    // Image consistency: if one has an image, all must have an image.
+    const hasAnyImage = pollOptions.some(opt => opt.imageUrl);
+    if (hasAnyImage && pollOptions.some(opt => !opt.imageUrl)) {
+      setPollError('If one poll option has an image, all options must have successfully uploaded images.');
+      return false;
+    }
+    if (pollOptions.some(opt => opt.isUploadingImage)) {
+        setPollError('Please wait for all images to finish uploading.');
+        return false;
+    }
+
+    setPollError(null);
+    return true;
+  };
+
+  // --- END POLL LOGIC FUNCTIONS ---
+
+  const handleSubmit = async () => {
+    let currentHtmlContent = editorInstanceRef.current?.getHTML() || '';
+    const currentTextContent = editorInstanceRef.current?.getText() || '';
+    
+    
+    // This regex handles <br>, <br/>, <br />, and whitespace between them.
+    const brRegex = /(<br\s*\/?>\s*){3,}/gi;
+    currentHtmlContent = currentHtmlContent.replace(brRegex, '<br><br>');
+    
+    if (!isPollMode && !currentTextContent.trim() && uploadedMedia.length === 0) {
+      setError('Please enter some content or add media.');
+      return;
+    }
+    if (isPollMode && !currentTextContent.trim()) {
+        setError('Please enter a question for your poll.');
+        return;
+    }
+
     setIsSubmitting(true);
     setError(null);
+    setPollError(null);
+
+    let payload: CreatePostPayload;
+
+    if (isPollMode) {
+      if (!validatePoll()) {
+        setIsSubmitting(false);
+        // pollError is already set by validatePoll
+        return;
+      }
+      const pollOptionsPayload = pollOptions.map(opt => ({
+        text: opt.text.trim(),
+        ...(opt.imageUrl && { imageUrl: opt.imageUrl }),
+      }));
+
+      payload = {
+        body: currentHtmlContent, // Poll question from rich text editor
+        community: selectedCommunity || undefined,
+        is_poll: true,
+        poll_options: pollOptionsPayload,
+        media: [] // No separate media attachments for polls
+      };
+    } else {
+      // For regular posts, media URLs are often appended to the body by the parent or here.
+      // The current onPostSubmit in CreatePostCard handles media URL appending. 
+      // So, we just pass the raw body and the media array separately.
+      payload = {
+        body: currentHtmlContent,
+        community: selectedCommunity || undefined,
+        media: uploadedMedia,
+        is_poll: false,
+      };
+    }
+    
+    console.log('Submitting post payload:', payload); 
+
     try {
-      // Pass the HTML content and the full media array
-      // The receiving function (handleModalPostSubmit in CreatePostCard) needs to handle formatting
-      const success = await onPostSubmit(currentHtmlContent, selectedCommunity || undefined, uploadedMedia);
+      const success = await onPostSubmit(payload);
       if (success) {
         onOpenChange(false); 
+        setContent('');
+        if(editorInstanceRef.current) editorInstanceRef.current.commands.clearContent();
+        setUploadedMedia([]);
+        setSelectedCommunity(communityName || '');
+        setIsPollMode(false);
+        setPollOptions([]);
+        setPollError(null);
+      } else {
+        // The onPostSubmit returned false, which means there was an error
+        // Check if it's a specific community membership error
+        setError('Failed to create post. Please check your community membership and try again.');
       }
-    } catch (e: any) {
-      setError(e.message || 'Failed to create post.');
-      toast.error(e.message || 'Failed to create post.');
+    } catch (submissionError: any) {
+      console.error('Post submission error:', submissionError);
+      
+      // Enhanced error parsing to handle different error formats
+      let errorMessage = 'An unexpected error occurred during submission.';
+      
+      if (submissionError && typeof submissionError === 'object') {
+        // Handle direct error message
+        if (submissionError.message) {
+          errorMessage = submissionError.message;
+        }
+        // Handle API error responses (like the 403 community membership error)
+        else if (submissionError.response && submissionError.response.data) {
+          const responseData = submissionError.response.data;
+          if (typeof responseData === 'string') {
+            // Try to parse JSON string response
+            try {
+              const parsedData = JSON.parse(responseData);
+              errorMessage = parsedData.error || parsedData.message || responseData;
+            } catch {
+              errorMessage = responseData;
+            }
+          } else if (responseData.error) {
+            errorMessage = responseData.error;
+          } else if (responseData.message) {
+            errorMessage = responseData.message;
+          }
+        }
+        // Handle direct error object
+        else if (submissionError.error) {
+          errorMessage = submissionError.error;
+        }
+      } else if (typeof submissionError === 'string') {
+        errorMessage = submissionError;
+      }
+      
+      // Special handling for community membership errors
+      if (errorMessage.includes('not a part of') || errorMessage.includes('Join the community first')) {
+        setError(`🚫 ${errorMessage}`);
+      } else if (errorMessage.includes('403')) {
+        setError('❌ You don\'t have permission to post in this community. Please join the community first.');
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -386,6 +739,19 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const toggleBold = () => editorInstanceRef.current?.chain().focus().toggleBold().run();
   const toggleItalic = () => editorInstanceRef.current?.chain().focus().toggleItalic().run();
   const toggleUnderline = () => editorInstanceRef.current?.chain().focus().toggleUnderline().run();
+
+  const onEmojiClickCreatePost = (emojiData: EmojiClickData) => {
+    if (editorInstanceRef.current) {
+      let emojiToInsert = '';
+      if (emojiData.isCustom) {
+        emojiToInsert = ` :${emojiData.emoji}: `; 
+      } else {
+        emojiToInsert = emojiData.emoji;
+      }
+      editorInstanceRef.current.chain().focus().insertContent(emojiToInsert).run();
+      setIsEmojiPickerOpen(false);
+    }
+  };
 
   const renderFormattingToolbar = () => (
     <div className="flex items-center gap-1 p-2 border-b border-border bg-background rounded-t-md">
@@ -413,30 +779,78 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
       >
         <UnderlineIcon className="h-4 w-4" />
       </Button>
+      {/* Emoji Picker Button */}
+      <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
+        <PopoverTrigger asChild>
+          <Button 
+            variant='ghost' // Keep consistent with other toolbar buttons
+            size="icon" 
+            onClick={() => setIsEmojiPickerOpen(prev => !prev)} // Toggle open state
+            title="Add Emoji"
+          >
+            <Smile className="h-4 w-4" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0 border-0 z-[100]" side="top" align="start">
+          <EmojiPicker
+            onEmojiClick={onEmojiClickCreatePost}
+            autoFocusSearch={false}
+            emojiStyle={EmojiStyle.NATIVE}
+            height={350}
+            customEmojis={customEmojisConfig}
+            categories={emojiPickerCategoryConfig}
+          />
+        </PopoverContent>
+      </Popover>
     </div>
   );
 
   const renderActionToolbar = () => (
-    <div className="flex items-center justify-between p-2 border-t border-border">
-      <div className="flex items-center gap-1">
-        <MediaUpload onMediaUploaded={handleMediaUploaded} acceptedTypes="image" maxFiles={5} disabled={isPasting || isSubmitting}>
-          <Button variant="ghost" size="icon" title="Upload Image" disabled={isPasting || isSubmitting}>
+    <div className="flex items-center gap-2 p-2">
+      {/* Image Upload for regular posts */}
+      <MediaUpload 
+        onMediaUploaded={handleMediaUploaded} 
+        acceptedTypes="image"
+        maxFiles={10}
+        disabled={isPollMode || uploadedMedia.some(m => m.type === 'video') || uploadedMedia.length >= 10}
+      >
+        <Button variant="ghost" size="icon" title="Add Image to Post" 
+                disabled={isPollMode || uploadedMedia.some(m => m.type === 'video') || uploadedMedia.length >= 10}
+        >
             <ImageIcon className="h-5 w-5" />
           </Button>
         </MediaUpload>
-        <MediaUpload onMediaUploaded={handleMediaUploaded} acceptedTypes="video" maxFiles={1} disabled={isPasting || isSubmitting}>
-          <Button variant="ghost" size="icon" title="Upload Video" disabled={isPasting || isSubmitting}>
+
+      {/* Video Upload for regular posts */}
+      <MediaUpload 
+        onMediaUploaded={handleMediaUploaded}
+        acceptedTypes="video"
+        maxFiles={1}
+        disabled={isPollMode || uploadedMedia.some(m => m.type === 'image') || uploadedMedia.length > 0}
+      >
+        <Button variant="ghost" size="icon" title="Add Video to Post" 
+                disabled={isPollMode || uploadedMedia.some(m => m.type === 'image') || uploadedMedia.length > 0}
+        >
             <VideoIcon className="h-5 w-5" />
           </Button>
         </MediaUpload>
-      </div>
+      
+      {/* Poll Icon with a dot */}
+      <Button variant="ghost" size="icon" onClick={handleTogglePollMode} title={isPollMode ? "Switch to Standard Post" : "Create a Poll"} className={cn("relative", isPollMode && "bg-primary/10 text-primary")}>
+        <BarChartBigIcon className="h-5 w-5" />
+        {!isPollMode && (
+          <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-primary ring-2 ring-background" />
+        )}
+      </Button>
+      
+      <div className="flex-grow" /> {/* Spacer */}
+      {isSubmitting && <Loader2 className="h-5 w-5 animate-spin text-primary" />}
       <Button 
         onClick={handleSubmit} 
-        disabled={isPasting || isSubmitting || ( !(editorInstanceRef.current?.getText().trim()) && uploadedMedia.length === 0 )}
-        className="gap-2"
+        disabled={isSubmitting || (!isPollMode && !editorInstanceRef.current?.getText().trim() && uploadedMedia.length === 0) || (isPollMode && !editorInstanceRef.current?.getText().trim())}
+        className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-6"
       >
-        {isPasting || isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <SendIcon className="h-4 w-4" />}
-        {isPasting ? 'Uploading...' : isSubmitting ? 'Posting...' : 'Post'}
+        Post <SendIcon className="ml-2 h-4 w-4" />
       </Button>
     </div>
   );
@@ -473,50 +887,253 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   };
   // --- END: Prominent Community Display/Selector Trigger ---
 
+  const renderPollCreator = () => {
+    if (!isPollMode) return null;
+    return (
+      <div className={cn("border-t space-y-3", 
+        isMobile ? "p-3" : "p-4",
+        // Enhanced mobile spacing when keyboard is visible
+        isMobile && isKeyboardVisible ? "pb-6" : ""
+      )}>
+        <div className="flex items-center justify-between">
+          <h3 className={cn("font-medium text-muted-foreground", 
+            isMobile ? "text-base" : "text-sm"
+          )}>
+            Poll Options (min 2, max 4)
+          </h3>
+          {/* Mobile keyboard indicator */}
+          {isMobile && isKeyboardVisible && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
+              Typing mode
+            </div>
+          )}
+        </div>
+        {pollOptions.map((option, index) => (
+          <div 
+            key={option.id} 
+            className={cn(
+              "border rounded-lg bg-background transition-all duration-200",
+              isMobile ? "p-4" : "p-2",
+              // Enhanced mobile focus states and keyboard-aware styling
+              focusedPollOption === option.id && isMobile ? "ring-2 ring-primary/50 border-primary/50 shadow-lg scale-[1.02]" : "",
+              isMobile && isKeyboardVisible ? "shadow-sm border-muted-foreground/30" : ""
+            )}
+          >
+            {/* Mobile-optimized layout */}
+            <div className={cn("flex gap-3", isMobile ? "items-start" : "items-start")}>
+              <span className={cn("font-medium text-muted-foreground flex-shrink-0", 
+                isMobile ? "text-base pt-3 min-w-[24px]" : "text-sm pt-2"
+              )}>
+                {index + 1}.
+              </span>
+              
+              <div className="flex-grow space-y-3">
+                <Input 
+                  ref={el => { if (el) pollOptionInputRefs.current[option.id] = el; }}
+                    type="text"
+                    placeholder={`Option ${index + 1}`}
+                    value={option.text}
+                    onChange={(e) => handlePollOptionTextChange(option.id, e.target.value)}
+                  onFocus={() => handlePollOptionFocus(option.id)}
+                  onBlur={handlePollOptionBlur}
+                  className={cn(
+                    "transition-all duration-200",
+                    // Enhanced mobile input styling for better touch experience
+                    isMobile ? "text-base h-14 text-foreground font-medium px-4 rounded-lg" : "text-sm",
+                    // Dynamic focus states based on keyboard visibility
+                    focusedPollOption === option.id && isMobile && isKeyboardVisible ? "ring-2 ring-primary/50 border-primary shadow-md" : "",
+                    focusedPollOption === option.id && isMobile && !isKeyboardVisible ? "ring-1 ring-primary/30" : "",
+                    // Better contrast when keyboard is visible
+                    isMobile && isKeyboardVisible ? "bg-background/95 backdrop-blur-sm" : ""
+                  )}
+                  maxLength={100}
+                    disabled={option.isUploadingImage}
+                />
+                
+                {/* Image preview section - optimized for mobile */}
+                {option.imagePreviewUrl && (
+                  <div className={cn("relative border rounded overflow-hidden", 
+                    isMobile ? "w-40 h-40" : "w-32 h-32"
+                  )}>
+                        <img src={option.imagePreviewUrl} alt={`Preview option ${index + 1}`} className="object-cover w-full h-full" />
+                        {option.isUploadingImage && (
+                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                <Loader2 className="h-6 w-6 animate-spin text-white" />
+                            </div>
+                        )}
+                    </div>
+                )}
+                
+                {option.imageUrl && !option.imagePreviewUrl && (
+                  <div className={cn("border rounded overflow-hidden", 
+                    isMobile ? "w-40 h-40" : "w-32 h-32"
+                  )}>
+                        <img src={option.imageUrl} alt={`Poll option ${index + 1}`} className="object-cover w-full h-full" />
+                    </div>
+                )}
+                
+                {option.imageUploadError && (
+                  <p className="text-xs text-red-500 flex items-center">
+                    <AlertTriangleIcon className="h-4 w-4 mr-1" />
+                    {option.imageUploadError}
+                  </p>
+                )}
+                
+                <input 
+                    type="file"
+                    accept="image/*"
+                    ref={el => { if (el) pollOptionImageUploadRefs.current[option.id] = el; }}
+                    onChange={(e) => e.target.files && e.target.files[0] && handlePollOptionImageSelected(option.id, e.target.files[0])}
+                    className="hidden"
+                    disabled={option.isUploadingImage}
+                />
+            </div>
+              
+              {/* Action buttons - enhanced mobile touch targets */}
+              <div className={cn("flex items-start", 
+                isMobile ? "flex-col gap-2 pt-3" : "flex-col space-y-1 pt-1",
+                // Better spacing when keyboard is visible
+                isMobile && isKeyboardVisible ? "gap-3" : ""
+              )}>
+                <Button 
+                  variant="outline" 
+                  size={isMobile ? "default" : "icon"}
+                    onClick={() => pollOptionImageUploadRefs.current[option.id]?.click()} 
+                    title={option.imageUrl ? "Change Image" : "Add Image"}
+                  disabled={option.isUploadingImage || pollOptions.some(o => o.isUploadingImage && o.id !== option.id)}
+                  className={cn(
+                    // Enhanced mobile button styling
+                    isMobile ? "h-12 w-12 p-0 rounded-lg shadow-sm" : "",
+                    // Better visibility when keyboard is active
+                    isMobile && isKeyboardVisible ? "bg-primary/5 border-primary/30" : ""
+                  )}
+                >
+                    <ImagePlusIcon className="h-4 w-4" />
+                </Button>
+                
+                {pollOptions.length > 2 && (
+                  <Button 
+                    variant="ghost" 
+                    size={isMobile ? "default" : "icon"}
+                    onClick={() => handleRemovePollOption(option.id)} 
+                    title="Remove Option" 
+                    className={cn(
+                      "text-muted-foreground hover:text-destructive transition-colors",
+                      // Enhanced mobile remove button styling
+                      isMobile ? "h-12 w-12 p-0 rounded-lg shadow-sm" : "",
+                      // Better visibility when keyboard is active
+                      isMobile && isKeyboardVisible ? "bg-destructive/5 border-destructive/30 hover:bg-destructive/10" : ""
+                    )}
+                  >
+                        <Trash2Icon className="h-4 w-4" />
+                    </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+        
+        {/* Add option button - enhanced mobile experience */}
+        {pollOptions.length < 4 && (
+          <Button 
+            variant="outline" 
+            onClick={handleAddPollOption} 
+            className={cn("w-full transition-all duration-200", 
+              // Enhanced mobile add button styling
+              isMobile ? "h-14 text-base font-medium rounded-lg" : "mt-2",
+              // Better visibility and feedback when keyboard is visible
+              isMobile && isKeyboardVisible ? "bg-primary/5 border-primary/40 shadow-sm hover:bg-primary/10" : "",
+              // Visual feedback for the button
+              "hover:scale-[0.99] active:scale-[0.97]"
+            )}
+          >
+            <PlusIcon className={cn("mr-2", isMobile ? "h-5 w-5" : "h-4 w-4")} />
+            Add Option ({pollOptions.length}/4)
+          </Button>
+        )}
+        
+        {pollError && (
+          <Alert variant="destructive" className="mt-2">
+            <AlertTriangleIcon className="h-4 w-4" />
+            <AlertDescription>{pollError}</AlertDescription>
+          </Alert>
+        )}
+        
+        <p className={cn("text-muted-foreground mt-2", 
+          isMobile ? "text-sm" : "text-xs"
+        )}>
+          The content you write above will be the poll question. Images in polls: if one option has an image, all options must have an image.
+        </p>
+      </div>
+    );
+  };
+
+  // This is the main content rendering function, previously named ModalContent in my plan,
+  // but named PostCreationForm in the actual code.
   const PostCreationForm = (
-    <div className={cn("flex flex-col", isMobile ? "h-full" : "max-h-[80vh]")}>
+    // Main container for the modal content. Use h-full for drawer, max-h for dialog.
+    <div className={cn("flex flex-col", isMobile ? "h-full" : "md:min-h-[450px] md:max-h-[90vh]")}>
       {!isMobile && (
-        <DialogHeader className="p-4 border-b">
+        <DialogHeader className="p-4 border-b flex-shrink-0"> {/* flex-shrink-0 to prevent header from shrinking */}
           <DialogTitle className="text-lg font-semibold flex items-center">
-            <Avatar className="h-8 w-8 mr-2">
-              <AvatarImage src={userAvatarUrl} />
-              <AvatarFallback>{userHandle?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
-            </Avatar>
-            Create Post
+            {isPollMode ? "Create Poll" : "Create Post"} {/* Dynamic Title */}
           </DialogTitle>
-           <DialogClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
-            <XIcon className="h-4 w-4" />
-            <span className="sr-only">Close</span>
-          </DialogClose>
         </DialogHeader>
       )}
       
-      {renderProminentCommunitySelector()}
-
-      {renderFormattingToolbar()}
+      {renderProminentCommunitySelector()} {/* This is also flex-shrink-0 implicitly or explicitly if needed */}
       
-      <div className={cn("flex-grow p-1 overflow-y-auto relative", isMobile ? "" : "custom-scrollbar")} style={{ WebkitOverflowScrolling: 'touch' }}>
+      {/* Formatting toolbar should be outside the scrollable content if it applies to fixed editor above poll options*/}
+      {!isPollMode && renderFormattingToolbar()} {/* Show only if not poll mode, or if you want it for poll Q too */}
+
+      {/* Scrollable area for editor, poll options, and media previews */}
+      <div 
+        ref={scrollContainerRef}
+        className={cn("flex-grow overflow-y-auto custom-scrollbar", {
+          "pb-[calc(env(safe-area-inset-bottom)_+_70px)]": isMobile, // Padding for mobile toolbar + some space
+          // Enhanced mobile keyboard height adjustments based on content
+          "max-h-[40vh]": isMobile && isKeyboardVisible && isPollMode && pollOptions.length > 2,
+          "max-h-[45vh]": isMobile && isKeyboardVisible && isPollMode && pollOptions.length <= 2,
+          "max-h-[55vh]": isMobile && isKeyboardVisible && !isPollMode,
+          // Ensure minimum scrollable space on mobile
+          "min-h-[200px]": isMobile && isKeyboardVisible,
+        })} 
+        style={{ 
+          WebkitOverflowScrolling: 'touch',
+          scrollBehavior: 'smooth',
+          // Enhanced dynamic height adjustment for keyboard on mobile
+          ...(isMobile && isKeyboardVisible && window.visualViewport ? {
+            maxHeight: `${Math.max(200, window.visualViewport.height - 180)}px`
+          } : {})
+        }}
+      >
+        {/* Container for Editor + Poll Options */}
+        <div className={cn(isMobile ? "p-3" : "p-4")}> 
+          <div className="flex-1 min-w-0"> {/* This div might not strictly need flex-1/min-w-0 if it's the sole child now, but harmless */}
         <RichTextEditor
             onEditorCreated={(editor) => { editorInstanceRef.current = editor; }}
-            content={content}
-            onChange={handleContentChange}
-            placeholder={selectedCommunity ? `Share with ${selectedCommunity}...` : "What\'s happening?"}
+              content={content} // This is the state variable for editor content
+              onChange={handleContentChange} // This updates the content state variable
+              placeholder={isPollMode ? "Ask a question for your poll..." : "What's on your mind?"}
             onPastedFile={handlePastedFile}
-            // --- PASS MENTION PLUGIN CONFIG ---
             mentionPluginOptions={{
                 onStateChange: handleMentionStateChange,
-                // We will need to pass fetchSuggestions or similar if plugin handles fetching
             }}
-            // --- END PASS MENTION PLUGIN CONFIG ---
+              className={cn("text-base mb-3", 
+                isMobile ? "min-h-[100px]" : "min-h-[120px]"
+              )} // Slightly smaller on mobile when keyboard is up
         />
+            {/* Poll Creator UI - now part of this scrollable column */}
+            {isPollMode && renderPollCreator()}
+          </div>
       </div>
       
-      {/* --- Media Preview Section (Show ALL media) --- */} 
-      {uploadedMedia.length > 0 && (
-        <div className="p-2 border-t max-h-[150px] overflow-y-auto custom-scrollbar flex-shrink-0">
-          <p className="text-xs text-muted-foreground mb-1">Attached media:</p>
+        {/* Regular Media Preview Section (not for poll mode) */}
+        {!isPollMode && uploadedMedia.length > 0 && (
+          <div className={cn(isMobile ? "px-3 pb-2" : "px-4 pb-2")}>
+            <h4 className="text-xs font-medium text-muted-foreground mb-2">Attached Media:</h4>
           <div className="flex flex-wrap gap-2">
-            {/* Iterate over the full uploadedMedia array */}
             {uploadedMedia.map((media) => (
               <div key={media.url} className="relative w-20 h-20"> 
                 <MediaPreview media={media} onRemove={() => removeMedia(media.url)} />
@@ -526,13 +1143,20 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
         </div>
       )}
 
-      {/* --- RENDER MENTION SUGGESTIONS --- */}
+        {error && (
+          <Alert variant="destructive" className="m-2 rounded-md text-xs">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+      </div>
+      
+      {/* Mention suggestions list - ensure its positioning works with the new layout */}
       {mentionState.show && mentionState.items.length > 0 && (
          <div 
             ref={suggestionsListRef}
-            className="absolute z-50" // Will need dynamic styling for position
+            className="absolute z-50" // Review positioning carefully
             style={isMobile ? 
-                { bottom: 'calc(env(safe-area-inset-bottom, 0px) + 60px)', /* Above action toolbar roughly */
+                { bottom: 'calc(env(safe-area-inset-bottom, 0px) + 60px)', 
                   left: '10px', right: '10px', maxHeight: '150px' } : 
                 (mentionState.position.visible ? 
                     { top: mentionState.position.top, left: mentionState.position.left, maxHeight: '200px', width: '250px' } : 
@@ -550,14 +1174,16 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
             />
         </div>
       )}
-      {/* --- END RENDER MENTION SUGGESTIONS --- */}
 
-      {error && (
-        <Alert variant="destructive" className="m-2 mt-0 rounded-md text-xs">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-      {renderActionToolbar()}
+      {/* Action Toolbar at the bottom - should be outside the scrollable div and always visible */}
+      <div className={cn(
+        "border-t flex-shrink-0 bg-background z-10",
+        isMobile ? "fixed bottom-0 left-0 right-0" : "mt-auto" // Fixed for mobile, mt-auto for desktop
+      )}>
+        {/* Formatting toolbar was moved above scrollable area, or could be here if preferred for poll Q too */}
+        {/* {!isPollMode && renderFormattingToolbar()} */}
+        {renderActionToolbar()} {/* Contains Post button */}
+      </div>
     </div>
   );
 
@@ -584,28 +1210,112 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
     </DialogContent>
   );
 
+  // --- NEW: KEYBOARD DETECTION AND AUTO-SCROLL LOGIC ---
+  useEffect(() => {
+    if (!isMobile || !open) return;
+
+    const handleViewportChange = () => {
+      const viewport = window.visualViewport;
+      if (viewport) {
+        const keyboardHeight = window.innerHeight - viewport.height;
+        const keyboardVisible = keyboardHeight > 150; // Threshold for keyboard detection
+        setIsKeyboardVisible(keyboardVisible);
+      }
+    };
+
+    const handleResize = () => {
+      // Fallback for browsers without visualViewport support
+      const heightDiff = window.innerHeight - document.documentElement.clientHeight;
+      setIsKeyboardVisible(heightDiff > 150);
+    };
+
+    // Use visualViewport if available (better detection)
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleViewportChange);
+    } else {
+      window.addEventListener('resize', handleResize);
+    }
+
+    return () => {
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleViewportChange);
+      } else {
+        window.removeEventListener('resize', handleResize);
+      }
+    };
+  }, [isMobile, open]);
+
+  // Auto-scroll focused poll option into view
+  useEffect(() => {
+    if (!isMobile || !focusedPollOption || !isKeyboardVisible) return;
+
+    const timeoutId = setTimeout(() => {
+      const focusedInput = pollOptionInputRefs.current[focusedPollOption];
+      const scrollContainer = scrollContainerRef.current;
+      
+      if (focusedInput && scrollContainer) {
+        const inputRect = focusedInput.getBoundingClientRect();
+        const containerRect = scrollContainer.getBoundingClientRect();
+        
+        // Calculate if input is visible in the viewport considering keyboard
+        const viewportHeight = window.visualViewport?.height || window.innerHeight;
+        const isInputVisible = inputRect.top >= containerRect.top && 
+                              inputRect.bottom <= Math.min(containerRect.bottom, viewportHeight - 50);
+        
+        if (!isInputVisible) {
+          // Scroll the input into view with some padding
+          const scrollTop = inputRect.top - containerRect.top + scrollContainer.scrollTop - 100;
+          scrollContainer.scrollTo({
+            top: Math.max(0, scrollTop),
+            behavior: 'smooth'
+          });
+        }
+      }
+    }, 300); // Small delay to ensure keyboard is fully visible
+
+    return () => clearTimeout(timeoutId);
+  }, [focusedPollOption, isKeyboardVisible, isMobile]);
+  // --- END NEW KEYBOARD DETECTION LOGIC ---
+
+  // Wait for client-side mount to ensure isMobile value is stable
+  if (!hasMounted) {
+    // If the modal is supposed to be open, returning null might be jarring.
+    // Consider a very lightweight placeholder or ensure open is false until hasMounted is true if possible from parent.
+    // For now, returning null if open is true, otherwise nothing.
+    return open ? null : null; 
+  }
+
   if (isMobile) {
     return (
       <>
-        <Drawer open={open} onOpenChange={onOpenChange} direction="bottom">
+        <Drawer open={open} onOpenChange={onOpenChange} direction="bottom" dismissible={false}>
           <DrawerContent className="h-[95vh] mt-24 flex flex-col rounded-t-[10px]">
             <DrawerHeader className="p-3 border-b flex items-center justify-between sticky top-0 bg-background z-10 flex-shrink-0">
-              <DrawerClose asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8"><XIcon className="h-5 w-5" /></Button>
-              </DrawerClose>
-              <DrawerTitle className="text-md font-semibold">Create Post</DrawerTitle>
+              <div className="flex-1" /> {/* Left spacer */}
+              <DrawerTitle className="text-md font-semibold absolute left-1/2 transform -translate-x-1/2">
+                {isPollMode ? "Create Poll" : "Create Post"}
+              </DrawerTitle>
+              <div className="flex items-center gap-2">
               <Button 
                 size="sm" 
                 onClick={handleSubmit} 
-                disabled={isPasting || isSubmitting || ( !(editorInstanceRef.current?.getText().trim()) && uploadedMedia.length === 0 )}
+                disabled={isSubmitting || (!isPollMode && !editorInstanceRef.current?.getText().trim() && uploadedMedia.length === 0) || (isPollMode && !editorInstanceRef.current?.getText().trim())}
                 className="h-8 px-3 text-sm">
-                 {isPasting ? 'Uploading...' : isSubmitting ? 'Posting...' : 'Post'}
+                 {isSubmitting ? 'Posting...' : 'Post'}
               </Button>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8" 
+                  onClick={() => onOpenChange(false)}
+                >
+                  <XIcon className="h-5 w-5" />
+                </Button>
+              </div>
             </DrawerHeader>
             {PostCreationForm} 
           </DrawerContent>
         </Drawer>
-        {/* Separate Dialog for Community Selector on Mobile */}
         <Dialog open={showCommunitySelector} onOpenChange={setShowCommunitySelector}>
           {communitySelectorDialogContent}
         </Dialog>
@@ -616,11 +1326,12 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-xl md:max-w-2xl lg:max-w-3xl p-0 gap-0 shadow-2xl rounded-lg overflow-hidden">
+        <DialogContent className={cn("sm:max-w-xl md:max-w-2xl lg:max-w-3xl p-0 gap-0 shadow-2xl rounded-lg", 
+          isMobile ? "overflow-visible" : "overflow-hidden"
+        )}>
           {PostCreationForm}
         </DialogContent>
       </Dialog>
-      {/* Separate Dialog for Community Selector on Desktop */}
       <Dialog open={showCommunitySelector} onOpenChange={setShowCommunitySelector}>
          {communitySelectorDialogContent}
       </Dialog>

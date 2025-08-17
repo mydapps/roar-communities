@@ -14,7 +14,7 @@ import { createPost } from '@/utils/api';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import confetti from 'canvas-confetti';
 import { CommunityPost } from '@/hooks/useCommunityPosts';
-import { CreatePostModal } from './CreatePostModal';
+import { CreatePostModal, CreatePostPayload } from './CreatePostModal';
 
 interface CreatePostCardProps {
   onPostCreated: (post: Partial<CommunityPost>) => void;
@@ -53,84 +53,164 @@ const CreatePostCard = ({ onPostCreated, communityName }: CreatePostCardProps) =
     });
   };
 
-  const handleModalPostSubmit = async (content: string, community: string | undefined, media: MediaUploadResponse[]): Promise<boolean> => {
-    if (!content.trim() && media.length === 0) {
-      toast.error('Please enter some content or add media.');
-      return false;
+  const handleModalPostSubmit = async (payload: CreatePostPayload): Promise<boolean> => {
+    const { body, community, media, is_poll, poll_options } = payload;
+
+    if (is_poll) {
+      if (!body.trim()) {
+        toast.error('Please enter a question for your poll.');
+        return false;
+      }
+      if (!poll_options || poll_options.length < 2) {
+        toast.error('Polls require at least 2 valid options.');
+        return false;
+      }
+    } else {
+      if (!body.trim() && (!media || media.length === 0)) {
+        toast.error('Please enter some content or add media to your post.');
+        return false;
+      }
     }
       
-      let fullBody = content.trim();
-    if (media.length > 0) {
-      let mediaAlreadyInContent = false;
-      if (content) {
-        mediaAlreadyInContent = media.some(m => content.includes(m.url));
+    let finalBody = body.trim();
+    
+    if (!is_poll && media && media.length > 0) {
+      let mediaMarkdownToAppend = '';
+      media.forEach(m => {
+        if (!finalBody.includes(m.url)) { 
+          mediaMarkdownToAppend += `\n\n![](${m.url})`; 
+        }
+      });
+      if (mediaMarkdownToAppend) {
+        finalBody += mediaMarkdownToAppend;
       }
-      if (!mediaAlreadyInContent) {
-        media.forEach(m => {
-            fullBody += `\n\n![](${m.url})`; 
-        });
-      }
-      }
+    }
       
     try {
-      const postData = {
-        body: fullBody,
+      const postDataForApi: any = {
+        body: finalBody,
         community: community,
       };
       
-      const response = await createPost(postData);
+      if (is_poll) {
+        postDataForApi.is_poll = true;
+        postDataForApi.poll_options = poll_options;
+      } else {
+        postDataForApi.is_poll = false;
+      }
       
-      if (response === true || (typeof response === 'object' && response.status === 'SUCCESS')) {
+      const response = await createPost(postDataForApi);
+      
+      if (response.status === 'SUCCESS') {
         triggerConfetti();
-        toast.success('Post created successfully!');
+        toast.success(is_poll ? 'Poll created successfully!' : 'Post created successfully!');
         
         const currentUserAvatar = localStorage.getItem('dapps_user_avatar') || '';
         const currentUserHandle = localStorage.getItem('dapps_user_handle') || '';
+        const postCode = response.postCode;
         
-        let postCode = '';
-        if (typeof response === 'object' && response.postCode) {
-          postCode = response.postCode;
-        } else {
-          postCode = `temp-${Date.now()}`;
-        }
-        
-        const newPost: Partial<CommunityPost> = {
+        const newPostForUI: Partial<CommunityPost> = {
           handle: currentUserHandle,
           avatar: currentUserAvatar,
           community: community,
           timeAgo: "just now",
-          body: fullBody,
+          body: finalBody,
           upvotes: 0,
           reply_count: 0,
           roar: 0,
-          image: media.filter(m => m.type === 'image').length > 0 ? 1 : 0,
-          image_url: media.filter(m => m.type === 'image')[0]?.url,
-          multiple_images: media.filter(m => m.type === 'image').length > 1 ? 1 : 0,
-          images: media.filter(m => m.type === 'image').map(m => m.url),
-          code: postCode
+          code: postCode,
+          is_poll: is_poll || false,
         };
         
-        onPostCreated(newPost);
+        if (is_poll) {
+          if (response.created_poll_options && response.created_poll_options.length > 0) {
+            newPostForUI.poll_data = {
+              is_active: true,
+              poll_end_time: null,
+              total_votes: 0,
+              user_has_voted: false,
+              chosen_option_id: null,
+              options: response.created_poll_options.map(opt => ({
+                option_id: opt.id,
+                text: opt.option_text,
+                imageUrl: opt.option_image_url || undefined,
+                vote_count: 0,
+                percentage: 0,
+              })),
+            };
+          } else if (poll_options) {
+            console.warn("Poll created, but created_poll_options not found in response. Using payload for UI.");
+            newPostForUI.poll_data = {
+              is_active: true,
+              poll_end_time: null,
+              total_votes: 0,
+              user_has_voted: false,
+              chosen_option_id: null,
+              options: poll_options.map((opt, index) => ({
+                option_id: index,
+                text: opt.text,
+                imageUrl: opt.imageUrl || undefined,
+                vote_count: 0,
+                percentage: 0,
+              })),
+            };
+          }
+          const pollHasImages = newPostForUI.poll_data?.options.some(opt => opt.imageUrl);
+          if (pollHasImages) {
+              newPostForUI.image = 1;
+              newPostForUI.image_url = newPostForUI.poll_data?.options.find(opt => opt.imageUrl)?.imageUrl;
+              newPostForUI.multiple_images = newPostForUI.poll_data?.options.filter(opt => opt.imageUrl).length ?? 0 > 1 ? 1 : 0;
+              newPostForUI.images = newPostForUI.poll_data?.options.map(opt => opt.imageUrl).filter(url => !!url) as string[];
+          }
+        } else if (!is_poll && media && media.length > 0) {
+          newPostForUI.image = media.filter(m => m.type === 'image').length > 0 ? 1 : 0;
+          newPostForUI.image_url = media.filter(m => m.type === 'image')[0]?.url;
+          newPostForUI.multiple_images = media.filter(m => m.type === 'image').length > 1 ? 1 : 0;
+          newPostForUI.images = media.filter(m => m.type === 'image').map(m => m.url);
+        }
+        
+        onPostCreated(newPostForUI);
         return true;
-      } else if (typeof response === 'object' && response.status === 'ERROR') {
-        const errorMessage = response.error || response.message || 'Failed to create post';
-        throw new Error(errorMessage);
+      } else if (response.status === 'ERROR') {
+        // Check if it's a community membership error that should be handled by the modal
+        const errorMessage = response.message || 'Failed to create post';
+        if (errorMessage.includes('not a part of') || errorMessage.includes('Join the community first') || errorMessage.includes('403')) {
+          // Re-throw community membership errors so the modal can handle them
+          throw new Error(errorMessage);
+        } else {
+          // Handle other errors normally with toast
+          toast.error(errorMessage);
+          return false;
+        }
       } else {
-        throw new Error('Failed to create post');
+        console.error('Unknown response structure from create post API:', response);
+        throw new Error('Unknown response from create post API');
       }
     } catch (error: any) {
+      console.error('Error in handleModalPostSubmit:', error);
+      
+      // Parse error message from different possible formats
       let errorMessage = error.message || 'Failed to create post. Please try again.';
+      
       if (error && typeof error === 'object') {
         if (error.response && typeof error.response.data === 'object' && error.response.data !== null) {
-            const serverError = error.response.data.error || error.response.data.message;
+            const serverError = error.response.data.message || error.response.data.error;
             if (serverError) errorMessage = serverError;
         } else if (error.data && typeof error.data === 'object' && error.data !== null) {
-            const serverError = error.data.error || error.data.message;
+            const serverError = error.data.message || error.data.error;
             if (serverError) errorMessage = serverError;
         }
       }
-      toast.error(errorMessage);
-      throw error;
+      
+      // Check if it's a community membership error that should be handled by the modal
+      if (errorMessage.includes('not a part of') || errorMessage.includes('Join the community first') || errorMessage.includes('403')) {
+        // Re-throw community membership errors so the modal can handle them inline
+        throw error;
+      } else {
+        // Handle other errors with toast and return false
+        toast.error(errorMessage);
+        return false;
+      }
     }
   };
 

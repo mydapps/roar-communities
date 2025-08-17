@@ -5,6 +5,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { shouldRefreshAuth } from '@/utils/apiBase';
 
+
 interface PrivyAuthProviderProps {
   children: ReactNode;
 }
@@ -18,6 +19,8 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
   const [authProcessed, setAuthProcessed] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [authRequestInProgress, setAuthRequestInProgress] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authTimeout, setAuthTimeout] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   
@@ -77,6 +80,57 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
       return true;
     }
   };
+
+  // Reset auth state function
+  const resetAuthState = () => {
+    setAuthProcessed(false);
+    setAuthRequestInProgress(false);
+    setIsAuthLoading(false);
+    setAuthError(null);
+    setAuthTimeout(false);
+  };
+
+  // Handle authentication timeout
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    
+    if (isAuthLoading && !authTimeout) {
+      // Set a timeout for authentication process (30 seconds)
+      timeoutId = setTimeout(() => {
+        console.error('[Auth] Authentication timeout after 30 seconds');
+        setAuthTimeout(true);
+        setIsAuthLoading(false);
+        setAuthRequestInProgress(false);
+        setAuthError('Authentication timed out. Please try again.');
+        toast.error('Authentication timed out. Please refresh the page.');
+      }, 30000);
+    }
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [isAuthLoading, authTimeout]);
+
+  // Handle app resume detection
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && authenticated && authProcessed) {
+        // App became visible again, check if we need to refresh auth
+        const needsRefresh = shouldRefreshAuth();
+        if (needsRefresh) {
+          debugLog("App resumed, refreshing authentication");
+          resetAuthState();
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [authenticated, authProcessed]);
   
   useEffect(() => {
     // Reset auth processed state when authentication status changes
@@ -86,7 +140,7 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
     }
     
     // If user is authenticated with Privy, handle auth flow
-    if (ready && authenticated && user && !authProcessed && !authRequestInProgress) {
+    if (ready && authenticated && user && !authProcessed && !authRequestInProgress && !authTimeout) {
       const handlePrivyAuth = async () => {
         try {
           // Check if we need to refresh auth or already have valid credentials
@@ -110,12 +164,14 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
           // Set both flags to prevent duplicate requests
           setAuthRequestInProgress(true);
           setIsAuthLoading(true);
+          setAuthError(null);
           
           // Get JWT token from Privy
           const token = await getAccessToken();
           
           if (!token) {
             console.error('No JWT token available from Privy');
+            setAuthError('No authentication token available');
             toast.error('Authentication error: No token available');
             setAuthProcessed(true);
             setIsAuthLoading(false);
@@ -144,10 +200,24 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
             
             console.log('[Auth] Received data from /privy_auth:', JSON.stringify(data, null, 2));
             
+            // Check for inactive account status FIRST
+            if (data.success === false && data.accountStatus === 'inactive') {
+              console.warn('[Auth] Account is inactive. Redirecting to inactive page.');
+              toast.error(data.message || 'Your account is inactive.');
+              navigate('/account-inactive', { replace: true });
+              // Important: Stop further processing
+              setAuthProcessed(true);
+              setIsAuthLoading(false);
+              setAuthRequestInProgress(false);
+              return; 
+            }
+            
+            // Original success path
             if (data.success) {
               // --- VALIDATE RESPONSE DATA ---
               if (!data.userId) {
                 console.error('CRITICAL AUTH ERROR: userId missing from /privy_auth response', data);
+                setAuthError('Missing user identifier from server');
                 toast.error('Authentication failed: Missing user identifier from server.');
                 // Stop processing here to prevent partial state
                 setAuthProcessed(true);
@@ -172,8 +242,17 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
                 const registeredStatus = data.registered ? data.registered.toString() : "0";
                 localStorage.setItem('dapps_user_registered', registeredStatus); 
                 debugLog('Authentication successful, stored user info. Registered status:', registeredStatus);
+                
+
+                
+                // Fire custom authentication success event for other components
+                const authSuccessEvent = new CustomEvent('dapps_auth_success', {
+                  detail: { userId: userIdStr, handle: data.handle, registered: registeredStatus === "1" }
+                });
+                document.dispatchEvent(authSuccessEvent);
               } catch (storageError) {
                 console.error('[Auth] CRITICAL ERROR storing user info in localStorage:', storageError, 'Data received:', data);
+                setAuthError('Could not save session');
                 toast.error('Authentication partially failed: Could not save session.');
                 // Stop processing here
                 setAuthProcessed(true);
@@ -235,45 +314,56 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
               return; // Important: Exit after handling success
               
             } else {
-              toast.error('Authentication failed: ' + (data.message || 'Unknown error'));
+              // Handle other non-inactive failures (e.g., validation errors from API)
+              setAuthError(data.message || 'Unknown server error');
+              toast.error('Authentication failed: ' + (data.message || 'Unknown server error'));
             }
           } else {
-            // Handle HTTP errors (4xx, 5xx) more robustly
+            // Handle HTTP errors (4xx, 5xx)
             let errorBody = '';
-            // Define a type for potential error JSON
-            interface ApiError { message?: string; error?: string; }
+            interface ApiError { success?: boolean; accountStatus?: string; message?: string; error?: string; }
             let errorData: ApiError = {}; 
             try {
-              // Try reading the response body as text first
               errorBody = await response.text();
-              // Attempt to parse as JSON only if it looks like JSON
               if (errorBody && errorBody.startsWith('{') && errorBody.endsWith('}')) {
                  errorData = JSON.parse(errorBody);
               }
             } catch (parseError) {
-              // Ignore errors during text reading or JSON parsing
               console.error('Error reading/parsing error response body:', parseError);
             }
             
+            // SPECIFIC CHECK: Handle 403 for inactive accounts
+            if (response.status === 403 && errorData.accountStatus === 'inactive') {
+              console.warn('[Auth] Account is inactive (detected via 403). Redirecting to inactive page.');
+              toast.error(errorData.message || 'Your account is inactive.');
+              navigate('/account-inactive', { replace: true });
+              // Important: Stop further processing for this specific case
+              setAuthProcessed(true);
+              setIsAuthLoading(false);
+              setAuthRequestInProgress(false);
+              return; 
+            }
+
+            // Generic error handling for other non-OK responses
             console.error(`Authentication failed with status: ${response.status}`, {
               status: response.status,
               statusText: response.statusText,
-              errorBody: errorBody, // Log the raw text body
-              parsedJson: errorData // Log the parsed JSON (if successful)
+              errorBody: errorBody,
+              parsedJson: errorData 
             });
             
-            // Show a more informative error if possible
-            // Now accessing .message and .error is type-safe
             const message = errorData.message || errorData.error || errorBody || 'Please try again.';
+            setAuthError(`Authentication failed (${response.status}): ${message}`);
             toast.error(`Authentication failed (${response.status}): ${message}`);
           }
           
-          // Mark auth as processed to prevent loops (Only reached if response.ok was false or data.success was false)
+          // Mark auth as processed if flow reaches here (indicates a failure other than inactive account)
           setAuthProcessed(true);
           setIsAuthLoading(false);
           setAuthRequestInProgress(false);
         } catch (error) {
           console.error('Error during authentication:', error);
+          setAuthError('Could not complete authentication');
           toast.error('Could not complete authentication');
           setAuthProcessed(true);
           setIsAuthLoading(false);
@@ -283,10 +373,10 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
 
       handlePrivyAuth();
     }
-  }, [ready, authenticated, user, getAccessToken, authProcessed, authRequestInProgress, isCommunityPage, isPostPage, pathname, navigate]);
+  }, [ready, authenticated, user, getAccessToken, authProcessed, authRequestInProgress, authTimeout, isCommunityPage, isPostPage, pathname, navigate]);
 
   // Show global loading overlay when authentication is processing
-  if (isAuthLoading) {
+  if (isAuthLoading && !authTimeout) {
     // Render ONLY the loader when loading
     return (
       <div className="fixed inset-0 bg-background flex items-center justify-center z-50">
@@ -298,7 +388,46 @@ const PrivyAuthWrapper = ({ children }: { children: ReactNode }) => {
     );
   }
 
-  // Render the children only when not loading
+  // Show error state if authentication failed or timed out
+  if (authError || authTimeout) {
+    return (
+      <div className="fixed inset-0 bg-background flex items-center justify-center z-50">
+        <div className="bg-background rounded-lg shadow-lg p-6 text-center max-w-md mx-4">
+          <div className="text-destructive mb-4">
+            <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 19.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold mb-2">Authentication Error</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            {authError || 'Authentication timed out. Please try again.'}
+          </p>
+          <div className="flex gap-2 justify-center">
+            <button
+              onClick={() => {
+                resetAuthState();
+                window.location.reload();
+              }}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm hover:bg-primary/90 transition-colors"
+            >
+              Retry
+            </button>
+            <button
+              onClick={() => {
+                localStorage.clear();
+                window.location.href = '/';
+              }}
+              className="px-4 py-2 bg-secondary text-secondary-foreground rounded-md text-sm hover:bg-secondary/90 transition-colors"
+            >
+              Start Over
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Render the children only when not loading and no errors
   return (
     <AuthLoadingContext.Provider value={isAuthLoading}>
       {children}
@@ -312,7 +441,7 @@ const PrivyAuthProvider = ({ children }: PrivyAuthProviderProps) => {
     <PrivyProvider
       appId="clxemmxy905w5101wwy4ahs1m"
       config={{
-        loginMethods: ['passkey', 'email', 'sms', 'wallet', 'farcaster', 'twitter', 'discord'] as any,
+        loginMethods: ['passkey', 'email', 'sms', 'wallet', 'farcaster', 'twitter', 'discord', 'apple'] as any,
         appearance: {
           theme: 'light',
           accentColor: '#31bcc3',

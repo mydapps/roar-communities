@@ -1,8 +1,15 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Wallet, SendHorizontal, Loader2 } from 'lucide-react';
+import { Wallet, SendHorizontal, Loader2, History, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 interface PortfolioSummaryProps {
   ethValue: string;
@@ -11,6 +18,7 @@ interface PortfolioSummaryProps {
   isLoadingBalance?: boolean;
   onDepositClick: () => void;
   onSendClick: () => void;
+  onWalletInfoClick?: () => void;
 }
 
 export const PortfolioSummary = ({
@@ -19,7 +27,8 @@ export const PortfolioSummary = ({
   ethBalance,
   isLoadingBalance = false,
   onDepositClick,
-  onSendClick
+  onSendClick,
+  onWalletInfoClick
 }: PortfolioSummaryProps) => {
   const [ethPrice, setEthPrice] = useState<number>(0);
   const [isPriceLoading, setIsPriceLoading] = useState<boolean>(true);
@@ -53,10 +62,49 @@ export const PortfolioSummary = ({
   };
 
   return (
-    <Card className="animate-scale-in bg-background/95 backdrop-blur-sm">
+    <TooltipProvider>
+      <Card className="animate-scale-in bg-background/95 backdrop-blur-sm relative">
       <CardContent className="p-6">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                asChild 
+                variant="ghost" 
+                size="icon" 
+                className="absolute top-4 right-4 text-muted-foreground hover:text-primary hover:bg-accent"
+              >
+                <Link to="/transactions">
+                  <History className="h-5 w-5" />
+                  <span className="sr-only">Transaction History</span>
+                </Link>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Transaction History</p>
+            </TooltipContent>
+          </Tooltip>
+
         <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
           <h2 className="text-xl font-semibold text-primary">Your ETH Balance</h2>
+            {onWalletInfoClick && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onWalletInfoClick}
+                    className="h-6 w-6 p-0 text-muted-foreground hover:text-primary"
+                  >
+                    <Info className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>About your wallet</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
           {isLoadingBalance && (
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <Loader2 className="h-3 w-3 animate-spin" />
@@ -88,7 +136,7 @@ export const PortfolioSummary = ({
           </div>
         </div>
         
-        <div className="flex space-x-4">
+          <div className="flex space-x-4 mt-6">
           <Button 
             className="flex-1 gap-2 bg-gradient-to-r from-primary to-primary/80 hover:opacity-90" 
             onClick={onDepositClick}
@@ -109,5 +157,6 @@ export const PortfolioSummary = ({
         </div>
       </CardContent>
     </Card>
+    </TooltipProvider>
   );
 };

@@ -1,4 +1,6 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { useFirstTimeVisitor } from '@/hooks/useFirstTimeVisitor';
+import CommunitiesOnboarding from '@/components/communities/CommunitiesOnboarding';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,22 +9,18 @@ import {
   TrendingUp, 
   Users, 
   Plus,
-  Filter,
   User,
   Loader2,
   RefreshCw,
   Clock,
-  Gift
+  Gift,
+  Star,
+  ArrowRight,
+  Sparkles,
+  TrendingDown
 } from 'lucide-react';
-import { 
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import CommunityCard from '@/components/communities/CommunityCard';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useCommunities } from '@/hooks/useCommunities';
@@ -32,11 +30,125 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { TradeSheet } from '@/components/shares/TradeSheet';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { getWalletBalance } from '@/utils/communityApi';
+import { Helmet } from 'react-helmet-async';
+import { Badge } from '@/components/ui/badge';
+
+// Enhanced Hero Section Component
+const HeroSection = ({ isLoggedIn, onCreateCommunity }: { isLoggedIn: boolean, onCreateCommunity: () => void }) => {
+  const isMobile = useIsMobile();
+  
+  return (
+    <div className="relative mb-8 overflow-hidden">
+      {/* Background gradient */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-purple-500/5 to-emerald-500/5 dark:from-primary/10 dark:via-purple-500/10 dark:to-emerald-500/10" />
+      <div className="absolute inset-0 bg-dot-pattern opacity-30" style={{
+        backgroundImage: `radial-gradient(circle at 1px 1px, rgba(0,0,0,0.15) 1px, transparent 0)`,
+        backgroundSize: '20px 20px'
+      }} />
+      
+      <div className="relative px-6 py-8 md:py-12">
+        <div className="max-w-4xl mx-auto text-center">
+          {/* Main heading with enhanced typography */}
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <Sparkles className="h-6 w-6 text-primary animate-pulse" />
+            <h1 className="text-3xl md:text-5xl font-bold bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
+              Discover Communities
+            </h1>
+            <Sparkles className="h-6 w-6 text-primary animate-pulse" />
+          </div>
+          
+          {/* Subtitle with better spacing */}
+          <p className="text-muted-foreground text-lg md:text-xl mb-6 max-w-2xl mx-auto leading-relaxed">
+            Invest in communities like stocks, join discussions, and earn from your participation. 
+            <span className="text-primary font-medium"> Build the future together.</span>
+          </p>
+          
+          {/* Call-to-action buttons */}
+          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+            <Button 
+              onClick={onCreateCommunity}
+              size={isMobile ? "default" : "lg"}
+              className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200 group"
+            >
+              <Plus className="h-4 w-4 mr-2 group-hover:rotate-90 transition-transform duration-200" />
+              Create Community
+              <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform duration-200" />
+            </Button>
+            
+
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+
+// Enhanced Tab Icons and Labels
+const getTabConfig = () => [
+  { value: 'popular', icon: TrendingUp, label: 'Popular', description: 'Most active communities' },
+  { value: 'my', icon: User, label: 'My Communities', description: 'Your investments' },
+  { value: 'trending', icon: Star, label: 'Trending', description: 'Rising fast' },
+  { value: 'newest', icon: Clock, label: 'Newest', description: 'Just launched' },
+  { value: 'most-rewards', icon: Gift, label: 'Rewards', description: 'Highest rewards' }
+];
+
+// Enhanced Empty State Component
+const EmptyState = ({ activeTab, searchQuery, onTabChange }: { activeTab: string, searchQuery: string, onTabChange: (tab: string) => void }) => {
+  const getEmptyStateContent = () => {
+    if (searchQuery) {
+      return {
+        icon: Search,
+        title: 'No communities found',
+        description: `No communities match your search for "${searchQuery}". Try different keywords or browse popular communities.`,
+        action: { text: 'Clear Search', onClick: () => window.location.reload() }
+      };
+    }
+    
+    switch (activeTab) {
+      case 'my':
+        return {
+          icon: Users,
+          title: 'Join your first community',
+          description: 'Start by exploring popular communities and investing in the ones you believe in.',
+          action: { text: 'Explore Popular', onClick: () => onTabChange('popular') }
+        };
+      default:
+        return {
+          icon: Sparkles,
+          title: 'No communities yet',
+          description: 'Be the first to create a community in this category!',
+          action: { text: 'Create Community', onClick: () => {} }
+        };
+    }
+  };
+  
+  const { icon: Icon, title, description, action } = getEmptyStateContent();
+  
+  return (
+    <div className="col-span-full flex flex-col items-center justify-center py-16 px-4">
+      <div className="relative mb-6">
+        <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl"></div>
+        <div className="relative bg-primary/10 p-6 rounded-full">
+          <Icon className="h-12 w-12 text-primary" />
+        </div>
+      </div>
+      <h3 className="text-xl font-semibold mb-2">{title}</h3>
+      <p className="text-muted-foreground text-center max-w-md mb-6 leading-relaxed">{description}</p>
+      <Button variant="outline" onClick={action.onClick} className="group">
+        {action.text}
+        <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform" />
+      </Button>
+    </div>
+  );
+};
 
 const CommunitiesPage = () => {
-  // State for search
-  const [searchQuery, setSearchQuery] = useState('');
-  const debouncedSearchQuery = useDebounce(searchQuery, 500);
+    // First-time visitor tracking
+    const { isFirstTime, isLoading: isLoadingVisitor, markAsVisited } = useFirstTimeVisitor();
+    const [showOnboarding, setShowOnboarding] = useState(false);
+    const [onboardingStartSlide, setOnboardingStartSlide] = useState(0);
   
   // State for trading dialog
   const [selectedCommunity, setSelectedCommunity] = useState<Community | null>(null);
@@ -46,9 +158,26 @@ const CommunitiesPage = () => {
   const [tradeLoading, setTradeLoading] = useState(false);
   const [tradeSuccess, setTradeSuccess] = useState(false);
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
   
   // State for active tab
   const [activeTab, setActiveTab] = useState('popular');
+  
+  // Check if user is logged in using dapps_user_id
+  const isLoggedIn = !!localStorage.getItem('dapps_user_id');
+  
+  // Effect to disable pull-to-refresh on this page
+  useEffect(() => {
+    const originalStyle = document.body.style.overscrollBehaviorY;
+    document.body.style.overscrollBehaviorY = 'contain';
+    console.log('[CommunitiesPage] Applied overscroll-behavior-y: contain to body');
+
+    // Cleanup function to restore original style on unmount
+    return () => {
+      document.body.style.overscrollBehaviorY = originalStyle;
+      console.log('[CommunitiesPage] Restored original overscroll-behavior-y to body');
+    };
+  }, []); // Empty dependency array ensures this runs only on mount and unmount
   
   // Fetch popular communities (default)
   const {
@@ -57,9 +186,7 @@ const CommunitiesPage = () => {
     isRefreshing: isRefreshingPopular,
     refreshCommunities: refreshPopularCommunities,
     loadMoreRef: popularLoadMoreRef,
-  } = useCommunities({
-    search: activeTab === 'popular' ? debouncedSearchQuery : '',
-  });
+  } = useCommunities({});
   
   // Fetch my communities
   const {
@@ -69,7 +196,6 @@ const CommunitiesPage = () => {
     refreshCommunities: refreshMyCommunities,
     loadMoreRef: myLoadMoreRef,
   } = useCommunities({
-    search: activeTab === 'my' ? debouncedSearchQuery : '',
     personal: true
   });
   
@@ -81,7 +207,6 @@ const CommunitiesPage = () => {
     refreshCommunities: refreshTrendingCommunities,
     loadMoreRef: trendingLoadMoreRef,
   } = useCommunities({
-    search: activeTab === 'trending' ? debouncedSearchQuery : '',
     trending: true
   });
   
@@ -93,7 +218,6 @@ const CommunitiesPage = () => {
     refreshCommunities: refreshNewestCommunities,
     loadMoreRef: newestLoadMoreRef,
   } = useCommunities({
-    search: activeTab === 'newest' ? debouncedSearchQuery : '',
     newest: true
   });
   
@@ -105,7 +229,6 @@ const CommunitiesPage = () => {
     refreshCommunities: refreshMostRewardsCommunities,
     loadMoreRef: mostRewardsLoadMoreRef,
   } = useCommunities({
-    search: activeTab === 'most-rewards' ? debouncedSearchQuery : '',
     mostRewards: true
   });
   
@@ -123,10 +246,6 @@ const CommunitiesPage = () => {
   // Handle tab change
   const handleTabChange = (value: string) => {
     setActiveTab(value);
-    // If changing to a different tab, reset the search
-    if (value !== activeTab) {
-      setSearchQuery('');
-    }
   };
   
   // Handle refresh
@@ -153,6 +272,12 @@ const CommunitiesPage = () => {
   
   // Handle buy/sell action
   const handleTradeAction = (community: Community, action: 'buy' | 'sell') => {
+    // If user is not logged in, redirect to index page
+    if (!isLoggedIn) {
+      navigate('/index');
+      return;
+    }
+    
     // Reset all trade states
     setTradeDialogOpen(false);
     setSelectedCommunity(null);
@@ -173,104 +298,91 @@ const CommunitiesPage = () => {
     }, 50);
   };
   
+  // Handle create community button click
+  const handleCreateCommunity = () => {
+    if (!isLoggedIn) {
+      navigate('/index');
+      return;
+    }
+    navigate('/create-community');
+  };
+
+  // Handle onboarding
+  useEffect(() => {
+    if (!isLoadingVisitor && isFirstTime) {
+      setOnboardingStartSlide(0);
+      setShowOnboarding(true);
+    }
+  }, [isFirstTime, isLoadingVisitor]);
+
+  const handleOnboardingComplete = () => {
+    markAsVisited();
+    setShowOnboarding(false);
+  };
+
+  const handleOnboardingClose = () => {
+    markAsVisited();
+    setShowOnboarding(false);
+  };
+
+  // Handle reward pool info click
+  const handleRewardPoolInfo = () => {
+    setOnboardingStartSlide(2); // Start at the third slide (0-indexed)
+    setShowOnboarding(true);
+  };
+  
   // Handle trade success
   const handleTradeSuccess = () => {
-    // Refresh wallet balance regardless of transaction type
-    fetchWalletBalance();
-    
-    // Only reload communities list
+    setTradeSuccess(true);
+    // Refresh the current tab's data
     handleRefresh();
   };
   
-  // Update trading confirmation handlers to fetch balance after transaction
+  // Handle buy shares confirmation
   const handleBuySharesConfirm = async (communityName: string, quantity: number) => {
     try {
       setTradeLoading(true);
-      setTradeSuccess(false);
       const result = await buySharesConfirm(communityName, quantity);
       
       if (result && result.status === 'SUCCESS') {
-        toast.success('Successfully purchased shares!');
-        
-        // IMPORTANT FIX: First set success true, then set loading false after a delay
-        // This ensures the success screen is visible
-        setTradeSuccess(true);
-        
-        setTimeout(() => {
-          setTradeLoading(false);
-        }, 300);
-        
-        // Don't hide the trade dialog immediately - let the success screen show
-        // for a sufficient amount of time (reduced from 7000ms to 3500ms)
-        setTimeout(() => {
-          // Close the dialog after the success screen has been shown
+         toast.success(`Successfully bought ${quantity} shares in ${communityName}!`);
+         handleTradeSuccess();
           setTradeDialogOpen(false);
-          setTradeSuccess(false);
-          
-          // After closing, refresh data
-          fetchWalletBalance();
-          handleRefresh();
-        }, 5000); // Extended to 5 seconds for better visibility
       } else {
-        // Set loading to false immediately for error cases
-        setTradeLoading(false);
-        toast.error(result?.message || 'Failed to purchase shares');
+         toast.error(result?.message || 'Failed to buy shares. Please try again.');
       }
     } catch (error) {
+      console.error('Error buying shares:', error);
+      toast.error('An error occurred while buying shares. Please try again.');
+    } finally {
       setTradeLoading(false);
-      toast.error('An error occurred while purchasing shares');
     }
   };
   
+  // Handle sell shares confirmation  
   const handleSellSharesConfirm = async (communityName: string, quantity: number) => {
     try {
       setTradeLoading(true);
-      setTradeSuccess(false);
       const result = await sellSharesConfirm(communityName, quantity);
       
       if (result && result.status === 'SUCCESS') {
-        toast.success('Successfully sold shares!');
-        
-        // IMPORTANT FIX: First set success true, then set loading false after a delay
-        // This ensures the success screen is visible
-        setTradeSuccess(true);
-        
-        setTimeout(() => {
-          setTradeLoading(false);
-        }, 300);
-        
-        // Don't hide the trade dialog immediately - let the success screen show
-        // for a sufficient amount of time (reduced from 7000ms to 3500ms)
-        setTimeout(() => {
-          // Close the dialog after the success screen has been shown
+         toast.success(`Successfully sold ${quantity} shares in ${communityName}!`);
+         handleTradeSuccess();
           setTradeDialogOpen(false);
-          setTradeSuccess(false);
-          
-          // After closing, refresh data
-          fetchWalletBalance();
-          handleRefresh();
-        }, 5000); // Extended to 5 seconds for better visibility
       } else {
-        // Set loading to false immediately for error cases
-        setTradeLoading(false);
-        toast.error(result?.message || 'Failed to sell shares');
+         toast.error(result?.message || 'Failed to sell shares. Please try again.');
       }
     } catch (error) {
+      console.error('Error selling shares:', error);
+      toast.error('An error occurred while selling shares. Please try again.');
+    } finally {
       setTradeLoading(false);
-      toast.error('An error occurred while selling shares');
     }
   };
   
-  // Based on the active tab, select the relevant data
+  // Get active tab data
   const getActiveTabData = () => {
     switch (activeTab) {
-      case 'popular':
-        return {
-          communities: popularCommunities,
-          isLoading: isLoadingPopular,
-          isRefreshing: isRefreshingPopular,
-          loadMoreRef: popularLoadMoreRef,
-        };
       case 'my':
         return {
           communities: myCommunities,
@@ -312,83 +424,77 @@ const CommunitiesPage = () => {
   const { communities: currentCommunities, isLoading, isRefreshing, loadMoreRef } = getActiveTabData();
 
   return (
-    <div className="px-4 pt-16 pb-6 space-y-6 pb-20">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h1 className="text-2xl md:text-3xl font-bold">Communities</h1>
+    <div className={`min-h-screen bg-gradient-to-br from-background via-background to-muted/20 ${isMobile ? 'pb-24' : 'pb-10'}`}>
+      <Helmet>
+        {/* Primary Meta Tags */}
+        <title>Communities - dapps.co - decentralized community network</title>
+        <meta name="title" content="Communities - dapps.co - decentralized community network" />
+        <meta name="description" content="Discover thriving communities on dapps.co. Invest in communities like stocks, join discussions, and earn from your participation. Browse popular, trending, and newest communities." />
+        <meta name="keywords" content="communities, invest in communities, community shares, social investing, decentralized communities, web3 communities, blockchain communities" />
         
-        <div className="w-full md:w-auto flex items-center gap-2">
-          <div className="w-full md:w-64 relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="Search communities..."
-              className="pl-9 pr-4 py-6 bg-background"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
-          
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={handleRefresh}
-            className="h-12 w-12 flex-shrink-0"
-          >
-            <RefreshCw className="h-5 w-5" />
-          </Button>
-
-          <Link to="/create-community" className="hidden md:block">
-            <Button
-              variant="default"
-              className="h-12 bg-[#31bcc3] hover:bg-[#31bcc3]/90 text-white"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Create Community
-            </Button>
-          </Link>
-        </div>
-      </div>
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://dapps.co/communities" />
+        <meta property="og:title" content="Communities - dapps.co - decentralized community network" />
+        <meta property="og:description" content="Discover thriving communities on dapps.co. Invest in communities like stocks, join discussions, and earn from your participation. Browse popular, trending, and newest communities." />
+        <meta property="og:image" content="https://dapps.co/og-community-image.png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:site_name" content="dapps.co" />
+        
+        {/* Twitter */}
+        <meta property="twitter:card" content="summary_large_image" />
+        <meta property="twitter:url" content="https://dapps.co/communities" />
+        <meta property="twitter:title" content="Communities - dapps.co - decentralized community network" />
+        <meta property="twitter:description" content="Discover thriving communities on dapps.co. Invest in communities like stocks, join discussions, and earn from your participation. Browse popular, trending, and newest communities." />
+        <meta property="twitter:image" content="https://dapps.co/og-community-image.png" />
+        <meta property="twitter:site" content="@dapps_co" />
+        <meta property="twitter:creator" content="@dapps_co" />
+        
+        {/* Additional Meta Tags */}
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="theme-color" content="#31bcc3" />
+        <link rel="canonical" href="https://dapps.co/communities" />
+      </Helmet>
       
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="mb-6">
-        <div 
-          className="relative overflow-x-auto pb-2 scrollbar-hide no-scrollbar overscroll-behavior-x-contain"
-          style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-x' }}
-          onTouchStart={(e) => e.stopPropagation()}
-        >
-          <TabsList className="inline-flex w-auto min-w-full whitespace-nowrap">
-            <TabsTrigger value="popular" className="flex items-center gap-1.5 flex-shrink-0">
-              <TrendingUp className="h-3.5 w-3.5" />
-              <span>Popular</span>
+      <div className="container max-w-7xl mx-auto px-4 pt-8">
+        {/* Enhanced Hero Section */}
+        <HeroSection isLoggedIn={isLoggedIn} onCreateCommunity={handleCreateCommunity} />
+
+
+
+        {/* Enhanced Tabs Section */}
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="mb-6">
+          <div className="relative overflow-x-auto pb-2 scrollbar-hide">
+                         <TabsList className="inline-flex w-auto min-w-full whitespace-nowrap bg-muted/50 p-1 rounded-xl backdrop-blur-sm border border-border/20">
+               {getTabConfig().map(({ value, icon: Icon, label, description }) => (
+                 <TabsTrigger 
+                   key={value} 
+                   value={value} 
+                   className="flex items-center gap-2 flex-shrink-0 px-4 py-2.5 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all duration-200 group hover:bg-muted/80"
+                 >
+                                     <Icon className="h-4 w-4 group-data-[state=active]:text-primary-foreground" />
+                  <div className="flex flex-col items-start">
+                    <span className="font-medium">{label}</span>
+                    {!isMobile && (
+                                             <span className="text-xs text-muted-foreground group-data-[state=active]:text-primary-foreground/80">
+                         {description}
+                       </span>
+                    )}
+      </div>
             </TabsTrigger>
-            <TabsTrigger value="my" className="flex items-center gap-1.5 flex-shrink-0">
-              <User className="h-3.5 w-3.5" />
-              <span>My communities</span>
-            </TabsTrigger>
-            <TabsTrigger value="trending" className="flex items-center gap-1.5 flex-shrink-0">
-              <Search className="h-3.5 w-3.5" />
-              <span>Trending</span>
-            </TabsTrigger>
-            <TabsTrigger value="newest" className="flex items-center gap-1.5 flex-shrink-0">
-              <Clock className="h-3.5 w-3.5" />
-              <span>Newest</span>
-            </TabsTrigger>
-            <TabsTrigger value="most-rewards" className="flex items-center gap-1.5 flex-shrink-0">
-              <Gift className="h-3.5 w-3.5" />
-              <span>Most Rewards</span>
-            </TabsTrigger>
+              ))}
           </TabsList>
         </div>
 
-        <div className="space-y-4 animate-fade-in">
+          {/* Enhanced Content Section */}
+          <div className="mt-6">
           {isLoading && currentCommunities.length === 0 ? (
             <CommunityCardSkeleton count={6} />
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {/* Show debug information if "My Communities" is selected and empty */}
-              {activeTab === 'my' && currentCommunities.length === 0 && !isLoading && (
-                <MyCommunitiesDebug communities={myCommunities} isLoading={isLoadingMy} />
-              )}
-              
+              <>
+                {/* Communities Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 auto-rows-fr">
               {currentCommunities.map((community) => (
                 <CommunityCard 
                   key={community.name}
@@ -404,37 +510,40 @@ const CommunitiesPage = () => {
                   image={community.image || ''}
                   isMember={!!community.userShares && community.userShares > 0}
                   isAdmin={!!community.isAdmin}
-                  userShares={community.userShares || 0}
+                  userShares={community.userShares && community.userShares > 0 ? community.userShares : undefined}
                   onBuy={() => handleTradeAction(community, 'buy')}
                   onSell={() => handleTradeAction(community, 'sell')}
+                  onRewardPoolInfo={handleRewardPoolInfo}
+                  isLoggedIn={isLoggedIn}
                 />
               ))}
+                </div>
               
+                {/* Load More Section */}
               {currentCommunities.length > 0 && (
                 <div 
                   ref={loadMoreRef} 
-                  className="col-span-full flex justify-center py-4 mt-2"
+                    className="flex justify-center py-8 mt-8"
                 >
                   {isLoading && !isRefreshing && (
-                    <div className="flex items-center justify-center">
-                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                      <span className="ml-2 text-sm text-muted-foreground">Loading more...</span>
+                      <div className="flex items-center justify-center space-x-3 bg-background/80 backdrop-blur-sm px-6 py-3 rounded-full border border-border/20">
+                        <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                        <span className="text-sm font-medium">Loading more communities...</span>
                     </div>
                   )}
                 </div>
               )}
               
-              {currentCommunities.length === 0 && !isLoading && activeTab !== 'my' && (
-                <div className="col-span-full p-8 text-center bg-muted/20 rounded-lg border border-border/40">
-                  <h3 className="font-medium text-lg">No communities found</h3>
-                  <p className="text-muted-foreground mt-2">Try adjusting your search or explore other categories.</p>
-                </div>
+                                 {/* Enhanced Empty State */}
+                 {currentCommunities.length === 0 && !isLoading && (
+                   <EmptyState activeTab={activeTab} searchQuery="" onTabChange={setActiveTab} />
               )}
-            </div>
+              </>
           )}
         </div>
       </Tabs>
 
+        {/* Trade Sheet (unchanged functionality) */}
       {selectedCommunity && (
         <TradeSheet
           open={tradeDialogOpen}
@@ -458,70 +567,73 @@ const CommunitiesPage = () => {
           onBuyConfirm={handleBuySharesConfirm}
           onSellConfirm={handleSellSharesConfirm}
           forceSuccessVisible={tradeSuccess}
+          onBalanceUpdate={(newBalance) => setUserEthBalance(newBalance)}
         />
       )}
       
-      {/* Mobile FAB for creating community */}
-      <Link 
-        to="/create-community" 
-        className="md:hidden fixed bottom-20 right-4 z-50"
+        {/* Enhanced Mobile FAB */}
+      <Button 
+        onClick={handleCreateCommunity}
+        size="icon" 
+          className="md:hidden fixed bottom-28 right-4 z-50 h-16 w-16 rounded-full bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-white shadow-xl hover:shadow-2xl transition-all duration-300 group"
       >
-        <Button 
-          size="icon" 
-          className="h-14 w-14 rounded-full bg-[#31bcc3] hover:bg-[#31bcc3]/90 text-white shadow-lg"
-        >
-          <Plus className="h-6 w-6" />
-        </Button>
-      </Link>
+          <Plus className="h-7 w-7 group-hover:rotate-90 transition-transform duration-300" />
+      </Button>
+      </div>
+      
+      {/* Communities Onboarding */}
+      <CommunitiesOnboarding 
+        isOpen={showOnboarding}
+        onClose={handleOnboardingClose}
+        onComplete={handleOnboardingComplete}
+        startSlide={onboardingStartSlide}
+      />
     </div>
   );
 };
 
-// Skeleton loader for community cards
-const CommunityCardSkeleton = ({ count = 3 }: { count?: number }) => {
+// Enhanced Skeleton Loader with better visual hierarchy
+const CommunityCardSkeleton = ({ count = 6 }: { count?: number }) => {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
       {Array(count).fill(0).map((_, i) => (
-        <Card key={i} className="overflow-hidden border-border/20 bg-gradient-to-b from-background to-background/95 dark:from-background dark:to-slate-900/20">
-          <div className="p-4 sm:p-5 space-y-3">
-            {/* Header */}
+        <Card key={i} className="overflow-hidden border-border/20 bg-gradient-to-b from-background to-background/95 dark:from-background dark:to-slate-900/20 animate-pulse">
+          <div className="p-6 space-y-4">
+            {/* Header with avatar and title */}
             <div className="flex items-center gap-3">
-              <Skeleton className="h-10 w-10 sm:h-12 sm:w-12 rounded-full shrink-0" />
+              <Skeleton className="h-12 w-12 rounded-full shrink-0" />
               <div className="space-y-2 flex-1 min-w-0">
                 <Skeleton className="h-5 w-3/4" />
                 <div className="flex gap-2">
-                  <Skeleton className="h-3.5 w-16 rounded-full" />
+                  <Skeleton className="h-4 w-20 rounded-full" />
+                  <Skeleton className="h-4 w-16 rounded-full" />
                 </div>
               </div>
             </div>
             
-            {/* Stats */}
-            <div className="py-3 space-y-2.5 border-t border-b border-border/20">
+            {/* Stats section */}
+            <div className="py-4 space-y-3 border-t border-b border-border/20">
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Skeleton className="h-3 w-10" />
-                  <div className="space-y-1">
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-3 w-1/2" />
-                  </div>
+                <div className="space-y-2">
+                  <Skeleton className="h-3 w-12" />
+                  <Skeleton className="h-5 w-full" />
+                  <Skeleton className="h-3 w-3/4" />
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <Skeleton className="h-3 w-16" />
-                  <div className="space-y-1">
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-3 w-1/2" />
-                  </div>
+                  <Skeleton className="h-5 w-full" />
+                  <Skeleton className="h-3 w-3/4" />
                 </div>
               </div>
             </div>
             
-            {/* Actions */}
+            {/* Action buttons */}
             <div className="flex justify-between items-center">
-              <div className="flex gap-1.5">
-                <Skeleton className="h-8 w-16 rounded-md" />
-                <Skeleton className="h-8 w-16 rounded-md" />
+              <div className="flex gap-2">
+                <Skeleton className="h-9 w-20 rounded-md" />
+                <Skeleton className="h-9 w-16 rounded-md" />
               </div>
-              <Skeleton className="h-8 w-20 rounded-md" />
+              <Skeleton className="h-9 w-24 rounded-md" />
             </div>
           </div>
         </Card>
@@ -530,61 +642,23 @@ const CommunityCardSkeleton = ({ count = 3 }: { count?: number }) => {
   );
 };
 
-// Debug component for "My Communities" section
+// Debug component (unchanged)
 const MyCommunitiesDebug = ({ communities, isLoading }: { communities: Community[], isLoading: boolean }) => {
-  if (isLoading) return null;
-  
-  // Check for authentication
-  const isAuthenticated = localStorage.getItem('dapps_user_id') !== null;
+  if (process.env.NODE_ENV === 'production') return null;
   
   return (
-    <div className="col-span-full">
-      {!isAuthenticated ? (
-        <div className="p-5 bg-blue-50 border border-blue-100 rounded-lg mb-4">
-          <div className="flex flex-col items-center text-center mb-3">
-            <h4 className="font-medium text-lg text-blue-800 mb-1">Authentication Required</h4>
-            <p className="text-blue-700 text-sm mb-3">Please log in to view your communities</p>
-            
-            <div className="flex flex-col gap-2 w-full max-w-xs">
-              <Button className="bg-blue-600 hover:bg-blue-700 w-full">
-                <User className="h-3.5 w-3.5 mr-2" />
-                Login
-              </Button>
-              <p className="text-xs text-blue-600">
-                You need to be logged in to see your personal communities and track your investments.
-              </p>
-            </div>
-          </div>
-          
-          <div className="bg-white p-3 rounded-md border border-blue-100 text-sm">
-            <h5 className="font-medium text-blue-900 mb-2">How to access your communities:</h5>
-            <ol className="list-decimal list-inside text-xs space-y-1 text-blue-800">
-              <li>Login with your account credentials</li>
-              <li>After login, this tab will automatically show your communities</li>
-              <li>You can buy shares in any community to add it to this list</li>
-            </ol>
-          </div>
+    <div className="col-span-full p-6 bg-muted/50 rounded-lg border border-amber-200 dark:border-amber-900">
+      <h4 className="font-medium text-amber-800 dark:text-amber-200 mb-2">Debug: My Communities</h4>
+      <p className="text-sm text-amber-700 dark:text-amber-300">
+        Communities count: {communities.length} | Loading: {isLoading ? 'Yes' : 'No'}
+      </p>
+      {communities.length > 0 && (
+        <div className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+          Communities: {communities.map(c => c.name).join(', ')}
         </div>
-      ) : communities.length === 0 ? (
-        <div className="p-5 bg-amber-50 border border-amber-100 rounded-lg mb-4">
-          <div className="text-center mb-4">
-            <h4 className="font-medium text-lg text-amber-800 mb-1">No Communities Yet</h4>
-            <p className="text-amber-700 text-sm">You haven't joined any communities yet</p>
-          </div>
-          
-          <div className="bg-white p-3 rounded-md border border-amber-100 text-sm">
-            <h5 className="font-medium text-amber-800 mb-2">How to join communities:</h5>
-            <ol className="list-decimal list-inside text-xs space-y-1.5 text-amber-700">
-              <li>Browse the <span className="font-medium">Popular</span> or <span className="font-medium">Trending</span> tabs</li>
-              <li>Find a community that interests you</li>
-              <li>Click the <span className="font-medium">Join</span> button to become a member</li>
-              <li>Your joined communities will appear here</li>
-            </ol>
-          </div>
-        </div>
-      ) : null}
+      )}
     </div>
   );
-}
+};
 
 export default CommunitiesPage;

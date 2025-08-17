@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useEditor, EditorContent, Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline'; // Added Underline import
+import HardBreak from '@tiptap/extension-hard-break'; // Import HardBreak
 // import Image from '@tiptap/extension-image'; // Removed Image extension
 // import Placeholder from '@tiptap/extension-placeholder'; 
 import { cn } from '@/lib/utils';
@@ -45,9 +46,18 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         horizontalRule: false,
         bulletList: false,
         orderedList: false,
-        paragraph: {},
+        // paragraph: {}, // Keep paragraph enabled for Shift+Enter (default behavior)
+        hardBreak: false, // Disable StarterKit's default hardBreak to use our custom one below
       }),
       Underline, // Added Underline extension
+      HardBreak.extend({ // Custom HardBreak to make Enter key insert <br>
+        addKeyboardShortcuts() {
+          return {
+            'Enter': () => this.editor.commands.setHardBreak(),
+            // Shift+Enter should still create a new paragraph due to the Paragraph extension from StarterKit
+          };
+        },
+      }),
       // Image.configure({ ... }) // Removed Image extension config
       // Add the mention plugin if options are provided
       ...(mentionPluginOptions ? [getMentionsPlugin({

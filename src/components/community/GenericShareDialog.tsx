@@ -2,8 +2,10 @@ import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { shareToSocialMedia, SharePlatform } from '@/utils/shareUtils';
-import { Copy, Linkedin, Send } from 'lucide-react';
+import { Copy, Linkedin, Send, Share2 } from 'lucide-react';
 import { toast } from "sonner";
+import { useDevice } from '@/components/providers/DeviceProvider';
+import { set as setNativeClipboard } from "webtonative/Clipboard";
 
 // WhatsApp Icon Component (copied from ShareDialog)
 const WhatsAppIcon = () => (
@@ -34,8 +36,43 @@ export const GenericShareDialog = ({
   shareText,
   dialogTitle = "Share this link" // Default dialog title
 }: GenericShareDialogProps) => {
+  const { isMobileApp } = useDevice();
   
   const handleShare = async (platform: SharePlatform) => {
+    // --- Native Mobile App Sharing ---
+    if (isMobileApp === true) {
+      console.log("Detected mobile app, using native sharing methods for generic share");
+      
+      if (platform === 'copy') {
+        console.log("Using native clipboard set for generic share");
+        try {
+          setNativeClipboard({ data: shareUrl });
+          toast.success("Link copied to clipboard!");
+        } catch (error) {
+          console.error("Native clipboard error:", error);
+          toast.error("Could not copy link using native clipboard.");
+        }
+        return;
+      } else if (platform === 'native') {
+        console.log("Using native share API for generic share");
+        try {
+          const shareMessage = shareText ? `${shareText} ${shareUrl}` : `${shareTitle} ${shareUrl}`;
+          await navigator.share({
+            text: shareMessage,
+          });
+          toast.success("Shared using native sharing!");
+        } catch (error) {
+          console.error("Native share error:", error);
+          if (error.name !== 'AbortError') {
+            toast.error("Could not share using native sharing.");
+          }
+        }
+        return;
+      }
+    }
+    // --- End Native Mobile App Handling ---
+    
+    // Default web share logic
     const success = await shareToSocialMedia(platform, { 
       url: shareUrl, 
       title: shareTitle, 
@@ -60,7 +97,13 @@ export const GenericShareDialog = ({
         <DialogHeader>
           <DialogTitle>{dialogTitle}</DialogTitle>
         </DialogHeader>
-        <div className="grid grid-cols-2 gap-4 py-4">
+        <div className={`grid gap-4 py-4 ${isMobileApp && navigator.share ? 'grid-cols-3' : 'grid-cols-2'}`}>
+          {(isMobileApp && navigator.share) && (
+            <Button variant="outline" className="flex gap-2" onClick={() => handleShare('native')}>
+              <Share2 className="h-4 w-4" />
+              Share
+            </Button>
+          )}
           <Button variant="twitter" className="flex gap-2" onClick={() => handleShare('twitter')}>
             <XLogoIcon />
             X
@@ -77,7 +120,7 @@ export const GenericShareDialog = ({
             <Send className="h-4 w-4" />
             Telegram
           </Button>
-          <Button variant="outline" className="flex gap-2 col-span-2" onClick={() => handleShare('copy')}>
+          <Button variant="outline" className={`flex gap-2 ${isMobileApp && navigator.share ? 'col-span-3' : 'col-span-2'}`} onClick={() => handleShare('copy')}>
             <Copy className="h-4 w-4" />
             Copy Link
           </Button>

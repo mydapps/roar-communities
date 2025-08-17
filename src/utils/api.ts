@@ -5,3 +5,4 @@ export * from './postApi';
 export * from './communityApi';
 export * from './commentApi';
 export * from './referralApi';
+export * from './leaderboardApi';

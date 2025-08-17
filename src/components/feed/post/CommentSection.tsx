@@ -21,6 +21,35 @@ interface CommentItemProps {
 }
 
 const CommentItem: React.FC<CommentItemProps> = ({ user, text, timeAgo, avatarUrl }) => {
+  // Regex to find markdown image links like ![alt](url) and capture alt text and URL
+  // alt: match[1], url: match[2]
+  const imageRegex = /!\[(.*?)\]\(([^)]+)\)/g;
+  const processedParts: Array<{ type: 'text'; content: string } | { type: 'image'; url: string; alt: string }> = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = imageRegex.exec(text)) !== null) {
+    // Add text before the image
+    if (match.index > lastIndex) {
+      processedParts.push({ type: 'text', content: text.substring(lastIndex, match.index) });
+    }
+    // Add the image
+    // match[1] is alt text, match[2] is URL
+    processedParts.push({ type: 'image', url: match[2], alt: match[1] });
+    lastIndex = imageRegex.lastIndex; // Update lastIndex to the end of the current match
+  }
+
+  // Add any remaining text after the last image
+  if (lastIndex < text.length) {
+    processedParts.push({ type: 'text', content: text.substring(lastIndex) });
+  }
+
+  // If no images were found and the original text is not empty,
+  // treat the whole text as a single text part.
+  if (processedParts.length === 0 && text && text.length > 0) {
+    processedParts.push({ type: 'text', content: text });
+  }
+
   return (
     <div className="flex gap-3 py-3">
       <Avatar className="h-8 w-8 shrink-0">
@@ -32,7 +61,23 @@ const CommentItem: React.FC<CommentItemProps> = ({ user, text, timeAgo, avatarUr
           <span className="font-medium text-sm">{user}</span>
           <span className="text-xs text-muted-foreground">{timeAgo}</span>
         </div>
-        <p className="text-sm mt-1">{text}</p>
+        <div className="text-sm mt-1 whitespace-pre-wrap break-words">
+          {processedParts.map((part, index) => {
+            if (part.type === 'image') {
+              return (
+                <img
+                  key={index}
+                  src={part.url}
+                  alt={part.alt || "Comment image"} // Use captured alt text or a default
+                  className="max-h-32 rounded-md my-1 object-contain"
+                  onError={(e) => (e.currentTarget.style.display = 'none')} // Hide if image fails to load
+                />
+              );
+            }
+            // part.type === 'text'
+            return <span key={index}>{part.content}</span>;
+          })}
+        </div>
       </div>
     </div>
   );

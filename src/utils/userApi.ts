@@ -1,4 +1,5 @@
 import { createAuthHeaders } from './apiBase';
+import { PollData } from './postApi';
 
 // User profile interface
 export interface UserCommunity {
@@ -25,6 +26,8 @@ export interface UserProfile {
   location?: string;
   link?: string;
   answer?: string;
+  about?: string;
+  dob?: string;
   profile_updated_at?: string;
   wallet_address?: string;
   is_following?: boolean;
@@ -109,6 +112,8 @@ export interface UpdateProfileParams {
   location?: string;
   link?: string;
   answer?: string;
+  about?: string;
+  dob?: string;
   avatar_code?: string;
 }
 
@@ -217,6 +222,9 @@ export interface UserPost {
   original_multiple_images?: number;
   original_images?: string[];
   original_has_video?: number;
+  // Poll-related fields
+  is_poll?: boolean;
+  poll_data?: PollData | null;
 }
 
 export interface UserPostsResponse {
@@ -254,6 +262,7 @@ export const getUserPosts = async (
     const data = await response.json();
     
     // Process the response to ensure mirror-related fields are properly formatted
+    // AND to map poll data if available
     if (data.success && data.posts) {
       data.posts = data.posts.map((post: any) => {
         return {
@@ -266,6 +275,10 @@ export const getUserPosts = async (
           original_image: typeof post.original_image === 'boolean' ? (post.original_image ? 1 : 0) : post.original_image,
           original_multiple_images: typeof post.original_multiple_images === 'boolean' ? (post.original_multiple_images ? 1 : 0) : post.original_multiple_images,
           original_has_video: typeof post.original_has_video === 'boolean' ? (post.original_has_video ? 1 : 0) : post.original_has_video,
+          
+          // Explicitly map poll data
+          is_poll: post.is_poll || post.isPoll || false, // Check for is_poll or isPoll, default to false
+          poll_data: post.poll_data || post.pollData || null // Check for poll_data or pollData, default to null
         };
       });
     }
@@ -365,4 +378,62 @@ export const getUserReplies = async (
     console.error('Error fetching user replies:', error);
     throw error;
   }
+}; 
+
+export interface FollowUser {
+    id: number;
+    handle: string;
+    avatar_url: string;
+    name: string;
+    follows_back: boolean;
+}
+
+export interface PaginatedFollowResponse {
+    success: boolean;
+    data: FollowUser[];
+    pagination: {
+        currentPage: number;
+        totalPages: number;
+        perPage: number;
+        totalResults: number;
+    };
+    message?: string;
+}
+
+export const getFollowers = async (handle: string, page = 1, limit = 20): Promise<PaginatedFollowResponse> => {
+    try {
+        const headers = createAuthHeaders();
+        const response = await fetch(`/api/${handle}/followers?page=${page}&limit=${limit}`, {
+            method: 'GET',
+            headers,
+            credentials: 'include',
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to fetch followers');
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching followers:', error);
+        throw error;
+    }
+};
+
+export const getFollowing = async (handle: string, page = 1, limit = 20): Promise<PaginatedFollowResponse> => {
+    try {
+        const headers = createAuthHeaders();
+        const response = await fetch(`/api/${handle}/following?page=${page}&limit=${limit}`, {
+            method: 'GET',
+            headers,
+            credentials: 'include',
+        });
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to fetch following');
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching following:', error);
+        throw error;
+    }
 }; 

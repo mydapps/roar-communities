@@ -16,6 +16,7 @@ export interface CommentReply {
   meow_count: number;
   has_meowed: boolean;
   sub_replies?: CommentReply[];
+  is_system_message?: boolean; // For tip system messages
 }
 
 /**

@@ -2,12 +2,16 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { CardContent } from '@/components/ui/card';
 import { MediaCarousel } from './MediaCarousel';
 import { MirrorPostContent } from './MirrorPostContent';
-import { sanitizeHtml } from '@/utils/sanitizeHtml';
 import { LinkPreviewCard, LinkPreviewData } from './LinkPreviewCard';
 import { YoutubeEmbed } from './YoutubeEmbed';
 import { Loader2 } from 'lucide-react';
+import { processRichTextForDisplayingPosts } from '@/utils/textFormatting';
 // Link component is not used if we are generating <a> tags directly in the string.
 // import { Link } from 'react-router-dom'; 
+
+// Import PollDisplay and PollData
+import { PollDisplay } from '@/components/polls/PollDisplay';
+import { PollData } from '@/utils/postApi';
 
 interface PostContentProps {
   content: string;
@@ -21,10 +25,17 @@ interface PostContentProps {
     originalAvatar: string;
     originalImages?: string[];
     originalTitle?: string;
+    originalPostCode?: string;
   };
   hasMedia: boolean;
   allMedia?: { type: 'image' | 'video', url: string }[];
   onImageClick: (imageSrc: string) => void;
+
+  // New props for polls
+  is_poll?: boolean;
+  poll_data?: PollData | null;
+  postCode?: string; // Required by PollDisplay
+  onVoteOnPoll?: (optionId: number) => Promise<void>; // Required by PollDisplay
 }
 
 export const PostContent: React.FC<PostContentProps> = ({
@@ -33,13 +44,30 @@ export const PostContent: React.FC<PostContentProps> = ({
   mirrorData,
   hasMedia,
   allMedia,
-  onImageClick
+  onImageClick,
+  // Destructure new props
+  is_poll = false,
+  poll_data = null,
+  postCode,
+  onVoteOnPoll,
 }) => {
-  const initialSanitizedContent = sanitizeHtml(content);
-  let finalHtml = '';
-  let lastIndex = 0;
+  // If it's a poll, render PollDisplay and return early.
+  // The poll question itself comes from the main `content` prop.
+  if (is_poll && poll_data && postCode && onVoteOnPoll) {
+    return (
+      <CardContent className="pb-3">
+        <PollDisplay 
+          pollQuestion={content} 
+          pollData={poll_data}
+          postCode={postCode}
+          onVote={onVoteOnPoll}
+          className="my-0"
+        />
+      </CardContent>
+    );
+  }
 
-  // --- STATE FOR URL PREVIEW/EMBED ---
+  // --- STATE FOR URL PREVIEW/EMBED (for non-mirrored content or mirror quote) ---
   const [firstUrl, setFirstUrl] = useState<string | null>(null);
   const [previewData, setPreviewData] = useState<LinkPreviewData | null>(null);
   const [youtubeVideoId, setYoutubeVideoId] = useState<string | null>(null);
@@ -47,37 +75,34 @@ export const PostContent: React.FC<PostContentProps> = ({
   const [previewError, setPreviewError] = useState<string | null>(null);
   // --- END STATE ---
 
-  // Effect to find the first URL in the content
+  const contentToProcess = content; // Use the main content prop
+
   useEffect(() => {
-    // Reset states when content changes before finding new URL
     setFirstUrl(null);
     setPreviewData(null);
     setYoutubeVideoId(null);
     setIsLoadingPreview(false);
     setPreviewError(null);
 
-    if (content) { // Use original content to find the URL before sanitization for linkification
+    if (contentToProcess) {
       const urlRegex = /\b(?:https?:\/\/|www\.)[^\s<>()"]*[^\s<>()"\.,!?:;']/i;
-      const match = content.match(urlRegex);
+      const match = contentToProcess.match(urlRegex);
       if (match && match[0]) {
         let detectedUrl = match[0];
-        // If it starts with www. but no scheme, prepend http:// for consistency in processing
         if (detectedUrl.startsWith('www.') && !detectedUrl.startsWith('http')) {
           detectedUrl = 'http://' + detectedUrl;
         }
         setFirstUrl(detectedUrl);
       }
     }
-  }, [content]); // Re-run when raw content changes
+  }, [contentToProcess]);
 
-  // Effect to fetch preview or identify YouTube video
   useEffect(() => {
     if (!firstUrl) {
-      setPreviewData(null); // Clear previous preview if no URL
-      setYoutubeVideoId(null); // Clear previous youtubeId if no URL
+      setPreviewData(null);
+      setYoutubeVideoId(null);
       return;
     }
-
     // 1. Check for YouTube Link (including Shorts)
     const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|embed\/|v\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
     const youtubeMatch = firstUrl.match(youtubeRegex);
@@ -137,105 +162,54 @@ export const PostContent: React.FC<PostContentProps> = ({
 
   }, [firstUrl]); // Re-run when firstUrl changes
 
-  // Regex to find: 
-  // 1. URLs (absolute with http/https or starting with www)
-  // 2. User mentions (@username or @username.suffix) NOT preceded by URL-like characters or within an email-like structure.
-  // 3. Community mentions (/c/communityname) NOT preceded by URL-like characters.
-  // 4. Email addresses
-  const MENTION_OR_URL_REGEX = new RegExp(
-    '(\\b(?:https?:\/\/|www\\.)[^\\s<>()\"]*[^\\s<>()\"\\.,!?:;\'])' + // Group 1: Full URL (improved, includes www, excludes trailing punctuation, handles parentheses better)
-    '|(?<![\\w\\/@\\.])(@([a-zA-Z0-9_\\-]+(?:\\.[a-zA-Z0-9_\\-]+)*))' + // Group 2 for full @mention, Group 3 for username part
-    '|(?<![\\w\\/])(\\/c\\/([a-zA-Z0-9_\\-]+))' + // Group 4 for full /c/mention, Group 5 for community name part
-    '|(\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b)', // Group 6: Email addresses
-    'g'
-  );
-  
-  // Using replace with a function to build the new string with segments
-  initialSanitizedContent.replace(MENTION_OR_URL_REGEX, (match, 
-    url, // Group 1
-    userMentionFull, // Group 2
-    _userMentionInner, // Group 3 (username part, not directly used here, derived from userMentionFull)
-    communityMentionFull, // Group 4
-    _communityMentionInner, // Group 5 (community name part, not directly used here, derived from communityMentionFull)
-    email, // Group 6
-    offset
-  ) => {
-    // Append text before this match
-    finalHtml += initialSanitizedContent.substring(lastIndex, offset);
-
-    if (url) {
-      let linkHref = url;
-      // Prepend http:// if URL starts with www. and doesn't have a scheme
-      if (url.startsWith('www.') && !url.startsWith('http://') && !url.startsWith('https://')) {
-        linkHref = 'http://' + url;
-      }
-
-      // Append loadIn=defaultBrowser parameter
-      if (linkHref.includes('?')) {
-        linkHref += '&loadIn=defaultBrowser';
-      } else {
-        linkHref += '?loadIn=defaultBrowser';
-      }
-      finalHtml += `<a href="${linkHref}" target="_blank" rel="noopener noreferrer ugc" class="text-primary hover:underline">${url}</a>`;
-    } else if (email) {
-      // If it's an email, just append it as is (or mailto: link if desired, but problem statement was about @ in URLs vs mentions)
-      // For now, rendering as plain text to prevent @ in email being a user link.
-      finalHtml += email;
-    } else if (userMentionFull) {
-      const usernameForUrl = userMentionFull.substring(1).split('.')[0]; // Remove '@' and .suffix for URL
-      finalHtml += `<a href="/u/${usernameForUrl}" class="text-primary hover:underline">${userMentionFull}</a>`;
-    } else if (communityMentionFull) {
-      const communityName = communityMentionFull.substring(3); // Remove '/c/'
-      finalHtml += `<a href="/c/${communityName}" class="text-primary hover:underline">${communityMentionFull}</a>`;
-    }
-    
-    lastIndex = offset + match.length;
-    return match; // Necessary for .replace() with a function, but we build finalHtml manually
-  });
-
-  // Append any remaining text after the last match
-  finalHtml += initialSanitizedContent.substring(lastIndex);
+  const processedHtmlBody = processRichTextForDisplayingPosts(contentToProcess);
 
   return (
     <CardContent className="pb-3">
-      {finalHtml && (
+      {/* Render the processed quote (mirror's own body) or regular post body */}
+      {processedHtmlBody && (
         <div 
           className="text-sm mt-2 break-words prose prose-sm max-w-none dark:prose-invert prose-p:my-2 prose-strong:font-semibold prose-em:italic"
-          dangerouslySetInnerHTML={{ __html: finalHtml }}
+          dangerouslySetInnerHTML={{ __html: processedHtmlBody }}
         />
       )}
       
-      {/* URL Preview and YouTube Embed Section */}
-      <div className="mt-3">
-        {isLoadingPreview && (
-          <div className="flex items-center justify-center p-4 border rounded-md bg-muted/30">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-            <span className="ml-2 text-sm text-muted-foreground">Fetching link preview...</span>
-          </div>
-        )}
-        {!isLoadingPreview && youtubeVideoId && (
-          <YoutubeEmbed videoId={youtubeVideoId} />
-        )}
-        {!isLoadingPreview && !youtubeVideoId && previewData && (
-          <LinkPreviewCard preview={previewData} />
-        )}
-        {!isLoadingPreview && !youtubeVideoId && !previewData && previewError && (
-          <div className="text-xs text-muted-foreground p-2 border rounded-md bg-destructive/10">
-            Could not load preview: {previewError.length > 100 ? previewError.substring(0,97) + '...': previewError}
-          </div>
+      {/* URL Preview and YouTube Embed Section for the quote/main content */}
+      {!isMirror && (
+        <div className="mt-3">
+          {isLoadingPreview && (
+            <div className="flex items-center justify-center p-4 border rounded-md bg-muted/30">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              <span className="ml-2 text-sm text-muted-foreground">Fetching link preview...</span>
+            </div>
+          )}
+          {!isLoadingPreview && youtubeVideoId && (
+            <YoutubeEmbed videoId={youtubeVideoId} />
+          )}
+          {!isLoadingPreview && !youtubeVideoId && previewData && (
+            <LinkPreviewCard preview={previewData} />
+          )}
+          {!isLoadingPreview && !youtubeVideoId && !previewData && previewError && (
+            <div className="text-xs text-red-500 p-2 border border-red-200 rounded-md bg-red-50">
+              Preview Error: {previewError}
+            </div>
+          )}
+        </div>
       )}
-      </div>
       
+      {/* Render the actual mirrored post content (original author, body, media etc.) */}
       {isMirror && mirrorData && (
         <MirrorPostContent 
           mirrorData={{
             ...mirrorData,
-            originalImages: mirrorData.originalImages || []
+            originalImages: mirrorData.originalImages || [], // Ensure originalImages is an array
+            originalBody: mirrorData.originalBody || '' // Ensure originalBody is a string
           }} 
           onImageClick={onImageClick}
         />
       )}
       
+      {/* Media Carousel for non-mirrored posts (mirrored post media is handled by MirrorPostContent) */}
       {!isMirror && hasMedia && allMedia && (
         <div className="mt-3">
           <MediaCarousel 

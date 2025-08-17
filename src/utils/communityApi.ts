@@ -1,5 +1,7 @@
 import { toast } from 'sonner';
 import { createAuthHeaders, validateAuthentication } from './apiBase';
+import { FlagType } from './postApi'; // Import FlagType if needed, or redefine if specific structure
+import axios from 'axios';
 
 /**
  * Interface for community data
@@ -599,7 +601,9 @@ export const sellSharesConfirm = async (communityName: string, shareQuantity: nu
 
 // Development-only logging helper
 const debugLog = (message: string, ...args: any[]) => {
-  // Removed console.log
+  if (import.meta.env.DEV) { // Only log in development
+    console.log(`[CommunityAPI] ${message}`, ...args);
+  }
 };
 
 // Add a wallet balance cache variable at the top of the file
@@ -1404,7 +1408,7 @@ export interface MutedUsersApiResponse {
 // --- Interface for Mute/Unmute API Response ---
 export interface MuteActionResponse {
   success: boolean;
-  message: string;
+  message?: string;
 }
 
 
@@ -1783,5 +1787,223 @@ export const withdrawAdminFees = async (communityName: string): Promise<AdminFee
       success: false,
       message: error.message || "Failed to withdraw admin fees"
     };
+  }
+};
+
+/**
+ * Interface for a single transaction item
+ */
+export interface Transaction {
+  id: number;
+  type_code: string;
+  type_description: string;
+  name: string;
+  txn_hash: string | null;
+  amount: number;
+  created_on: string; // ISO 8601 format
+  status: string;
+}
+
+/**
+ * Interface for the pagination part of the transactions response
+ */
+export interface TransactionPagination {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+/**
+ * Interface for the full /api/transactions response
+ */
+export interface TransactionsResponse {
+  success: boolean;
+  transactions: Transaction[];
+  pagination: TransactionPagination;
+  message?: string; // Optional error message
+}
+
+/**
+ * Fetches the user's transaction history with pagination.
+ * @param page - The page number to fetch (default: 1).
+ * @param limit - The number of transactions per page (default: 20).
+ * @returns Promise resolving to TransactionsResponse or null on error.
+ */
+export const getTransactions = async (
+  page: number = 1,
+  limit: number = 20
+): Promise<TransactionsResponse | null> => {
+  console.log(`API Call: Fetching transactions - Page: ${page}, Limit: ${limit}`);
+  try {
+    const headers = createAuthHeaders(); // Get headers with auth if needed
+    const response = await fetch(`/api/transactions?page=${page}&limit=${limit}`, {
+      method: 'GET',
+      headers: headers,
+      credentials: 'include',
+    });
+
+    const responseData: TransactionsResponse = await response.json();
+    console.log('API Response (getTransactions):', responseData);
+
+    if (!response.ok || !responseData.success) {
+      const errorMessage = responseData?.message || `HTTP error! status: ${response.status}`;
+      console.error("Fetch Transactions API Error:", errorMessage, responseData);
+      toast.error(errorMessage || 'Failed to fetch transaction history.');
+      return null; // Return null to indicate failure
+    }
+
+    return responseData; // Return the successful response data
+
+  } catch (error) {
+    console.error('Network or other error fetching transactions:', error);
+    let message = 'An unknown error occurred while fetching transactions.';
+    if (error instanceof Error) {
+      message = error.message;
+    }
+    toast.error(message);
+    return null; // Return null to indicate failure
+  }
+};
+
+/**
+ * Interface for the hide post and warn API response
+ */
+export interface HideWarnResponse {
+  success: boolean;
+  message: string;
+  error?: string;
+}
+
+/**
+ * Hides a post and optionally warns the user (Admin Action).
+ * @param communityName - The name or handle of the community.
+ * @param postCode - The unique code of the post to hide.
+ * @param flagTypeId - The ID of the reason for hiding (from /api/flag_types).
+ * @param warningDetails - Optional text details for the warning.
+ * @returns Promise resolving to HideWarnResponse.
+ */
+export const hidePostAndWarn = async (
+  communityName: string,
+  postCode: string,
+  flagTypeId: number,
+  warningDetails?: string
+): Promise<HideWarnResponse> => {
+  console.log(`API Call: Admin hiding post ${postCode} in community ${communityName}`);
+  try {
+    // Ensure authentication (uses validateAuthentication which checks cookies)
+    if (!(await validateAuthentication())) {
+      return { success: false, message: "Authentication required.", error: "Not authenticated" };
+    }
+
+    const headers = createAuthHeaders(); // Get headers with content-type and auth
+    const url = `/api/communities/${encodeURIComponent(communityName)}/admin/posts/${encodeURIComponent(postCode)}/hide-warn`;
+    
+    const payload: { flagTypeId: number; warningDetails?: string } = { flagTypeId };
+    if (warningDetails && warningDetails.trim() !== '') {
+      payload.warningDetails = warningDetails.trim();
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: headers,
+      credentials: 'include', 
+      body: JSON.stringify(payload),
+    });
+
+    const responseData: HideWarnResponse = await response.json();
+    console.log('API Response (hidePostAndWarn):', responseData);
+
+    if (!response.ok || !responseData.success) {
+      const errorMessage = responseData?.message || `HTTP error! status: ${response.status}`;
+      console.error("Hide Post & Warn API Error:", errorMessage, responseData);
+      // Return the structured error from the API
+      return { 
+        success: false, 
+        message: errorMessage, 
+        error: responseData?.error || errorMessage 
+      };
+    }
+
+    return responseData; // Return the successful response data
+
+  } catch (error) {
+    console.error('Network or other error hiding post and warning:', error);
+    let message = 'An unknown error occurred while hiding the post.';
+    if (error instanceof Error) {
+      message = error.message;
+    }
+    return { success: false, message: message, error: message };
+  }
+};
+
+// Interface for warning details data
+export interface WarningDetailsData {
+  warning_details: string | null;
+  post_body: string;
+  warning_count: number;
+  flag_type_name: string;
+  flag_type_description: string;
+}
+
+// Interface for the warning details API response
+export interface WarningDetailsResponse {
+  success: boolean;
+  data?: WarningDetailsData;
+  message?: string;
+}
+
+/**
+ * Fetches details for a specific post warning.
+ */
+export const getWarningDetails = async (communityName: string, postCode: string): Promise<WarningDetailsResponse> => {
+  try {
+    debugLog(`Fetching warning details for post ${postCode} in community ${communityName}`);
+    
+    // Ensure authentication
+    if (!(await validateAuthentication())) {
+      toast.error("Authentication required to view warning details.");
+      return { success: false, message: "Authentication required." };
+    }
+
+    const headers = createAuthHeaders(false); // Create headers, no Content-Type needed for GET
+    const apiUrl = `/api/communities/${encodeURIComponent(communityName)}/warning/${encodeURIComponent(postCode)}/details`;
+
+    const response = await fetch(apiUrl, {
+      method: 'GET',
+      headers: headers,
+      credentials: 'include', // Important for cookie-based auth
+    });
+
+    let responseData: WarningDetailsResponse;
+    try {
+      responseData = await response.json();
+    } catch (parseError) {
+      console.error(`Error parsing JSON response from ${apiUrl}:`, parseError);
+      // If parsing fails, but we got a non-OK http status, prioritize that.
+      if (!response.ok) {
+        return { success: false, message: `Server error: ${response.status} ${response.statusText}` };
+      }
+      return { success: false, message: 'Failed to parse server response.' };
+    }
+    
+    debugLog(`Warning details response for ${postCode}:`, responseData);
+
+    if (response.ok && responseData.success) {
+      return responseData;
+    } else {
+      // Use message from API if available, otherwise construct one
+      const errorMessage = responseData?.message || `Failed to fetch warning details. Status: ${response.status}`;
+      console.error(`API error from ${apiUrl}:`, errorMessage, responseData);
+      return { success: false, message: errorMessage };
+    }
+  } catch (error) {
+    console.error(`Network or other error fetching warning details for post ${postCode}:`, error);
+    let message = 'An unexpected network error occurred while fetching warning details.';
+    if (error instanceof Error) {
+      message = error.message; // Keep original error message if it's an Error instance
+    }
+    // It's good to return a structured response even for catch-all errors
+    return { success: false, message: message };
   }
 };

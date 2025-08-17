@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Send, X, ImageIcon, VideoIcon, Loader2, AtSign, Hash } from 'lucide-react';
+import { Send, X, ImageIcon, VideoIcon, Loader2, AtSign, Hash, Smile } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
@@ -9,6 +9,12 @@ import { MediaUpload, MediaPreview, MediaUploadResponse } from '@/components/ui/
 import { MentionSuggestionsList, SuggestionItem } from '@/components/mentions/MentionSuggestionsList';
 import { searchUsers, searchCommunities, SearchUserItem, SearchCommunityItem } from '@/utils/searchApi';
 import { debounce } from 'lodash';
+import EmojiPicker, { EmojiClickData, EmojiStyle, Categories } from 'emoji-picker-react';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface MobileCommentInputProps {
   postCode: string;
@@ -22,6 +28,10 @@ interface MobileCommentInputProps {
   };
   onSubmit: (content: string, parentId?: number) => Promise<void>;
   onCancel?: () => void;
+}
+
+export interface MobileCommentInputRef {
+  triggerExpand: () => void;
 }
 
 // Helper to get cursor position and text before it
@@ -78,13 +88,46 @@ const getTriggerInfo = (textarea: HTMLTextAreaElement): { trigger: '@' | '/c/' |
   return { trigger, query, startPos: triggerPos };
 };
 
-export const MobileCommentInput: React.FC<MobileCommentInputProps> = ({
+const customEmojisConfig = [
+  { id: 'angry', names: ['angry'], imgUrl: '/emojis/angry.png' },
+  { id: 'bitcoin', names: ['bitcoin'], imgUrl: '/emojis/bitcoin.png' },
+  { id: 'cool', names: ['cool'], imgUrl: '/emojis/cool.png' },
+  { id: 'ethereum', names: ['ethereum'], imgUrl: '/emojis/ethereum.png' },
+  { id: 'happy', names: ['happy'], imgUrl: '/emojis/happy.png' },
+  { id: 'mindblown', names: ['mindblown'], imgUrl: '/emojis/mindblown.png' },
+  { id: 'party', names: ['party'], imgUrl: '/emojis/party.png' },
+  { id: 'sad', names: ['sad'], imgUrl: '/emojis/sad.png' },
+  { id: 'scared', names: ['scared'], imgUrl: '/emojis/scared.png' },
+  { id: 'sleepy', names: ['sleepy'], imgUrl: '/emojis/sleepy.png' },
+  { id: 'solana', names: ['solana'], imgUrl: '/emojis/solana.png' },
+  { id: 'thinking', names: ['thinking'], imgUrl: '/emojis/thinking.png' },
+  { id: 'angelic', names: ['angelic'], imgUrl: '/emojis/angelic.png' },
+  { id: 'devilish', names: ['devilish'], imgUrl: '/emojis/devilish.png' },
+  { id: 'inlove', names: ['inlove'], imgUrl: '/emojis/inlove.png' },
+  { id: 'pleading', names: ['pleading'], imgUrl: '/emojis/pleading.png' },
+  { id: 'surprised', names: ['surprised'], imgUrl: '/emojis/surprised.png' },
+];
+
+const emojiPickerCategoryConfig = [
+  { category: Categories.SUGGESTED, name: 'Suggested' },
+  { category: Categories.CUSTOM, name: 'Roar Emojis' },
+  { category: Categories.SMILEYS_PEOPLE, name: 'Smileys & People' },
+  { category: Categories.ANIMALS_NATURE, name: 'Animals & Nature' },
+  { category: Categories.FOOD_DRINK, name: 'Food & Drink' },
+  { category: Categories.TRAVEL_PLACES, name: 'Travel & Places' },
+  { category: Categories.ACTIVITIES, name: 'Activities' },
+  { category: Categories.OBJECTS, name: 'Objects' },
+  { category: Categories.SYMBOLS, name: 'Symbols' },
+  { category: Categories.FLAGS, name: 'Flags' },
+];
+
+export const MobileCommentInput = forwardRef<MobileCommentInputRef, MobileCommentInputProps>(({
   postCode,
   isReplyMode = false,
   replyToComment,
   onSubmit,
   onCancel
-}) => {
+}, ref) => {
   const [isExpanded, setIsExpanded] = useState(isReplyMode);
   const [content, setContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -101,6 +144,7 @@ export const MobileCommentInput: React.FC<MobileCommentInputProps> = ({
   const [showSuggestions, setShowSuggestions] = useState<boolean>(false);
   const [mentionLoading, setMentionLoading] = useState<boolean>(false);
   const [activeTriggerPos, setActiveTriggerPos] = useState<number | null>(null);
+  const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
   // --- End Mention State ---
 
   // Get user info from localStorage
@@ -324,6 +368,45 @@ export const MobileCommentInput: React.FC<MobileCommentInputProps> = ({
       : text;
   };
 
+  const onEmojiClick = (emojiData: EmojiClickData) => {
+    if (inputRef.current) {
+      const textarea = inputRef.current;
+      const { selectionStart, selectionEnd } = textarea;
+      const text = textarea.value;
+
+      let emojiToInsert = '';
+      if (emojiData.isCustom) {
+        // For custom emojis, use the :id: format with spaces, emojiData.emoji contains the id for custom ones
+        emojiToInsert = ` :${emojiData.emoji}: `; 
+      } else {
+        // For standard emojis, use the emoji character itself
+        emojiToInsert = emojiData.emoji;
+      }
+
+      const newText =
+        text.substring(0, selectionStart) +
+        emojiToInsert +
+        text.substring(selectionEnd);
+      setContent(newText);
+
+      // Move cursor to after the inserted emoji
+      const newCursorPosition = selectionStart + emojiToInsert.length;
+      setTimeout(() => {
+        if (textarea) {
+          textarea.focus();
+          textarea.setSelectionRange(newCursorPosition, newCursorPosition);
+        }
+      }, 0);
+      setIsEmojiPickerOpen(false); // Close the picker
+    }
+  };
+
+  useImperativeHandle(ref, () => ({
+    triggerExpand: () => {
+      setIsExpanded(true);
+    }
+  }));
+
   return (
     <div 
       className={cn(
@@ -391,29 +474,47 @@ export const MobileCommentInput: React.FC<MobileCommentInputProps> = ({
           {/* Media Upload Area (only when expanded) */}
           {isExpanded && (
             <div className="flex justify-between items-center mt-2">
-                <div className="flex gap-1">
+                <div className="flex items-center gap-1">
               {!uploadedMedia && (
                         <>
                   <MediaUpload
                     onMediaUploaded={handleMediaUploaded}
                     acceptedTypes="image"
-                    maxFiles={1}
+                    disabled={!!uploadedMedia || isSubmitting}
                   >
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" type="button">
-                                <ImageIcon className="h-4 w-4" />
+                            <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700 disabled:opacity-50 w-9 h-9 p-0" disabled={!!uploadedMedia || isSubmitting} title="Upload Image">
+                                <ImageIcon className="h-5 w-5" />
                     </Button>
                   </MediaUpload>
                   <MediaUpload
                     onMediaUploaded={handleMediaUploaded}
                     acceptedTypes="video"
-                    maxFiles={1}
+                    disabled={!!uploadedMedia || isSubmitting}
                   >
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" type="button">
-                                <VideoIcon className="h-4 w-4" />
+                            <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700 disabled:opacity-50 w-9 h-9 p-0" disabled={!!uploadedMedia || isSubmitting} title="Upload Video">
+                                <VideoIcon className="h-5 w-5" />
                     </Button>
                   </MediaUpload>
                         </>
                     )}
+                  {/* Emoji Picker Popover - Moved outside the !uploadedMedia condition */}
+                  <Popover open={isEmojiPickerOpen} onOpenChange={setIsEmojiPickerOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700 disabled:opacity-50 w-9 h-9 p-0" disabled={isSubmitting} title="Add Emoji">
+                        <Smile className="h-5 w-5" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 border-0" side="top" align="end">
+                      <EmojiPicker
+                        onEmojiClick={onEmojiClick}
+                        autoFocusSearch={false}
+                        emojiStyle={EmojiStyle.NATIVE}
+                        height={300} 
+                        customEmojis={customEmojisConfig}
+                        categories={emojiPickerCategoryConfig}
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <Button 
                   onClick={handleSubmit} 
@@ -436,4 +537,4 @@ export const MobileCommentInput: React.FC<MobileCommentInputProps> = ({
       </div>
     </div>
   );
-};
+});

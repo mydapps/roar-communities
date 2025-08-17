@@ -58,10 +58,17 @@ export const MobileReplyDrawer: React.FC<MobileReplyDrawerProps> = ({
     }
   };
 
-  const getAvatarUrl = (avatarPath: string) => {
+  const getAvatarUrl = (avatarPath: string | null | undefined) => {
+    // Handle null, undefined, or empty values
+    if (!avatarPath || avatarPath === 'null' || avatarPath === 'undefined') {
+      return `https://img.dapps.co/avatar/default.svg`;
+    }
+    
+    // Check if it's already a full URL
     if (avatarPath.includes('https://img.dapps.co/avatar/')) {
       return avatarPath;
     }
+    
     return `https://img.dapps.co/avatar/${avatarPath}.svg`;
   };
 

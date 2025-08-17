@@ -9,12 +9,22 @@ import { toggleRoar, fetchPosts, setupMirrorListener } from '@/utils/api';
 import { NotInCommunitySheet } from '@/components/community/NotInCommunitySheet';
 import { usePreventZoom } from '@/hooks/usePreventZoom';
 import { ProfileSuggestionModule } from '@/components/suggestions/ProfileSuggestionModule';
+import NotificationPermissionModal from '@/components/notifications/NotificationPermissionModal';
+import { useDeviceNotifications } from '@/hooks/useDeviceNotifications';
+import { useNavigate } from 'react-router-dom';
+import { useUsernameCheck } from '@/hooks/useUsernameCheck';
+import { cn } from '@/lib/utils';
 
 const SUGGESTION_INTERVAL = 7;
 const MIN_POSTS_BEFORE_SUGGESTION = 3;
+const POSTS_PER_PAGE = 10;
 
 const FeedPage = () => {
   usePreventZoom();
+  const navigate = useNavigate();
+  
+  // Check if username is set, redirect to avatar-handle if not
+  useUsernameCheck();
 
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,37 +39,72 @@ const FeedPage = () => {
   const [notInCommunitySheetOpen, setNotInCommunitySheetOpen] = useState(false);
   const [communityName, setCommunityName] = useState("");
   const [showProfileSuggestionModule, setShowProfileSuggestionModule] = useState(true);
+  const requestInFlight = useRef(false);
   
-  const loadPosts = useCallback(async (pageNum: number, replace = false) => {
+  // Notification modal state
+  const { isMobileApp, isRegistered, isEnabled } = useDeviceNotifications();
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
+  
+  const loadPosts = useCallback(async (pageNum: number, replacePosts = false) => {
+    if (requestInFlight.current && !replacePosts) {
+      console.log('[FeedPage] loadPosts bailed: request already in flight and not a replace operation.');
+      return;
+    }
+
+    console.log(`[FeedPage] loadPosts called: pageNum=${pageNum}, replacePosts=${replacePosts}`);
+    requestInFlight.current = true;
+    setLoading(true);
+    setError(null);
+
     try {
       const fetchedPosts = await fetchPosts({ 
         page: pageNum,
+        limit: POSTS_PER_PAGE,
         personal: activeTab === "personal",
         trending: activeTab === "trending",
         global: activeTab === "global"
       });
+      console.log(`[FeedPage] Fetched ${fetchedPosts.length} posts for page ${pageNum}.`);
       
-      if (replace) {
-        setPosts(fetchedPosts);
-      } else {
-        setPosts(prev => [...prev, ...fetchedPosts]);
-      }
+      setPosts(prevPosts => {
+        if (replacePosts) {
+          console.log('[FeedPage] Replacing posts.');
+          return fetchedPosts;
+        } else {
+          const existingCodes = new Set(prevPosts.map(p => p.code));
+          const newUniquePosts = fetchedPosts.filter(p => !existingCodes.has(p.code));
+          if (newUniquePosts.length === 0 && fetchedPosts.length > 0) {
+              console.log('[FeedPage] Fetched posts were all duplicates or already present.');
+          }
+          console.log(`[FeedPage] Appending ${newUniquePosts.length} new unique posts to ${prevPosts.length} existing ones.`);
+          return [...prevPosts, ...newUniquePosts];
+        }
+      });
       
-      setHasMore(fetchedPosts.length > 0);
+      const newHasMore = fetchedPosts.length === POSTS_PER_PAGE;
+      console.log(`[FeedPage] Setting hasMore to: ${newHasMore}`);
+      setHasMore(newHasMore);
+
     } catch (err) {
-      console.error('Error loading posts:', err);
+      console.error('[FeedPage] Error loading posts:', err);
       setError('Failed to load posts. Please try again.');
+      setHasMore(false);
     } finally {
+      requestInFlight.current = false;
       setLoading(false);
+      console.log('[FeedPage] loadPosts finished.');
     }
-  }, [activeTab]);
+  }, [activeTab, setPosts, setLoading, setError, setHasMore]);
   
   useEffect(() => {
-    setLoading(true);
-    setPage(1);
-    setShowProfileSuggestionModule(true);
-    loadPosts(1, true);
-  }, [loadPosts, refreshKey, activeTab]);
+    console.log(`[FeedPage] useEffect for page/tab/refreshKey change: page=${page}, activeTab=${activeTab}, refreshKey=${refreshKey}`);
+    if (page === 1) {
+      setShowProfileSuggestionModule(true);
+      loadPosts(1, true);
+    } else {
+      loadPosts(page, false);
+    }
+  }, [page, activeTab, refreshKey, loadPosts]);
   
   useEffect(() => {
     const handleScroll = () => {
@@ -78,6 +123,59 @@ const FeedPage = () => {
     return cleanup;
   }, []);
   
+  // Check if we should show the notification permission modal
+  useEffect(() => {
+    // Simple check - wait for posts to load then check conditions
+    if (loading) return;
+    
+    // Only for mobile app users  
+    if (!isMobileApp) {
+      console.log('[FeedPage] Not mobile app, skipping notification modal');
+      return;
+    }
+    
+    // Check if user has been prompted before
+    const hasBeenPrompted = localStorage.getItem('dapps_notification_prompted') === 'true';
+    if (hasBeenPrompted) {
+      console.log('[FeedPage] User already prompted for notifications, skipping modal');
+      return;
+    }
+    
+    // Don't show if already registered and enabled (but only if we're sure)
+    if (isRegistered && isEnabled) {
+      console.log('[FeedPage] User already has notifications enabled, skipping modal');
+      return;
+    }
+    
+    console.log('[FeedPage] Conditions met, showing notification modal in 2 seconds');
+    console.log('[FeedPage] isMobileApp:', isMobileApp);
+    console.log('[FeedPage] isRegistered:', isRegistered); 
+    console.log('[FeedPage] isEnabled:', isEnabled);
+    console.log('[FeedPage] hasBeenPrompted:', hasBeenPrompted);
+    
+    // Show modal after a delay
+    const timer = setTimeout(() => {
+      console.log('[FeedPage] Showing notification permission modal');
+      setShowNotificationModal(true);
+    }, 2000);
+    
+    return () => clearTimeout(timer);
+  }, [isMobileApp, isRegistered, isEnabled, loading]);
+  
+  // Add event listener for mobile feed refresh
+  useEffect(() => {
+    const handleFeedRefresh = () => {
+      console.log('[FeedPage] Feed refresh triggered from mobile navigation');
+      handleRefresh();
+    };
+
+    window.addEventListener('feedRefresh', handleFeedRefresh);
+    
+    return () => {
+      window.removeEventListener('feedRefresh', handleFeedRefresh);
+    };
+  }, []);
+  
   useEffect(() => {
     if (observerRef.current) {
       observerRef.current.disconnect();
@@ -86,8 +184,8 @@ const FeedPage = () => {
     const handleObserver = (entries: IntersectionObserverEntry[]) => {
       const [entry] = entries;
       if (entry?.isIntersecting && hasMore && !loading) {
+        console.log('[FeedPage] Observer triggered: preparing to load next page.');
         setPage(prev => prev + 1);
-        loadPosts(page + 1);
       }
     };
     
@@ -106,7 +204,7 @@ const FeedPage = () => {
         observerRef.current.disconnect();
       }
     };
-  }, [hasMore, loading, page, loadPosts]);
+  }, [hasMore, loading]);
   
   const handleRefresh = () => {
     setPage(1);
@@ -153,12 +251,39 @@ const FeedPage = () => {
   };
   
   const handleTabChange = (value: string) => {
+    console.log(`[FeedPage] Tab changing from ${activeTab} to ${value}`);
     setActiveTab(value);
     setError(null);
+    
+    // Reset posts and pagination when switching tabs to ensure fresh data
+    setPosts([]);
+    setPage(1);
+    setHasMore(true);
+    
+    // Force a refresh to get fresh data from API
+    setRefreshKey(prev => prev + 1);
   };
   
+  const handleDismissSuggestionModule = useCallback(() => {
+    setShowProfileSuggestionModule(false);
+    console.log('[FeedPage] ProfileSuggestionModule dismissed by user.');
+  }, []);
+
   return (
-    <div className="max-w-2xl mx-auto pt-8 pb-20 px-4">
+    <div className={cn(
+      // Responsive feed container strategy
+      "mx-auto pt-8 pb-20 px-4",
+      // Mobile: full width with padding
+      "w-full max-w-none",
+      // Tablet: moderate constraint for readability
+      "sm:max-w-2xl",
+      // Desktop: wider but still readable
+      "md:max-w-3xl lg:max-w-4xl",
+      // Large desktop: optimal reading width
+      "xl:max-w-4xl 2xl:max-w-5xl",
+      // Ultra-wide: cap for optimal reading experience
+      "3xl:max-w-[900px]"
+    )}>
       <div className="mb-6">
         <CreatePostCard onPostCreated={handleNewPost} />
       </div>
@@ -219,17 +344,19 @@ const FeedPage = () => {
                 originalBody: post.original_body || '',
                 originalTimeAgo: post.original_created_on || '',
                 originalAvatar: post.original_author_avatar || '',
-                originalImages: post.original_images || [],
-                originalTitle: post.original_title || '',
-                originalPostCode: post.original_post_code || ''
+                originalImages: post.original_images || (post.original_image === 1 ? [post.original_image_url] : []),
+                originalPostCode: post.original_post_code
               } : undefined}
               ipfs={post.ipfs}
+              is_poll={Boolean(post.is_poll)}
+              poll_data={post.poll_data || null}
+              hasUserTipped={post.has_tipped === 1}
             />
               );
 
               console.log(`[FeedPage] Post Index: ${index}, showProfileSuggestionModule: ${showProfileSuggestionModule}, MinMet: ${(index + 1) >= MIN_POSTS_BEFORE_SUGGESTION}, IntervalMet: ${(index + 1) % SUGGESTION_INTERVAL === 0}, InstanceCount: ${suggestionModuleInstanceCount}`);
 
-              let componentsToReturn = [postComponent];
+              const componentsToReturn = [postComponent];
 
               if (
                   showProfileSuggestionModule && 
@@ -242,10 +369,8 @@ const FeedPage = () => {
                   <ProfileSuggestionModule 
                     key={`profile-suggestions-${activeTab}-${refreshKey}-${suggestionModuleInstanceCount}`} 
                     fetchPageNumber={suggestionModuleInstanceCount}
-                    onDismiss={() => {
-                      setShowProfileSuggestionModule(false);
-                    }}
-                    initialLimit={3} 
+                    onDismiss={handleDismissSuggestionModule}
+                    initialLimit={8}
                   />
                 );
               }
@@ -291,6 +416,17 @@ const FeedPage = () => {
         open={notInCommunitySheetOpen}
         onOpenChange={setNotInCommunitySheetOpen}
         communityName={communityName}
+      />
+      
+      <NotificationPermissionModal
+        isOpen={showNotificationModal}
+        onClose={() => {
+          console.log('[FeedPage] Modal onClose called');
+          setShowNotificationModal(false);
+        }}
+        onPermissionGranted={() => {
+          console.log('Notification permission granted!');
+        }}
       />
     </div>
   );

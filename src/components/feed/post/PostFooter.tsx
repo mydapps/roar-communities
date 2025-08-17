@@ -1,13 +1,15 @@
 import React from 'react';
 import { CardFooter } from '@/components/ui/card';
-import { Loader2 } from 'lucide-react';
+import { Loader2, MessageCircle } from 'lucide-react';
 import { RoarButton } from './RoarButton';
 import { MirrorButton } from './MirrorButton';
 import { CommentButton } from './CommentButton';
 import { ShareButton } from './ShareButton';
+import { TipButton } from '@/components/tip/TipButton';
 import { ImageViewer } from './ImageViewer';
 import { useLocation } from 'react-router-dom';
 import { isMobile } from '@/utils/responsive';
+import { Button } from '@/components/ui/button';
 
 interface PostFooterProps {
   localRoared: boolean;
@@ -25,15 +27,28 @@ interface PostFooterProps {
   setShareSheetOpen: (open: boolean) => void;
   community?: string;
   onShareSuccess: (platform: string) => void;
-  imageViewerOpen: boolean;
-  setImageViewerOpen: (open: boolean) => void;
-  selectedImageIndex: number;
+
   children?: React.ReactNode;
   commentCount: number;
   onToggleComments: () => void;
   isLoggedIn?: boolean;
   hideComments?: boolean;
   avatar?: string;
+  onTriggerMobileCommentInput?: () => void;
+
+  // Tipping props
+  tipSheetOpen: boolean;
+  setTipSheetOpen: (open: boolean) => void;
+  tipCount?: number;
+  hasUserTipped?: boolean;
+  onTipSuccess?: (tipData: {
+    senderHandle: string;
+    receiverHandle: string;
+    amount: number;
+    asset: string;
+    usdValue?: number;
+    parentReplyId?: number;
+  }) => void;
 }
 
 export const PostFooter: React.FC<PostFooterProps> = ({
@@ -52,20 +67,39 @@ export const PostFooter: React.FC<PostFooterProps> = ({
   setShareSheetOpen,
   community,
   onShareSuccess,
-  imageViewerOpen,
-  setImageViewerOpen,
-  selectedImageIndex,
+
   children,
   commentCount,
   onToggleComments,
   isLoggedIn,
   hideComments = false,
-  avatar
+  avatar,
+  onTriggerMobileCommentInput,
+
+  // Tipping props
+  tipSheetOpen,
+  setTipSheetOpen,
+  tipCount = 0,
+  hasUserTipped = false,
+  onTipSuccess
 }) => {
   const location = useLocation();
   
   // Check if this is a detailed post page
-  const isDetailedPostPage = location.pathname.includes('/post/');
+  const isDetailedPostPage = location.pathname.includes('/post/') || 
+                            location.pathname.match(/^\/c\/[^\/]+\/[^\/]+$/) || 
+                            (location.pathname.match(/^\/[^\/]+\/[^\/]+$/) && !location.pathname.startsWith('/c/') && !location.pathname.startsWith('/u/'));
+  
+
+
+  
+  // Function to trigger mobile comment input
+  const handleCommentClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent Post component's click handler from firing
+    if (onTriggerMobileCommentInput) {
+      onTriggerMobileCommentInput();
+    }
+  };
   
   return (
     <CardFooter className="pt-0 flex justify-between flex-col">
@@ -79,6 +113,19 @@ export const PostFooter: React.FC<PostFooterProps> = ({
             isLoggedIn={isLoggedIn}
             handleApiCall={false} 
           />
+          
+          {/* Show comment button between roar and mirror on mobile detailed post page */}
+          {isMobile() && isDetailedPostPage && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleCommentClick}
+              className="gap-2 hover:text-blue-500 hover:bg-blue-500/10 px-3 rounded-full transition-colors"
+            >
+              <MessageCircle className="h-4 w-4" />
+              <span>{commentCount}</span>
+            </Button>
+          )}
           
           {/* Show comment button except when explicitly hidden or on detailed post page */}
           {!hideComments && !isDetailedPostPage && (
@@ -99,6 +146,17 @@ export const PostFooter: React.FC<PostFooterProps> = ({
             postCode={postCode}
             community={community}
           />
+
+          {/* Tip Button */}
+          {postCode && (
+            <TipButton
+              postCode={postCode}
+              receiverHandle={username}
+              onTipClick={() => setTipSheetOpen(true)}
+              tipCount={tipCount}
+              hasUserTipped={hasUserTipped}
+            />
+          )}
         </div>
         
         <ShareButton 
@@ -117,15 +175,6 @@ export const PostFooter: React.FC<PostFooterProps> = ({
       </div>
       
       {children}
-
-      {allImages && allImages.length > 0 && (
-        <ImageViewer 
-          images={allImages} 
-          selectedImageIndex={selectedImageIndex}
-          open={imageViewerOpen} 
-          onOpenChange={setImageViewerOpen} 
-        />
-      )}
     </CardFooter>
   );
 };

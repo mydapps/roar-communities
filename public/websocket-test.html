@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Connection Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .status.connected {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.connecting {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin: 5px;
+        }
+        .log {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 4px;
+            border-left: 3px solid #007bff;
+            padding-left: 8px;
+        }
+        .log-entry.error {
+            border-left-color: #dc3545;
+            background-color: #f8d7da;
+        }
+        .log-entry.success {
+            border-left-color: #28a745;
+            background-color: #d4edda;
+        }
+        .debug-info {
+            background-color: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔌 WebSocket Connection Test</h1>
+    <p>This test will help verify WebSocket connectivity and authentication with the backend.</p>
+
+    <div class="container">
+        <h2>Connection Status</h2>
+        <div id="status" class="status disconnected">🔴 Disconnected</div>
+        
+        <div>
+            <label for="conversationId">Conversation ID:</label>
+            <input type="text" id="conversationId" value="1" />
+            <button onclick="connect()">Connect</button>
+            <button onclick="disconnect()">Disconnect</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Test Controls</h2>
+        <button onclick="sendPing()" id="pingBtn" disabled>Send Ping</button>
+        <button onclick="sendTypingStart()" id="typingStartBtn" disabled>Start Typing</button>
+        <button onclick="sendTypingStop()" id="typingStopBtn" disabled>Stop Typing</button>
+        <button onclick="sendTestMessage()" id="testMsgBtn" disabled>Send Test Message</button>
+        <button onclick="clearLog()">Clear Log</button>
+        
+        <div style="margin-top: 10px;">
+            <input type="text" id="customMessage" placeholder="Custom message..." />
+            <button onclick="sendCustomMessage()" id="customBtn" disabled>Send Custom</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Debug Information</h2>
+        <div class="debug-info">
+            <div>Current URL: <span id="currentUrl"></span></div>
+            <div>WebSocket URL: <span id="wsUrl"></span></div>
+            <div>User Agent: <span id="userAgent"></span></div>
+            <div>Cookies: <span id="cookies"></span></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Message Log</h2>
+        <div id="log" class="log"></div>
+    </div>
+
+    <script>
+        let ws = null;
+        let connectionAttempts = 0;
+        const maxRetries = 5;
+
+        // Update debug info
+        document.getElementById('currentUrl').textContent = window.location.href;
+        document.getElementById('userAgent').textContent = navigator.userAgent;
+        document.getElementById('cookies').textContent = document.cookie || 'None';
+
+        function updateWebSocketUrl() {
+            const conversationId = document.getElementById('conversationId').value;
+            // Always connect to production WebSocket server
+            // In development, we use the production API through Vite proxy for HTTP,
+            // but WebSocket connections go directly to production
+            const protocol = 'wss:';
+            const host = 'api.dapps.co';
+            const wsUrl = `${protocol}//${host}/ws?conversationId=${conversationId}`;
+            document.getElementById('wsUrl').textContent = wsUrl;
+            return wsUrl;
+        }
+
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `<strong>[${new Date().toLocaleTimeString()}]</strong> ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(`[WebSocket Test] ${message}`);
+        }
+
+        function updateStatus(status, message) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = `status ${status}`;
+            statusDiv.textContent = message;
+            
+            // Update button states
+            const buttons = ['pingBtn', 'typingStartBtn', 'typingStopBtn', 'testMsgBtn', 'customBtn'];
+            buttons.forEach(id => {
+                document.getElementById(id).disabled = status !== 'connected';
+            });
+        }
+
+        function connect() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                log('Already connected!', 'info');
+                return;
+            }
+
+            const wsUrl = updateWebSocketUrl();
+            log(`Attempting to connect to: ${wsUrl}`, 'info');
+            updateStatus('connecting', '🟡 Connecting...');
+
+            try {
+                ws = new WebSocket(wsUrl);
+
+                ws.onopen = function(event) {
+                    log('✅ WebSocket connection established!', 'success');
+                    updateStatus('connected', '🟢 Connected');
+                    connectionAttempts = 0;
+                };
+
+                ws.onmessage = function(event) {
+                    let data;
+                    try {
+                        data = JSON.parse(event.data);
+                        log(`📨 Received: ${JSON.stringify(data, null, 2)}`, 'success');
+                        
+                        // Handle specific message types
+                        if (data.type === 'connection_established') {
+                            log('🎉 Authentication successful!', 'success');
+                        } else if (data.type === 'error') {
+                            log(`❌ Server error: ${data.message}`, 'error');
+                        } else if (data.type === 'pong') {
+                            log('🏓 Pong received - connection is healthy', 'success');
+                        }
+                    } catch (e) {
+                        log(`📨 Received (raw): ${event.data}`, 'info');
+                    }
+                };
+
+                ws.onclose = function(event) {
+                    log(`🔌 Connection closed: Code ${event.code}, Reason: ${event.reason}`, 'error');
+                    updateStatus('disconnected', '🔴 Disconnected');
+                    
+                    // Auto-reconnect logic
+                    if (connectionAttempts < maxRetries && !event.wasClean) {
+                        connectionAttempts++;
+                        const delay = Math.pow(2, connectionAttempts) * 1000;
+                        log(`🔄 Auto-reconnecting in ${delay/1000}s (attempt ${connectionAttempts}/${maxRetries})`, 'info');
+                        setTimeout(connect, delay);
+                    }
+                };
+
+                ws.onerror = function(error) {
+                    log(`❌ WebSocket error occurred`, 'error');
+                    console.error('WebSocket error:', error);
+                };
+
+            } catch (error) {
+                log(`❌ Failed to create WebSocket: ${error.message}`, 'error');
+                updateStatus('disconnected', '🔴 Connection Failed');
+            }
+        }
+
+        function disconnect() {
+            if (ws) {
+                ws.close(1000, 'User requested disconnect');
+                ws = null;
+                log('👋 Disconnected by user', 'info');
+            }
+        }
+
+        function sendMessage(message) {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                log('❌ Cannot send message - not connected', 'error');
+                return false;
+            }
+
+            try {
+                const messageStr = JSON.stringify(message);
+                ws.send(messageStr);
+                log(`📤 Sent: ${messageStr}`, 'info');
+                return true;
+            } catch (error) {
+                log(`❌ Failed to send message: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        function sendPing() {
+            sendMessage({ type: 'ping' });
+        }
+
+        function sendTypingStart() {
+            const conversationId = document.getElementById('conversationId').value;
+            sendMessage({ 
+                type: 'typing_start',
+                conversationId: conversationId
+            });
+        }
+
+        function sendTypingStop() {
+            const conversationId = document.getElementById('conversationId').value;
+            sendMessage({ 
+                type: 'typing_stop',
+                conversationId: conversationId
+            });
+        }
+
+        function sendTestMessage() {
+            const conversationId = document.getElementById('conversationId').value;
+            sendMessage({
+                type: 'test_message',
+                conversationId: conversationId,
+                content: 'Hello from WebSocket test!',
+                timestamp: new Date().toISOString()
+            });
+        }
+
+        function sendCustomMessage() {
+            const customInput = document.getElementById('customMessage');
+            const message = customInput.value.trim();
+            
+            if (!message) {
+                log('❌ Please enter a custom message', 'error');
+                return;
+            }
+
+            try {
+                // Try to parse as JSON first
+                const jsonMessage = JSON.parse(message);
+                sendMessage(jsonMessage);
+            } catch (e) {
+                // If not JSON, send as a text message
+                const conversationId = document.getElementById('conversationId').value;
+                sendMessage({
+                    type: 'custom_message',
+                    conversationId: conversationId,
+                    content: message,
+                    timestamp: new Date().toISOString()
+                });
+            }
+            
+            customInput.value = '';
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+
+        // Initialize on page load
+        window.onload = function() {
+            updateWebSocketUrl();
+            log('🚀 WebSocket test page loaded', 'info');
+            log('ℹ️ Make sure you are logged in to the app for authentication to work', 'info');
+        };
+
+        // Update WebSocket URL when conversation ID changes
+        document.getElementById('conversationId').addEventListener('input', updateWebSocketUrl);
+
+        // Allow Enter key to send custom messages
+        document.getElementById('customMessage').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendCustomMessage();
+            }
+        });
+
+        // Clean up on page unload
+        window.onbeforeunload = function() {
+            if (ws) {
+                ws.close(1001, 'Page unload');
+            }
+        };
+    </script>
+</body>
+</html> 

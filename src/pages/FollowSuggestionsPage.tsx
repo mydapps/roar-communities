@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Sparkles, Check, UserPlus, Users, ArrowRight, Loader2 } from 'lucide-react';
 import { useTitle } from '@/hooks/useTitle';
+import { useUsernameCheck } from '@/hooks/useUsernameCheck';
 import { toast } from 'sonner';
 import axios from 'axios';
 import { Progress } from '@/components/ui/progress';
@@ -35,6 +36,10 @@ const FullScreenLayout: React.FC<{ children: React.ReactNode }> = ({ children })
 
 const FollowSuggestionsPage: React.FC = () => {
   useTitle('Find People to Follow - Dapps.co');
+  
+  // Check if username is set, redirect to avatar-handle if not
+  useUsernameCheck();
+  
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [suggestedUsers, setSuggestedUsers] = useState<SuggestedUser[]>([]);

@@ -24,11 +24,36 @@ const MainLayout = () => {
     /^\/[\w-]+\/[\w-]+$/.test(location.pathname) ||    // user post: /handle/postId
     /^\/post\/[\w-]+$/.test(location.pathname);        // generic post: /post/postId
   
+  // Determine if we are on the communities page
+  const isOnCommunitiesPage = location.pathname === '/communities';
+  
+  // Check if we're on a landing/public page where sidebar shouldn't render
+  const isPublicPage = location.pathname === '/' || 
+                      location.pathname === '/invite' ||
+                      location.pathname.startsWith('/invite/') ||
+                      location.pathname === '/login' ||
+                      location.pathname === '/signup';
+  
+  // Determine if pull-to-refresh should be disabled for the current page
+  const disablePullToRefresh = 
+    location.pathname === '/communities' || 
+    location.pathname === '/feed' || 
+    location.pathname === '/boosters' || // Add /boosters page
+    location.pathname === '/messages' || // Disable on messages list page
+    /^\/c\/[^/]+$/.test(location.pathname) || // Matches /c/communityId or /c/communityName
+    /^\/messages\/[^/]+$/.test(location.pathname); // Disable on conversation pages /messages/conversationId
+  
   useEffect(() => {
+    // Only check login status on authenticated pages, not on public landing pages
+    if (isPublicPage) {
+      setIsLoggedIn(false);
+      return;
+    }
+    
     // Check if user is logged in
     const userId = localStorage.getItem('dapps_user_id');
     setIsLoggedIn(!!userId);
-  }, [location]);
+  }, [location, isPublicPage]);
   
   // Add global search keyboard shortcut
   useEffect(() => {
@@ -96,34 +121,73 @@ const MainLayout = () => {
       {/* It takes remaining space (flex-1) and hides overflow for its children */}
       <div className="flex flex-1 overflow-hidden"> 
         {/* Sidebar (conditionally rendered) */}
-        {isLoggedIn && !isMobileAppUser && (
+        {isLoggedIn && !isMobileAppUser && !isPublicPage && (
           // Sidebar takes fixed width, content area takes rest
           <div className="hidden md:block flex-shrink-0 w-64 border-r border-border/40">
             <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
           </div>
         )}
         
-        {/* Make PullToRefresh the main scrollable container */}
-        {/* It needs to grow (flex-1) and handle its own vertical scroll */}
-        <PullToRefresh 
-          onRefresh={handleRefresh}
-          className="flex-1 overflow-y-auto transition-all duration-300 ease-in-out"
-        >
-          {/* Main content inside the scrollable container */}
-          <main className={cn(
-            mainContentClass, 
-            isMobileAppUser ? "pt-16" : "" // Keep mobile app top padding
-          )}>
-            <div className="container py-6 px-4 sm:px-6 max-w-5xl mx-auto animate-fade-in">
-              <Outlet />
-            </div>
-          </main>
-        </PullToRefresh>
+        {/* Conditionally render PullToRefresh or a simple div */}
+        {disablePullToRefresh ? (
+          // Render simple div on pages where pull-to-refresh is disabled
+          <div 
+            className="flex-1 overflow-y-auto transition-all duration-300 ease-in-out"
+          >
+            <main className={cn(
+              mainContentClass, 
+              isMobileAppUser ? "pt-16" : "" // Keep mobile app top padding
+            )}>
+              <div className={cn(
+                "py-6 px-4 sm:px-6 animate-fade-in",
+                // Responsive container strategy for different screen sizes
+                "mx-auto", // Center the container
+                // Mobile: full width with padding
+                "w-full max-w-none sm:max-w-none",
+                // Tablet: moderate constraint
+                "md:max-w-4xl lg:max-w-5xl",
+                // Desktop: wider but not unlimited
+                "xl:max-w-6xl 2xl:max-w-7xl",
+                // Ultra-wide: cap at reasonable reading width
+                "3xl:max-w-[1600px]"
+              )}>
+                <Outlet />
+              </div>
+            </main>
+          </div>
+        ) : (
+          // Render PullToRefresh on other pages
+          <PullToRefresh 
+            onRefresh={handleRefresh}
+            className="flex-1 overflow-y-auto transition-all duration-300 ease-in-out"
+          >
+            <main className={cn(
+              mainContentClass, 
+              isMobileAppUser ? "pt-16" : "" // Keep mobile app top padding
+            )}>
+              <div className={cn(
+                "py-6 px-4 sm:px-6 animate-fade-in",
+                // Responsive container strategy for different screen sizes
+                "mx-auto", // Center the container
+                // Mobile: full width with padding
+                "w-full max-w-none sm:max-w-none",
+                // Tablet: moderate constraint
+                "md:max-w-4xl lg:max-w-5xl",
+                // Desktop: wider but not unlimited
+                "xl:max-w-6xl 2xl:max-w-7xl",
+                // Ultra-wide: cap at reasonable reading width
+                "3xl:max-w-[1600px]"
+              )}>
+                <Outlet />
+              </div>
+            </main>
+          </PullToRefresh>
+        )}
         
       </div> {/* End flex-1 overflow-hidden div */}
       
       {/* Mobile Bottom Navigation - outside the main scroll area */}
-      {(isMobile || isMobileAppUser) && isLoggedIn && <MobileBottomNav />}
+      {(isMobile || isMobileAppUser) && isLoggedIn && !isPublicPage && <MobileBottomNav />}
     </div>
   );
 };

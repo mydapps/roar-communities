@@ -233,6 +233,7 @@ export interface GoldenBoosterStatusResponse {
       boost: number;
       eligible: boolean;
       claimed: boolean;
+      action_url?: string;
       progress?: {
         current: number;
         required: number;
@@ -261,6 +262,188 @@ export interface GoldenBoosterClaimResponse {
     boost: number;
   }>;
   total_boost_added?: number;
+}
+
+/**
+ * ENB Wallet Status Response interface
+ */
+export interface ENBWalletStatusResponse {
+  success: boolean;
+  data: {
+    wallets: Array<{
+      wallet: string;
+      enb_balance: number;
+      date: string;
+      status: number;
+    }>;
+    max_balance: number;
+    eligible_for_booster: boolean;
+    required_balance: number;
+  };
+}
+
+/**
+ * ENB Wallet Submit Response interface
+ */
+export interface ENBWalletSubmitResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    wallet: string;
+    enb_balance: number;
+    eligible_for_booster: boolean;
+    required_balance: number;
+  };
+}
+
+/**
+ * ENB Wallet Refresh Response interface
+ */
+export interface ENBWalletRefreshResponse {
+  success: boolean;
+  message: string;
+  data: {
+    refresh_results: Array<{
+      wallet: string;
+      new_balance?: number;
+      success: boolean;
+      error?: string;
+    }>;
+    max_balance: number;
+    eligible_for_booster: boolean;
+    required_balance: number;
+  };
+}
+
+/**
+ * SNI Wallet Status Response interface
+ */
+export interface SNIWalletStatusResponse {
+  success: boolean;
+  data: {
+    wallets: Array<{
+      wallet: string;
+      sni_balance: number;
+      date: string;
+      status: number;
+    }>;
+    max_balance: number;
+    eligible_for_booster: boolean;
+    required_balance: number;
+  };
+}
+
+/**
+ * SNI Wallet Submit Response interface
+ */
+export interface SNIWalletSubmitResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    wallet: string;
+    sni_balance: number;
+    eligible_for_booster: boolean;
+    required_balance: number;
+  };
+}
+
+/**
+ * SNI Wallet Refresh Response interface
+ */
+export interface SNIWalletRefreshResponse {
+  success: boolean;
+  message: string;
+  data: {
+    refresh_results: Array<{
+      wallet: string;
+      new_balance?: number;
+      success: boolean;
+      error?: string;
+    }>;
+    max_balance: number;
+    eligible_for_booster: boolean;
+    required_balance: number;
+  };
+}
+
+/**
+ * SHM Wallet Status Response interface
+ */
+export interface SHMWalletStatusResponse {
+  success: boolean;
+  data: {
+    wallets: Array<{
+      wallet: string;
+      shm_balance: number;
+      date: string;
+      status: number;
+    }>;
+    max_balance: number;
+    eligible_for_booster: boolean;
+    required_balance: number;
+    boost_multiplier: string;
+    blockchain: string;
+  };
+}
+
+/**
+ * SHM Wallet Submit Response interface
+ */
+export interface SHMWalletSubmitResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    wallet: string;
+    shm_balance: number;
+    eligible_for_booster: boolean;
+    required_balance: number;
+    boost_multiplier: string;
+    blockchain: string;
+  };
+}
+
+/**
+ * SHM Wallet Refresh Response interface
+ */
+export interface SHMWalletRefreshResponse {
+  success: boolean;
+  message: string;
+  data: {
+    refresh_results: Array<{
+      wallet: string;
+      new_balance?: number;
+      success: boolean;
+      error?: string;
+    }>;
+    max_balance: number;
+    eligible_for_booster: boolean;
+    required_balance: number;
+    boost_multiplier: string;
+    blockchain: string;
+  };
+}
+
+/**
+ * SHM Check Existing Wallets Response interface
+ */
+export interface SHMCheckExistingResponse {
+  success: boolean;
+  data: {
+    existing_wallets: Array<{
+      wallet: string;
+      enb_balance?: number;
+      sni_balance?: number;
+      shm_balance: number;
+      source: string;
+    }>;
+    total_wallets: number;
+    max_shm_balance: number;
+    eligible_for_booster: boolean;
+    required_balance: number;
+    boost_multiplier: string;
+    blockchain: string;
+    message: string;
+  };
 }
 
 /**
@@ -345,6 +528,290 @@ export const claimAllGoldenBoosters = async (): Promise<GoldenBoosterClaimRespon
     return data;
   } catch (error) {
     console.error('Error claiming all golden boosters:', error);
+    return null;
+  }
+};
+
+/**
+ * Fetch ENB wallet status
+ * @returns Promise that resolves to ENB wallet status data
+ */
+export const fetchENBWalletStatus = async (): Promise<ENBWalletStatusResponse | null> => {
+  try {
+    // Use relative path for proxy
+    const response = await fetch(`/api/enb_wallet/status`, {
+      method: 'GET',
+      credentials: 'include', // Important for cookie-based auth
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Error fetching ENB wallet status:', errorData);
+      return null;
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching ENB wallet status:', error);
+    return null;
+  }
+};
+
+/**
+ * Submit ENB wallet address
+ * @param wallet The Ethereum wallet address to submit
+ * @returns Promise that resolves to the submit response
+ */
+export const submitENBWallet = async (wallet: string): Promise<ENBWalletSubmitResponse | null> => {
+  try {
+    // Use relative path for proxy
+    const response = await fetch(`/api/enb_wallet/submit`, {
+      method: 'POST',
+      credentials: 'include', // Important for cookie-based auth
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ wallet })
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Error submitting ENB wallet:', errorData);
+      return null;
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error submitting ENB wallet:', error);
+    return null;
+  }
+};
+
+/**
+ * Refresh ENB wallet balances
+ * @returns Promise that resolves to the refresh response
+ */
+export const refreshENBWalletBalances = async (): Promise<ENBWalletRefreshResponse | null> => {
+  try {
+    // Use relative path for proxy
+    const response = await fetch(`/api/enb_wallet/refresh`, {
+      method: 'POST',
+      credentials: 'include', // Important for cookie-based auth
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Error refreshing ENB wallet balances:', errorData);
+      return null;
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error refreshing ENB wallet balances:', error);
+    return null;
+  }
+};
+
+/**
+ * Fetch SNI wallet status for the current user
+ * @returns Promise that resolves to the wallet status data
+ */
+export const fetchSNIWalletStatus = async (): Promise<SNIWalletStatusResponse | null> => {
+  try {
+    // Use relative path for proxy
+    const response = await fetch(`/api/sni_wallet/status`, {
+      method: 'GET',
+      credentials: 'include', // Important for cookie-based auth
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Error fetching SNI wallet status:', errorData);
+      return null;
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching SNI wallet status:', error);
+    return null;
+  }
+};
+
+/**
+ * Submit SNI wallet address
+ * @param wallet The Ethereum wallet address to submit
+ * @returns Promise that resolves to the submit response
+ */
+export const submitSNIWallet = async (wallet: string): Promise<SNIWalletSubmitResponse | null> => {
+  try {
+    // Use relative path for proxy
+    const response = await fetch(`/api/sni_wallet/submit`, {
+      method: 'POST',
+      credentials: 'include', // Important for cookie-based auth
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ wallet })
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Error submitting SNI wallet:', errorData);
+      return errorData;
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error submitting SNI wallet:', error);
+    return null;
+  }
+};
+
+/**
+ * Refresh SNI wallet balances
+ * @returns Promise that resolves to the refresh response
+ */
+export const refreshSNIWalletBalances = async (): Promise<SNIWalletRefreshResponse | null> => {
+  try {
+    // Use relative path for proxy
+    const response = await fetch(`/api/sni_wallet/refresh`, {
+      method: 'POST',
+      credentials: 'include', // Important for cookie-based auth
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Error refreshing SNI wallet balances:', errorData);
+      return null;
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error refreshing SNI wallet balances:', error);
+    return null;
+  }
+};
+
+/**
+ * Fetch SHM wallet status for the current user
+ * @returns Promise that resolves to the wallet status data
+ */
+export const fetchSHMWalletStatus = async (): Promise<SHMWalletStatusResponse | null> => {
+  try {
+    // Use relative path for proxy
+    const response = await fetch(`/api/shm_wallet/status`, {
+      method: 'GET',
+      credentials: 'include', // Important for cookie-based auth
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Error fetching SHM wallet status:', errorData);
+      return null;
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching SHM wallet status:', error);
+    return null;
+  }
+};
+
+/**
+ * Submit SHM wallet address
+ * @param wallet The Ethereum wallet address to submit
+ * @returns Promise that resolves to the submit response
+ */
+export const submitSHMWallet = async (wallet: string): Promise<SHMWalletSubmitResponse | null> => {
+  try {
+    // Use relative path for proxy
+    const response = await fetch(`/api/shm_wallet/submit`, {
+      method: 'POST',
+      credentials: 'include', // Important for cookie-based auth
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ wallet })
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Error submitting SHM wallet:', errorData);
+      return errorData;
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error submitting SHM wallet:', error);
+    return null;
+  }
+};
+
+/**
+ * Refresh SHM wallet balances
+ * @returns Promise that resolves to the refresh response
+ */
+export const refreshSHMWalletBalances = async (): Promise<SHMWalletRefreshResponse | null> => {
+  try {
+    // Use relative path for proxy
+    const response = await fetch(`/api/shm_wallet/refresh`, {
+      method: 'POST',
+      credentials: 'include', // Important for cookie-based auth
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Error refreshing SHM wallet balances:', errorData);
+      return null;
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error refreshing SHM wallet balances:', error);
+    return null;
+  }
+};
+
+/**
+ * Check existing wallets for SHM balance
+ * @returns Promise that resolves to the check existing response
+ */
+export const checkExistingSHMWallets = async (): Promise<SHMCheckExistingResponse | null> => {
+  try {
+    // Use relative path for proxy
+    const response = await fetch(`/api/shm_wallet/check_existing`, {
+      method: 'GET',
+      credentials: 'include', // Important for cookie-based auth
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Error checking existing SHM wallets:', errorData);
+      return null;
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error checking existing SHM wallets:', error);
     return null;
   }
 };
@@ -436,7 +903,7 @@ export const fetchRegularBoosterStatus = async (): Promise<RegularBoosterStatusR
 
 /**
  * Claim a specific regular booster
- * @param type The type of booster to claim (daily_tweet, daily_quote_tweet, daily_checkin, post_streak, roar_streak)
+ * @param type The type of booster to claim (daily_tweet, daily_quote_tweet, daily_checkin, post_streak, roar_streak, daily_poll_creation, daily_poll_voting)
  * @returns Promise that resolves to the claim response
  */
 export const claimRegularBooster = async (type: string): Promise<RegularBoosterClaimResponse | null> => {

@@ -43,6 +43,7 @@ import {
   searchUsers, 
   ETHGasEstimateResponse 
 } from '@/utils/communityApi';
+import { getExplorerUrl, getExplorerName } from '@/utils/explorerUtils';
 import confetti from 'canvas-confetti';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -786,12 +787,12 @@ export const ETHTransferSheet = ({
         
         {transactionHash && (
           <a 
-            href={`https://etherscan.io/tx/${transactionHash}`}
+            href={getExplorerUrl(transactionHash)}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1 text-primary hover:underline text-sm"
           >
-            View on Etherscan
+            View on {getExplorerName()}
             <ExternalLink className="h-3 w-3" />
           </a>
         )}

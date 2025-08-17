@@ -270,93 +270,50 @@ interface MediaPreviewProps {
 }
 
 export function MediaPreview({ media, onRemove }: MediaPreviewProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [aspectRatio, setAspectRatio] = useState(16/9);
-  const [isLoaded, setIsLoaded] = useState(false);
-  
-  // Log received media data
-  console.log("MediaPreview received:", media);
-  
-  // Safety check
-  if (!media || typeof media !== 'object') {
-    console.error("Invalid media object received:", media);
-    return null;
-  }
-  
-  // Validate media type
-  if (!media.type || !['image', 'video'].includes(media.type)) {
-    console.error("Media has invalid type:", media.type);
-    return null;
-  }
-  
-  // Validate media URL
-  if (!media.url) {
-    console.error("Media missing URL:", media);
-    return null;
-  }
-  
-  // Function to calculate aspect ratio from video dimensions
-  const calculateAspectRatio = () => {
-    if (videoRef.current) {
-      const video = videoRef.current;
-      // Only update once metadata is loaded
-      if (video.videoWidth && video.videoHeight) {
-        const ratio = video.videoWidth / video.videoHeight;
-        setAspectRatio(ratio);
-        setIsLoaded(true);
-      }
-    }
-  };
-  
-  // Render media preview based on type
+  const isImage = media.type === 'image';
+
   return (
-    <div className="relative group rounded-md overflow-hidden border">
-      {media.type === 'image' ? (
-        <AspectRatio ratio={16/9}>
-          <img 
-            src={media.displayUrl || media.url} 
-            alt="Uploaded content" 
-            className="w-full h-full object-cover" 
-            onError={(e) => {
-              console.error("Error loading image:", media.displayUrl || media.url);
-              e.currentTarget.src = "https://placehold.co/400x225?text=Error+Loading+Image";
-            }}
-            onLoad={() => console.log("Image loaded successfully:", media.displayUrl || media.url)}
-          />
-        </AspectRatio>
-      ) : (
-        <>
-          <AspectRatio ratio={aspectRatio}>
-            <div className={`w-full h-full flex items-center justify-center bg-black/5 ${!isLoaded ? 'min-h-[200px]' : ''}`}>
-              {!isLoaded && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/10">
-                  <VideoIcon className="h-10 w-10 text-muted-foreground/50 animate-pulse" />
-                </div>
-              )}
-              <video 
-                ref={videoRef}
-                src={media.url} 
-                className="w-full h-full object-cover" 
-                controls
-                preload="metadata"
-                onLoadedMetadata={calculateAspectRatio}
-                onError={(e) => {
-                  console.error("Error loading video:", media.url);
-                }}
+    <div className="relative w-full max-w-sm rounded-lg border bg-background p-2 shadow-sm transition-all animate-in fade-in-50">
+      <div className="flex items-center gap-3">
+        <div className="w-24 h-24 flex-shrink-0">
+          <AspectRatio ratio={1} className="overflow-hidden rounded-md">
+            {isImage ? (
+              <img
+                src={media.displayUrl}
+                alt="Media preview"
+                className="h-full w-full object-cover"
               />
-            </div>
+            ) : (
+              <video 
+                src={media.displayUrl}
+                className="h-full w-full object-cover bg-black"
+                autoPlay
+                loop
+                muted
+                playsInline
+              />
+            )}
           </AspectRatio>
-        </>
-      )}
-      
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium truncate">
+            {media.fileInfo?.originalName || 'Uploaded Media'}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {media.isProcessing ? 'Processing...' : 'Ready to send'}
+          </p>
+        </div>
       <Button
-        variant="destructive"
+          type="button"
+          variant="ghost"
         size="icon"
-        className="h-6 w-6 absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity"
+          className="h-7 w-7 rounded-full flex-shrink-0"
         onClick={onRemove}
       >
-        <XIcon className="h-3 w-3" />
+          <XIcon className="h-4 w-4" />
+          <span className="sr-only">Remove media</span>
       </Button>
+      </div>
     </div>
   );
 }

@@ -1,7 +1,7 @@
-import React, { useState, useCallback, useEffect, useRef, useMemo, memo } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo, memo, forwardRef, useImperativeHandle } from 'react';
 import { CommentReply, toggleMeow, createReply } from '@/utils/commentApi';
 import { EnhancedCommentItem } from './EnhancedCommentItem';
-import { MobileCommentInput } from './MobileCommentInput';
+import { MobileCommentInput, MobileCommentInputRef } from './MobileCommentInput';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { NotInCommunitySheet } from '@/components/community/NotInCommunitySheet';
@@ -21,44 +21,56 @@ interface MobileCommentsSectionProps {
     message?: string;
   }>;
   onRefresh: () => void;
+  readOnly?: boolean;
+}
+
+export interface MobileCommentsSectionRef {
+  triggerCommentInput: () => void;
 }
 
 // Memoized comment item to prevent unnecessary renders
-const MemoizedCommentItem = memo(({ 
+const MemoizedCommentItem = React.memo(({
   comment,
   postAuthorHandle,
+  postCode,
   onMeowChange,
   onReply,
   onOpenMobileReply,
-  optimisticToRealIdMap
+  optimisticToRealIdMap,
+  readOnly = false
 }: {
   comment: CommentReply;
   postAuthorHandle: string;
+  postCode?: string;
   onMeowChange: (commentId: number, newState: boolean) => void;
   onReply: (parentId: number, content: string) => Promise<void>;
   onOpenMobileReply: (id: number, handle: string, avatar: string, content: string, level2ParentId?: number) => void;
   optimisticToRealIdMap: Record<number, number>;
+  readOnly?: boolean;
 }) => (
   <div key={comment.id} className="pt-6 first:pt-0">
     <EnhancedCommentItem 
       comment={comment}
       postAuthorHandle={postAuthorHandle}
+      postCode={postCode}
       onMeowChange={onMeowChange}
       onReply={onReply}
       isMobile={true}
       onOpenMobileReply={onOpenMobileReply}
       optimisticToRealIdMap={optimisticToRealIdMap}
+      readOnly={readOnly}
     />
   </div>
 ));
 
-export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
+export const MobileCommentsSection = forwardRef<MobileCommentsSectionRef, MobileCommentsSectionProps>(({
   postCode,
   postAuthorHandle,
   replies,
   onAddComment,
-  onRefresh
-}) => {
+  onRefresh,
+  readOnly
+}, ref) => {
   const [replyingTo, setReplyingTo] = useState<{
     id: number;
     author: string;
@@ -81,6 +93,9 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
   // Store a reference to the previous replies for comparison
   const previousRepliesRef = useRef<CommentReply[]>(replies);
   
+  // Ref for the comment input
+  const commentInputRef = useRef<MobileCommentInputRef>(null);
+  
   // Helper function to get real ID if available, or return original ID
   const getRealIdIfAvailable = useCallback((id: number): number => {
     return optimisticToRealIdMap[id] || id;
@@ -94,6 +109,14 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
       setLocalReplies(replies);
     }
   }, [replies]);
+
+  useImperativeHandle(ref, () => ({
+    triggerCommentInput: () => {
+      if (commentInputRef.current) {
+        commentInputRef.current.triggerExpand();
+      }
+    }
+  }));
 
   // Debounced function to update local replies to improve performance
   const debouncedSetLocalReplies = useRef(
@@ -430,15 +453,17 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
             key={reply.id}
             comment={reply}
             postAuthorHandle={postAuthorHandle}
+            postCode={postCode}
             onMeowChange={handleMeowChange}
             onReply={handleReplySubmit}
             onOpenMobileReply={handleOpenMobileReply}
             optimisticToRealIdMap={optimisticToRealIdMap}
+            readOnly={readOnly}
           />
         ))}
       </div>
     );
-  }, [localReplies, postAuthorHandle, handleMeowChange, handleReplySubmit, handleOpenMobileReply, optimisticToRealIdMap]);
+  }, [localReplies, postAuthorHandle, handleMeowChange, handleReplySubmit, handleOpenMobileReply, optimisticToRealIdMap, readOnly]);
 
   if (!isMobile) {
     return null;
@@ -451,14 +476,17 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
         {commentsList}
       </div>
       
-      {/* Floating comment input */}
-      <MobileCommentInput
-        postCode={postCode}
-        isReplyMode={!!replyingTo}
-        replyToComment={replyingTo || undefined}
-        onSubmit={handleSubmit}
-        onCancel={handleCancelReply}
-      />
+      {/* Floating comment input - only show if not in read-only mode */}
+      {!readOnly && (
+        <MobileCommentInput
+          postCode={postCode}
+          isReplyMode={!!replyingTo}
+          replyToComment={replyingTo || undefined}
+          onSubmit={handleSubmit}
+          onCancel={handleCancelReply}
+          ref={commentInputRef}
+        />
+      )}
 
       <NotInCommunitySheet 
         open={notInCommunitySheetOpen}
@@ -467,4 +495,4 @@ export const MobileCommentsSection: React.FC<MobileCommentsSectionProps> = ({
       />
     </>
   );
-};
+});

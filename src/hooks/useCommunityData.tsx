@@ -76,6 +76,7 @@ export const useCommunityData = (communityName: string | undefined) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<CommunityApiResponse | null>(null);
+  const [isEncryptedAccess, setIsEncryptedAccess] = useState<boolean>(false);
 
   const fetchCommunityData = async () => {
     if (!communityName) {
@@ -87,6 +88,7 @@ export const useCommunityData = (communityName: string | undefined) => {
     try {
       setLoading(true);
       setError(null);
+      setIsEncryptedAccess(false);
 
       // Use relative proxy path
       const response = await fetch(`/api/get_community?name=${encodeURIComponent(communityName)}`, {
@@ -94,6 +96,13 @@ export const useCommunityData = (communityName: string | undefined) => {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include' // Add credentials
       });
+
+      // 🔒 Handle 403 Forbidden specifically for encrypted communities
+      if (response.status === 403) {
+        setIsEncryptedAccess(true);
+        setError('ENCRYPTED_COMMUNITY_ACCESS');
+        return;
+      }
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -106,8 +115,10 @@ export const useCommunityData = (communityName: string | undefined) => {
         }
     } catch (err) {
       console.error("Failed to fetch community data:", err);
-      setError(err instanceof Error ? err.message : 'An unknown error occurred');
-      toast.error('Failed to load community data. Please try again.');
+      if (!isEncryptedAccess) {
+        setError(err instanceof Error ? err.message : 'An unknown error occurred');
+        toast.error('Failed to load community data. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -118,5 +129,5 @@ export const useCommunityData = (communityName: string | undefined) => {
   }, [communityName]);
 
   // Return the data with the refetch function attached
-  return { data, loading, error, refetch: fetchCommunityData };
+  return { data, loading, error, isEncryptedAccess, refetch: fetchCommunityData };
 };
