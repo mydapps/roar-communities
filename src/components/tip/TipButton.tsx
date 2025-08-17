@@ -46,10 +46,17 @@ export const TipButton: React.FC<TipButtonProps> = ({
                 onTipClick();
               }}
               className={cn(
-                "h-8 px-2 gap-1.5 text-muted-foreground hover:text-primary",
-                "transition-all duration-200 relative overflow-hidden",
-                "group hover:bg-primary/10 active:bg-primary/20",
-                hasUserTipped && "text-primary bg-primary/5",
+                "h-8 px-2 gap-1.5 transition-all duration-200 relative overflow-hidden group",
+                // Enhanced tipped state with design thinking
+                hasUserTipped ? [
+                  "text-primary bg-gradient-to-r from-primary/15 to-primary/10",
+                  "border border-primary/20 shadow-sm",
+                  "hover:from-primary/20 hover:to-primary/15 hover:shadow-md",
+                  "hover:border-primary/30 hover:scale-[1.02]"
+                ] : [
+                  "text-muted-foreground hover:text-primary",
+                  "hover:bg-primary/10 active:bg-primary/20"
+                ],
                 className
               )}
             >
@@ -64,12 +71,12 @@ export const TipButton: React.FC<TipButtonProps> = ({
                 transition={{ duration: 0.3 }}
               />
               
-              {/* Tip icon with animation */}
+              {/* Enhanced tip icon with better tipped state feedback */}
               <motion.div
                 className="relative"
                 animate={{
                   rotate: isPressed ? [0, -10, 10, 0] : 0,
-                  scale: hasUserTipped ? [1, 1.2, 1] : 1
+                  scale: hasUserTipped ? [1, 1.1, 1] : 1
                 }}
                 transition={{ 
                   duration: 0.4,
@@ -77,7 +84,20 @@ export const TipButton: React.FC<TipButtonProps> = ({
                 }}
               >
                 {hasUserTipped ? (
-                  <Heart className="h-4 w-4 fill-current" />
+                  <motion.div
+                    initial={{ scale: 1 }}
+                    animate={{ 
+                      scale: [1, 1.05, 1],
+                      filter: ["brightness(1)", "brightness(1.2)", "brightness(1)"]
+                    }}
+                    transition={{ 
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                  >
+                    <Heart className="h-4 w-4 fill-current drop-shadow-sm" />
+                  </motion.div>
                 ) : (
                   <Heart className="h-4 w-4" />
                 )}
@@ -100,17 +120,7 @@ export const TipButton: React.FC<TipButtonProps> = ({
                 <Sparkles className="h-3 w-3 text-primary" />
               </motion.div>
 
-              {/* Tip count */}
-              {tipCount > 0 && (
-                <motion.span
-                  className="text-xs font-medium"
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  {tipCount}
-                </motion.span>
-              )}
+
 
               {/* Floating hearts animation on hover */}
               {isHovered && (

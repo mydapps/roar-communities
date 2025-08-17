@@ -350,6 +350,7 @@ const FeedPage = () => {
               ipfs={post.ipfs}
               is_poll={Boolean(post.is_poll)}
               poll_data={post.poll_data || null}
+              hasUserTipped={post.has_tipped === 1}
             />
               );
 

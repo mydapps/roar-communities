@@ -8,7 +8,7 @@ import {
   PenTool, BarChart3, Vote, User, Coins, Wallet, RefreshCw, Loader2,
   Info, CheckCircle2, LucideIcon, ChevronRight, Gift, Lock
 } from 'lucide-react';
-import { useLinkAccount } from '@privy-io/react-auth';
+import { usePrivy, useLinkAccount } from '@privy-io/react-auth';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
@@ -420,9 +420,15 @@ const ENBWalletModal: React.FC<ENBWalletModalProps> = ({ isOpen, onClose, onSucc
   const [walletStatus, setWalletStatus] = useState<ENBWalletStatusResponse | null>(null);
   const [isLoadingStatus, setIsLoadingStatus] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const enbActiveRef = useRef(false);
+  useEffect(() => { enbActiveRef.current = isOpen; }, [isOpen]);
+
+  // Add Privy authentication check
+  const { ready, authenticated, user } = usePrivy();
 
   const { linkWallet } = useLinkAccount({
     onSuccess: async (user) => {
+      if (!enbActiveRef.current) return;
       console.log('[wallet] ✅ Wallet linked successfully');
       console.log('[wallet] User object received:', JSON.stringify(user, null, 2));
       console.log('[wallet] User ID:', user?.id);
@@ -463,6 +469,7 @@ const ENBWalletModal: React.FC<ENBWalletModalProps> = ({ isOpen, onClose, onSucc
       }
     },
     onError: (error) => {
+      if (!enbActiveRef.current) return;
       console.log('[wallet] ❌ Failed to link wallet - ERROR DETAILS:');
       console.log('[wallet] Error object:', error);
       console.log('[wallet] Error type:', typeof error);
@@ -538,7 +545,31 @@ const ENBWalletModal: React.FC<ENBWalletModalProps> = ({ isOpen, onClose, onSucc
   });
 
   const handleLinkWallet = () => {
+    // Check if Privy is ready
+    if (!ready) {
+      console.log('[wallet] ⏳ Privy not ready yet, please wait...');
+      toast.error('Please wait for the page to load completely');
+      return;
+    }
+
+    // Check if user is logged in to the app (not just Privy)
+    const userId = localStorage.getItem('dapps_user_id');
+    if (!userId) {
+      console.error('[wallet] ❌ User not logged in to the app');
+      toast.error('Please sign in to link your wallet');
+      return;
+    }
+
+    // CRITICAL: Check if Privy is authenticated (required for linkWallet())
+    if (!authenticated) {
+      console.error('[wallet] ❌ Privy not authenticated yet');
+      console.log('[wallet] Auth state:', { ready, authenticated, user: !!user });
+      toast.error('Authentication in progress. Please wait and try again.');
+      return;
+    }
+
     console.log('[wallet] 🚀 Starting wallet linking process...');
+    console.log('[wallet] User authenticated:', { ready, userId, privyAuthenticated: authenticated });
     console.log('[wallet] Current linking state:', isLinking);
     console.log('[wallet] Current submitting state:', isSubmitting);
     
@@ -758,10 +789,25 @@ const ENBWalletModal: React.FC<ENBWalletModalProps> = ({ isOpen, onClose, onSucc
           <div className="flex gap-2">
             <Button
               onClick={handleLinkWallet}
-              disabled={isLinking || isSubmitting}
+              disabled={!ready || !localStorage.getItem('dapps_user_id') || !authenticated || isLinking || isSubmitting}
               className="flex-1"
             >
-              {isLinking ? (
+              {!ready ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Loading...
+                </>
+              ) : !localStorage.getItem('dapps_user_id') ? (
+                <>
+                  <Lock className="h-4 w-4 mr-2" />
+                  Sign In Required
+                </>
+              ) : !authenticated ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Authenticating...
+                </>
+              ) : isLinking ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
                   Connecting...
@@ -797,9 +843,74 @@ const SNIWalletModal: React.FC<SNIWalletModalProps> = ({ isOpen, onClose, onSucc
   const [walletStatus, setWalletStatus] = useState<SNIWalletStatusResponse | null>(null);
   const [isLoadingStatus, setIsLoadingStatus] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showSessionExpiry, setShowSessionExpiry] = useState(false);
+  const navigate = useNavigate();
+
+  // Add Privy authentication check
+  const { ready, authenticated, user, logout } = usePrivy();
+  const sniActiveRef = useRef(false);
+  useEffect(() => { sniActiveRef.current = isOpen; }, [isOpen]);
+
+  // Check authentication when modal opens - immediate graceful handling
+  useEffect(() => {
+    if (isOpen && ready) {
+      const userId = localStorage.getItem('dapps_user_id');
+      if (!userId || !authenticated) {
+        console.log('[sni_wallet] 🔓 Session expired on modal open, showing graceful overlay...');
+        setShowSessionExpiry(true);
+      } else {
+        setShowSessionExpiry(false);
+      }
+    }
+  }, [isOpen, ready, authenticated]);
+
+  // Graceful logout function for session expiry
+  const handleSessionExpiry = async () => {
+    console.log('[sni_wallet] 🔓 Handling session expiry gracefully...');
+    
+    // Show a graceful message
+    toast.error('Your login session has expired. Please sign in again to continue.', {
+      duration: 6000,
+      action: {
+        label: 'Sign In',
+        onClick: () => {
+          handleGracefulLogout();
+        }
+      }
+    });
+  };
+
+  const handleGracefulLogout = async () => {
+    try {
+      console.log('[sni_wallet] 🔓 Starting graceful logout...');
+      
+      // Clear localStorage
+      localStorage.clear();
+      
+      // Logout from Privy
+      await logout();
+      
+      // Close modal
+      onClose();
+      
+      // Show friendly message
+      toast.info('Redirecting to sign in...', { duration: 2000 });
+      
+      // Redirect to home page
+      setTimeout(() => {
+        navigate('/');
+      }, 800);
+      
+    } catch (error) {
+      console.error('[sni_wallet] Error during graceful logout:', error);
+      // Fallback - just redirect
+      window.location.href = '/';
+    }
+  };
 
   const { linkWallet } = useLinkAccount({
     onSuccess: async (user) => {
+      if (!sniActiveRef.current) return;
       console.log('[sni_wallet] ✅ Wallet linked successfully');
       setIsLinking(false);
       
@@ -822,6 +933,7 @@ const SNIWalletModal: React.FC<SNIWalletModalProps> = ({ isOpen, onClose, onSucc
       }
     },
     onError: (error) => {
+      if (!sniActiveRef.current) return;
       console.log('[sni_wallet] ❌ Failed to link wallet:', error);
       setIsLinking(false);
       
@@ -859,14 +971,24 @@ const SNIWalletModal: React.FC<SNIWalletModalProps> = ({ isOpen, onClose, onSucc
     }
   });
 
-  const handleLinkWallet = () => {
+  const handleLinkWallet = async () => {
+    // Check if Privy is ready
+    if (!ready) {
+      console.log('[sni_wallet] ⏳ Privy not ready yet, please wait...');
+      toast.error('Please wait for the page to load completely');
+      return;
+    }
+
     console.log('[sni_wallet] 🚀 Starting wallet linking process...');
+    console.log('[sni_wallet] Auth state:', { ready, privyAuthenticated: authenticated, user: !!user });
+    
     setIsLinking(true);
     
     try {
+      // Proceed with wallet linking (authentication already verified)
       linkWallet();
     } catch (error) {
-      console.error('[sni_wallet] ❌ Error calling linkWallet():', error);
+      console.error('[sni_wallet] ❌ Error during wallet linking process:', error);
       setIsLinking(false);
       toast.error('Failed to initiate wallet linking');
     }
@@ -879,21 +1001,35 @@ const SNIWalletModal: React.FC<SNIWalletModalProps> = ({ isOpen, onClose, onSucc
       const result = await submitSNIWallet(walletAddress);
       
       if (result && result.success) {
-        toast.success(result.message);
+        console.log('[sni_wallet] ✅ Wallet verification successful:', result);
         
         if (result.data?.eligible_for_booster) {
-          toast.success(`🎉 Eligible for 2x SNI Token Holder Boost! Balance: ${result.data.sni_balance} SNI`);
+          toast.success(`🎉 SNI tokens verified! 2x boost activated! Balance: ${result.data.sni_balance} SNI`);
           onSuccess();
           onClose();
         } else {
-          toast.warning(`Insufficient SNI balance: ${result.data?.sni_balance || 0} SNI. Need at least ${result.data?.required_balance || 10} SNI.`);
+          const balance = result.data?.sni_balance || 0;
+          const required = result.data?.required_balance || 10;
+          toast.warning(`SNI balance too low: ${balance} SNI. Need at least ${required} SNI for the boost.`);
           await loadWalletStatus();
         }
       } else {
-        toast.error(result?.message || 'Failed to verify wallet');
+        // Provide more specific error messages for SNI wallet
+        let errorMessage = result?.message || 'Failed to verify SNI wallet';
+        
+        // Clean up error messages to be more user-friendly
+        if (errorMessage.toLowerCase().includes('enb') || errorMessage.toLowerCase().includes('ens')) {
+          errorMessage = 'This wallet doesn\'t contain SNI tokens. Please connect a wallet with SNI tokens on Polygon network.';
+        } else if (errorMessage.toLowerCase().includes('balance')) {
+          errorMessage = 'Insufficient SNI token balance. You need at least 10 SNI tokens for this boost.';
+        }
+        
+        console.error('[sni_wallet] ❌ Verification failed:', result);
+        toast.error(errorMessage);
       }
     } catch (error) {
-      toast.error('Failed to verify wallet. Please try again.');
+      console.error('[sni_wallet] ❌ Exception during wallet verification:', error);
+      toast.error('Failed to verify SNI wallet. Please ensure your wallet is connected to Polygon network and try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -945,6 +1081,55 @@ const SNIWalletModal: React.FC<SNIWalletModalProps> = ({ isOpen, onClose, onSucc
       loadWalletStatus();
     }
   }, [isOpen]);
+
+  // Session Expiry Fullscreen Overlay
+  if (showSessionExpiry) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-md border-0 bg-transparent shadow-none p-0">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+            className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.4, delay: 0.2 }}
+              className="bg-white dark:bg-gray-900 rounded-xl p-8 m-4 max-w-md w-full text-center shadow-2xl"
+            >
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ duration: 0.3, delay: 0.4 }}
+              >
+                <div className="mx-auto w-16 h-16 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mb-6">
+                  <Lock className="w-8 h-8 text-amber-600 dark:text-amber-400" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">
+                  Session Expired
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-8 leading-relaxed">
+                  Your login session has expired. Please sign in again to continue connecting your wallet and verify your SNI tokens.
+                </p>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleGracefulLogout}
+                  className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-medium py-3 px-6 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl"
+                >
+                  Sign In Again
+                </motion.button>
+              </motion.div>
+            </motion.div>
+          </motion.div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -1025,18 +1210,28 @@ const SNIWalletModal: React.FC<SNIWalletModalProps> = ({ isOpen, onClose, onSucc
           <div className="flex flex-col gap-2">
             <Button 
               onClick={handleLinkWallet} 
-              disabled={isLinking || isSubmitting}
+              disabled={!ready || !localStorage.getItem('dapps_user_id') || isLinking || isSubmitting}
               className="w-full"
             >
-              {isLinking ? (
+              {!ready ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Connecting Wallet...
+                  Loading...
+                </>
+              ) : !localStorage.getItem('dapps_user_id') ? (
+                <>
+                  <Lock className="mr-2 h-4 w-4" />
+                  Sign In Required
+                </>
+              ) : isLinking ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {!authenticated ? 'Authenticating...' : 'Connecting Wallet...'}
                 </>
               ) : (
                 <>
                   <Wallet className="mr-2 h-4 w-4" />
-                  Connect New Wallet
+                  {!authenticated ? 'Authenticate & Connect Wallet' : 'Connect New Wallet'}
                 </>
               )}
             </Button>
@@ -1091,19 +1286,95 @@ const SHMWalletModal: React.FC<SHMWalletModalProps> = ({ isOpen, onClose, onSucc
   const [walletStatus, setWalletStatus] = useState<SHMWalletStatusResponse | null>(null);
   const [isLoadingStatus, setIsLoadingStatus] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showSessionExpiry, setShowSessionExpiry] = useState(false);
+  const navigate = useNavigate();
+
+  // Add Privy authentication check
+  const { ready, authenticated, user, logout } = usePrivy();
+
+  // Check authentication when modal opens - immediate graceful handling
+  useEffect(() => {
+    if (isOpen && ready) {
+      const userId = localStorage.getItem('dapps_user_id');
+      if (!userId || !authenticated) {
+        console.log('[shm_wallet] 🔓 Session expired on modal open, showing graceful overlay...');
+        setShowSessionExpiry(true);
+      } else {
+        setShowSessionExpiry(false);
+      }
+    }
+  }, [isOpen, ready, authenticated]);
+
+  // Graceful logout function for session expiry
+  const handleSessionExpiry = async () => {
+    console.log('[shm_wallet] 🔓 Handling session expiry gracefully...');
+    
+    // Show a graceful message
+    toast.error('Your login session has expired. Please sign in again to continue.', {
+      duration: 6000,
+      action: {
+        label: 'Sign In',
+        onClick: () => {
+          handleGracefulLogout();
+        }
+      }
+    });
+  };
+
+  const handleGracefulLogout = async () => {
+    try {
+      console.log('[shm_wallet] 🔓 Starting graceful logout...');
+      
+      // Clear localStorage
+      localStorage.clear();
+      
+      // Logout from Privy
+      await logout();
+      
+      // Close modal
+      onClose();
+      
+      // Show friendly message
+      toast.info('Redirecting to sign in...', { duration: 2000 });
+      
+      // Redirect to home page
+      setTimeout(() => {
+        navigate('/');
+      }, 800);
+      
+    } catch (error) {
+      console.error('[shm_wallet] Error during graceful logout:', error);
+      // Fallback - just redirect
+      window.location.href = '/';
+    }
+  };
 
   const { linkWallet } = useLinkAccount({
     onSuccess: (wallet, linkedAccount) => {
       console.log('[shm_wallet] 🎉 Wallet linked successfully!');
       console.log('[shm_wallet] Wallet:', wallet);
       console.log('[shm_wallet] Account:', linkedAccount);
-      
-      if ((wallet as any).address) {
-        console.log('[shm_wallet] Auto-submitting wallet address:', (wallet as any).address);
-        handleWalletSubmit((wallet as any).address);
+
+      // Prefer direct wallet address, then linkedAccount, then fallback to Privy user's latest wallet
+      const directAddress = (wallet as any)?.address || (linkedAccount as any)?.address;
+      let resolvedAddress = directAddress;
+      if (!resolvedAddress && user?.linkedAccounts?.length) {
+        const walletAccounts = user.linkedAccounts.filter(acc => acc.type === 'wallet');
+        if (walletAccounts.length > 0) {
+          const latest = walletAccounts[walletAccounts.length - 1] as any;
+          resolvedAddress = latest?.address;
+          console.log('[shm_wallet] Fallback resolved address from user.linkedAccounts:', resolvedAddress);
+        }
+      }
+
+      if (resolvedAddress) {
+        console.log('[shm_wallet] Submitting wallet address for SHM verification:', resolvedAddress);
+        handleWalletSubmit(resolvedAddress);
       } else {
-        console.error('[shm_wallet] ❌ Latest wallet has no address field');
-        toast.error('Wallet address not found');
+        console.error('[shm_wallet] ❌ Could not resolve a wallet address after linking');
+        toast.error('Wallet address not found. Please try linking again.');
+        // As a fallback, load current status to prompt user
+        loadWalletStatus();
       }
       setIsLinking(false);
     },
@@ -1115,12 +1386,23 @@ const SHMWalletModal: React.FC<SHMWalletModalProps> = ({ isOpen, onClose, onSucc
   });
 
   const handleLinkWallet = async () => {
+    // Check if Privy is ready
+    if (!ready) {
+      console.log('[shm_wallet] ⏳ Privy not ready yet, please wait...');
+      toast.error('Please wait for the page to load completely');
+      return;
+    }
+
     console.log('[shm_wallet] 🔗 Starting wallet linking...');
+    console.log('[shm_wallet] Auth state:', { ready, privyAuthenticated: authenticated, user: !!user });
+    
     setIsLinking(true);
+    
     try {
+      // Proceed with wallet linking (authentication already verified)
       linkWallet();
     } catch (error) {
-      console.error('[shm_wallet] ❌ Exception during wallet linking:', error);
+      console.error('[shm_wallet] ❌ Error during wallet linking process:', error);
       setIsLinking(false);
       toast.error('Failed to initiate wallet linking');
     }
@@ -1133,19 +1415,35 @@ const SHMWalletModal: React.FC<SHMWalletModalProps> = ({ isOpen, onClose, onSucc
       const result = await submitSHMWallet(walletAddress);
       
       if (result && result.success) {
+        console.log('[shm_wallet] ✅ Wallet verification successful:', result);
+        
         if (result.data?.eligible_for_booster) {
-          toast.success(`🎉 Shardeum wallet connected! 3x boost activated!`);
+          toast.success(`🎉 SHM tokens verified! 3x boost activated! Balance: ${result.data.shm_balance} SHM`);
           onSuccess();
           onClose();
         } else {
+          const balance = result.data?.shm_balance || 0;
+          const required = result.data?.required_balance || 10;
+          toast.warning(`SHM balance too low: ${balance} SHM. Need at least ${required} SHM for the boost.`);
           await loadWalletStatus();
-          // Modal will show the status, no need for toast
         }
       } else {
-        toast.error(result?.message || 'Failed to verify Shardeum wallet');
+        // Provide more specific error messages for SHM wallet
+        let errorMessage = result?.message || 'Failed to verify SHM wallet';
+        
+        // Clean up error messages to be more user-friendly
+        if (errorMessage.toLowerCase().includes('sni') || errorMessage.toLowerCase().includes('enb')) {
+          errorMessage = 'This wallet doesn\'t contain SHM tokens. Please connect a wallet with SHM tokens on Shardeum network.';
+        } else if (errorMessage.toLowerCase().includes('balance')) {
+          errorMessage = 'Insufficient SHM token balance. You need at least 10 SHM tokens for this boost.';
+        }
+        
+        console.error('[shm_wallet] ❌ Verification failed:', result);
+        toast.error(errorMessage);
       }
     } catch (error) {
-      toast.error('Failed to connect wallet. Please try again.');
+      console.error('[shm_wallet] ❌ Exception during wallet verification:', error);
+      toast.error('Failed to verify SHM wallet. Please ensure your wallet is connected to Shardeum network and try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -1194,6 +1492,55 @@ const SHMWalletModal: React.FC<SHMWalletModalProps> = ({ isOpen, onClose, onSucc
       loadWalletStatus();
     }
   }, [isOpen]);
+
+  // Session Expiry Fullscreen Overlay
+  if (showSessionExpiry) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-md border-0 bg-transparent shadow-none p-0">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+            className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.4, delay: 0.2 }}
+              className="bg-white dark:bg-gray-900 rounded-xl p-8 m-4 max-w-md w-full text-center shadow-2xl"
+            >
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ duration: 0.3, delay: 0.4 }}
+              >
+                <div className="mx-auto w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-6">
+                  <Lock className="w-8 h-8 text-red-600 dark:text-red-400" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">
+                  Session Expired
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-8 leading-relaxed">
+                  Your login session has expired. Please sign in again to continue connecting your wallet and verify your SHM tokens.
+                </p>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleGracefulLogout}
+                  className="w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium py-3 px-6 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl"
+                >
+                  Sign In Again
+                </motion.button>
+              </motion.div>
+            </motion.div>
+          </motion.div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -1264,18 +1611,28 @@ const SHMWalletModal: React.FC<SHMWalletModalProps> = ({ isOpen, onClose, onSucc
           <div className="flex flex-col gap-2">
             <Button 
               onClick={handleLinkWallet} 
-              disabled={isLinking || isSubmitting}
+              disabled={!ready || !localStorage.getItem('dapps_user_id') || isLinking || isSubmitting}
               className="w-full"
             >
-              {isLinking ? (
+              {!ready ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Connecting Wallet...
+                  Loading...
+                </>
+              ) : !localStorage.getItem('dapps_user_id') ? (
+                <>
+                  <Lock className="mr-2 h-4 w-4" />
+                  Sign In Required
+                </>
+              ) : isLinking ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {!authenticated ? 'Authenticating...' : 'Connecting Wallet...'}
                 </>
               ) : (
                 <>
                   <Wallet className="mr-2 h-4 w-4" />
-                  Connect New Wallet
+                  {!authenticated ? 'Authenticate & Connect Wallet' : 'Connect New Wallet'}
                 </>
               )}
             </Button>
@@ -1519,6 +1876,8 @@ const BoosterCard: React.FC<BoosterCardProps> = ({ activity, onClaim, isProcessi
               'Connect Wallet'
             ) : activity.id === 'sni_token_holder' ? (
               'Connect Wallet'
+            ) : activity.id === 'shm_token_holder' ? (
+              'Connect Wallet'
             ) : 'Complete Task'}
           </>
         );
@@ -1534,6 +1893,10 @@ const BoosterCard: React.FC<BoosterCardProps> = ({ activity, onClaim, isProcessi
             ) : activity.id === 'enable_mobile_notifications' ? (
               isMobileApp() ? 'Enable Notifications' : 'Download Mobile App'
             ) : activity.id === 'enb_token_holder' ? (
+              'Connect Wallet'
+            ) : activity.id === 'sni_token_holder' ? (
+              'Connect Wallet'
+            ) : activity.id === 'shm_token_holder' ? (
               'Connect Wallet'
             ) : 'Start Task'}
           </>
@@ -1918,6 +2281,19 @@ const BoosterPage: React.FC = () => {
   
   // Add a ref to track if we're on mobile
   const isMobileRef = useRef<boolean>(false);
+
+  // Optimistically mark a token-holder booster as eligible immediately after wallet verification
+  const optimisticallyMarkTokenEligibility = (boosterId: 'enb_token_holder' | 'sni_token_holder' | 'shm_token_holder') => {
+    setBoosterData(prev => {
+      if (!prev) return prev;
+      const updatedActivities = prev.activities.map(activity =>
+        activity.id === boosterId
+          ? { ...activity, eligible: true }
+          : activity
+      );
+      return { ...prev, activities: updatedActivities };
+    });
+  };
   
   // ENB Wallet Modal state
   const [showENBWalletModal, setShowENBWalletModal] = useState(false);
@@ -2966,7 +3342,8 @@ const BoosterPage: React.FC = () => {
         isOpen={showENBWalletModal}
         onClose={() => setShowENBWalletModal(false)}
         onSuccess={() => {
-          // Refresh booster data when wallet is successfully linked and eligible
+          // Optimistically enable ENB booster claim, then refresh
+          optimisticallyMarkTokenEligibility('enb_token_holder');
           fetchData();
         }}
       />
@@ -2976,7 +3353,8 @@ const BoosterPage: React.FC = () => {
         isOpen={showSNIWalletModal}
         onClose={() => setShowSNIWalletModal(false)}
         onSuccess={() => {
-          // Refresh booster data when wallet is successfully linked and eligible
+          // Optimistically enable SNI booster claim, then refresh
+          optimisticallyMarkTokenEligibility('sni_token_holder');
           fetchData();
         }}
       />
@@ -2986,7 +3364,8 @@ const BoosterPage: React.FC = () => {
         isOpen={showSHMWalletModal}
         onClose={() => setShowSHMWalletModal(false)}
         onSuccess={() => {
-          // Refresh booster data when wallet is successfully linked and eligible
+          // Optimistically enable SHM booster claim, then refresh
+          optimisticallyMarkTokenEligibility('shm_token_holder');
           fetchData();
         }}
       />

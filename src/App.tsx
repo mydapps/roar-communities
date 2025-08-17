@@ -38,6 +38,7 @@ import { validateAuthentication } from '@/utils/apiBase';
 import FollowSuggestionsPage from '@/pages/FollowSuggestionsPage';
 import DeviceProvider from '@/components/providers/DeviceProvider';
 import TermsOfServicePage from '@/pages/TermsOfServicePage';
+import RoaredPostsPage from '@/pages/RoaredPostsPage';
 import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
 import TransactionHistoryPage from '@/pages/TransactionHistoryPage';
 import AccountInactivePage from '@/pages/AccountInactivePage';
@@ -134,6 +135,11 @@ function App() {
             <Route path="feed" element={
               <ProtectedRoute>
                 <FeedPage />
+              </ProtectedRoute>
+            } />
+            <Route path="roared-posts" element={
+              <ProtectedRoute>
+                <RoaredPostsPage />
               </ProtectedRoute>
             } />
             <Route path="communities" element={<CommunitiesPage />} />

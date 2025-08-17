@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Menu, Search, User, Gift, Sparkles, LogOut, ArrowLeft, Home, Moon, Sun } from 'lucide-react';
+import { Menu, Search, User, Gift, Sparkles, LogOut, ArrowLeft, Home, Moon, Sun, Heart } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   DropdownMenu, 
@@ -300,6 +300,12 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
                     <Link to="/feed" className="cursor-pointer flex items-center gap-2">
                       <Home className="h-4 w-4" />
                       <span>Feed</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/roared-posts" className="cursor-pointer flex items-center gap-2">
+                      <Heart className="h-4 w-4 text-primary fill-current" />
+                      <span>Roared Posts</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>

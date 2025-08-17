@@ -41,6 +41,14 @@ interface PostFooterProps {
   setTipSheetOpen: (open: boolean) => void;
   tipCount?: number;
   hasUserTipped?: boolean;
+  onTipSuccess?: (tipData: {
+    senderHandle: string;
+    receiverHandle: string;
+    amount: number;
+    asset: string;
+    usdValue?: number;
+    parentReplyId?: number;
+  }) => void;
 }
 
 export const PostFooter: React.FC<PostFooterProps> = ({
@@ -72,7 +80,8 @@ export const PostFooter: React.FC<PostFooterProps> = ({
   tipSheetOpen,
   setTipSheetOpen,
   tipCount = 0,
-  hasUserTipped = false
+  hasUserTipped = false,
+  onTipSuccess
 }) => {
   const location = useLocation();
   

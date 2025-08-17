@@ -669,6 +669,7 @@ const DetailedPostPage = () => {
           poll_data={post.poll_data}
           onTriggerMobileCommentInput={triggerMobileCommentInput}
           onTipSuccess={handleTipSuccess}
+          hasUserTipped={post.has_tipped === 1}
         />
       </div>
       

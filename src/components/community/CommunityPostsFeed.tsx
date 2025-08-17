@@ -62,6 +62,7 @@ const CommunityPostsFeed: React.FC<CommunityPostsFeedProps> = ({
               } : undefined}
               ipfs={post.code || ''}
               isLoggedIn={isLoggedIn}
+              hasUserTipped={post.has_tipped === 1}
               hideComments={false} // Keep comments visible on community feed
               isAdmin={isAdmin}
               isPinned={!!post.pinned}

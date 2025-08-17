@@ -160,6 +160,8 @@ export const TipSheet: React.FC<TipSheetProps> = ({
       return;
     }
 
+    console.log('🎯 Starting tip process:', { amount, activeTab, tipType, postCode, replyId });
+
     // Validation
     if (activeTab === 'roar') {
       if (!tipLimits) {
@@ -225,13 +227,24 @@ export const TipSheet: React.FC<TipSheetProps> = ({
 
     // For ETH tips, show immediate optimistic success (blockchain takes time)
     if (activeTab === 'eth') {
+      console.log('💎 Processing ETH tip optimistically');
       // Send API request in background without waiting
       fetch(apiEndpoint, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody)
-      }).catch(error => {
+      })
+      .then(async response => {
+        const data = await response.json();
+        if (!response.ok || !data.success) {
+          console.error('Background ETH tip failed:', data);
+          // Don't show error toast since user already saw optimistic success
+        } else {
+          console.log('Background ETH tip succeeded:', data);
+        }
+      })
+      .catch(error => {
         console.error('Background ETH tip error:', error);
         // Don't show error to user since they already saw success
         // TODO: Could implement retry logic or notification system here
@@ -316,10 +329,11 @@ export const TipSheet: React.FC<TipSheetProps> = ({
         setCustomAmount('');
         loadTipLimits();
       } else {
+        console.log('🚫 ROAR tip failed - API response:', data);
         toast.error(data.message || 'Failed to send tip');
       }
     } catch (error) {
-      console.error('Error sending tip:', error);
+      console.error('🚫 ROAR tip error - Exception:', error);
       toast.error('Failed to send tip. Please try again.');
     } finally {
       setIsLoading(false);

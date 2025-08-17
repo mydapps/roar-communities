@@ -228,6 +228,9 @@ export const UserPosts: React.FC<UserPostsProps> = ({ handle }) => {
             // Enable comments functionality
             hideComments={false}
             isLoggedIn={true} // Assume logged in since we're viewing profile
+            // Tipping functionality
+            tipCount={0} // TODO: Add tip count from API if available
+            hasUserTipped={post.has_tipped === 1}
 
           />
         );

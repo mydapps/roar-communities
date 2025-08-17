@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter, DrawerClose } from '@/components/ui/drawer';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { XIcon, SendIcon, ImageIcon, VideoIcon, UsersIcon, BoldIcon, ItalicIcon, UnderlineIcon, Loader2, BarChartBigIcon, Trash2Icon, ImagePlusIcon, AlertTriangleIcon, Smile } from 'lucide-react';
+import { XIcon, SendIcon, ImageIcon, VideoIcon, UsersIcon, BoldIcon, ItalicIcon, UnderlineIcon, Loader2, BarChartBigIcon, Trash2Icon, ImagePlusIcon, AlertTriangleIcon, Smile, PlusIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { CommunitySelector } from './CommunitySelector';
@@ -494,19 +494,56 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
     setPollOptions(prev => prev.map(opt => opt.id === optionId ? { ...opt, text: newText } : opt));
   };
 
-  // --- NEW: ENHANCED FOCUS MANAGEMENT FOR POLL OPTIONS ---
+  // --- ENHANCED MOBILE-FIRST FOCUS MANAGEMENT FOR POLL OPTIONS ---
   const handlePollOptionFocus = (optionId: string) => {
     setFocusedPollOption(optionId);
     setPollError(null); // Clear errors when user starts typing
+    
+    // Enhanced mobile keyboard handling
+    if (isMobile) {
+      // Trigger keyboard detection earlier for smoother UX
+      setTimeout(() => {
+        setIsKeyboardVisible(true);
+        
+        // Auto-scroll to focused input with better timing
+        const focusedInput = pollOptionInputRefs.current[optionId];
+        const scrollContainer = scrollContainerRef.current;
+        
+        if (focusedInput && scrollContainer) {
+          // Improved scroll calculation for mobile poll creation
+          const inputRect = focusedInput.getBoundingClientRect();
+          const containerRect = scrollContainer.getBoundingClientRect();
+          
+          // Calculate optimal scroll position considering mobile keyboard
+          const targetPosition = inputRect.top - containerRect.top + scrollContainer.scrollTop - 80;
+          
+          scrollContainer.scrollTo({
+            top: Math.max(0, targetPosition),
+            behavior: 'smooth'
+          });
+        }
+      }, 150); // Optimized timing for keyboard appearance
+    }
   };
 
   const handlePollOptionBlur = () => {
     // Small delay to allow for focus to move to another poll option
     setTimeout(() => {
       setFocusedPollOption(null);
+      
+      // Reset keyboard visibility if no poll options are focused on mobile
+      if (isMobile) {
+        const anyPollInputFocused = Object.values(pollOptionInputRefs.current).some(
+          input => input === document.activeElement
+        );
+        
+        if (!anyPollInputFocused) {
+          setTimeout(() => setIsKeyboardVisible(false), 200);
+        }
+      }
     }, 100);
   };
-  // --- END ENHANCED FOCUS MANAGEMENT ---
+  // --- END ENHANCED MOBILE-FIRST FOCUS MANAGEMENT ---
 
   const handlePollOptionImageSelected = async (optionId: string, file: File) => {
     if (!file.type.startsWith('image/')) {
@@ -853,15 +890,34 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const renderPollCreator = () => {
     if (!isPollMode) return null;
     return (
-      <div className={cn("border-t space-y-3", isMobile ? "p-3" : "p-4")}>
-        <h3 className="text-sm font-medium text-muted-foreground">Poll Options (min 2, max 4)</h3>
+      <div className={cn("border-t space-y-3", 
+        isMobile ? "p-3" : "p-4",
+        // Enhanced mobile spacing when keyboard is visible
+        isMobile && isKeyboardVisible ? "pb-6" : ""
+      )}>
+        <div className="flex items-center justify-between">
+          <h3 className={cn("font-medium text-muted-foreground", 
+            isMobile ? "text-base" : "text-sm"
+          )}>
+            Poll Options (min 2, max 4)
+          </h3>
+          {/* Mobile keyboard indicator */}
+          {isMobile && isKeyboardVisible && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <div className="w-2 h-2 bg-primary rounded-full animate-pulse" />
+              Typing mode
+            </div>
+          )}
+        </div>
         {pollOptions.map((option, index) => (
           <div 
             key={option.id} 
             className={cn(
               "border rounded-lg bg-background transition-all duration-200",
-              isMobile ? "p-3" : "p-2",
-              focusedPollOption === option.id && isMobile ? "ring-2 ring-primary/50 border-primary/50 shadow-sm" : ""
+              isMobile ? "p-4" : "p-2",
+              // Enhanced mobile focus states and keyboard-aware styling
+              focusedPollOption === option.id && isMobile ? "ring-2 ring-primary/50 border-primary/50 shadow-lg scale-[1.02]" : "",
+              isMobile && isKeyboardVisible ? "shadow-sm border-muted-foreground/30" : ""
             )}
           >
             {/* Mobile-optimized layout */}
@@ -883,8 +939,13 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
                   onBlur={handlePollOptionBlur}
                   className={cn(
                     "transition-all duration-200",
-                    isMobile ? "text-base h-12 text-foreground" : "text-sm",
-                    focusedPollOption === option.id && isMobile ? "ring-2 ring-primary/30" : ""
+                    // Enhanced mobile input styling for better touch experience
+                    isMobile ? "text-base h-14 text-foreground font-medium px-4 rounded-lg" : "text-sm",
+                    // Dynamic focus states based on keyboard visibility
+                    focusedPollOption === option.id && isMobile && isKeyboardVisible ? "ring-2 ring-primary/50 border-primary shadow-md" : "",
+                    focusedPollOption === option.id && isMobile && !isKeyboardVisible ? "ring-1 ring-primary/30" : "",
+                    // Better contrast when keyboard is visible
+                    isMobile && isKeyboardVisible ? "bg-background/95 backdrop-blur-sm" : ""
                   )}
                   maxLength={100}
                     disabled={option.isUploadingImage}
@@ -929,9 +990,11 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
                 />
             </div>
               
-              {/* Action buttons - mobile optimized */}
-              <div className={cn("flex items-start gap-1", 
-                isMobile ? "flex-col pt-2" : "flex-col space-y-1 pt-1"
+              {/* Action buttons - enhanced mobile touch targets */}
+              <div className={cn("flex items-start", 
+                isMobile ? "flex-col gap-2 pt-3" : "flex-col space-y-1 pt-1",
+                // Better spacing when keyboard is visible
+                isMobile && isKeyboardVisible ? "gap-3" : ""
               )}>
                 <Button 
                   variant="outline" 
@@ -939,7 +1002,12 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
                     onClick={() => pollOptionImageUploadRefs.current[option.id]?.click()} 
                     title={option.imageUrl ? "Change Image" : "Add Image"}
                   disabled={option.isUploadingImage || pollOptions.some(o => o.isUploadingImage && o.id !== option.id)}
-                  className={cn(isMobile ? "h-10 w-10 p-0" : "")}
+                  className={cn(
+                    // Enhanced mobile button styling
+                    isMobile ? "h-12 w-12 p-0 rounded-lg shadow-sm" : "",
+                    // Better visibility when keyboard is active
+                    isMobile && isKeyboardVisible ? "bg-primary/5 border-primary/30" : ""
+                  )}
                 >
                     <ImagePlusIcon className="h-4 w-4" />
                 </Button>
@@ -951,8 +1019,11 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
                     onClick={() => handleRemovePollOption(option.id)} 
                     title="Remove Option" 
                     className={cn(
-                      "text-muted-foreground hover:text-destructive",
-                      isMobile ? "h-10 w-10 p-0" : ""
+                      "text-muted-foreground hover:text-destructive transition-colors",
+                      // Enhanced mobile remove button styling
+                      isMobile ? "h-12 w-12 p-0 rounded-lg shadow-sm" : "",
+                      // Better visibility when keyboard is active
+                      isMobile && isKeyboardVisible ? "bg-destructive/5 border-destructive/30 hover:bg-destructive/10" : ""
                     )}
                   >
                         <Trash2Icon className="h-4 w-4" />
@@ -963,13 +1034,21 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
           </div>
         ))}
         
-        {/* Add option button - mobile optimized */}
+        {/* Add option button - enhanced mobile experience */}
         {pollOptions.length < 4 && (
           <Button 
             variant="outline" 
             onClick={handleAddPollOption} 
-            className={cn("w-full", isMobile ? "h-12 text-base" : "mt-2")}
+            className={cn("w-full transition-all duration-200", 
+              // Enhanced mobile add button styling
+              isMobile ? "h-14 text-base font-medium rounded-lg" : "mt-2",
+              // Better visibility and feedback when keyboard is visible
+              isMobile && isKeyboardVisible ? "bg-primary/5 border-primary/40 shadow-sm hover:bg-primary/10" : "",
+              // Visual feedback for the button
+              "hover:scale-[0.99] active:scale-[0.97]"
+            )}
           >
+            <PlusIcon className={cn("mr-2", isMobile ? "h-5 w-5" : "h-4 w-4")} />
             Add Option ({pollOptions.length}/4)
           </Button>
         )}
@@ -1012,16 +1091,20 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
       <div 
         ref={scrollContainerRef}
         className={cn("flex-grow overflow-y-auto custom-scrollbar", {
-        "pb-[calc(env(safe-area-inset-bottom)_+_70px)]": isMobile, // Padding for mobile toolbar + some space
-          // Adjust height when keyboard is visible on mobile
-          "max-h-[50vh]": isMobile && isKeyboardVisible && isPollMode,
-          "max-h-[60vh]": isMobile && isKeyboardVisible && !isPollMode,
+          "pb-[calc(env(safe-area-inset-bottom)_+_70px)]": isMobile, // Padding for mobile toolbar + some space
+          // Enhanced mobile keyboard height adjustments based on content
+          "max-h-[40vh]": isMobile && isKeyboardVisible && isPollMode && pollOptions.length > 2,
+          "max-h-[45vh]": isMobile && isKeyboardVisible && isPollMode && pollOptions.length <= 2,
+          "max-h-[55vh]": isMobile && isKeyboardVisible && !isPollMode,
+          // Ensure minimum scrollable space on mobile
+          "min-h-[200px]": isMobile && isKeyboardVisible,
         })} 
         style={{ 
           WebkitOverflowScrolling: 'touch',
-          // Dynamic height adjustment for keyboard on mobile
+          scrollBehavior: 'smooth',
+          // Enhanced dynamic height adjustment for keyboard on mobile
           ...(isMobile && isKeyboardVisible && window.visualViewport ? {
-            maxHeight: `${window.visualViewport.height - 200}px`
+            maxHeight: `${Math.max(200, window.visualViewport.height - 180)}px`
           } : {})
         }}
       >
@@ -1243,7 +1326,9 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-xl md:max-w-2xl lg:max-w-3xl p-0 gap-0 shadow-2xl rounded-lg overflow-hidden">
+        <DialogContent className={cn("sm:max-w-xl md:max-w-2xl lg:max-w-3xl p-0 gap-0 shadow-2xl rounded-lg", 
+          isMobile ? "overflow-visible" : "overflow-hidden"
+        )}>
           {PostCreationForm}
         </DialogContent>
       </Dialog>

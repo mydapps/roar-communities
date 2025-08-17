@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -124,6 +125,8 @@ export const Post = ({
   const [notInCommunitySheetOpen, setNotInCommunitySheetOpen] = useState(false);
   const [sheetCommunityName, setSheetCommunityName] = useState("");
   const [tipSheetOpen, setTipSheetOpen] = useState(false);
+  const [localTipCount, setLocalTipCount] = useState(tipCount);
+  const [localHasUserTipped, setLocalHasUserTipped] = useState(hasUserTipped);
   const isMobile = useIsMobile();
   
   // Image viewer hook
@@ -173,7 +176,9 @@ export const Post = ({
     setLocalRoarCount(roarCount);
     setCurrentIsPinned(isPinned);
     setCurrentPollData(poll_data);
-  }, [roared, roarCount, isPinned, poll_data]);
+    setLocalTipCount(tipCount);
+    setLocalHasUserTipped(hasUserTipped);
+  }, [roared, roarCount, isPinned, poll_data, tipCount, hasUserTipped]);
 
   const handleRoar = async () => {
     if (!userIsLoggedIn) {
@@ -206,6 +211,40 @@ export const Post = ({
         description: "Unable to roar this post. Missing post identifier.",
         variant: "destructive"
       });
+    }
+  };
+
+  // Handle optimistic tip success updates
+  const handleTipSuccess = (tipData: {
+    senderHandle: string;
+    receiverHandle: string;
+    amount: number;
+    asset: string;
+    usdValue?: number;
+    parentReplyId?: number;
+  }) => {
+    // Only update if this is a tip for this post (not a reply)
+    if (!tipData.parentReplyId) {
+      setLocalHasUserTipped(true);
+      setLocalTipCount(prev => prev + 1);
+      
+      // Show success toast with delightful feedback
+      const tipText = tipData.asset === 'roar' 
+        ? `${tipData.amount} 🦁 ROAR`
+        : `${tipData.amount} ETH${tipData.usdValue ? ` (~$${tipData.usdValue.toFixed(2)})` : ''}`;
+      
+      console.log('🎉 Tip success - visual update applied:', { tipText, receiverHandle: tipData.receiverHandle });
+      
+      // TODO: Fix toast.success import issue
+      // toast.success(`Tip sent! ${tipText}`, {
+      //   description: `@${tipData.receiverHandle} received your appreciation`,
+      //   duration: 4000,
+      // });
+    }
+    
+    // Pass through to parent onTipSuccess if provided
+    if (onTipSuccess) {
+      onTipSuccess(tipData);
     }
   };
 
@@ -657,8 +696,9 @@ export const Post = ({
           onTriggerMobileCommentInput={onTriggerMobileCommentInput}
           tipSheetOpen={tipSheetOpen}
           setTipSheetOpen={setTipSheetOpen}
-          tipCount={tipCount}
-          hasUserTipped={hasUserTipped}
+          tipCount={localTipCount}
+          hasUserTipped={localHasUserTipped}
+          onTipSuccess={handleTipSuccess}
         >
           {showComments && !hideComments && (
             <div onClick={(e) => e.stopPropagation()} className="w-full">
@@ -733,7 +773,7 @@ export const Post = ({
           postCode={postCode}
           receiverHandle={username}
           receiverAvatar={avatar}
-          onTipSuccess={onTipSuccess}
+          onTipSuccess={handleTipSuccess}
         />
       )}
     </>

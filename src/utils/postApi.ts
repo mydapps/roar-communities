@@ -17,6 +17,7 @@ export interface Post {
   upvotes: number;
   comments: number;
   roar: number; // 1 if user has already roared this post, 0 if not
+  has_tipped?: number; // 1 if user has tipped this post directly, 0 if not - NEW FIELD
   ipfs: string;
   engagement: number;
   roarable: number;
@@ -242,6 +243,39 @@ export const fetchPost = async (postCode: string): Promise<{
   } catch (error) {
     console.error('Error fetching post:', error);
     toast.error('Failed to load post. Please try again.');
+    throw error;
+  }
+};
+
+/**
+ * Fetch posts that the current user has upvoted (roared)
+ */
+export const fetchUserUpvotedPosts = async (page: number = 1): Promise<Post[]> => {
+  try {
+    const response = await fetch(`/api/user_upvoted_posts?page=${page}`, {
+      method: 'GET',
+      headers: createAuthHeaders(),
+      credentials: 'include'
+    });
+    
+    console.log(`User upvoted posts API response status: ${response.status}`);
+    
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Authentication required to view your upvoted posts');
+      }
+      const errorText = await response.text();
+      console.error(`Failed response body: ${errorText}`);
+      throw new Error(`Failed to fetch upvoted posts: ${errorText}`);
+    }
+    
+    const data: Post[] = await response.json();
+    console.log(`User upvoted posts API response:`, data);
+    
+    return data;
+  } catch (error) {
+    console.error('Error fetching user upvoted posts:', error);
+    toast.error('Failed to load your upvoted posts. Please try again.');
     throw error;
   }
 };
