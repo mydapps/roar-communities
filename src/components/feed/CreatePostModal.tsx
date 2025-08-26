@@ -142,6 +142,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
   const editorInstanceRef = useRef<Editor | null>(null);
   const [isPasting, setIsPasting] = useState(false);
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+  const [pollOptionEmojiPickerOpen, setPollOptionEmojiPickerOpen] = useState<Record<string, boolean>>({});
 
   // --- POLL STATE ---
   const [isPollMode, setIsPollMode] = useState(false);
@@ -234,6 +235,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
       setIsPollMode(false); // Reset poll mode on open
       setPollOptions([]);    // Clear poll options
       setPollError(null);    // Clear poll errors
+      setPollOptionEmojiPickerOpen({}); // Clear emoji picker states
       
       // Reset mobile UX state
       setFocusedPollOption(null);
@@ -492,6 +494,33 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
 
   const handlePollOptionTextChange = (optionId: string, newText: string) => {
     setPollOptions(prev => prev.map(opt => opt.id === optionId ? { ...opt, text: newText } : opt));
+  };
+
+  // Add emoji to specific poll option
+  const handlePollOptionEmojiSelect = (optionId: string, emojiData: EmojiClickData) => {
+    let emojiToInsert = '';
+    if (emojiData.isCustom) {
+      emojiToInsert = `:${emojiData.emoji}:`;
+    } else {
+      emojiToInsert = emojiData.emoji;
+    }
+    
+    setPollOptions(prev => prev.map(opt => 
+      opt.id === optionId 
+        ? { ...opt, text: opt.text + emojiToInsert }
+        : opt
+    ));
+    
+    // Close the emoji picker after selection
+    setPollOptionEmojiPickerOpen(prev => ({ ...prev, [optionId]: false }));
+  };
+
+  // Toggle emoji picker for specific poll option
+  const togglePollOptionEmojiPicker = (optionId: string) => {
+    setPollOptionEmojiPickerOpen(prev => ({ 
+      ...prev, 
+      [optionId]: !prev[optionId] 
+    }));
   };
 
   // --- ENHANCED MOBILE-FIRST FOCUS MANAGEMENT FOR POLL OPTIONS ---
@@ -992,7 +1021,7 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
               
               {/* Action buttons - enhanced mobile touch targets */}
               <div className={cn("flex items-start", 
-                isMobile ? "flex-col gap-2 pt-3" : "flex-col space-y-1 pt-1",
+                isMobile ? "flex-col gap-2 pt-3" : "flex-row gap-1 pt-1",
                 // Better spacing when keyboard is visible
                 isMobile && isKeyboardVisible ? "gap-3" : ""
               )}>
@@ -1011,6 +1040,42 @@ export const CreatePostModal: React.FC<CreatePostModalProps> = ({
                 >
                     <ImagePlusIcon className="h-4 w-4" />
                 </Button>
+                
+                {/* Emoji Picker Button for Poll Option */}
+                <Popover 
+                  open={pollOptionEmojiPickerOpen[option.id] || false} 
+                  onOpenChange={(open) => setPollOptionEmojiPickerOpen(prev => ({ ...prev, [option.id]: open }))}
+                >
+                  <PopoverTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      size={isMobile ? "default" : "icon"}
+                      onClick={() => togglePollOptionEmojiPicker(option.id)}
+                      title="Add Emoji to Option"
+                      className={cn(
+                        // Enhanced mobile button styling
+                        isMobile ? "h-12 w-12 p-0 rounded-lg shadow-sm" : "",
+                        // Better visibility when keyboard is active
+                        isMobile && isKeyboardVisible ? "bg-primary/5 border-primary/30" : "",
+                        // Highlight when open
+                        pollOptionEmojiPickerOpen[option.id] ? "bg-primary/10 border-primary/50" : ""
+                      )}
+                    >
+                      <Smile className="h-4 w-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 border-0 z-[100]" side="left" align="start">
+                    <EmojiPicker
+                      onEmojiClick={(emojiData) => handlePollOptionEmojiSelect(option.id, emojiData)}
+                      autoFocusSearch={false}
+                      emojiStyle={EmojiStyle.NATIVE}
+                      height={300}
+                      width={280}
+                      customEmojis={customEmojisConfig}
+                      categories={emojiPickerCategoryConfig}
+                    />
+                  </PopoverContent>
+                </Popover>
                 
                 {pollOptions.length > 2 && (
                   <Button 

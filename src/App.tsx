@@ -50,6 +50,7 @@ import { ThemeProvider } from '@/contexts/ThemeContext';
 import MessagesPage from '@/pages/MessagesPage';
 import ConversationPage from '@/pages/ConversationPage';
 import PaidConversationPage from '@/pages/PaidConversationPage';
+import DIP1Page from '@/pages/DIP1Page';
 
 import { TipProvider } from '@/contexts/TipContext';
 import { SharedTipSheet } from '@/components/tip/SharedTipSheet';
@@ -167,6 +168,7 @@ function App() {
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="roar-farming" element={<RoarFarmingPage />} />
             <Route path="roar-leaderboard" element={<RoarLeaderboardPage />} />
+            <Route path="dip/1" element={<DIP1Page />} />
             <Route path="roars/:username" element={<RoarsPage />} />
             <Route path="boosters" element={<BoosterPage />} />
             <Route path="successful-onboarding" element={

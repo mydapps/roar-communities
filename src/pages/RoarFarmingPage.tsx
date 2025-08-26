@@ -1315,6 +1315,40 @@ const RoarFarmingPage = () => {
           </CardContent>
         </Card>
         
+        {/* DIP-1 Victory Callout */}
+        <Card className="mb-5 border-0 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 shadow-lg hover:shadow-xl transition-all duration-300 border-green-200 dark:border-green-800">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-2 h-2 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full animate-pulse"></div>
+                  <span className="text-xs font-medium text-green-700 dark:text-green-300 uppercase tracking-wide">Victory!</span>
+                </div>
+                <h3 className="text-sm font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-1">
+                  🏆 DIP-1 PASSED! Community Tokens Coming Soon
+                </h3>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Unanimous approval! 638M+ 🦁 voted YES for the historic migration to ERC20 tokens.
+                </p>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Link 
+                  to="/dip/1" 
+                  className="text-xs px-4 py-2 rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 font-medium shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105 text-center"
+                >
+                  🎉 View Results
+                </Link>
+                <Link 
+                  to="/mohit/04c06d" 
+                  className="text-xs px-4 py-1 rounded-lg border border-green-200 dark:border-green-700 text-green-600 dark:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors text-center"
+                >
+                  Celebration
+                </Link>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
         {/* Main farming card */}
         <Card className="border-amber-200 dark:border-amber-800/40 shadow-md">
           <CardHeader className="pb-2">

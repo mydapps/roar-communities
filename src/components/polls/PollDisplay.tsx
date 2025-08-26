@@ -3,6 +3,7 @@ import { PollData } from '@/utils/postApi';
 import { cn } from '@/lib/utils';
 import { CheckCircle2, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { processTextContent } from '@/utils/textFormatting';
 
 interface PollDisplayProps {
   pollQuestion: string;
@@ -121,13 +122,13 @@ export const PollDisplay: React.FC<PollDisplayProps> = ({
                 )}
 
                 <div className="flex items-center justify-between flex-grow">
-                  <span className={cn(
+                  <div className={cn(
                     "font-semibold break-words",
                     showResults && isChosenOption ? "text-black" : "text-card-foreground dark:text-slate-100",
                     option.imageUrl ? "text-sm sm:text-base" : "text-base sm:text-lg"
                   )}>
-                    {option.text}
-                  </span>
+                    {processTextContent(option.text)}
+                  </div>
                   {showResults && isChosenOption && (
                      <CheckCircle2 className="h-5 w-5 text-black ml-2 flex-shrink-0" />
                   )}
