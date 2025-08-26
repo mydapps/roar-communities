@@ -18,6 +18,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { GifPicker } from '@/components/ui/gif-picker';
+import { AnimatedGifIcon } from '@/components/ui/animated-gif-icon';
 import { useImageViewer } from '@/components/contexts/ImageViewerContext';
 import { TipButton } from '@/components/tip/TipButton';
 import { TipSheet } from '@/components/tip/TipSheet';
@@ -79,6 +81,8 @@ export const EnhancedCommentItem = ({
   // --- End Mention State ---
   
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+  const [isGifPickerOpen, setIsGifPickerOpen] = useState(false);
+  const [selectedGif, setSelectedGif] = useState<{ url: string; alt?: string } | null>(null);
   
   // Image viewer hook
   const { openImageViewer } = useImageViewer();
@@ -454,7 +458,7 @@ export const EnhancedCommentItem = ({
   const handleSubmitReply = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!replyContent.trim() && !uploadedMedia) return;
+    if (!replyContent.trim() && !uploadedMedia && !selectedGif) return;
     
     setIsSending(true);
     
@@ -478,6 +482,12 @@ export const EnhancedCommentItem = ({
         finalContent += markdown;
       }
       
+      // Add GIF if selected
+      if (selectedGif && selectedGif.url) {
+        const gifMarkdown = finalContent.length > 0 ? `\n\n![GIF](${selectedGif.url})` : `![GIF](${selectedGif.url})`;
+        finalContent += gifMarkdown;
+      }
+      
       // If we're at level 3, use the level 2 parent ID as the target
       let targetId = commentRealId; // Default to replying directly to this comment
       
@@ -489,6 +499,7 @@ export const EnhancedCommentItem = ({
       await onReply(targetId, finalContent);
       setReplyContent('');
       setUploadedMedia(null);
+      setSelectedGif(null);
       setIsReplying(false);
     } catch (error) {
       console.error('Error submitting reply:', error);
@@ -586,6 +597,22 @@ export const EnhancedCommentItem = ({
       }, 0);
       setIsEmojiPickerOpen(false);
     }
+  };
+
+  const onGifSelect = (gifUrl: string) => {
+    // Set the selected GIF for preview (don't modify text)
+    setSelectedGif({ url: gifUrl, alt: 'Selected GIF' });
+    setIsGifPickerOpen(false);
+    toast.success('GIF added to your reply!');
+    
+    // Focus back to textarea
+    if (replyInputRef.current) {
+      replyInputRef.current.focus();
+    }
+  };
+
+  const removeSelectedGif = () => {
+    setSelectedGif(null);
   };
   
   // Share comment functionality
@@ -825,7 +852,32 @@ export const EnhancedCommentItem = ({
                 {uploadedMedia && (
                   <div className="mt-2">
                     <MediaPreview media={uploadedMedia} onRemove={removeMedia} />
+                  </div>
+                )}
+                {/* GIF Preview for inline reply */}
+                {selectedGif && (
+                  <div className="mt-2">
+                    <div className="relative max-w-xs">
+                      <img 
+                        src={selectedGif.url} 
+                        alt={selectedGif.alt || 'Selected GIF'} 
+                        className="rounded-md object-cover w-full h-auto border border-border/20"
+                        loading="lazy"
+                      />
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="absolute top-2 right-2 h-6 w-6 p-0 rounded-full"
+                        onClick={removeSelectedGif}
+                        title="Remove GIF"
+                      >
+                        ✕
+                      </Button>
+                      <div className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
+                        GIF
                       </div>
+                    </div>
+                  </div>
                 )}
                 {/* Container for media buttons and submit button */}
                 <div className="flex items-center justify-between pt-2">
@@ -866,9 +918,19 @@ export const EnhancedCommentItem = ({
                         />
                       </PopoverContent>
                     </Popover>
+                    <Popover open={isGifPickerOpen} onOpenChange={setIsGifPickerOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700 h-8 w-8" disabled={isSending} title="Add GIF">
+                          <AnimatedGifIcon className="h-4 w-4" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0 border-0 z-50" side="top" align="start">
+                        <GifPicker onGifSelect={onGifSelect} />
+                      </PopoverContent>
+                    </Popover>
                   </div>
                   {/* Submit Button */}
-                  <Button type="submit" size="sm" disabled={isSending || (!replyContent.trim() && !uploadedMedia)} className="h-8">
+                  <Button type="submit" size="sm" disabled={isSending || (!replyContent.trim() && !uploadedMedia && !selectedGif)} className="h-8">
                     {isSending ? <Loader2 className="animate-spin h-4 w-4" /> : <Send className="h-4 w-4" />}
                     Post
                   </Button>

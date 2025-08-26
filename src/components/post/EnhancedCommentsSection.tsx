@@ -19,6 +19,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { GifPicker } from '@/components/ui/gif-picker';
+import { AnimatedGifIcon } from '@/components/ui/animated-gif-icon';
 
 interface EnhancedCommentsSectionProps {
   postCode: string;
@@ -96,6 +98,8 @@ export const EnhancedCommentsSection = ({
   const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
   const suggestionsContainerRef = useRef<HTMLDivElement>(null);
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+  const [isGifPickerOpen, setIsGifPickerOpen] = useState(false);
+  const [selectedGif, setSelectedGif] = useState<{ url: string; alt?: string } | null>(null);
 
   const handleInitiateMentionInNewComment = (username: string) => {
     if (newCommentInputRef.current) {
@@ -162,7 +166,7 @@ export const EnhancedCommentsSection = ({
       e.preventDefault();
       e.stopPropagation();
     }
-    if (!newComment.trim() && !uploadedMedia) return;
+    if (!newComment.trim() && !uploadedMedia && !selectedGif) return;
     setSubmitting(true);
     let finalContent = newComment.trim();
     if (uploadedMedia && uploadedMedia.url) {
@@ -176,6 +180,12 @@ export const EnhancedCommentsSection = ({
       }
       const markdown = finalContent.length > 0 ? `\n\n![](${mediaUrl})` : `![](${mediaUrl})`;
       finalContent += markdown;
+    }
+    
+    // Add GIF if selected
+    if (selectedGif && selectedGif.url) {
+      const gifMarkdown = finalContent.length > 0 ? `\n\n![GIF](${selectedGif.url})` : `![GIF](${selectedGif.url})`;
+      finalContent += gifMarkdown;
     }
     try {
       const response = await createReply(postCode, finalContent);
@@ -203,6 +213,7 @@ export const EnhancedCommentsSection = ({
         setReplyCount(prev => prev + 1);
         setNewComment('');
         setUploadedMedia(null);
+        setSelectedGif(null);
         setShowSuggestions(false);
       } else {
         toast.error('Error adding comment. Please try again.');
@@ -536,6 +547,22 @@ export const EnhancedCommentsSection = ({
     }
   };
 
+  const onGifSelect = (gifUrl: string) => {
+    // Set the selected GIF for preview (don't modify text)
+    setSelectedGif({ url: gifUrl, alt: 'Selected GIF' });
+    setIsGifPickerOpen(false);
+    toast.success('GIF added to your comment!');
+    
+    // Focus back to textarea
+    if (newCommentInputRef.current) {
+      newCommentInputRef.current.focus();
+    }
+  };
+
+  const removeSelectedGif = () => {
+    setSelectedGif(null);
+  };
+
   return (
     <div className="space-y-8">
       <div className="space-y-4">
@@ -625,11 +652,21 @@ export const EnhancedCommentsSection = ({
                         />
                       </PopoverContent>
                     </Popover>
+                    <Popover open={isGifPickerOpen} onOpenChange={setIsGifPickerOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700" disabled={submitting} title="Add GIF">
+                          <AnimatedGifIcon className="h-5 w-5" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0 border-0" side="top" align="start">
+                        <GifPicker onGifSelect={onGifSelect} />
+                      </PopoverContent>
+                    </Popover>
                   </div>
                   <Button 
                     type="submit" 
                     className="text-xs h-8 gap-1.5"
-                    disabled={submitting || (!newComment.trim() && !uploadedMedia)}
+                    disabled={submitting || (!newComment.trim() && !uploadedMedia && !selectedGif)}
                     onClick={handleSubmitComment}
                   >
                     {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
@@ -639,6 +676,30 @@ export const EnhancedCommentsSection = ({
                 {uploadedMedia && (
                   <div className="mt-3">
                     <MediaPreview media={uploadedMedia} onRemove={removeMedia} />
+                  </div>
+                )}
+                {selectedGif && (
+                  <div className="mt-3">
+                    <div className="relative max-w-xs">
+                      <img 
+                        src={selectedGif.url} 
+                        alt={selectedGif.alt || 'Selected GIF'} 
+                        className="rounded-md object-cover w-full h-auto border border-border/20"
+                        loading="lazy"
+                      />
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="absolute top-2 right-2 h-6 w-6 p-0 rounded-full"
+                        onClick={removeSelectedGif}
+                        title="Remove GIF"
+                      >
+                        ✕
+                      </Button>
+                      <div className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
+                        GIF
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

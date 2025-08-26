@@ -15,6 +15,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { GifPicker } from '@/components/ui/gif-picker';
+import { AnimatedGifIcon } from '@/components/ui/animated-gif-icon';
 
 interface MobileCommentInputProps {
   postCode: string;
@@ -145,6 +147,8 @@ export const MobileCommentInput = forwardRef<MobileCommentInputRef, MobileCommen
   const [mentionLoading, setMentionLoading] = useState<boolean>(false);
   const [activeTriggerPos, setActiveTriggerPos] = useState<number | null>(null);
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
+  const [isGifPickerOpen, setIsGifPickerOpen] = useState(false);
+  const [selectedGif, setSelectedGif] = useState<{ url: string; alt?: string } | null>(null);
   // --- End Mention State ---
 
   // Get user info from localStorage
@@ -316,7 +320,7 @@ export const MobileCommentInput = forwardRef<MobileCommentInputRef, MobileCommen
 
   // Handle submission
   const handleSubmit = async () => {
-    if (!content.trim() && !uploadedMedia) return;
+    if (!content.trim() && !uploadedMedia && !selectedGif) return;
     if (isSubmittingRef.current) return;
 
     isSubmittingRef.current = true;
@@ -325,6 +329,12 @@ export const MobileCommentInput = forwardRef<MobileCommentInputRef, MobileCommen
     let finalContent = content.trim();
     if (uploadedMedia && uploadedMedia.markdown) {
       finalContent += (finalContent.length > 0 ? "\n\n" : "") + uploadedMedia.markdown;
+    }
+    
+    // Add GIF if selected
+    if (selectedGif && selectedGif.url) {
+      const gifMarkdown = finalContent.length > 0 ? `\n\n![GIF](${selectedGif.url})` : `![GIF](${selectedGif.url})`;
+      finalContent += gifMarkdown;
     }
 
     try {
@@ -336,6 +346,7 @@ export const MobileCommentInput = forwardRef<MobileCommentInputRef, MobileCommen
       await onSubmit(finalContent, parentId);
       setContent('');
       setUploadedMedia(null);
+      setSelectedGif(null);
       setIsExpanded(false);
       if (onCancel && isReplyMode) onCancel();
       setShowSuggestions(false); // Hide suggestions on submit
@@ -357,6 +368,7 @@ export const MobileCommentInput = forwardRef<MobileCommentInputRef, MobileCommen
     }
     setContent('');
     setUploadedMedia(null);
+    setSelectedGif(null);
     setShowSuggestions(false);
   };
 
@@ -399,6 +411,22 @@ export const MobileCommentInput = forwardRef<MobileCommentInputRef, MobileCommen
       }, 0);
       setIsEmojiPickerOpen(false); // Close the picker
     }
+  };
+
+  const onGifSelect = (gifUrl: string) => {
+    // Set the selected GIF for preview (don't modify text)
+    setSelectedGif({ url: gifUrl, alt: 'Selected GIF' });
+    setIsGifPickerOpen(false);
+    toast.success('GIF added to your comment!');
+    
+    // Focus back to textarea
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  };
+
+  const removeSelectedGif = () => {
+    setSelectedGif(null);
   };
 
   useImperativeHandle(ref, () => ({
@@ -515,10 +543,21 @@ export const MobileCommentInput = forwardRef<MobileCommentInputRef, MobileCommen
                       />
                     </PopoverContent>
                   </Popover>
+                  {/* GIF Picker Popover */}
+                  <Popover open={isGifPickerOpen} onOpenChange={setIsGifPickerOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="ghost" size="icon" className="text-gray-500 hover:text-gray-700 disabled:opacity-50 w-9 h-9 p-0" disabled={isSubmitting} title="Add GIF">
+                        <AnimatedGifIcon className="h-5 w-5" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 border-0" side="top" align="start">
+                      <GifPicker onGifSelect={onGifSelect} />
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <Button 
                   onClick={handleSubmit} 
-                  disabled={(!content.trim() && !uploadedMedia) || isSubmitting}
+                  disabled={(!content.trim() && !uploadedMedia && !selectedGif) || isSubmitting}
                   size="sm"
                   className="gap-1.5 h-8"
                 >
@@ -531,6 +570,31 @@ export const MobileCommentInput = forwardRef<MobileCommentInputRef, MobileCommen
           {isExpanded && uploadedMedia && (
              <div className="mt-2 pb-1">
                  <MediaPreview media={uploadedMedia} onRemove={removeMedia} />
+            </div>
+          )}
+          
+          {isExpanded && selectedGif && (
+            <div className="mt-2 pb-1">
+              <div className="relative max-w-xs">
+                <img 
+                  src={selectedGif.url} 
+                  alt={selectedGif.alt || 'Selected GIF'} 
+                  className="rounded-md object-cover w-full h-auto border border-border/20"
+                  loading="lazy"
+                />
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="absolute top-2 right-2 h-6 w-6 p-0 rounded-full"
+                  onClick={removeSelectedGif}
+                  title="Remove GIF"
+                >
+                  ✕
+                </Button>
+                <div className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
+                  GIF
+                </div>
+              </div>
             </div>
           )}
         </div>
