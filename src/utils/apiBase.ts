@@ -152,9 +152,22 @@ export const cleanupAuthState = (): void => {
 /**
  * Handle graceful recovery when API key validation fails
  * This function will try to recover the session by clearing localStorage
- * and triggering a page reload to re-authenticate
+ * and triggering a page reload to re-authenticate (with protection against infinite loops)
  */
 export const handleAuthRecovery = (): void => {
+  // Check if we've already tried recovery recently to prevent infinite loops
+  const lastRecoveryAttempt = localStorage.getItem('dapps_last_recovery_attempt');
+  const now = Date.now();
+  
+  if (lastRecoveryAttempt && (now - parseInt(lastRecoveryAttempt)) < 10000) {
+    // If we attempted recovery within the last 10 seconds, don't try again
+    console.warn('Recovery already attempted recently, skipping to prevent loop');
+    return;
+  }
+  
+  // Mark this recovery attempt
+  localStorage.setItem('dapps_last_recovery_attempt', now.toString());
+  
   // Clear auth timestamp to force a refresh on next auth check
   localStorage.removeItem('dapps_last_auth_time');
   
