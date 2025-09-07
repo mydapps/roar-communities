@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Card, 
   CardContent, 
@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -23,9 +24,12 @@ import {
   BarChart3,
   LineChart,
   PieChart,
-  RefreshCw
+  RefreshCw,
+  Loader2
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import SimplePriceChart from './SimplePriceChart';
+import { getRecentTrades, RecentTradesResponse, getPriceChange, PriceChangeResponse } from '@/utils/communityTokensApi';
 
 interface TokenData {
   symbol: string;
@@ -39,6 +43,21 @@ interface TokenData {
   timeLeft: number;
   totalSupply: number;
   circulatingSupply: number;
+  buyPressure?: number;
+  tokenAddress?: string;
+  volumeAnalysis?: {
+    buyVolumeEth: number;
+    sellVolumeEth: number;
+    totalVolumeEth: number;
+    buyVolumeUsd: number;
+    sellVolumeUsd: number;
+    totalVolumeUsd: number;
+    buyPercentage: number;
+    sellPercentage: number;
+    buyCount: number;
+    sellCount: number;
+    totalTrades: number;
+  };
   recentTrades: Array<{
     id: number;
     user: string;
@@ -73,7 +92,11 @@ const CommunityTokenAnalytics: React.FC<CommunityTokenAnalyticsProps> = ({
   onTrade
 }) => {
   const [activeChart, setActiveChart] = useState<'price' | 'volume'>('price');
+  const [recentTrades, setRecentTrades] = useState<any[]>([]);
+  const [tradesLoading, setTradesLoading] = useState(false);
   const [timeframe, setTimeframe] = useState<'1h' | '24h' | '7d' | '30d'>('24h');
+  const [priceChanges, setPriceChanges] = useState<PriceChangeResponse['data'] | null>(null);
+  const [priceChangesLoading, setPriceChangesLoading] = useState(false);
 
   const formatPrice = (price: number) => {
     if (price < 0.000001) {
@@ -105,98 +128,210 @@ const CommunityTokenAnalytics: React.FC<CommunityTokenAnalyticsProps> = ({
   const sellTrades = tokenData.recentTrades.filter(t => t.action === 'sell');
   const buyVolume = buyTrades.reduce((sum, t) => sum + (t.amount * t.price), 0);
   const sellVolume = sellTrades.reduce((sum, t) => sum + (t.amount * t.price), 0);
-  const buyPressure = buyVolume / (buyVolume + sellVolume) * 100;
+  // Use real buy pressure from API if available, otherwise calculate from trades
+  const buyPressure = tokenData.volumeAnalysis?.buyPercentage !== undefined ? 
+    tokenData.volumeAnalysis.buyPercentage :
+    (tokenData.buyPressure !== undefined ? tokenData.buyPressure : 
+      (buyVolume + sellVolume > 0 ? (buyVolume / (buyVolume + sellVolume) * 100) : 50));
+
+  // Fetch recent trades
+  useEffect(() => {
+    const fetchTrades = async () => {
+      if (!tokenData.symbol) return;
+      
+      // Ensure ticker is a string
+      const ticker = typeof tokenData.symbol === 'string' ? tokenData.symbol : String(tokenData.symbol);
+      if (!ticker || ticker === 'undefined' || ticker === '[object Object]') {
+        console.error('Invalid ticker for recent trades:', tokenData.symbol);
+        return;
+      }
+      
+      setTradesLoading(true);
+      try {
+        const response = await getRecentTrades(ticker, 1, 10);
+        if (response.success && response.data?.trades) {
+          setRecentTrades(response.data.trades);
+        }
+      } catch (error) {
+        console.error('Error fetching recent trades:', error);
+      } finally {
+        setTradesLoading(false);
+      }
+    };
+
+    fetchTrades();
+  }, [tokenData.symbol]);
+
+  // Fetch price changes when component mounts or ticker changes
+  useEffect(() => {
+    const fetchPriceChanges = async () => {
+      if (!tokenData.symbol) return;
+      
+      // Ensure ticker is a string
+      const ticker = typeof tokenData.symbol === 'string' ? tokenData.symbol : String(tokenData.symbol);
+      if (!ticker || ticker === 'undefined' || ticker === '[object Object]') {
+        console.error('Invalid ticker for price changes:', tokenData.symbol);
+        return;
+      }
+      
+      setPriceChangesLoading(true);
+      try {
+        const response = await getPriceChange(ticker);
+        if (response.success && response.data) {
+          setPriceChanges(response.data);
+        }
+      } catch (error) {
+        console.error('Error fetching price changes:', error);
+      } finally {
+        setPriceChangesLoading(false);
+      }
+    };
+
+    fetchPriceChanges();
+  }, [tokenData.symbol]);
 
   // Mock chart data (in a real app, this would come from an API)
   const chartData = tokenData.priceHistory.slice(-24); // Last 24 hours
 
   return (
     <div className="space-y-6">
-      {/* Quick Stats */}
+      {/* Price Change Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {/* 15m Price Change */}
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Price</p>
-                <p className="text-lg font-bold">${formatPrice(tokenData.currentPrice)}</p>
+                <p className="text-sm text-muted-foreground">15m</p>
+                {priceChangesLoading ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <p className="text-lg font-bold">--</p>
+                  </div>
+                ) : (
+                  <p className={`text-lg font-bold ${
+                    (priceChanges?.price_changes['15m']?.change_percent_usd || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {priceChanges?.price_changes['15m']?.change_percent_usd !== null 
+                      ? `${(priceChanges?.price_changes['15m']?.change_percent_usd || 0).toFixed(2)}%`
+                      : 'N/A'
+                    }
+                  </p>
+                )}
               </div>
-              <div className={`flex items-center gap-1 text-sm ${tokenData.priceChange24h >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {tokenData.priceChange24h >= 0 ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
-                {Math.abs(tokenData.priceChange24h).toFixed(2)}%
+              <div className={`flex items-center gap-1 text-sm ${
+                (priceChanges?.price_changes['15m']?.change_percent_usd || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+              }`}>
+                {(priceChanges?.price_changes['15m']?.change_percent_usd || 0) >= 0 ? 
+                  <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                }
               </div>
             </div>
           </CardContent>
         </Card>
 
+        {/* 1h Price Change */}
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Volume 24h</p>
-                <p className="text-lg font-bold">{formatVolume(tokenData.volume24h)}</p>
+                <p className="text-sm text-muted-foreground">1h</p>
+                {priceChangesLoading ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <p className="text-lg font-bold">--</p>
+                  </div>
+                ) : (
+                  <p className={`text-lg font-bold ${
+                    (priceChanges?.price_changes['1h']?.change_percent_usd || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {priceChanges?.price_changes['1h']?.change_percent_usd !== null 
+                      ? `${(priceChanges?.price_changes['1h']?.change_percent_usd || 0).toFixed(2)}%`
+                      : 'N/A'
+                    }
+                  </p>
+                )}
               </div>
-              <Activity className="w-5 h-5 text-blue-600" />
+              <div className={`flex items-center gap-1 text-sm ${
+                (priceChanges?.price_changes['1h']?.change_percent_usd || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+              }`}>
+                {(priceChanges?.price_changes['1h']?.change_percent_usd || 0) >= 0 ? 
+                  <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                }
+              </div>
             </div>
           </CardContent>
         </Card>
 
+        {/* 4h Price Change */}
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Holders</p>
-                <p className="text-lg font-bold">{tokenData.holders.toLocaleString()}</p>
+                <p className="text-sm text-muted-foreground">4h</p>
+                {priceChangesLoading ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <p className="text-lg font-bold">--</p>
+                  </div>
+                ) : (
+                  <p className={`text-lg font-bold ${
+                    (priceChanges?.price_changes['4h']?.change_percent_usd || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {priceChanges?.price_changes['4h']?.change_percent_usd !== null 
+                      ? `${(priceChanges?.price_changes['4h']?.change_percent_usd || 0).toFixed(2)}%`
+                      : 'N/A'
+                    }
+                  </p>
+                )}
               </div>
-              <Users className="w-5 h-5 text-purple-600" />
+              <div className={`flex items-center gap-1 text-sm ${
+                (priceChanges?.price_changes['4h']?.change_percent_usd || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+              }`}>
+                {(priceChanges?.price_changes['4h']?.change_percent_usd || 0) >= 0 ? 
+                  <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                }
+              </div>
             </div>
           </CardContent>
         </Card>
 
+        {/* 1d Price Change */}
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Buy Pressure</p>
-                <p className="text-lg font-bold">{buyPressure.toFixed(1)}%</p>
+                <p className="text-sm text-muted-foreground">1d</p>
+                {priceChangesLoading ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <p className="text-lg font-bold">--</p>
+                  </div>
+                ) : (
+                  <p className={`text-lg font-bold ${
+                    (priceChanges?.price_changes['1d']?.change_percent_usd || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {priceChanges?.price_changes['1d']?.change_percent_usd !== null 
+                      ? `${(priceChanges?.price_changes['1d']?.change_percent_usd || 0).toFixed(2)}%`
+                      : 'N/A'
+                    }
+                  </p>
+                )}
               </div>
-              <Target className={`w-5 h-5 ${buyPressure > 50 ? 'text-green-600' : 'text-red-600'}`} />
+              <div className={`flex items-center gap-1 text-sm ${
+                (priceChanges?.price_changes['1d']?.change_percent_usd || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+              }`}>
+                {(priceChanges?.price_changes['1d']?.change_percent_usd || 0) >= 0 ? 
+                  <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
+                }
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Chart Section */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="w-5 h-5" />
-              Price Chart
-            </CardTitle>
-            <div className="flex items-center gap-2">
-              <Tabs value={timeframe} onValueChange={(value) => setTimeframe(value as any)}>
-                <TabsList className="grid w-full grid-cols-4">
-                  <TabsTrigger value="1h" className="text-xs">1H</TabsTrigger>
-                  <TabsTrigger value="24h" className="text-xs">24H</TabsTrigger>
-                  <TabsTrigger value="7d" className="text-xs">7D</TabsTrigger>
-                  <TabsTrigger value="30d" className="text-xs">30D</TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {/* Mock Chart Visualization */}
-          <div className="h-64 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 rounded-lg flex items-center justify-center border-2 border-dashed border-blue-200 dark:border-blue-800">
-            <div className="text-center">
-              <LineChart className="w-12 h-12 text-blue-400 mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">Interactive price chart</p>
-              <p className="text-xs text-muted-foreground">Real-time data visualization</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Price Chart */}
+      <SimplePriceChart ticker={tokenData.symbol} />
 
       {/* Trading Activity */}
       <div className="grid md:grid-cols-2 gap-6">
@@ -209,30 +344,60 @@ const CommunityTokenAnalytics: React.FC<CommunityTokenAnalyticsProps> = ({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3 max-h-80 overflow-y-auto">
-              {tokenData.recentTrades.slice(0, 10).map((trade) => (
-                <div key={trade.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <Badge 
-                      variant={trade.action === 'buy' ? 'default' : 'secondary'}
-                      className={trade.action === 'buy' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'}
-                    >
-                      {trade.action.toUpperCase()}
-                    </Badge>
-                    <div>
-                      <p className="text-sm font-medium">@{trade.user}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(trade.timestamp, { addSuffix: true })}
-                      </p>
+            {tradesLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin" />
+                <span className="ml-2 text-sm text-muted-foreground">Loading trades...</span>
+              </div>
+            ) : recentTrades.length > 0 ? (
+              <div className="space-y-3 max-h-80 overflow-y-auto">
+                {recentTrades.slice(0, 10).map((trade) => (
+                  <div key={trade.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <Badge 
+                        variant={trade.action === 'buy' ? 'default' : 'secondary'}
+                        className={trade.action === 'buy' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'}
+                      >
+                        {(trade.action || '').toUpperCase()}
+                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Avatar className="w-6 h-6">
+                          <AvatarImage src={trade.user_avatar} />
+                          <AvatarFallback className="text-xs">
+                            {(trade.user_handle || '').slice(0, 2).toUpperCase() || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="text-sm font-medium">@{trade.user_handle}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {(() => {
+                              try {
+                                const date = new Date(trade.timestamp || Date.now());
+                                if (isNaN(date.getTime())) {
+                                  return 'Recently';
+                                }
+                                return formatDistanceToNow(date, { addSuffix: true });
+                              } catch (e) {
+                                return 'Recently';
+                              }
+                            })()}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-medium">{formatAmount(trade.token_amount || 0)} ${tokenData.symbol}</p>
+                      <p className="text-xs text-muted-foreground">${(trade.usd_amount || 0).toFixed(2)}</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium">{formatAmount(trade.amount)} ${tokenData.symbol}</p>
-                    <p className="text-xs text-muted-foreground">${formatPrice(trade.price)}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Activity className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">No recent trades</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -249,17 +414,27 @@ const CommunityTokenAnalytics: React.FC<CommunityTokenAnalyticsProps> = ({
             <div>
               <div className="flex justify-between text-sm mb-2">
                 <span>Buy Volume</span>
-                <span className="text-green-600">{formatVolume(buyVolume)}</span>
+                <span className="text-green-600">
+                  {tokenData.volumeAnalysis ? 
+                    formatVolume(tokenData.volumeAnalysis.buyVolumeUsd) : 
+                    formatVolume(buyVolume)
+                  }
+                </span>
               </div>
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-3">
                 <div 
                   className="bg-green-600 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${buyPressure}%` }}
+                  style={{ width: `${isNaN(buyPressure) ? 50 : Math.max(0, Math.min(100, buyPressure))}%` }}
                 />
               </div>
               <div className="flex justify-between text-sm">
                 <span>Sell Volume</span>
-                <span className="text-red-600">{formatVolume(sellVolume)}</span>
+                <span className="text-red-600">
+                  {tokenData.volumeAnalysis ? 
+                    formatVolume(tokenData.volumeAnalysis.sellVolumeUsd) : 
+                    formatVolume(sellVolume)
+                  }
+                </span>
               </div>
             </div>
 
@@ -268,41 +443,28 @@ const CommunityTokenAnalytics: React.FC<CommunityTokenAnalyticsProps> = ({
             {/* Trade Count */}
             <div className="flex justify-between">
               <span className="text-sm text-muted-foreground">Total Trades (24h)</span>
-              <span className="font-medium">{tokenData.recentTrades.length}</span>
+              <span className="font-medium">
+                {tokenData.volumeAnalysis ? 
+                  tokenData.volumeAnalysis.totalTrades : 
+                  tokenData.recentTrades.length
+                }
+              </span>
             </div>
 
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Buy Trades</span>
-              <span className="font-medium text-green-600">{buyTrades.length}</span>
-            </div>
+            {/* Buy vs Sell Count */}
+            {tokenData.volumeAnalysis && (
+              <>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Buy Orders</span>
+                  <span className="font-medium text-green-600">{tokenData.volumeAnalysis.buyCount}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Sell Orders</span>
+                  <span className="font-medium text-red-600">{tokenData.volumeAnalysis.sellCount}</span>
+                </div>
+              </>
+            )}
 
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Sell Trades</span>
-              <span className="font-medium text-red-600">{sellTrades.length}</span>
-            </div>
-
-            <Separator />
-
-            {/* Quick Actions */}
-            <div className="flex gap-2 pt-2">
-              <Button 
-                onClick={() => onTrade('buy')}
-                className="flex-1 bg-green-600 hover:bg-green-700"
-                size="sm"
-              >
-                <ArrowUp className="w-4 h-4 mr-1" />
-                Buy
-              </Button>
-              <Button 
-                onClick={() => onTrade('sell')}
-                variant="outline"
-                className="flex-1 border-red-200 text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950"
-                size="sm"
-              >
-                <ArrowDown className="w-4 h-4 mr-1" />
-                Sell
-              </Button>
-            </div>
           </CardContent>
         </Card>
       </div>
@@ -328,31 +490,43 @@ const CommunityTokenAnalytics: React.FC<CommunityTokenAnalyticsProps> = ({
               </div>
               <div className="flex justify-between">
                 <span className="text-sm text-muted-foreground">Total Supply</span>
-                <span className="font-medium">{(tokenData.totalSupply / 1000000).toFixed(0)}M</span>
+                <span className="font-medium">1 billion</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Circulating Supply</span>
-                <span className="font-medium">{(tokenData.circulatingSupply / 1000000).toFixed(1)}M</span>
+                <span className="text-sm text-muted-foreground">Status</span>
+                <span className="font-medium">{tokenData.status === 'graduated' ? 'Trading on Uniswap' : 'Incubating'}</span>
               </div>
+              {tokenData.tokenAddress && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Contract Address</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-xs"
+                      onClick={() => navigator.clipboard.writeText(tokenData.tokenAddress)}
+                    >
+                      Copy
+                    </Button>
+                  </div>
+                  <div className="font-mono text-xs bg-muted/30 p-2 rounded border break-all text-muted-foreground">
+                    {tokenData.tokenAddress}
+                  </div>
+                </div>
+              )}
             </div>
             <div className="space-y-3">
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Status</span>
-                <Badge variant={tokenData.status === 'graduated' ? 'default' : 'secondary'}>
-                  {tokenData.status === 'graduated' ? 'Graduated' : 'Incubating'}
-                </Badge>
+                <span className="text-sm text-muted-foreground">Created On</span>
+                <span className="font-medium">{new Date().toLocaleDateString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Market Cap</span>
-                <span className="font-medium">{formatVolume(tokenData.marketCap)}</span>
+                <span className="text-sm text-muted-foreground">Network</span>
+                <span className="font-medium">Base</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Holders</span>
-                <span className="font-medium">{tokenData.holders.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">24h Volume</span>
-                <span className="font-medium">{formatVolume(tokenData.volume24h)}</span>
+                <span className="text-sm text-muted-foreground">Type</span>
+                <span className="font-medium">Community Token</span>
               </div>
             </div>
           </div>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Card, 
   CardContent, 
@@ -19,17 +19,18 @@ import {
   Clock,
   Target,
   Zap,
-  BarChart3,
   Wallet,
   Coins,
   Timer
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { getVolumeAnalysis, VolumeAnalysisResponse } from '@/utils/communityTokensApi';
 
 interface TokenData {
   symbol: string;
   name: string;
   currentPrice: number;
+  currentPriceUsd: number;
   priceChange24h: number;
   marketCap: number;
   volume24h: number;
@@ -121,17 +122,36 @@ const CommunityTokenRightPane: React.FC<CommunityTokenRightPaneProps> = ({
   const isIncubation = tokenData.status === 'incubation';
   const priceChangePositive = tokenData.priceChange24h >= 0;
 
-  // Calculate buy pressure
-  const buyTrades = tokenData.recentTrades.filter(t => t.action === 'buy');
-  const sellTrades = tokenData.recentTrades.filter(t => t.action === 'sell');
-  const buyVolume = buyTrades.reduce((sum, t) => sum + (t.amount * t.price), 0);
-  const sellVolume = sellTrades.reduce((sum, t) => sum + (t.amount * t.price), 0);
-  const buyPressure = buyVolume / (buyVolume + sellVolume) * 100;
+  // State for volume analysis data
+  const [volumeAnalysis, setVolumeAnalysis] = useState<VolumeAnalysisResponse['data'] | null>(null);
+  const [buyPressure, setBuyPressure] = useState<number>(50);
+
+  // Fetch volume analysis data
+  useEffect(() => {
+    const fetchVolumeAnalysis = async () => {
+      try {
+        const response = await getVolumeAnalysis(tokenData.symbol, '24h');
+        if (response.success && response.data) {
+          setVolumeAnalysis(response.data);
+          setBuyPressure(response.data.buy_percentage || 50);
+        } else {
+          setBuyPressure(50); // Default fallback
+        }
+      } catch (error) {
+        console.error('Error fetching volume analysis:', error);
+        setBuyPressure(50); // Default fallback
+      }
+    };
+
+    if (tokenData.symbol) {
+      fetchVolumeAnalysis();
+    }
+  }, [tokenData.symbol]);
 
   return (
     <div className="space-y-4 sticky top-4">
       {/* Quick Trade Card */}
-      <Card className="border-2 border-primary/20">
+      <Card className="border-2 border-primary/20 mt-6">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg flex items-center gap-2">
             <Zap className="w-5 h-5" />
@@ -168,56 +188,9 @@ const CommunityTokenRightPane: React.FC<CommunityTokenRightPaneProps> = ({
             </Button>
           </div>
 
-          {/* User Holdings */}
-          {user?.shares && user.shares > 0 && (
-            <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
-              <p className="text-sm text-muted-foreground">Your Holdings</p>
-              <p className="font-bold">{user.shares.toLocaleString()} ${tokenData.symbol}</p>
-              <p className="text-sm text-green-600">
-                ≈ ${(user.shares * tokenData.currentPrice).toFixed(2)}
-              </p>
-            </div>
-          )}
         </CardContent>
       </Card>
 
-      {/* Token Stats */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <BarChart3 className="w-5 h-5" />
-            Token Stats
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex justify-between">
-            <span className="text-sm text-muted-foreground">Market Cap</span>
-            <span className="font-medium">{formatVolume(tokenData.marketCap)}</span>
-          </div>
-          
-          <div className="flex justify-between">
-            <span className="text-sm text-muted-foreground">24h Volume</span>
-            <span className="font-medium">{formatVolume(tokenData.volume24h)}</span>
-          </div>
-          
-          <div className="flex justify-between">
-            <span className="text-sm text-muted-foreground">Holders</span>
-            <span className="font-medium">{tokenData.holders.toLocaleString()}</span>
-          </div>
-          
-          <div className="flex justify-between">
-            <span className="text-sm text-muted-foreground">Circulating</span>
-            <span className="font-medium">{(tokenData.circulatingSupply / 1000000).toFixed(1)}M</span>
-          </div>
-
-          <div className="flex justify-between">
-            <span className="text-sm text-muted-foreground">Buy Pressure</span>
-            <span className={`font-medium ${buyPressure > 50 ? 'text-green-600' : 'text-red-600'}`}>
-              {buyPressure.toFixed(1)}%
-            </span>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Incubation Status */}
       {isIncubation && (
@@ -284,15 +257,6 @@ const CommunityTokenRightPane: React.FC<CommunityTokenRightPaneProps> = ({
               <span className="font-medium">{formatAmount(tokenData.rewardPool.tokenBalance)} ${tokenData.symbol}</span>
             </div>
             
-            <div className="flex justify-between items-center p-2 bg-background/50 rounded">
-              <span className="text-sm text-muted-foreground">Status</span>
-              <Badge 
-                variant={tokenData.rewardPool.isLocked ? 'secondary' : 'default'}
-                className={tokenData.rewardPool.isLocked ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'}
-              >
-                {tokenData.rewardPool.isLocked ? 'Locked' : 'Unlocked'}
-              </Badge>
-            </div>
           </div>
           
           {tokenData.rewardPool.isLocked && (

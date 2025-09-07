@@ -139,7 +139,7 @@ const CommunityTokenRewards: React.FC<CommunityTokenRewardsProps> = ({
                 <DollarSign className="w-4 h-4 text-green-600" />
                 <span className="text-sm font-medium">ETH Holdings</span>
               </div>
-              <p className="text-2xl font-bold">{rewardPool.ethBalance.toFixed(4)} ETH</p>
+              <p className="text-2xl font-bold">{rewardPool.ethBalance.toFixed(6)} ETH</p>
               <p className="text-sm text-muted-foreground">
                 ≈ {formatCurrency(rewardPool.ethBalance * ethToUsd)}
               </p>
@@ -285,37 +285,6 @@ const CommunityTokenRewards: React.FC<CommunityTokenRewardsProps> = ({
         </CardContent>
       </Card>
 
-      {/* Recent Activity */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Zap className="w-5 h-5" />
-            Recent Pool Activity
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {/* Mock recent activities */}
-            {[
-              { type: 'deposit', amount: '0.025 ETH', time: '2 hours ago', from: 'Trading fees' },
-              { type: 'deposit', amount: '15,000 ' + tokenData.symbol, time: '5 hours ago', from: 'Token allocation' },
-              { type: 'deposit', amount: '0.018 ETH', time: '8 hours ago', from: 'Trading fees' },
-              { type: 'deposit', amount: '0.032 ETH', time: '1 day ago', from: 'Trading fees' }
-            ].map((activity, index) => (
-              <div key={index} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full bg-green-500" />
-                  <div>
-                    <p className="text-sm font-medium">+{activity.amount}</p>
-                    <p className="text-xs text-muted-foreground">{activity.from}</p>
-                  </div>
-                </div>
-                <span className="text-xs text-muted-foreground">{activity.time}</span>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };

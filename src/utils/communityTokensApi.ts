@@ -520,6 +520,7 @@ export interface UserHolding {
   hookAddress?: string;
   marketCap: number;
   volume24h: number;
+  totalHolders: number;
   firstPurchaseAt: string;
   lastPurchaseAt: string;
   lastUpdated: string;
@@ -703,7 +704,9 @@ export interface TokensListItem {
   holders: number;
   flatEtherCollection: number;
   currentRate: number;
+  currentRateUsd: number;
   marketCap: number;
+  marketCapUsd: number;
   volume24h: number;
   createdOn: string;
 }
@@ -723,7 +726,7 @@ export interface TokensListResponse {
 }
 
 // Get recent trades across all tokens
-export const getRecentTrades = async (params?: {
+export const getAllRecentTrades = async (params?: {
   limit?: number;
 }): Promise<RecentTradesResponse> => {
   try {
@@ -1580,3 +1583,280 @@ export const getEnhancedTokensList = async (params?: {
     };
   }
 };
+
+// Get community name from ticker
+export interface CommunityNameResponse {
+  success: boolean;
+  data?: {
+    ticker: string;
+    name: string;
+    givenName: string;
+    communityType: string;
+  };
+  error?: string;
+}
+
+export const getCommunityNameFromTicker = async (ticker: string): Promise<CommunityNameResponse> => {
+  try {
+    const url = `/api/community_tokens/name/${ticker}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      credentials: 'include',
+      headers: createAuthHeaders(false),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      return {
+        success: false,
+        error: errorData.error || `HTTP ${response.status}`
+      };
+    }
+
+    const responseData = await response.json();
+    return responseData;
+  } catch (error) {
+    console.error('Error fetching community name from ticker:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
+  }
+};
+
+// Get volume analysis for buy pressure
+export interface VolumeAnalysisResponse {
+  success: boolean;
+  data?: {
+    period: string;
+    ticker: string;
+    buy_volume_eth: number;
+    sell_volume_eth: number;
+    total_volume_eth: number;
+    buy_volume_usd: number;
+    sell_volume_usd: number;
+    total_volume_usd: number;
+    buy_percentage: number;
+    sell_percentage: number;
+    buy_count: number;
+    sell_count: number;
+    total_trades: number;
+    eth_to_usd_rate: number;
+  };
+  error?: string;
+}
+
+export const getVolumeAnalysis = async (ticker: string, period: string = '24h'): Promise<VolumeAnalysisResponse> => {
+  try {
+    const queryParams = new URLSearchParams();
+    queryParams.append('period', period);
+    queryParams.append('ticker', ticker);
+
+    const url = `/api/community_tokens/volume_analysis?${queryParams.toString()}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      credentials: 'include',
+      headers: createAuthHeaders(false),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      return {
+        success: false,
+        error: errorData.error || `HTTP ${response.status}`
+      };
+    }
+
+    const responseData = await response.json();
+    return responseData;
+  } catch (error) {
+    console.error('Error fetching volume analysis:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
+  }
+};
+
+// Get recent trades for a token
+export interface RecentTradesResponse {
+  success: boolean;
+  data?: {
+    trades: Array<{
+      id: number;
+      ticker: string;
+      user_handle: string;
+      user_avatar?: string;
+      action: 'buy' | 'sell';
+      token_amount: number;
+      eth_amount: number;
+      usd_amount: number;
+      price_per_token: number;
+      timestamp: string;
+      transaction_hash?: string;
+    }>;
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      has_more: boolean;
+    };
+  };
+  error?: string;
+}
+
+export const getRecentTrades = async (ticker: string, page: number = 1, limit: number = 20): Promise<RecentTradesResponse> => {
+  try {
+    const queryParams = new URLSearchParams();
+    queryParams.append('page', page.toString());
+    queryParams.append('limit', limit.toString());
+
+    const url = `/api/community_tokens/token_trades/${ticker}?${queryParams.toString()}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      credentials: 'include',
+      headers: createAuthHeaders(false),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      return {
+        success: false,
+        error: errorData.error || `HTTP ${response.status}`
+      };
+    }
+
+    const responseData = await response.json();
+    return responseData;
+  } catch (error) {
+    console.error('Error fetching recent trades:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
+  }
+};
+
+// Get price history for charts
+export interface PriceHistoryResponse {
+  success: boolean;
+  data?: {
+    token_info: {
+      ticker: string;
+      name: string;
+      graduated: number;
+    };
+    timeframe: string;
+    price_history: Array<{
+      time: string;
+      open_eth: string;
+      high_eth: string;
+      low_eth: string;
+      close_eth: string;
+      open_usd: string;
+      high_usd: string;
+      low_usd: string;
+      close_usd: string;
+      volume_eth: string;
+      volume_usd: string;
+      data_points: number;
+    }>;
+    data_points: number;
+  };
+  error?: string;
+}
+
+export const getPriceHistory = async (ticker: string, period: string = '24h'): Promise<PriceHistoryResponse> => {
+  try {
+    const queryParams = new URLSearchParams();
+    queryParams.append('period', period);
+
+    const url = `/api/community_tokens/price_history/${ticker}?${queryParams.toString()}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      credentials: 'include',
+      headers: createAuthHeaders(false),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      return {
+        success: false,
+        error: errorData.error || `HTTP ${response.status}`
+      };
+    }
+
+    const responseData = await response.json();
+    return responseData;
+  } catch (error) {
+    console.error('Error fetching price history:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
+  }
+};
+
+export interface TokenHoldersResponse {
+  success: boolean;
+  data?: {
+    token: {
+      ticker: string;
+      name: string;
+      image: string;
+    };
+    holders: Array<{
+      rank: number;
+      userId: number;
+      handle: string;
+      avatar: string;
+      balance: number;
+      isCreator: boolean;
+    }>;
+    pagination: {
+      currentPage: number;
+      totalPages: number;
+      totalHolders: number;
+      limit: number;
+      hasNextPage: boolean;
+      hasPrevPage: boolean;
+    };
+  };
+  error?: string;
+}
+
+export const getTokenHolders = async (ticker: string, page: number = 1, limit: number = 10): Promise<TokenHoldersResponse> => {
+  try {
+    const queryParams = new URLSearchParams();
+    queryParams.append('page', page.toString());
+    queryParams.append('limit', limit.toString());
+
+    const url = `/api/community_tokens/holders/${ticker}?${queryParams.toString()}`;
+    const response = await fetch(url, {
+      method: 'GET',
+      credentials: 'include',
+      headers: createAuthHeaders(false),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      return {
+        success: false,
+        error: errorData.error || `HTTP ${response.status}`
+      };
+    }
+
+    const responseData = await response.json();
+    return responseData;
+  } catch (error) {
+    console.error('Error fetching token holders:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
+  }
+};
+
+
+
+

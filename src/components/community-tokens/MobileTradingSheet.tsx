@@ -444,7 +444,7 @@ const MobileTradingSheet: React.FC<MobileTradingSheetProps> = ({
               </div>
 
               {/* Flat Sale Message for Incubation */}
-              {(token.status === 'incubation' || !token.graduated) && (
+              {(token.status === 'incubation' && token.graduated !== true) && (
                 <div className="px-4 py-3 bg-gradient-to-r from-orange-50 to-yellow-50 dark:from-orange-950/20 dark:to-yellow-950/20 border-b border-orange-200/50">
                   <div className="flex items-center justify-center gap-2 text-sm">
                     <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" />

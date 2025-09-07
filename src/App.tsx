@@ -10,6 +10,7 @@ import Index2 from '@/pages/Index2';
 import Index3 from '@/pages/Index3';
 import FeedPage from '@/pages/FeedPage';
 import CommunitiesPage from '@/pages/CommunitiesPage';
+import CommunitiesPageOld from '@/pages/CommunitiesPageOld';
 import CommunityPage from '@/pages/CommunityPage';
 import PostPage from '@/pages/PostPage';
 import DetailedPostPage from '@/pages/DetailedPostPage';
@@ -146,9 +147,10 @@ function App() {
                 <RoaredPostsPage />
               </ProtectedRoute>
             } />
-            <Route path="communities" element={<CommunitiesPage />} />
-            <Route path="c/:id" element={<CommunityPage />} />
-            <Route path="ct/:id" element={<CommunityTokenPage />} />
+            <Route path="communities" element={<CommunityTokensPage />} />
+            <Route path="communities-old" element={<CommunitiesPageOld />} />
+            <Route path="c/:id" element={<CommunityTokenPage />} />
+            <Route path="legacy-c/:id" element={<CommunityPage />} />
             <Route path="create-community" element={<CreateCommunityPage />} />
             <Route path="u/:handle" element={<UserProfilePage />} />
             <Route path="edit-profile" element={<EditProfilePage />} />

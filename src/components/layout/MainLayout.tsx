@@ -123,7 +123,7 @@ const MainLayout = () => {
         {/* Sidebar (conditionally rendered) */}
         {isLoggedIn && !isMobileAppUser && !isPublicPage && (
           // Sidebar takes fixed width, content area takes rest
-          <div className="hidden md:block flex-shrink-0 w-64 border-r border-border/40">
+          <div className="hidden md:block flex-shrink-0 w-56 lg:w-64 border-r border-border/40">
             <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
           </div>
         )}

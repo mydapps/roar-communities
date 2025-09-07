@@ -31,6 +31,7 @@ interface TokenData {
   symbol: string;
   name: string;
   currentPrice: number;
+  currentPriceUsd: number;
   priceChange24h: number;
   marketCap: number;
   volume24h: number;
@@ -75,6 +76,9 @@ const CommunityTokenHeader: React.FC<CommunityTokenHeaderProps> = ({
   isMobile
 }) => {
   const formatPrice = (price: number) => {
+    if (price == null || isNaN(price)) {
+      return '0.00';
+    }
     if (price < 0.000001) {
       return price.toExponential(2);
     }
@@ -82,6 +86,9 @@ const CommunityTokenHeader: React.FC<CommunityTokenHeaderProps> = ({
   };
 
   const formatMarketCap = (value: number) => {
+    if (value == null || isNaN(value)) {
+      return '$0.00';
+    }
     if (value >= 1000000) {
       return `$${(value / 1000000).toFixed(2)}M`;
     } else if (value >= 1000) {
@@ -91,14 +98,14 @@ const CommunityTokenHeader: React.FC<CommunityTokenHeaderProps> = ({
   };
 
   const formatTimeLeft = (ms: number) => {
-    if (ms <= 0) return null;
+    if (ms == null || isNaN(ms) || ms <= 0) return null;
     const minutes = Math.floor(ms / 60000);
     const seconds = Math.floor((ms % 60000) / 1000);
     return `${minutes}m ${seconds}s`;
   };
 
   const isIncubation = tokenData.status === 'incubation';
-  const priceChangePositive = tokenData.priceChange24h >= 0;
+  const priceChangePositive = (tokenData.priceChange24h || 0) >= 0;
 
   return (
     <Card className="border-0 shadow-lg bg-gradient-to-br from-background via-background to-muted/20">
@@ -120,7 +127,7 @@ const CommunityTokenHeader: React.FC<CommunityTokenHeaderProps> = ({
                   variant={isIncubation ? "secondary" : "default"}
                   className={`${isMobile ? 'mt-1' : ''} ${isIncubation ? "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200" : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"}`}
                 >
-                  {isIncubation ? "Incubating" : "Graduated"}
+                  {isIncubation ? "Incubating" : "Trading on Uniswap"}
                 </Badge>
               </div>
               
@@ -181,10 +188,10 @@ const CommunityTokenHeader: React.FC<CommunityTokenHeaderProps> = ({
           <div className="space-y-1">
             <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground`}>Current Price</p>
             <div className={`flex ${isMobile ? 'flex-col' : 'items-center'} gap-1`}>
-              <p className={`${isMobile ? 'text-base' : 'text-lg'} font-bold`}>${formatPrice(tokenData.currentPrice)}</p>
+              <p className={`${isMobile ? 'text-base' : 'text-lg'} font-bold`}>${formatPrice(tokenData.currentPriceUsd)}</p>
               <div className={`flex items-center gap-1 ${isMobile ? 'text-xs' : 'text-sm'} ${priceChangePositive ? 'text-green-600' : 'text-red-600'}`}>
                 {priceChangePositive ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
-                {Math.abs(tokenData.priceChange24h).toFixed(2)}%
+                {Math.abs(tokenData.priceChange24h || 0).toFixed(2)}%
               </div>
             </div>
           </div>
@@ -203,12 +210,9 @@ const CommunityTokenHeader: React.FC<CommunityTokenHeaderProps> = ({
 
           {/* Supply */}
           <div className="space-y-1">
-            <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground`}>Circulating Supply</p>
+            <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground`}>Total Supply</p>
             <p className={`${isMobile ? 'text-base' : 'text-lg'} font-bold`}>
-              {(tokenData.circulatingSupply / 1000000).toFixed(1)}M
-              <span className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground ml-1`}>
-                / {(tokenData.totalSupply / 1000000).toFixed(0)}M
-              </span>
+              1 billion
             </p>
           </div>
         </div>
@@ -235,7 +239,7 @@ const CommunityTokenHeader: React.FC<CommunityTokenHeaderProps> = ({
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">Value</p>
                 <p className="text-lg font-bold text-green-600">
-                  ${(user.shares * tokenData.currentPrice).toFixed(2)}
+                  ${((user.shares || 0) * (tokenData.currentPriceUsd || 0)).toFixed(2)}
                 </p>
               </div>
             </div>

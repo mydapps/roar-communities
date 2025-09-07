@@ -73,24 +73,20 @@ const CommunityAboutSection: React.FC<CommunityAboutSectionProps> = ({
                 <span>{community?.created_on ? new Date(community.created_on).toLocaleDateString() : 'Unknown'}</span>
               </div>
               <div className="flex justify-between">
+                <span className="text-muted-foreground">Min Tokens for Posting</span>
+                <span>1</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Min Tokens for Commenting</span>
+                <span>1</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Created On</span>
+                <span>{community?.created_on ? new Date(community.created_on).toLocaleDateString() : 'N/A'}</span>
+              </div>
+              <div className="flex justify-between">
                 <span className="text-muted-foreground">Admin</span>
                 <span>{community?.owner ? `${community.owner.substring(0, 6)}...${community.owner.substring(community.owner.length - 4)}` : 'Unknown'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Total Members</span>
-                <span>{community?.members_count || 0}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Total Shares</span>
-                <span>{community?.shares?.toLocaleString() || 0}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Min Shares Posting</span>
-                <span>{minSharePosting}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Min Shares Commenting</span>
-                <span>{minShareCommenting}</span>
               </div>
             </div>
           </div>
@@ -99,20 +95,12 @@ const CommunityAboutSection: React.FC<CommunityAboutSectionProps> = ({
             <h3 className="font-medium">Fee Structure</h3>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Admin Fee</span>
-                <span>{community?.fees?.admin_fees || 0}%</span>
+                <span className="text-muted-foreground">Community Admin Fee</span>
+                <span>0.25%</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Reward Pool</span>
-                <span>{community?.fees?.reward_fees || 0}%</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Platform Fee</span>
-                <span>{community?.fees?.platform_fees || 0}%</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Current Share Price</span>
-                <span>{community?.prices?.buy_price?.toFixed(6) || 0} ETH</span>
+                <span className="text-muted-foreground">Reward Pool Fee</span>
+                <span>0.5%</span>
               </div>
             </div>
           </div>

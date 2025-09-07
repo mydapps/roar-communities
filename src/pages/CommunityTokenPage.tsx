@@ -65,10 +65,28 @@ import TradingInterface from '@/components/community-tokens/TradingInterface';
 import { Post } from '@/components/feed/Post';
 import CreatePostCard from '@/components/feed/CreatePostCard';
 import { MembersList } from '@/components/community/MembersList';
+import TokenHoldersList from '@/components/community-tokens/TokenHoldersList';
 import { useCommunityPosts, CommunityPost } from '@/hooks/useCommunityPosts';
 import { toggleRoar } from '@/utils/api';
 import { getWalletBalance } from '@/utils/communityApi';
 import { buySharesConfirm, sellSharesConfirm } from '@/utils/api';
+import { 
+  getCommunityNameFromTicker, 
+  getTokenStatus, 
+  getPriceChange, 
+  getRewardPool,
+  getUserHoldings,
+  getVolumeAnalysis,
+  getRecentTrades,
+  getPriceHistory,
+  TokenStatus,
+  PriceChangeResponse,
+  RewardPoolResponse,
+  UserHoldingsResponse,
+  VolumeAnalysisResponse,
+  RecentTradesResponse,
+  PriceHistoryResponse
+} from '@/utils/communityTokensApi';
 import { Helmet } from 'react-helmet-async';
 import { Textarea } from '@/components/ui/textarea';
 import { MediaUpload, MediaPreview, MediaUploadResponse } from '@/components/ui/media-upload';
@@ -118,48 +136,52 @@ const debugLog = (...args: any[]) => {
   }
 };
 
-// Mock token data for the community token
-const generateMockTokenData = (communityName: string) => {
-  const basePrice = 0.000012; // Starting price
-  const priceChange = (Math.random() - 0.5) * 20; // -10% to +10%
-  const currentPrice = basePrice * (1 + priceChange / 100);
-  
-  return {
-    symbol: communityName?.toUpperCase().slice(0, 5) || 'TOKEN',
-    name: `${communityName} Token` || 'Community Token',
-    currentPrice,
-    priceChange24h: priceChange,
-    marketCap: currentPrice * 1000000000, // 1B total supply
-    volume24h: Math.random() * 50000,
-    holders: Math.floor(Math.random() * 5000) + 100,
-    totalSupply: 1000000000,
-    circulatingSupply: Math.floor(Math.random() * 500000000) + 100000000,
-    status: Math.random() > 0.3 ? 'graduated' : 'incubation',
-    timeLeft: Math.random() > 0.3 ? 0 : Math.floor(Math.random() * 1800000), // 30 min max
-    rewardPool: {
-      address: '0x742d35Cc6634C0532925a3b8D4C8C8c8C8C8C8C8',
-      ethBalance: Math.random() * 5,
-      tokenBalance: Math.floor(Math.random() * 50000000),
-      usdValue: Math.random() * 15000,
-      isLocked: true,
-      unlockDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days from now
-    },
-    recentTrades: Array.from({ length: 20 }, (_, i) => ({
-      id: i,
-      user: `trader_${Math.floor(Math.random() * 1000)}`,
-      action: Math.random() > 0.5 ? 'buy' : 'sell',
-      amount: Math.floor(Math.random() * 10000000) + 1000,
-      price: currentPrice * (0.95 + Math.random() * 0.1),
-      timestamp: new Date(Date.now() - Math.random() * 3600000),
-      value: 0
-    })),
-    priceHistory: Array.from({ length: 24 }, (_, i) => ({
-      time: new Date(Date.now() - (23 - i) * 3600000),
-      price: basePrice * (0.8 + Math.random() * 0.4),
-      volume: Math.random() * 10000
-    }))
+// Real token data interface
+interface RealTokenData {
+  symbol: string;
+  name: string;
+  givenName: string;
+  currentPrice: number;
+  currentPriceUsd: number;
+  priceChange24h: number;
+  marketCap: number;
+  marketCapUsd: number;
+  volume24h: number;
+  holders: number;
+  totalSupply: number;
+  status: 'incubation' | 'graduated';
+  timeLeft: number;
+  timeRemaining: number;
+  flatEtherCollection: number;
+  rewardPool: {
+    address: string;
+    ethBalance: number;
+    tokenBalance: number;
+    ethBalanceUsd: number;
+    tokenValueUsd: number;
+    totalValueUsd: number;
   };
-};
+  userBalance: number;
+  graduated: boolean;
+  createdOn: string;
+  admin: string; // Community admin address
+  buyPressure: number; // Buy percentage from volume analysis
+  tokenAddress: string; // Smart contract address
+  hookAddress?: string; // Uniswap V4 hook address (for graduated tokens)
+  volumeAnalysis?: {
+    buyVolumeEth: number;
+    sellVolumeEth: number;
+    totalVolumeEth: number;
+    buyVolumeUsd: number;
+    sellVolumeUsd: number;
+    totalVolumeUsd: number;
+    buyPercentage: number;
+    sellPercentage: number;
+    buyCount: number;
+    sellCount: number;
+    totalTrades: number;
+  };
+}
 
 const CommunityTokenPage = () => {
   // All hooks must be called at the top level, before any conditional returns
@@ -184,27 +206,183 @@ const CommunityTokenPage = () => {
   const [previousHasShares, setPreviousHasShares] = useState(false);
   const [tradeSuccess, setTradeSuccess] = useState(false);
   
+  // Real token data states
+  const [tokenData, setTokenData] = useState<RealTokenData | null>(null);
+  const [tokenLoading, setTokenLoading] = useState(true);
+  const [tokenError, setTokenError] = useState<string | null>(null);
+  const [communityName, setCommunityName] = useState<string>('');
+  
   // Check if user is logged in using dapps_user_id
   const isLoggedIn = !!localStorage.getItem('dapps_user_id');
   
   debugLog("CommunityTokenPage rendering, id:", id, "activeTab:", activeTab, "isLoggedIn:", isLoggedIn);
   
-  const { data: communityData, loading: communityLoading, error: communityError, isEncryptedAccess: communityEncryptedAccess, refetch } = useCommunityData(id);
+  const { data: communityData, loading: communityLoading, error: communityError, isEncryptedAccess: communityEncryptedAccess, refetch } = useCommunityData(communityName || undefined);
   
-  // Generate mock token data based on community
-  const tokenData = useMemo(() => {
-    if (communityData?.community?.name) {
-      return generateMockTokenData(communityData.community.name);
+  // Fetch real token data
+  const fetchTokenData = useCallback(async (ticker: string) => {
+    if (!ticker) return;
+    
+    setTokenLoading(true);
+    setTokenError(null);
+    
+    try {
+      // Get community name from ticker
+      const nameResponse = await getCommunityNameFromTicker(ticker);
+      if (nameResponse.success && nameResponse.data) {
+        setCommunityName(nameResponse.data.name);
+      }
+      
+      // Get token status
+      const statusResponse = await getTokenStatus(ticker);
+      if (!statusResponse.success || !statusResponse.data) {
+        throw new Error(statusResponse.error || 'Failed to fetch token status');
+      }
+      
+      const tokenStatus = statusResponse.data;
+      
+      // Get price change data
+      const priceChangeResponse = await getPriceChange(ticker);
+      let priceChange24h = 0;
+      if (priceChangeResponse.success && priceChangeResponse.data?.price_changes?.['24h']) {
+        // Get the best price change from USD or ETH
+        const change24h = priceChangeResponse.data.price_changes['24h'];
+        priceChange24h = Math.abs(change24h.change_percent_usd || 0) > Math.abs(change24h.change_percent_eth || 0) 
+          ? change24h.change_percent_usd || 0
+          : change24h.change_percent_eth || 0;
+      }
+      
+      // Get reward pool data
+      const rewardPoolResponse = await getRewardPool(ticker);
+      let rewardPoolData = {
+        address: '',
+        ethBalance: 0,
+        tokenBalance: 0,
+        ethBalanceUsd: 0,
+        tokenValueUsd: 0,
+        totalValueUsd: 0,
+      };
+      
+      if (rewardPoolResponse.success && rewardPoolResponse.data) {
+        const pool = rewardPoolResponse.data.rewardPool;
+        rewardPoolData = {
+          address: pool.address,
+          ethBalance: Number(pool.ethBalance) || 0,
+          tokenBalance: Number(pool.tokenBalance) || 0,
+          ethBalanceUsd: Number(pool.ethBalanceUsd) || 0,
+          tokenValueUsd: Number(pool.tokenValueUsd) || 0,
+          totalValueUsd: Number(pool.totalValueUsd) || 0,
+        };
+      }
+      
+      // Get user holdings if logged in
+      let userBalance = 0;
+      if (isLoggedIn) {
+        const holdingsResponse = await getUserHoldings({ search: ticker });
+        if (holdingsResponse.success && holdingsResponse.data?.holdings) {
+          const holding = holdingsResponse.data.holdings.find(h => h.ticker === ticker);
+          userBalance = holding?.balance || 0;
+        }
+      }
+      
+      // Get volume analysis for buy pressure
+      const volumeAnalysisResponse = await getVolumeAnalysis(ticker, '24h');
+      let buyPressure = 50; // Default 50% if no data
+      let volumeAnalysisData = null;
+      if (volumeAnalysisResponse.success && volumeAnalysisResponse.data) {
+        buyPressure = volumeAnalysisResponse.data.buy_percentage;
+        volumeAnalysisData = {
+          buyVolumeEth: volumeAnalysisResponse.data.buy_volume_eth,
+          sellVolumeEth: volumeAnalysisResponse.data.sell_volume_eth,
+          totalVolumeEth: volumeAnalysisResponse.data.total_volume_eth,
+          buyVolumeUsd: volumeAnalysisResponse.data.buy_volume_usd,
+          sellVolumeUsd: volumeAnalysisResponse.data.sell_volume_usd,
+          totalVolumeUsd: volumeAnalysisResponse.data.total_volume_usd,
+          buyPercentage: volumeAnalysisResponse.data.buy_percentage,
+          sellPercentage: volumeAnalysisResponse.data.sell_percentage,
+          buyCount: volumeAnalysisResponse.data.buy_count,
+          sellCount: volumeAnalysisResponse.data.sell_count,
+          totalTrades: volumeAnalysisResponse.data.total_trades,
+        };
+      }
+      
+      // Use the USD values directly from the API and ensure they are numbers
+      const currentPriceUsd = Number(tokenStatus.currentPriceUsd) || 0;
+      const marketCapUsd = Number(tokenStatus.marketCap) || 0;
+      
+      const realTokenData: RealTokenData = {
+        symbol: tokenStatus.ticker,
+        name: nameResponse.data?.name || tokenStatus.name,
+        givenName: nameResponse.data?.givenName || tokenStatus.name,
+        currentPrice: Number(tokenStatus.currentRate) || 0,
+        currentPriceUsd,
+        priceChange24h,
+        marketCap: Number(tokenStatus.marketCap) || 0,
+        marketCapUsd,
+        volume24h: Number(tokenStatus.volume24h) || 0,
+        holders: Number(tokenStatus.holders) || 0,
+        totalSupply: tokenStatus.totalSupply,
+        status: tokenStatus.graduated ? 'graduated' : 'incubation',
+        timeLeft: tokenStatus.timeRemaining,
+        timeRemaining: tokenStatus.timeRemaining,
+        flatEtherCollection: tokenStatus.flatEtherCollection,
+        rewardPool: rewardPoolData,
+        userBalance,
+        graduated: tokenStatus.graduated,
+        createdOn: tokenStatus.createdOn,
+        admin: tokenStatus.communityAdmin || '',
+        buyPressure,
+        tokenAddress: tokenStatus.tokenAddress || '',
+        hookAddress: tokenStatus.hookAddress,
+        volumeAnalysis: volumeAnalysisData,
+      };
+      
+      setTokenData(realTokenData);
+      debugLog("Real token data:", realTokenData);
+      
+    } catch (error) {
+      console.error('Error fetching token data:', error);
+      setTokenError(error instanceof Error ? error.message : 'Failed to fetch token data');
+    } finally {
+      setTokenLoading(false);
     }
-    return generateMockTokenData('Community');
-  }, [communityData?.community?.name]);
+  }, [isLoggedIn]);
+  
+  // Fetch token data when ticker is available
+  useEffect(() => {
+    if (id) {
+      fetchTokenData(id);
+    }
+  }, [id, fetchTokenData]);
+
+  // Fetch ETH balance when logged in
+  useEffect(() => {
+    const fetchEthBalance = async () => {
+      if (isLoggedIn) {
+        try {
+          setIsLoadingBalance(true);
+          const balanceData = await getWalletBalance();
+          setUserEthBalance(balanceData.balance.eth);
+        } catch (error) {
+          console.error('Failed to fetch ETH balance:', error);
+        } finally {
+          setIsLoadingBalance(false);
+        }
+      }
+    };
+
+    fetchEthBalance();
+  }, [isLoggedIn]);
   
   debugLog("Community data:", communityData);
   debugLog("Token data:", tokenData);
   
-  const { members, loading: membersLoading, hasMore: hasMoreMembers, loadMore: loadMoreMembers } = useCommunityMembers(id);
+  const { members, loading: membersLoading, hasMore: hasMoreMembers, loadMore: loadMoreMembers } = useCommunityMembers(communityName || undefined);
   
-  const { posts, loading: postsLoading, error: postsError, hasMore: hasMorePosts, loadMore: loadMorePosts, loadingElementRef, fetchPosts, isEncryptedAccess: postsEncryptedAccess } = useCommunityPosts(id);
+  // Use ticker directly for posts since API now supports it
+  const { posts, loading: postsLoading, error: postsError, hasMore: hasMorePosts, loadMore: loadMorePosts, loadingElementRef, fetchPosts, isEncryptedAccess: postsEncryptedAccess } = useCommunityPosts(id || undefined);
+  
+  debugLog("Posts loading state:", { postsLoading, posts: posts.length, error: postsError, ticker: id });
   
   const allPosts = useMemo(() => {
     const combinedPosts = [...localPosts, ...posts];
@@ -259,36 +437,45 @@ const CommunityTokenPage = () => {
   }, []);
 
   const handleTrade = useCallback((action: 'buy' | 'sell') => {
-    const community = communityData?.community;
-    if (!community) return;
+    if (!tokenData) return;
     
     setTradingModal({
       isOpen: true,
       token: {
-        ...tokenData,
-        name: community.name,
-        avatar: community.image || community.name?.charAt(0) || '🪙',
-        image: community.image,
-        id: community.id,
-        description: community.description
+        id: parseInt(id || '0'),
+        name: tokenData.givenName,
+        ticker: tokenData.symbol,
+        description: `${tokenData.givenName} community token`,
+        avatar: tokenData.symbol.charAt(0),
+        status: tokenData.status,
+        price: tokenData.currentPriceUsd,
+        marketCap: tokenData.marketCapUsd,
+        holders: tokenData.holders,
+        volume24h: tokenData.volume24h,
+        priceChange24h: tokenData.priceChange24h,
+        rewardPool: tokenData.rewardPool.totalValueUsd,
+        timeLeft: tokenData.timeLeft,
+        totalSupply: tokenData.totalSupply,
+        userHoldings: tokenData.userBalance,
       },
       mode: action
     });
-  }, [communityData?.community, tokenData]);
+  }, [tokenData, id]);
 
   const handleRewardPoolUtilize = useCallback(() => {
-    const daysLeft = Math.ceil((tokenData.rewardPool.unlockDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-    toast.info(`Reward pool tokens are locked for ${daysLeft} more days`, {
-      description: "Funds will be available for community voting after the lock period.",
+    if (!tokenData) return;
+    
+    toast.info(`Reward pool contains $${Number(tokenData.rewardPool.totalValueUsd || 0).toFixed(2)}`, {
+      description: "Funds are managed by the community through DAO governance.",
       duration: 5000
     });
-  }, [tokenData.rewardPool.unlockDate]);
+  }, [tokenData]);
 
   // Derived values
   const community = communityData?.community;
   const user = communityData?.user;
   const isAdmin = user?.is_admin || false;
-  const hasShares = user?.shares && user.shares > 0;
+  const hasShares = tokenData?.userBalance && tokenData.userBalance > 0;
   const ethToUsd = communityData?.eth_to_usd || 3000;
 
   // Handle encrypted access
@@ -296,8 +483,8 @@ const CommunityTokenPage = () => {
     return <EncryptedCommunityAccess />;
   }
 
-  // Loading state
-  if (communityLoading) {
+  // Loading state - wait for community name to be fetched first
+  if (tokenLoading || !communityName || communityLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -306,13 +493,13 @@ const CommunityTokenPage = () => {
   }
 
   // Error state
-  if (communityError || !community) {
+  if (communityError || tokenError || !community || !tokenData) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-2">Community Not Found</h1>
+          <h1 className="text-2xl font-bold mb-2">Token Not Found</h1>
           <p className="text-muted-foreground mb-4">
-            The community you're looking for doesn't exist or has been removed.
+            {tokenError || communityError || "The token you're looking for doesn't exist or has been removed."}
           </p>
           <Button onClick={() => navigate('/communities')}>
             Browse Communities
@@ -327,16 +514,40 @@ const CommunityTokenPage = () => {
   return (
     <div className="min-h-screen bg-background">
       <Helmet>
-        <title>{community.name} Token - Community Tokens</title>
-        <meta name="description" content={community.description || `Join the ${community.name} token community`} />
+        <title>{tokenData.givenName} (${tokenData.symbol}) - Community Tokens</title>
+        <meta name="description" content={`Trade ${tokenData.givenName} tokens. Current price: $${Number(tokenData.currentPriceUsd || 0).toFixed(6)} | Market Cap: $${(Number(tokenData.marketCapUsd || 0) / 1000000).toFixed(2)}M`} />
       </Helmet>
 
       <div className="container mx-auto px-4 py-6 max-w-7xl">
         {/* Community Token Header */}
         <CommunityTokenHeader 
-          community={community}
-          user={user}
-          tokenData={tokenData}
+          community={{
+            id: tokenData.symbol,
+            name: tokenData.givenName,
+            image: community?.image,
+            description: `${tokenData.givenName} community token`,
+          }}
+          user={{
+            shares: tokenData.userBalance,
+            share_value: {
+              usd: tokenData.userBalance * tokenData.currentPriceUsd,
+              eth: tokenData.userBalance * tokenData.currentPrice,
+            }
+          }}
+          tokenData={{
+            symbol: tokenData.symbol,
+            name: tokenData.givenName,
+            currentPrice: tokenData.currentPrice,
+            currentPriceUsd: tokenData.currentPriceUsd,
+            priceChange24h: tokenData.priceChange24h,
+            marketCap: tokenData.marketCapUsd,
+            volume24h: tokenData.volume24h,
+            holders: tokenData.holders,
+            status: tokenData.status,
+            timeLeft: tokenData.timeLeft,
+            totalSupply: tokenData.totalSupply,
+            circulatingSupply: tokenData.totalSupply, // Use total supply as requested
+          }}
           onTrade={handleTrade}
           ethToUsd={ethToUsd}
           isMobile={isMobile}
@@ -356,6 +567,16 @@ const CommunityTokenPage = () => {
               
               {/* Posts Tab */}
               <TabsContent value="posts" className="animate-fade-in mt-0">
+                {isLoggedIn && (
+                  <div className="mb-6">
+                    <CreatePostCard 
+                      onPostCreated={(newPost) => {
+                        setLocalPosts(prev => [newPost, ...prev]);
+                      }}
+                      communityName={tokenData.givenName}
+                    />
+                  </div>
+                )}
                 <CommunityPostsFeed 
                   posts={allPosts}
                   loading={postsLoading}
@@ -371,8 +592,30 @@ const CommunityTokenPage = () => {
               {/* Token Tab - New */}
               <TabsContent value="token" className="animate-fade-in mt-0">
                 <CommunityTokenAnalytics 
-                  tokenData={tokenData}
-                  community={community}
+                  tokenData={{
+                    symbol: tokenData.symbol,
+                    name: tokenData.givenName,
+                    currentPrice: tokenData.currentPriceUsd,
+                    priceChange24h: tokenData.priceChange24h,
+                    marketCap: tokenData.marketCapUsd,
+                    volume24h: tokenData.volume24h,
+                    holders: tokenData.holders,
+                    status: tokenData.status,
+                    timeLeft: tokenData.timeLeft,
+                    totalSupply: tokenData.totalSupply,
+                    circulatingSupply: tokenData.totalSupply,
+                    buyPressure: tokenData.buyPressure,
+                    tokenAddress: tokenData.tokenAddress,
+                    volumeAnalysis: tokenData.volumeAnalysis,
+                    recentTrades: [], // Will be populated by the component
+                    priceHistory: [], // Will be populated by the component
+                  }}
+                  community={{
+                    id: tokenData.symbol,
+                    name: tokenData.givenName,
+                    image: community?.image,
+                    description: `${tokenData.givenName} community token`,
+                  }}
                   onTrade={handleTrade}
                 />
               </TabsContent>
@@ -383,16 +626,13 @@ const CommunityTokenPage = () => {
                   <CardHeader>
                     <CardTitle>Token Holders</CardTitle>
                     <CardDescription>
-                      {tokenData.holders.toLocaleString()} holders own {tokenData.symbol} tokens
+                      {tokenData.holders.toLocaleString()} holders own ${tokenData.symbol} tokens
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <MembersList 
-                      members={members} 
-                      loading={membersLoading} 
-                      hasMore={hasMoreMembers} 
-                      loadMore={loadMoreMembers}
-                      ethToUsd={ethToUsd}
+                    <TokenHoldersList 
+                      ticker={tokenData.symbol}
+                      tokenSymbol={tokenData.symbol}
                     />
                   </CardContent>
                 </Card>
@@ -401,8 +641,24 @@ const CommunityTokenPage = () => {
               {/* Enhanced Rewards Tab */}
               <TabsContent value="rewards" className="animate-fade-in mt-0">
                 <CommunityTokenRewards 
-                  tokenData={tokenData}
-                  community={community}
+                  tokenData={{
+                    symbol: tokenData.symbol,
+                    name: tokenData.givenName,
+                    rewardPool: {
+                      address: tokenData.rewardPool.address,
+                      ethBalance: tokenData.rewardPool.ethBalance,
+                      tokenBalance: tokenData.rewardPool.tokenBalance,
+                      usdValue: tokenData.rewardPool.totalValueUsd,
+                      isLocked: false, // DAO managed
+                      unlockDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) // 1 year from now
+                    }
+                  }}
+                  community={{
+                    id: tokenData.symbol,
+                    name: tokenData.givenName,
+                    image: community?.image,
+                    description: `${tokenData.givenName} community token`,
+                  }}
                   onUtilize={handleRewardPoolUtilize}
                   ethToUsd={ethToUsd}
                 />
@@ -411,8 +667,28 @@ const CommunityTokenPage = () => {
               {/* About Tab */}
               <TabsContent value="about" className="animate-fade-in mt-0">
                 <CommunityAboutSection 
-                  community={community}
-                  tokenData={tokenData}
+                  community={{
+                    id: tokenData.symbol,
+                    name: tokenData.givenName,
+                    image: community?.image,
+                    description: `${tokenData.givenName} is a community token with ${tokenData.holders} holders and 1 Billion token supply.`,
+                    members_count: tokenData.holders,
+                    created_on: tokenData.createdOn,
+                    owner: tokenData.admin,
+                  }}
+                  tokenData={{
+                    symbol: tokenData.symbol,
+                    name: tokenData.givenName,
+                    currentPrice: tokenData.currentPriceUsd,
+                    priceChange24h: tokenData.priceChange24h,
+                    marketCap: tokenData.marketCapUsd,
+                    volume24h: tokenData.volume24h,
+                    holders: tokenData.holders,
+                    status: tokenData.status,
+                    timeLeft: tokenData.timeLeft,
+                    totalSupply: tokenData.totalSupply,
+                    circulatingSupply: tokenData.totalSupply,
+                  }}
                 />
               </TabsContent>
 
@@ -420,7 +696,14 @@ const CommunityTokenPage = () => {
               {isAdmin && (
                 <TabsContent value="admin" className="animate-fade-in mt-0">
                   <CommunityAdminPanel 
-                    community={community}
+                    community={{
+                      id: tokenData.symbol,
+                      name: tokenData.givenName,
+                      image: community?.image,
+                      description: `${tokenData.givenName} community token`,
+                      members_count: tokenData.holders,
+                      created_at: tokenData.createdOn,
+                    }}
                     onCommunityUpdated={refetch}
                   />
                 </TabsContent>
@@ -432,9 +715,42 @@ const CommunityTokenPage = () => {
           {!isMobile && (
             <div className="order-2">
               <CommunityTokenRightPane 
-                tokenData={tokenData}
-                community={community}
-                user={user}
+                tokenData={{
+                  symbol: tokenData.symbol,
+                  name: tokenData.givenName,
+                  currentPrice: tokenData.currentPriceUsd,
+                  priceChange24h: tokenData.priceChange24h,
+                  marketCap: tokenData.marketCapUsd,
+                  volume24h: tokenData.volume24h,
+                  holders: tokenData.holders,
+                  status: tokenData.status,
+                  timeLeft: tokenData.timeLeft,
+                  totalSupply: tokenData.totalSupply,
+                  circulatingSupply: tokenData.totalSupply,
+                  rewardPool: {
+                    address: tokenData.rewardPool.address,
+                    ethBalance: tokenData.rewardPool.ethBalance,
+                    tokenBalance: tokenData.rewardPool.tokenBalance,
+                    usdValue: tokenData.rewardPool.totalValueUsd,
+                    isLocked: false,
+                    unlockDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+                  },
+                  recentTrades: [],
+                  priceHistory: []
+                }}
+                community={{
+                  id: tokenData.symbol,
+                  name: tokenData.givenName,
+                  image: community?.image,
+                  description: `${tokenData.givenName} community token`,
+                }}
+                user={{
+                  shares: tokenData.userBalance,
+                  share_value: {
+                    usd: tokenData.userBalance * tokenData.currentPriceUsd,
+                    eth: tokenData.userBalance * tokenData.currentPrice,
+                  }
+                }}
                 onTrade={handleTrade}
                 ethToUsd={ethToUsd}
               />

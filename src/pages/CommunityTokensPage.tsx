@@ -33,7 +33,8 @@ import {
   ChevronDown,
   RefreshCw,
   Loader2,
-  HelpCircle
+  HelpCircle,
+  X
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -202,13 +203,13 @@ const CommunityTokensPage: React.FC = () => {
   const fetchRealTokens = useCallback(async () => {
     setIsLoadingRealTokens(true);
     try {
-      const response = await getEnhancedTokensList({
+      const response = await getTokensList({
         page: 1,
-        limit: 50,
-        sortBy: sortBy
+        limit: 50
       });
       
       if (response.success && response.data) {
+        console.log('DEBUG: API response tokens:', response.data.tokens.slice(0, 2));
         setRealTokens(response.data.tokens);
         setDisplayedTokens(response.data.tokens);
         
@@ -296,8 +297,25 @@ const CommunityTokensPage: React.FC = () => {
         sortBy: sortOption
       });
       if (response.success && response.data) {
-        setRealTokens(response.data.tokens);
-        setDisplayedTokens(response.data.tokens);
+        // Convert GraduationTokenItem to TokensListItem format
+        const convertedTokens = response.data.tokens.map(token => ({
+          id: token.id,
+          ticker: token.ticker,
+          name: token.name,
+          image: token.image,
+          description: token.description,
+          graduated: token.graduated,
+          holders: token.holders,
+          flatEtherCollection: token.flat_ether_sale_collection,
+          currentRate: token.current_rate_eth,
+          currentRateUsd: token.current_rate_usd,
+          marketCap: token.market_cap_eth,
+          marketCapUsd: token.market_cap_usd,
+          volume24h: 0, // Not available in GraduationTokenItem
+          createdOn: token.created_on
+        }));
+        setRealTokens(convertedTokens);
+        setDisplayedTokens(convertedTokens);
       }
     } catch (error) {
       console.error('Failed to fetch sorted tokens:', error);
@@ -312,7 +330,6 @@ const CommunityTokensPage: React.FC = () => {
       const priceChangePromises = tokens.map(async (token) => {
         try {
           const response = await getPriceChange(token.ticker);
-          console.log(`🔍 DEBUG: Price change API response for ${token.ticker}:`, response);
           
           if (response.success && response.data) {
             return { ticker: token.ticker, data: response.data };
@@ -358,7 +375,24 @@ const CommunityTokensPage: React.FC = () => {
         });
 
         if (response.success && response.data) {
-          setSearchResults(response.data.tokens);
+          // Convert GraduationTokenItem to TokensListItem format
+          const convertedTokens = response.data.tokens.map(token => ({
+            id: token.id,
+            ticker: token.ticker,
+            name: token.name,
+            image: token.image,
+            description: token.description,
+            graduated: token.graduated,
+            holders: token.holders,
+            flatEtherCollection: token.flat_ether_sale_collection,
+            currentRate: token.current_rate_eth,
+            currentRateUsd: token.current_rate_usd,
+            marketCap: token.market_cap_eth,
+            marketCapUsd: token.market_cap_usd,
+            volume24h: 0, // Not available in GraduationTokenItem
+            createdOn: token.created_on
+          }));
+          setSearchResults(convertedTokens);
         } else {
           setSearchResults([]);
         }
@@ -594,52 +628,32 @@ const CommunityTokensPage: React.FC = () => {
 
   // Helper function to get the best price change from all timeframes
   const getBestPriceChange = (priceChangeData: any): { value: number; timeframe: string } => {
-    console.log('🔍 DEBUG: getBestPriceChange input:', priceChangeData);
     if (!priceChangeData?.price_changes) return { value: 0, timeframe: '' };
     
     const changes = priceChangeData.price_changes;
-    console.log('🔍 DEBUG: price_changes data:', changes);
     const timeframes = ['15m', '1h', '4h', '1d'];
     
     let bestChange = { value: 0, timeframe: '' };
-    let hasPositive = false;
+    let highestAbsValue = 0;
     
-    // First, look for any positive changes (check both ETH and USD)
+    // Find the highest absolute value across all timeframes and currencies
     for (const tf of timeframes) {
       const changeUsd = Number(changes[tf]?.change_percent_usd) || 0;
       const changeEth = Number(changes[tf]?.change_percent_eth) || 0;
       
-      console.log(`🔍 DEBUG: ${tf} - USD: ${changeUsd}%, ETH: ${changeEth}%`);
+      // Check USD change
+      if (Math.abs(changeUsd) > highestAbsValue) {
+        highestAbsValue = Math.abs(changeUsd);
+        bestChange = { value: changeUsd, timeframe: tf };
+      }
       
-      // Check if either USD or ETH change is positive
-      if (changeUsd > 0 || changeEth > 0) {
-        hasPositive = true;
-        // Pick the higher positive value
-        const maxPositive = Math.max(changeUsd, changeEth);
-        if (maxPositive > bestChange.value) {
-          bestChange = { value: maxPositive, timeframe: tf };
-        }
+      // Check ETH change
+      if (Math.abs(changeEth) > highestAbsValue) {
+        highestAbsValue = Math.abs(changeEth);
+        bestChange = { value: changeEth, timeframe: tf };
       }
     }
     
-    // If no positive changes, find the highest (least negative) value
-    if (!hasPositive) {
-      let leastNegative = -Infinity;
-      for (const tf of timeframes) {
-        const changeUsd = Number(changes[tf]?.change_percent_usd) || 0;
-        const changeEth = Number(changes[tf]?.change_percent_eth) || 0;
-        
-        // Pick the higher (less negative) value
-        const maxValue = Math.max(changeUsd, changeEth);
-        
-        if (maxValue >= leastNegative) {
-          leastNegative = maxValue;
-          bestChange = { value: maxValue, timeframe: tf };
-        }
-      }
-    }
-    
-    console.log('🔍 DEBUG: getBestPriceChange result:', bestChange);
     return bestChange;
   };
 
@@ -1008,7 +1022,7 @@ const CommunityTokensPage: React.FC = () => {
                           ? 'bg-gradient-to-br from-amber-50/50 to-yellow-50/30 dark:from-amber-950/10 dark:to-yellow-950/5 border-amber-200/30' 
                           : 'bg-card hover:bg-muted/10'
                       }`}
-                      onClick={() => navigate(`/ct/${token.ticker}`)}
+                      onClick={() => navigate(`/c/${token.ticker}`)}
                     >
                       {/* Status Indicator */}
                       {!token.graduated && (
@@ -1018,10 +1032,10 @@ const CommunityTokensPage: React.FC = () => {
                       <CardContent className="p-4 flex flex-col h-full">
                         {/* Compact Header */}
                         <div className="flex items-center gap-3 mb-3">
-                          <div className="text-xl flex-shrink-0">{token.avatar}</div>
+                          <div className="text-xl flex-shrink-0">{token.image ? <img src={token.image} alt={token.name} className="w-8 h-8 rounded-full" /> : '🪙'}</div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2 mb-1">
-                              <h3 className="font-bold text-sm truncate flex-1">{token.givenName || token.name}</h3>
+                              <h3 className="font-bold text-sm truncate flex-1">{token.name}</h3>
                               <Badge variant="outline" className="text-xs px-1.5 py-0 flex-shrink-0">
                                 ${token.ticker}
                               </Badge>
@@ -1040,8 +1054,22 @@ const CommunityTokensPage: React.FC = () => {
 
                         {/* Incubation Progress or Community Reward Pool */}
                         {!token.graduated ? (() => {
-                          // Calculate time remaining from flat_sale_start_time (30 minutes incubation period)
-                          const startTime = new Date(token.flat_sale_start_time || token.createdOn).getTime();
+                          // Calculate time remaining from createdOn (30 minutes incubation period)
+                          const createdDate = new Date(token.createdOn);
+                          const startTime = createdDate.getTime();
+                          
+                          // Check if date is valid
+                          if (isNaN(startTime)) {
+                            console.warn('Invalid createdOn date for token:', token.ticker, token.createdOn);
+                            return (
+                              <div className="mb-3 p-2.5 rounded-md bg-gray-100 dark:bg-gray-800">
+                                <p className="text-xs text-gray-600 dark:text-gray-400 text-center">
+                                  Incubation data unavailable
+                                </p>
+                              </div>
+                            );
+                          }
+                          
                           const now = Date.now();
                           const incubationDuration = 30 * 60 * 1000; // 30 minutes in milliseconds
                           const timeElapsed = now - startTime;
@@ -1078,7 +1106,10 @@ const CommunityTokensPage: React.FC = () => {
                                   </span>
                                   <Dialog>
                                     <DialogTrigger asChild>
-                                      <button className="ml-1 p-0.5 rounded-full hover:bg-red-200 dark:hover:bg-red-800/30 transition-colors">
+                                      <button 
+                                        className="ml-1 p-0.5 rounded-full hover:bg-red-200 dark:hover:bg-red-800/30 transition-colors"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
                                         <HelpCircle className="w-3 h-3 text-red-600 dark:text-red-400" />
                                       </button>
                                     </DialogTrigger>
@@ -1151,7 +1182,44 @@ const CommunityTokensPage: React.FC = () => {
                                   <DollarSign className="w-3 h-3 text-white" />
                                 </div>
                                 <div className="text-center">
-                                  <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">Community Reward Pool</p>
+                                  <div className="flex items-center justify-center gap-1">
+                                    <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">Community Reward Pool</p>
+                                    <Dialog>
+                                      <DialogTrigger asChild>
+                                        <button 
+                                          className="p-0.5 rounded-full hover:bg-emerald-200 dark:hover:bg-emerald-800/30 transition-colors"
+                                          onClick={(e) => e.stopPropagation()}
+                                        >
+                                          <HelpCircle className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                                        </button>
+                                      </DialogTrigger>
+                                      <DialogContent className="sm:max-w-md">
+                                        <DialogHeader>
+                                          <DialogTitle className="flex items-center gap-2">
+                                            <DollarSign className="w-5 h-5 text-emerald-500" />
+                                            Community Reward Pool
+                                          </DialogTitle>
+                                        </DialogHeader>
+                                        <div className="space-y-4 text-sm text-muted-foreground">
+                                          <p>
+                                            The <strong>Community Reward Pool</strong> consists of tokens and ETH accumulated from trading fees and platform activities.
+                                          </p>
+                                          <div className="bg-muted/50 p-3 rounded-lg">
+                                            <p className="font-medium text-foreground mb-2">How it works:</p>
+                                            <ul className="space-y-1 text-xs">
+                                              <li>• <strong>Accumulation:</strong> Trading fees and platform activities contribute to the pool</li>
+                                              <li>• <strong>DAO Governance:</strong> Community members can propose how to use these funds</li>
+                                              <li>• <strong>Democratic Decisions:</strong> Token holders vote on proposals for fund allocation</li>
+                                              <li>• <strong>Community Benefits:</strong> Funds can be used for development, rewards, or community initiatives</li>
+                                            </ul>
+                                          </div>
+                                          <p>
+                                            This creates a <strong>decentralized treasury</strong> that grows with community activity and is managed democratically by token holders.
+                                          </p>
+                                        </div>
+                                      </DialogContent>
+                                    </Dialog>
+                                  </div>
                                   <p className="text-lg font-bold text-emerald-800 dark:text-emerald-300">
                                     ${Math.floor(rewardPools[token.ticker]?.totalUsd || 0).toLocaleString()}
                                   </p>
@@ -1166,7 +1234,7 @@ const CommunityTokensPage: React.FC = () => {
                           <div>
                             <p className="text-xs text-muted-foreground">Price</p>
                             {(() => {
-                              // Use currentRateUsd from the API which is already in USD
+                              // Use currentRateUsd from the API which is the USD price
                               const priceValue = Number(token.currentRateUsd) || 0;
                               const priceFormat = formatSmallPrice(priceValue);
                               

@@ -230,7 +230,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
       {/* Sidebar - position changed to make it scroll with the page on desktop */}
       <aside
         className={cn(
-          "w-[280px] border-r bg-card z-30",
+          "w-[280px] md:w-56 lg:w-[280px] border-r bg-card z-30",
           "md:sticky md:top-16 md:h-[calc(100vh-64px)] md:self-start",
           isOpen ? "fixed top-0 left-0 h-full translate-x-0" : "fixed top-0 -translate-x-full md:translate-x-0 h-full left-0"
         )}

@@ -59,6 +59,7 @@
     "emoji-picker-react": "^4.12.2",
     "framer-motion": "^12.19.1",
     "input-otp": "^1.2.4",
+    "lightweight-charts": "^5.0.8",
     "lottie-react": "^2.4.1",
     "lucide-react": "^0.462.0",
     "next-themes": "^0.3.0",

@@ -197,6 +197,13 @@ export const processRichTextForDisplayingPosts = (htmlContent: string | null | u
     return match; 
   });
 
+  // Process $TICKER patterns - convert to highlighted format with navigation
+  const tickerRegex = /\$([A-Z0-9]{2,10})\b/g;
+  sanitizedContent = sanitizedContent.replace(tickerRegex, (match, ticker) => {
+    // Create clickable ticker that navigates to /c/TICKER
+    return `<a href="/c/${ticker}" class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/30 dark:text-blue-300 dark:border-blue-800/50 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors cursor-pointer no-underline">${match}</a>`;
+  });
+
   // Process URLs - convert URLs to clickable links with loadIn parameter
   const urlRegex = /(https?:\/\/[^\s<>"]+)/g;
   sanitizedContent = sanitizedContent.replace(urlRegex, (match, url, offset) => {
@@ -253,11 +260,6 @@ export const processRichTextForDisplayingPosts = (htmlContent: string | null | u
     return `<a href="/u/${username}" class="text-primary hover:underline" onclick="event.stopPropagation()">${match}</a>`;
   });
 
-  // Process community mentions - convert /c/community to clickable links
-  const communityRegex = /\/c\/([a-zA-Z0-9-]+)/g;
-  sanitizedContent = sanitizedContent.replace(communityRegex, (match, community) => {
-    return `<a href="/c/${community}" class="text-primary hover:underline" onclick="event.stopPropagation()">${match}</a>`;
-  });
 
   return sanitizedContent;
 };
