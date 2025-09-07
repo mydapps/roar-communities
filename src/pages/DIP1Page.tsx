@@ -193,17 +193,17 @@ const DIP1Page: React.FC = () => {
           <div className="flex items-center justify-center gap-2 mb-2">
             <Trophy className="h-6 w-6 text-yellow-500" />
             <h1 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-              DIP-1: Community Tokens Revolution
-            </h1>
+            DIP-1: Community Tokens Revolution
+          </h1>
             <Trophy className="h-6 w-6 text-yellow-500" />
           </div>
           <div className="space-y-1">
             <div className="text-lg font-semibold text-green-600 dark:text-green-400">
               ✅ VOTING COMPLETED - PROPOSAL PASSED!
             </div>
-            <p className="text-muted-foreground">
+          <p className="text-muted-foreground">
               Historic migration from shares to ERC20 tokens approved by community
-            </p>
+          </p>
           </div>
         </div>
 
@@ -249,11 +249,11 @@ const DIP1Page: React.FC = () => {
                     <div className="bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
                       <div className="text-2xl font-bold text-green-600 dark:text-green-400">
                         638,577,109 🦁
-                      </div>
+                    </div>
                       <div className="text-sm text-muted-foreground">Total Voting Power</div>
                       <div className="text-xs text-green-600 dark:text-green-400 mt-1">
                         100% YES • 0% NO
-                      </div>
+                    </div>
                     </div>
                   </div>
                 </div>
@@ -264,10 +264,10 @@ const DIP1Page: React.FC = () => {
                     <CheckCircle2 className="h-6 w-6" />
                     <span className="text-xl font-bold">VOTING COMPLETE</span>
                     <CheckCircle2 className="h-6 w-6" />
-                  </div>
+                      </div>
                   <div className="text-green-100">
                     DIP-1 officially approved by the Roar Communities
-                  </div>
+                      </div>
                   <div className="text-sm text-green-200 mt-2">
                     Historic transition to ERC20 tokens begins!
                   </div>

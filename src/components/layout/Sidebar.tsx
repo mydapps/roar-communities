@@ -260,7 +260,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                 label="Messages" 
                 badgeCount={unreadCount}
               />
-              <NavItem to="/my-shares" icon={<Wallet className="h-5 w-5" />} label="My Shares" />
+              <NavItem to="/wallet" icon={<Wallet className="h-5 w-5" />} label="Wallet" />
               <NavItem 
                 to="/referral" 
                 icon={
@@ -327,7 +327,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
             {isLoggedIn && (
               <div className="pt-4 border-t">
                 <NavLink 
-                  to="/create-community"
+                  to="/community_token_new"
                   className={({ isActive }) => cn(
                     "flex items-center justify-center gap-2 w-full py-2 px-3 rounded-md text-sm font-medium",
                     isActive 

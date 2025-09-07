@@ -51,6 +51,9 @@ import MessagesPage from '@/pages/MessagesPage';
 import ConversationPage from '@/pages/ConversationPage';
 import PaidConversationPage from '@/pages/PaidConversationPage';
 import DIP1Page from '@/pages/DIP1Page';
+import CommunityTokensPage from '@/pages/CommunityTokensPage';
+import CreateCommunityTokenPage from '@/pages/CreateCommunityTokenPage';
+import CommunityTokenPage from '@/pages/CommunityTokenPage';
 
 import { TipProvider } from '@/contexts/TipContext';
 import { SharedTipSheet } from '@/components/tip/SharedTipSheet';
@@ -145,9 +148,11 @@ function App() {
             } />
             <Route path="communities" element={<CommunitiesPage />} />
             <Route path="c/:id" element={<CommunityPage />} />
+            <Route path="ct/:id" element={<CommunityTokenPage />} />
             <Route path="create-community" element={<CreateCommunityPage />} />
             <Route path="u/:handle" element={<UserProfilePage />} />
             <Route path="edit-profile" element={<EditProfilePage />} />
+            <Route path="wallet" element={<WalletPage />} />
             <Route path="my-shares" element={
                 <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -155,7 +160,6 @@ function App() {
                   <LazyMySharesPage />
                 </Suspense>
             } />
-            <Route path="wallet" element={<WalletPage />} />
             <Route path="account" element={<AccountPage />} />
             <Route path="search" element={<SearchPage />} />
             <Route path="referral" element={
@@ -169,6 +173,9 @@ function App() {
             <Route path="roar-farming" element={<RoarFarmingPage />} />
             <Route path="roar-leaderboard" element={<RoarLeaderboardPage />} />
             <Route path="dip/1" element={<DIP1Page />} />
+                            <Route path="community-tokens" element={<CommunityTokensPage />} />
+                <Route path="community_tokens" element={<CommunityTokensPage />} />
+                <Route path="community_token_new" element={<CreateCommunityTokenPage />} />
             <Route path="roars/:username" element={<RoarsPage />} />
             <Route path="boosters" element={<BoosterPage />} />
             <Route path="successful-onboarding" element={

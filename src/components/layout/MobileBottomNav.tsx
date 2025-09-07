@@ -36,7 +36,9 @@ const MobileBottomNav = () => {
     /^\/post\/[\w-]+$/.test(location.pathname);        // generic post: /post/postId
   
   const isRoarFarmingPage = location.pathname === '/roar-farming';
+  const isCommunityTokensPage = location.pathname === '/community-tokens' || location.pathname === '/community_tokens';
   const isPaidConversationPage = /^\/messages\/paid\/[\w-]+$/.test(location.pathname);
+  const isWalletPage = location.pathname === '/wallet';
   
   // Only on the feed page, we want to hide/show the bottom nav based on scroll
   const isScrollSensitive = location.pathname === '/feed';
@@ -74,8 +76,8 @@ const MobileBottomNav = () => {
     };
   }, [lastScrollY, isScrollSensitive]);
   
-  // Don't render the bottom nav on post detail pages, roar farming page, or paid conversation page
-  if (isPostDetailPage || isRoarFarmingPage || isPaidConversationPage) {
+  // Don't render the bottom nav on post detail pages, roar farming page, community tokens page, wallet page, or paid conversation page
+  if (isPostDetailPage || isRoarFarmingPage || isCommunityTokensPage || isPaidConversationPage || isWalletPage) {
     return null;
   }
 
@@ -93,7 +95,7 @@ const MobileBottomNav = () => {
         <NavItem to="/feed" icon={<Home className="h-5 w-5" />} label="Feed" />
         <NavItem to="/search" icon={<Search className="h-5 w-5" />} label="Search" />
         <NavItem to="/communities" icon={<Users className="h-5 w-5" />} label="Communities" />
-        <NavItem to="/my-shares" icon={<Wallet className="h-5 w-5" />} label="Wallet" />
+        <NavItem to="/wallet" icon={<Wallet className="h-5 w-5" />} label="Wallet" />
         <NavItem 
           to="/messages" 
           icon={<MessageCircle className="h-5 w-5" />} 

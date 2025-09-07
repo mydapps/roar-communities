@@ -421,5 +421,25 @@ body {
     overscroll-behavior: none !important;
   }
 
+  /* Hide mobile bottom nav when modals are open */
+  @media (max-width: 768px) {
+    /* Hide when trading modals are open */
+    body.trading-modal-open .fixed.bottom-0.bg-background.border-t {
+      transform: translateY(100%) !important;
+      transition: transform 0.3s ease-in-out !important;
+    }
+    
+    /* Hide when any sheet is open */
+    body:has([data-state="open"][role="dialog"]) .fixed.bottom-0.bg-background.border-t {
+      transform: translateY(100%) !important;
+      transition: transform 0.3s ease-in-out !important;
+    }
+    
+    /* Alternative selector for sheets */
+    body:has([data-radix-dialog-overlay]) .fixed.bottom-0.bg-background.border-t {
+      transform: translateY(100%) !important;
+      transition: transform 0.3s ease-in-out !important;
+    }
+  }
 
 } 
