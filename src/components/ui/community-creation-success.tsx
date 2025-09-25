@@ -269,9 +269,6 @@ const CommunityCreationSuccess: React.FC<CommunityCreationSuccessProps> = ({
                   <p className="text-lg">
                     Token: <span className="font-bold text-yellow-400">${ticker}</span>
                   </p>
-                  <p className="text-lg">
-                    Initial Investment: <span className="font-bold text-green-400">{ethAmount} ETH</span>
-                  </p>
                 </motion.div>
               </motion.div>
 

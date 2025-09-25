@@ -48,7 +48,7 @@ import CommunityTokensExplainer from '@/components/community-tokens/CommunityTok
 import confetti from 'canvas-confetti';
 import { 
   getTokensList, 
-  getRecentTrades, 
+  getAllRecentTrades, 
   getTopGainers,
   getGraduationTokensList,
   getRewardPool,
@@ -410,7 +410,7 @@ const CommunityTokensPage: React.FC = () => {
   const fetchRecentTrades = useCallback(async () => {
     setIsLoadingTrades(true);
     try {
-      const response = await getRecentTrades({ limit: 10 });
+      const response = await getAllRecentTrades({ limit: 10 });
       
       if (response.success && response.data) {
         setRecentTrades(response.data.trades);
@@ -1220,9 +1220,18 @@ const CommunityTokensPage: React.FC = () => {
                                       </DialogContent>
                                     </Dialog>
                                   </div>
-                                  <p className="text-lg font-bold text-emerald-800 dark:text-emerald-300">
-                                    ${Math.floor(rewardPools[token.ticker]?.totalUsd || 0).toLocaleString()}
-                                  </p>
+                                  {rewardPools[token.ticker] !== undefined ? (
+                                    <p className="text-lg font-bold text-emerald-800 dark:text-emerald-300">
+                                      ${Math.floor(rewardPools[token.ticker]?.totalUsd || 0).toLocaleString()}
+                                    </p>
+                                  ) : (
+                                    <div className="flex items-center gap-2">
+                                      <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
+                                      <p className="text-sm text-emerald-700 dark:text-emerald-400">
+                                        Loading pool...
+                                      </p>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -1460,7 +1469,11 @@ const CommunityTokensPage: React.FC = () => {
                     </div>
                   ) : topGainers.length > 0 ? (
                     topGainers.slice(0, 4).map((token, index) => (
-                      <div key={generateStableKey('desktop-gainer', token.ticker, index)} className="flex items-center gap-2">
+                      <div 
+                        key={generateStableKey('desktop-gainer', token.ticker, index)} 
+                        className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 p-2 rounded-md transition-colors"
+                        onClick={() => navigate(`/c/${token.ticker}`)}
+                      >
                         <div className="text-sm">
                           {token.image ? (
                             <img src={token.image} alt={token.name} className="w-4 h-4 rounded" />
@@ -1506,7 +1519,11 @@ const CommunityTokensPage: React.FC = () => {
                     </div>
                   ) : incubationTokens.length > 0 ? (
                     incubationTokens.map((token, index) => (
-                      <div key={generateStableKey('desktop-incubation', token.ticker, index)} className="flex items-center gap-2 p-2 rounded bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-950/20 dark:to-orange-950/20 border border-red-200/50 dark:border-red-800/30">
+                      <div 
+                        key={generateStableKey('desktop-incubation', token.ticker, index)} 
+                        className="flex items-center gap-2 p-2 rounded bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-950/20 dark:to-orange-950/20 border border-red-200/50 dark:border-red-800/30 cursor-pointer hover:from-red-100 hover:to-orange-100 dark:hover:from-red-900/30 dark:hover:to-orange-900/30 transition-colors"
+                        onClick={() => navigate(`/c/${token.ticker}`)}
+                      >
                         <div className="text-sm">
                           {token.image ? (
                             <img src={token.image} alt={token.givenName || token.name} className="w-4 h-4 rounded" />
@@ -1598,7 +1615,11 @@ const CommunityTokensPage: React.FC = () => {
                   </div>
                 ) : topGainers.length > 0 ? (
                   topGainers.slice(0, 8).map((token, index) => (
-                    <div key={generateStableKey('mobile-gainer', token.ticker, index)} className="flex-shrink-0 bg-card border rounded-lg p-3 w-28">
+                    <div 
+                      key={generateStableKey('mobile-gainer', token.ticker, index)} 
+                      className="flex-shrink-0 bg-card border rounded-lg p-3 w-28 cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => navigate(`/c/${token.ticker}`)}
+                    >
                       <div className="text-center">
                         <div className="text-lg mb-1">
                           {token.image ? (
@@ -1633,7 +1654,11 @@ const CommunityTokensPage: React.FC = () => {
                 </h3>
                 <div className="space-y-3">
                   {lastMinuteRush.map((token, index) => (
-                    <div key={generateStableKey('mobile-rush', token.ticker, index)} className="bg-card border rounded-lg p-3">
+                    <div 
+                      key={generateStableKey('mobile-rush', token.ticker, index)} 
+                      className="bg-card border rounded-lg p-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                      onClick={() => navigate(`/c/${token.ticker}`)}
+                    >
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <div className="text-lg">
@@ -1657,17 +1682,17 @@ const CommunityTokensPage: React.FC = () => {
                           </div>
                         </div>
                       </div>
-                      <div className="w-full bg-muted rounded-full h-1.5">
+                          <div className="w-full bg-muted rounded-full h-1.5">
                         <div 
                           className="bg-red-500 h-1.5 rounded-full transition-all duration-300"
                           style={{ 
-                            width: `${Math.max(10, ((token.flat_ether_sale_collection || 0) / 1.0) * 100)}%` 
+                            width: `${Math.max(10, ((30 - token.graduation_time_remaining_minutes) / 30) * 100)}%` 
                           }}
                         />
                       </div>
                       <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                        <span>{safeToFixed(token.flat_ether_sale_collection, 3)} ETH</span>
-                        <span>1.0 ETH cap</span>
+                        <span>{30 - token.graduation_time_remaining_minutes}m elapsed</span>
+                        <span>30m total</span>
                       </div>
                     </div>
                   ))}

@@ -123,41 +123,44 @@ const TokenHoldersList: React.FC<TokenHoldersListProps> = ({ ticker, tokenSymbol
             key={`${holder.userId}-${holder.rank}`}
             className="flex items-center justify-between p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors"
           >
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-muted-foreground w-8">
+            <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
+              <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
+                <span className="text-xs md:text-sm font-medium text-muted-foreground w-6 md:w-8">
                   #{holder.rank}
                 </span>
                 {holder.isCreator && (
-                  <Crown className="w-4 h-4 text-yellow-500" />
+                  <Crown className="w-3 h-3 md:w-4 md:h-4 text-yellow-500" />
                 )}
               </div>
               
-              <Avatar className="w-10 h-10">
+              <Avatar className="w-8 h-8 md:w-10 md:h-10 flex-shrink-0">
                 <AvatarImage src={holder.avatar} alt={holder.handle} />
-                <AvatarFallback>
+                <AvatarFallback className="text-xs">
                   {holder.handle.slice(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               
-              <div>
-                <div className="flex items-center gap-2">
-                  <p className="font-medium">@{holder.handle}</p>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1 md:gap-2">
+                  <p className="font-medium text-sm md:text-base truncate">@{holder.handle}</p>
                   {holder.isCreator && (
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge variant="secondary" className="text-xs flex-shrink-0 hidden md:inline-flex">
                       Creator
                     </Badge>
                   )}
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  {formatBalance(holder.balance)} ${tokenSymbol}
+                <p className="text-xs md:text-sm text-muted-foreground">
+                  Token holder
                 </p>
               </div>
             </div>
             
-            <div className="text-right">
-              <p className="text-sm font-medium">
-                {holder.balance.toLocaleString()} tokens
+            <div className="text-right flex-shrink-0 ml-2">
+              <p className="text-xs md:text-sm font-medium">
+                {formatBalance(holder.balance)}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                ${tokenSymbol}
               </p>
             </div>
           </div>

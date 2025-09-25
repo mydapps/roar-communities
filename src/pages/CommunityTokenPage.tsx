@@ -244,12 +244,17 @@ const CommunityTokenPage = () => {
       // Get price change data
       const priceChangeResponse = await getPriceChange(ticker);
       let priceChange24h = 0;
+      console.log('🔍 Price change response for', ticker, ':', priceChangeResponse);
       if (priceChangeResponse.success && priceChangeResponse.data?.price_changes?.['24h']) {
         // Get the best price change from USD or ETH
         const change24h = priceChangeResponse.data.price_changes['24h'];
+        console.log('📊 24h price change data:', change24h);
         priceChange24h = Math.abs(change24h.change_percent_usd || 0) > Math.abs(change24h.change_percent_eth || 0) 
           ? change24h.change_percent_usd || 0
           : change24h.change_percent_eth || 0;
+        console.log('💹 Final priceChange24h:', priceChange24h);
+      } else {
+        console.log('❌ No price change data available for', ticker);
       }
       
       // Get reward pool data
@@ -307,8 +312,10 @@ const CommunityTokenPage = () => {
       }
       
       // Use the USD values directly from the API and ensure they are numbers
-      const currentPriceUsd = Number(tokenStatus.currentPriceUsd) || 0;
+      const currentPriceUsd = tokenStatus.currentPriceUsd ? Number(tokenStatus.currentPriceUsd) : 0;
       const marketCapUsd = Number(tokenStatus.marketCap) || 0;
+      console.log('💰 Token status currentPriceUsd:', tokenStatus.currentPriceUsd, '-> parsed:', currentPriceUsd);
+      console.log('💰 Full tokenStatus object:', tokenStatus);
       
       const realTokenData: RealTokenData = {
         symbol: tokenStatus.ticker,
@@ -383,11 +390,15 @@ const CommunityTokenPage = () => {
   const { posts, loading: postsLoading, error: postsError, hasMore: hasMorePosts, loadMore: loadMorePosts, loadingElementRef, fetchPosts, isEncryptedAccess: postsEncryptedAccess } = useCommunityPosts(id || undefined);
   
   debugLog("Posts loading state:", { postsLoading, posts: posts.length, error: postsError, ticker: id });
+  debugLog("useCommunityPosts called with:", id);
+  debugLog("Actual posts array:", posts);
   
   const allPosts = useMemo(() => {
     const combinedPosts = [...localPosts, ...posts];
     const uniquePosts = combinedPosts.reduce((acc, post) => {
-      if (post.id && !acc.some(p => p.id === post.id)) {
+      // Use code or id as unique identifier
+      const postId = post.code || post.id;
+      if (postId && !acc.some(p => (p.code || p.id) === postId)) {
         acc.push(post);
       }
       return acc;
@@ -399,6 +410,8 @@ const CommunityTokenPage = () => {
       return bTime - aTime;
     });
   }, [localPosts, posts]);
+  
+  debugLog("All posts (including local):", allPosts);
 
   // All event handlers must be defined before conditional returns
   const handleRoar = useCallback(async (postId: string) => {
@@ -448,6 +461,7 @@ const CommunityTokenPage = () => {
         description: `${tokenData.givenName} community token`,
         avatar: tokenData.symbol.charAt(0),
         status: tokenData.status,
+        graduated: tokenData.graduated,
         price: tokenData.currentPriceUsd,
         marketCap: tokenData.marketCapUsd,
         holders: tokenData.holders,
@@ -474,7 +488,10 @@ const CommunityTokenPage = () => {
   // Derived values
   const community = communityData?.community;
   const user = communityData?.user;
-  const isAdmin = user?.is_admin || false;
+  
+  // For community tokens, check if current user handle matches the token admin
+  const currentUserHandle = localStorage.getItem('dapps_user_handle');
+  const isAdmin = currentUserHandle && tokenData?.admin && currentUserHandle === tokenData.admin;
   const hasShares = tokenData?.userBalance && tokenData.userBalance > 0;
   const ethToUsd = communityData?.eth_to_usd || 3000;
 
@@ -573,7 +590,7 @@ const CommunityTokenPage = () => {
                       onPostCreated={(newPost) => {
                         setLocalPosts(prev => [newPost, ...prev]);
                       }}
-                      communityName={tokenData.givenName}
+                      communityName={tokenData.symbol}
                     />
                   </div>
                 )}
@@ -649,8 +666,8 @@ const CommunityTokenPage = () => {
                       ethBalance: tokenData.rewardPool.ethBalance,
                       tokenBalance: tokenData.rewardPool.tokenBalance,
                       usdValue: tokenData.rewardPool.totalValueUsd,
-                      isLocked: false, // DAO managed
-                      unlockDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) // 1 year from now
+                      isLocked: true, // Always locked for 2 days from launch
+                      unlockDate: new Date(new Date(tokenData.createdOn).getTime() + 2 * 24 * 60 * 60 * 1000) // 2 days from creation
                     }
                   }}
                   community={{
@@ -718,7 +735,8 @@ const CommunityTokenPage = () => {
                 tokenData={{
                   symbol: tokenData.symbol,
                   name: tokenData.givenName,
-                  currentPrice: tokenData.currentPriceUsd,
+                  currentPrice: tokenData.currentPrice,
+                  currentPriceUsd: tokenData.currentPriceUsd,
                   priceChange24h: tokenData.priceChange24h,
                   marketCap: tokenData.marketCapUsd,
                   volume24h: tokenData.volume24h,
@@ -765,6 +783,11 @@ const CommunityTokenPage = () => {
         onClose={() => setTradingModal({ isOpen: false, token: null, mode: 'buy' })}
         token={tradingModal.token}
         mode={tradingModal.mode}
+        userEthBalance={userEthBalance}
+        onTradeComplete={() => {
+          // Refresh token data after trade
+          fetchTokenData();
+        }}
       />
     </div>
   );

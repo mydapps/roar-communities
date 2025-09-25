@@ -20,8 +20,7 @@ import {
   Target,
   Zap,
   Wallet,
-  Coins,
-  Timer
+  Coins
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { getVolumeAnalysis, VolumeAnalysisResponse } from '@/utils/communityTokensApi';
@@ -87,11 +86,51 @@ const CommunityTokenRightPane: React.FC<CommunityTokenRightPaneProps> = ({
   onTrade,
   ethToUsd
 }) => {
-  const formatPrice = (price: number) => {
-    if (price < 0.000001) {
-      return price.toExponential(2);
+  // Helper function to format very small prices with proper subscript notation
+  const formatSmallPrice = (price: number): { formatted: string; hasSubscript: boolean; subscriptCount: number; mainDigits: string; jsx?: React.ReactNode } => {
+    if (price == null || isNaN(price) || price === 0) return { formatted: '0.00', hasSubscript: false, subscriptCount: 0, mainDigits: '0.00' };
+    
+    const priceStr = price.toFixed(20); // Get enough decimal places
+    const match = priceStr.match(/^0\.0*([1-9]\d*)/);
+    
+    if (!match) return { formatted: price.toFixed(4), hasSubscript: false, subscriptCount: 0, mainDigits: price.toFixed(4) };
+    
+    const decimalPart = priceStr.split('.')[1];
+    const leadingZeros = decimalPart.match(/^0*/)?.[0].length || 0;
+    
+    // Only use subscript notation if there are 4 or more leading zeros
+    if (leadingZeros >= 4) {
+      const significantDigits = match[1].substring(0, 3); // Take first 3 significant digits
+      
+      // Convert number to subscript characters
+      const subscriptMap: { [key: string]: string } = {
+        '0': '₀', '1': '₁', '2': '₂', '3': '₃', '4': '₄',
+        '5': '₅', '6': '₆', '7': '₇', '8': '₈', '9': '₉'
+      };
+      const subscriptNumber = leadingZeros.toString().split('').map(digit => subscriptMap[digit]).join('');
+      
+      return {
+        formatted: `0.0${subscriptNumber}${significantDigits}`,
+        hasSubscript: true,
+        subscriptCount: leadingZeros,
+        mainDigits: significantDigits,
+        jsx: (
+          <span>
+            0.0<span className="font-bold text-base align-sub">{subscriptNumber}</span>{significantDigits}
+          </span>
+        )
+      };
     }
-    return price.toFixed(8);
+    
+    return { formatted: price.toFixed(6), hasSubscript: false, subscriptCount: 0, mainDigits: price.toFixed(6) };
+  };
+
+  const formatPrice = (price: number) => {
+    if (price == null || isNaN(price)) {
+      return '0.00';
+    }
+    const result = formatSmallPrice(price);
+    return result.jsx || result.formatted;
   };
 
   const formatVolume = (volume: number) => {
@@ -112,14 +151,6 @@ const CommunityTokenRightPane: React.FC<CommunityTokenRightPaneProps> = ({
     return amount.toString();
   };
 
-  const formatTimeLeft = (ms: number) => {
-    if (ms <= 0) return null;
-    const minutes = Math.floor(ms / 60000);
-    const seconds = Math.floor((ms % 60000) / 1000);
-    return `${minutes}m ${seconds}s`;
-  };
-
-  const isIncubation = tokenData.status === 'incubation';
   const priceChangePositive = tokenData.priceChange24h >= 0;
 
   // State for volume analysis data
@@ -162,10 +193,19 @@ const CommunityTokenRightPane: React.FC<CommunityTokenRightPaneProps> = ({
           {/* Current Price */}
           <div className="text-center p-4 bg-muted/30 rounded-lg">
             <p className="text-sm text-muted-foreground mb-1">Current Price</p>
-            <p className="text-2xl font-bold">${formatPrice(tokenData.currentPrice)}</p>
+            <p className="text-2xl font-bold">
+              {(() => {
+                const result = formatSmallPrice(tokenData.currentPriceUsd);
+                if (result.jsx) {
+                  return <span>${result.jsx}</span>;
+                } else {
+                  return `$${result.formatted}`;
+                }
+              })()}
+            </p>
             <div className={`flex items-center justify-center gap-1 text-sm mt-1 ${priceChangePositive ? 'text-green-600' : 'text-red-600'}`}>
               {priceChangePositive ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
-              {Math.abs(tokenData.priceChange24h).toFixed(2)}% (24h)
+              {Math.abs(tokenData.priceChange24h || 0).toFixed(2)}% (24h)
             </div>
           </div>
 
@@ -192,40 +232,6 @@ const CommunityTokenRightPane: React.FC<CommunityTokenRightPaneProps> = ({
       </Card>
 
 
-      {/* Incubation Status */}
-      {isIncubation && (
-        <Card className="border-amber-200 dark:border-amber-800">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2 text-amber-800 dark:text-amber-200">
-              <Timer className="w-5 h-5" />
-              Incubation Status
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="text-center">
-              <p className="text-2xl font-bold text-amber-600">
-                {formatTimeLeft(tokenData.timeLeft) || "Graduating..."}
-              </p>
-              <p className="text-sm text-muted-foreground">Time remaining</p>
-            </div>
-            
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Progress to graduation</span>
-                <span>{Math.min(90, (tokenData.volume24h / 1) * 100).toFixed(0)}%</span>
-              </div>
-              <Progress 
-                value={Math.min(90, (tokenData.volume24h / 1) * 100)} 
-                className="h-2"
-              />
-            </div>
-            
-            <p className="text-xs text-amber-700 dark:text-amber-300">
-              Flat rate trading until 1 ETH collected or time expires
-            </p>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Reward Pool Summary - Enhanced and prominent */}
       <Card className="border-2 border-green-200 dark:border-green-800 bg-gradient-to-br from-green-50/50 to-blue-50/50 dark:from-green-950/20 dark:to-blue-950/20">

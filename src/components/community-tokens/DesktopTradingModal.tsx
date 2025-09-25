@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { flushSync } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, TrendingUp, TrendingDown, Wallet, ToggleLeft, ToggleRight, Loader2, AlertCircle, Clock } from 'lucide-react';
 
@@ -17,9 +18,12 @@ import {
   quoteEthToToken,
   quoteTokenToEth,
   swapEthToToken,
-  swapTokenToEth
+  swapTokenToEth,
+  // User balance API
+  getUserTokenBalance
 } from '@/utils/communityTokensApi';
 import { fetchEthPrice } from '@/utils/apiBase';
+import { getWalletBalance } from '@/utils/communityApi';
 
 // Countdown Timer Component
 interface CountdownTimerProps {
@@ -103,10 +107,14 @@ const DesktopTradingModal: React.FC<DesktopTradingModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [ethToUsd, setEthToUsd] = useState(3000);
   const [isLoadingEthPrice, setIsLoadingEthPrice] = useState(false);
+  const [freshEthBalance, setFreshEthBalance] = useState<string | null>(null);
+  const [isLoadingEthBalance, setIsLoadingEthBalance] = useState(false);
+  const [freshTokenBalance, setFreshTokenBalance] = useState<number | null>(null);
+  const [isLoadingTokenBalance, setIsLoadingTokenBalance] = useState(false);
 
-  // Get real user balances
-  const ethBalance = parseFloat(userEthBalance || "0");
-  const userTokenBalance = token?.userHoldings || 0;
+  // Get real user balances - use fresh balance if available, otherwise fallback to prop
+  const ethBalance = parseFloat(freshEthBalance || userEthBalance || "0");
+  const userTokenBalance = freshTokenBalance !== null ? freshTokenBalance : (token?.userHoldings || 0);
 
   // Reset state when modal opens/closes
   useEffect(() => {
@@ -119,32 +127,65 @@ const DesktopTradingModal: React.FC<DesktopTradingModalProps> = ({
       setQuote(null);
       setError(null);
     }
-  }, [isOpen]);
+  }, [isOpen]); // Removed showSuccess from dependency array
 
-  // Fetch ETH price when modal opens
+  // Fetch ETH price, wallet balance, and token balance when modal opens
   useEffect(() => {
     if (isOpen) {
-      const loadEthPrice = async () => {
+      const loadData = async () => {
         setIsLoadingEthPrice(true);
+        setIsLoadingEthBalance(true);
+        
         try {
-          const response = await fetchEthPrice();
-          if (response.success && response.price) {
-            setEthToUsd(response.price);
+          // Always fetch ETH price and wallet balance
+          const promises = [
+            fetchEthPrice(),
+            getWalletBalance(true) // Force refresh
+          ];
+          
+          // For sell mode, also fetch fresh token balance
+          if (mode === 'sell' && token?.symbol) {
+            setIsLoadingTokenBalance(true);
+            promises.push(getUserTokenBalance(token.symbol));
+          }
+          
+          const responses = await Promise.all(promises);
+          const [priceResponse, balanceResponse, tokenBalanceResponse] = responses;
+          
+          if (priceResponse.success && priceResponse.price) {
+            setEthToUsd(priceResponse.price);
+          }
+          
+          if (balanceResponse.success && balanceResponse.balance) {
+            setFreshEthBalance(balanceResponse.balance.eth);
+          }
+          
+          // Handle token balance response if it exists
+          if (tokenBalanceResponse && tokenBalanceResponse.success && tokenBalanceResponse.data) {
+            setFreshTokenBalance(tokenBalanceResponse.data.balance);
           }
         } catch (error) {
-          console.error('Failed to fetch ETH price:', error);
+          console.error('Failed to fetch data:', error);
         } finally {
           setIsLoadingEthPrice(false);
+          setIsLoadingEthBalance(false);
+          setIsLoadingTokenBalance(false);
         }
       };
-      loadEthPrice();
+      loadData();
     }
-  }, [isOpen]);
+  }, [isOpen, mode, token?.symbol]);
 
   // Get quote when amount changes
   const getQuote = useCallback(async (inputAmount: string) => {
     if (!token || !inputAmount || parseFloat(inputAmount) <= 0) {
       setQuote(null);
+      return;
+    }
+
+    // Wait for ETH price to be loaded if not in ETH mode
+    if (!isEthMode && (ethToUsd === 3000 || isLoadingEthPrice)) {
+      // Still loading ETH price, skip quote for now
       return;
     }
 
@@ -245,7 +286,7 @@ const DesktopTradingModal: React.FC<DesktopTradingModalProps> = ({
     } finally {
       setIsLoadingQuote(false);
     }
-  }, [token, mode]);
+  }, [token, mode, isEthMode, ethToUsd, isLoadingEthPrice]);
 
   // Debounced quote fetching
   useEffect(() => {
@@ -364,19 +405,27 @@ const DesktopTradingModal: React.FC<DesktopTradingModalProps> = ({
       }
 
       if (response.success) {
-        setShowSuccess(true);
-        toast.success(`${mode === 'buy' ? 'Purchase' : 'Sale'} completed successfully!`);
+        console.log('🎉 Trade successful, showing animation IMMEDIATELY:', {
+          showSuccess: true,
+          token: token,
+          mode: mode,
+          amount: displayAmount,
+          tokenSymbol: token.symbol || token.ticker,
+          tokenAvatar: token.image
+        });
         
-        // Call onTradeComplete to refresh balances
-        if (onTradeComplete) {
-          onTradeComplete();
-        }
+        // Show animation IMMEDIATELY - force synchronous state update
+        flushSync(() => {
+          setShowSuccess(true);
+        });
         
-        // Auto close after success animation
-        setTimeout(() => {
-          setShowSuccess(false);
-          onClose();
-        }, 3000);
+        // No toast notification - let animation handle all feedback
+        
+        // Don't call onTradeComplete yet - wait until user dismisses animation
+        // onTradeComplete will be called in handleSuccessComplete
+        
+        // Don't auto-close the modal - let the animation handle it
+        // The animation will call handleSuccessComplete when done
       } else {
         setError(response.error || `Failed to ${mode} tokens`);
         toast.error(response.error || `Failed to ${mode} tokens`);
@@ -391,10 +440,21 @@ const DesktopTradingModal: React.FC<DesktopTradingModalProps> = ({
     }
   };
 
-  const handleSuccessComplete = () => {
+  const handleSuccessComplete = useCallback(() => {
     setShowSuccess(false);
+    
+    // Call onTradeComplete to refresh balances after user dismisses animation
+    if (onTradeComplete) {
+      onTradeComplete();
+    }
+    
     onClose();
-  };
+  }, [onClose, onTradeComplete]);
+
+  // Debug log for showSuccess changes
+  useEffect(() => {
+    console.log('🔍 DesktopTradingModal showSuccess changed:', showSuccess);
+  }, [showSuccess]);
 
   if (!token) return null;
 
@@ -509,18 +569,26 @@ const DesktopTradingModal: React.FC<DesktopTradingModalProps> = ({
                     >
                       <div className="font-semibold">
                         {mode === 'sell' 
-                          ? `${userTokenBalance.toLocaleString()} ${token.symbol || token.ticker}`
-                          : isEthMode 
-                            ? `${ethBalance.toFixed(4)} ETH`
-                            : `$${(ethBalance * ethToUsd).toFixed(2)}`
+                          ? isLoadingTokenBalance
+                            ? "Loading..."
+                            : `${userTokenBalance.toLocaleString()} ${token.symbol || token.ticker}`
+                          : isLoadingEthBalance
+                            ? "Loading..."
+                            : isEthMode 
+                              ? `${ethBalance.toFixed(4)} ETH`
+                              : `$${(ethBalance * ethToUsd).toFixed(2)}`
                         }
                       </div>
                       <div className="text-xs text-muted-foreground">
                         {mode === 'sell' 
-                          ? `Available to sell`
-                          : isEthMode 
-                            ? `≈ $${(ethBalance * ethToUsd).toFixed(2)}`
-                            : `≈ ${ethBalance.toFixed(4)} ETH`
+                          ? isLoadingTokenBalance
+                            ? "Fetching balance..."
+                            : `Available to sell`
+                          : isLoadingEthBalance
+                            ? "Fetching balance..."
+                            : isEthMode 
+                              ? `≈ $${(ethBalance * ethToUsd).toFixed(2)}`
+                              : `≈ ${ethBalance.toFixed(4)} ETH`
                         }
                       </div>
                     </button>
@@ -684,15 +752,10 @@ const DesktopTradingModal: React.FC<DesktopTradingModalProps> = ({
       <TradeSuccessAnimation
         isVisible={showSuccess}
         onComplete={handleSuccessComplete}
-        amount={mode === 'buy' 
-          ? isEthMode 
-            ? `${displayAmount} ETH`
-            : `$${displayAmount}`
-          : `${displayAmount} ${token.symbol || token.ticker}`
-        }
         tokenSymbol={token.symbol || token.ticker}
         tokenAvatar={token.image}
         action={mode}
+        autoClose={false}
       />
     </>
   );

@@ -36,11 +36,12 @@ const IncubationProgressBar: React.FC<IncubationProgressBarProps> = ({
     return `${seconds}s left`;
   };
 
-  // Calculate progress percentage (based on volume towards 1 ETH goal)
-  const progressPercentage = Math.max(10, Math.min(90, (volume24h / 1) * 100));
+  // Calculate progress percentage (based on time elapsed)
+  const totalTime = 30 * 60 * 1000; // 30 minutes in ms
+  const timeElapsed = totalTime - timeLeft;
+  const progressPercentage = Math.max(0, Math.min(100, (timeElapsed / totalTime) * 100));
   
   // Calculate urgency level based on time left
-  const totalTime = 30 * 60 * 1000; // 30 minutes in ms
   const timePercentage = (timeLeft / totalTime) * 100;
   
   // Determine urgency level and colors
@@ -109,9 +110,6 @@ const IncubationProgressBar: React.FC<IncubationProgressBarProps> = ({
       <div className="flex items-center justify-between">
         <p className={`text-xs ${textColor} ${urgencyLevel === 'critical' ? 'animate-pulse font-bold' : ''}`}>
           {urgencyText}
-        </p>
-        <p className={`text-xs ${textColor.replace('800', '700').replace('200', '300')}`}>
-          {volume24h.toFixed(3)} / 1.000 ETH
         </p>
       </div>
       

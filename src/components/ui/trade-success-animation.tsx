@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle, TrendingUp, TrendingDown, Sparkles } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -6,87 +7,113 @@ import confetti from 'canvas-confetti';
 interface TradeSuccessAnimationProps {
   isVisible: boolean;
   onComplete: () => void;
-  amount: string;
   tokenSymbol: string;
   tokenAvatar?: string;
   action: 'buy' | 'sell';
+  autoClose?: boolean; // New prop to control auto-close behavior
 }
 
 const TradeSuccessAnimation: React.FC<TradeSuccessAnimationProps> = ({
   isVisible,
   onComplete,
-  amount,
   tokenSymbol,
   tokenAvatar,
-  action
+  action,
+  autoClose = true // Default to true for backward compatibility
 }) => {
+  const triggerConfetti = () => {
+    console.log('🎊 Confetti triggered by user interaction');
+    
+    const duration = 3000;
+    const animationEnd = Date.now() + duration;
+    
+    const randomInRange = (min: number, max: number) => {
+      return Math.random() * (max - min) + min;
+    };
+
+    const runConfetti = () => {
+      confetti({
+        particleCount: 50,
+        startVelocity: 30,
+        spread: 360,
+        origin: {
+          x: randomInRange(0.1, 0.3),
+          y: Math.random() - 0.2
+        },
+        colors: ['#10B981', '#3B82F6', '#8B5CF6', '#F59E0B', '#EF4444']
+      });
+      confetti({
+        particleCount: 50,
+        startVelocity: 30,
+        spread: 360,
+        origin: {
+          x: randomInRange(0.7, 0.9),
+          y: Math.random() - 0.2
+        },
+        colors: ['#10B981', '#3B82F6', '#8B5CF6', '#F59E0B', '#EF4444']
+      });
+    };
+
+    // Initial burst
+    runConfetti();
+    
+    // Additional bursts
+    const interval = setInterval(() => {
+      if (Date.now() < animationEnd) {
+        runConfetti();
+      } else {
+        clearInterval(interval);
+      }
+    }, 250);
+
+    // Clean up interval after duration
+    setTimeout(() => {
+      clearInterval(interval);
+    }, duration);
+  };
+
   useEffect(() => {
-    if (isVisible) {
-      // Trigger confetti
-      const duration = 3000;
-      const animationEnd = Date.now() + duration;
-      
-      const randomInRange = (min: number, max: number) => {
-        return Math.random() * (max - min) + min;
-      };
+    if (!isVisible) return;
 
-      const runConfetti = () => {
-        confetti({
-          particleCount: 50,
-          startVelocity: 30,
-          spread: 360,
-          origin: {
-            x: randomInRange(0.1, 0.3),
-            y: Math.random() - 0.2
-          },
-          colors: ['#10B981', '#3B82F6', '#8B5CF6', '#F59E0B', '#EF4444']
-        });
-        confetti({
-          particleCount: 50,
-          startVelocity: 30,
-          spread: 360,
-          origin: {
-            x: randomInRange(0.7, 0.9),
-            y: Math.random() - 0.2
-          },
-          colors: ['#10B981', '#3B82F6', '#8B5CF6', '#F59E0B', '#EF4444']
-        });
-      };
+    console.log('🎊 TradeSuccessAnimation triggered (no confetti yet):', {
+      isVisible,
+      tokenSymbol,
+      tokenAvatar,
+      action,
+      timestamp: Date.now()
+    });
 
-      // Initial burst
-      runConfetti();
-      
-      // Additional bursts
-      const interval = setInterval(() => {
-        if (Date.now() < animationEnd) {
-          runConfetti();
-        } else {
-          clearInterval(interval);
-        }
-      }, 250);
-
-      // Auto close after 4 seconds
-      const timeout = setTimeout(() => {
+    // Auto close after 4 seconds only if autoClose is enabled
+    let timeout: NodeJS.Timeout | null = null;
+    if (autoClose) {
+      timeout = setTimeout(() => {
         onComplete();
       }, 4000);
-
-      return () => {
-        clearInterval(interval);
-        clearTimeout(timeout);
-      };
     }
-  }, [isVisible, onComplete]);
 
-  if (!isVisible) return null;
+    return () => {
+      if (timeout) clearTimeout(timeout);
+    };
+  }, [isVisible, onComplete, autoClose, tokenSymbol, tokenAvatar, action]);
 
-  return (
+  if (!isVisible) {
+    console.log('🚫 TradeSuccessAnimation not visible:', { isVisible, timestamp: Date.now(), component: 'TradeSuccessAnimation' });
+    return null;
+  }
+
+  console.log('🎨 TradeSuccessAnimation rendering with isVisible:', isVisible);
+  
+  const animationContent = (
     <AnimatePresence>
       {isVisible && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          onClick={onComplete}
+          onClick={() => {
+            triggerConfetti();
+            onComplete();
+          }}
           className="fixed inset-0 z-[10000] overflow-hidden cursor-pointer"
           style={{ 
             background: action === 'buy' 
@@ -186,10 +213,10 @@ const TradeSuccessAnimation: React.FC<TradeSuccessAnimationProps> = ({
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-2xl px-6 py-4 border border-white/20">
                 <p className="text-2xl md:text-3xl font-bold">
-                  {amount}
+                  {tokenSymbol}
                 </p>
                 <p className="text-lg text-white/80">
-                  {tokenSymbol} {action === 'buy' ? 'purchased' : 'sold'}
+                  {action === 'buy' ? 'purchased' : 'sold'}
                 </p>
               </div>
             </motion.div>
@@ -245,6 +272,9 @@ const TradeSuccessAnimation: React.FC<TradeSuccessAnimationProps> = ({
       )}
     </AnimatePresence>
   );
+
+  // Render using portal to ensure it appears above everything else
+  return createPortal(animationContent, document.body);
 };
 
 export default TradeSuccessAnimation;

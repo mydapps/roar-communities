@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ArrowUp, ArrowDown, Loader2 } from 'lucide-react';
 import { Community, SharePrecheckResponse, buySharesPrecheck, sellSharesPrecheck, buySharesConfirm, sellSharesConfirm, getShareValue } from '@/utils/communityApi';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import confetti from 'canvas-confetti';
+import TradeSuccessAnimation from '@/components/ui/trade-success-animation';
 
 interface CommunityShareDialogProps {
   community: Community | null;
@@ -28,6 +28,7 @@ export const CommunityShareDialog = ({
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [precheckData, setPrecheckData] = useState<SharePrecheckResponse | null>(null);
   const [userShareData, setUserShareData] = useState<{shares: number}|null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
     setAction(initialAction);
@@ -102,8 +103,8 @@ export const CommunityShareDialog = ({
       if (action === 'buy') {
         result = await buySharesConfirm(community.name, quantity);
         if (result.status === 'SUCCESS') {
-          triggerSuccessAnimation();
-          toast.success(`Successfully purchased ${quantity} shares of ${community.name}`);
+          setShowSuccess(true);
+          // No toast notification - let animation handle all feedback
           onOpenChange(false);
           if (onSuccess) onSuccess();
         } else {
@@ -112,8 +113,8 @@ export const CommunityShareDialog = ({
       } else {
         result = await sellSharesConfirm(community.name, quantity);
         if (result.status === 'SUCCESS') {
-          triggerSuccessAnimation();
-          toast.success(`Successfully sold ${quantity} shares of ${community.name}`);
+          setShowSuccess(true);
+          // No toast notification - let animation handle all feedback
           onOpenChange(false);
           if (onSuccess) onSuccess();
         } else {
@@ -128,13 +129,9 @@ export const CommunityShareDialog = ({
     }
   };
 
-  const triggerSuccessAnimation = () => {
-    confetti({
-      particleCount: 100,
-      spread: 70,
-      origin: { y: 0.6 }
-    });
-  };
+  const handleSuccessComplete = useCallback(() => {
+    setShowSuccess(false);
+  }, []);
 
   const updateQuantityAndPrecheck = (newQuantity: number) => {
     setQuantity(newQuantity);
@@ -272,5 +269,15 @@ export const CommunityShareDialog = ({
         </div>
       </DialogContent>
     </Dialog>
+
+    {/* Success Animation - Render outside dialog with higher z-index */}
+        <TradeSuccessAnimation
+          isVisible={showSuccess}
+          onComplete={handleSuccessComplete}
+          tokenSymbol={community?.name || 'SHARES'}
+          tokenAvatar={community?.image}
+          action={action}
+          autoClose={false}
+        />
   );
 };

@@ -23,10 +23,12 @@ import { PinPostConfirmationModal } from './post/PinPostConfirmationModal';
 import { HideWarnModal } from '@/components/admin/HideWarnModal';
 import { NotInCommunitySheet } from '@/components/community/NotInCommunitySheet';
 import { useImageViewer } from '@/components/contexts/ImageViewerContext';
+import DaoProposalVoting from '@/components/dao/DaoProposalVoting';
 
 export interface PostProps {
   username: string;
   community?: string;
+  ticker?: string | null; // Community ticker for proper linking
   timeAgo: string;
   content: string;
   roarCount: number;
@@ -71,11 +73,14 @@ export interface PostProps {
     usdValue?: number;
     parentReplyId?: number;
   }) => void; // Callback for optimistic tip UI updates
+  is_dao_proposal?: boolean; // True if the post is a DAO proposal
+  dao_proposal_data?: import('@/utils/postApi').DaoProposalData | null; // DAO proposal data
 }
 
 export const Post = ({ 
   username, 
   community, 
+  ticker,
   timeAgo, 
   content, 
   roarCount, 
@@ -103,6 +108,8 @@ export const Post = ({
   tipCount = 0,
   hasUserTipped = false,
   onTipSuccess,
+  is_dao_proposal = false,
+  dao_proposal_data = null,
 }: PostProps) => {
   const navigate = useNavigate();
   const [localRoared, setLocalRoared] = useState(roared);
@@ -642,6 +649,7 @@ export const Post = ({
         <PostHeader 
           username={username}
           community={community}
+          ticker={ticker}
           timeAgo={timeAgo}
           avatar={avatar}
           ipfsHash={ipfsHash}
@@ -670,7 +678,26 @@ export const Post = ({
           poll_data={currentPollData}
           postCode={postCode}
           onVoteOnPoll={handleVoteOnPoll}
+          is_dao_proposal={is_dao_proposal}
         />
+        
+        {/* DAO Proposal Voting */}
+        {is_dao_proposal && dao_proposal_data && (
+          <div className="px-6 pb-4">
+            <DaoProposalVoting
+              proposalData={dao_proposal_data}
+              onVoteSuccess={() => {
+                // Navigate to detailed post page after voting
+                if (postCode) {
+                  navigate(`/p/${postCode}`);
+                } else {
+                  // Fallback to refresh if no postCode
+                  window.location.reload();
+                }
+              }}
+            />
+          </div>
+        )}
         
         <PostFooter
           localRoared={hasRoared}

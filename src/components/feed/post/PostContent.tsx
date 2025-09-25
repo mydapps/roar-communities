@@ -36,6 +36,9 @@ interface PostContentProps {
   poll_data?: PollData | null;
   postCode?: string; // Required by PollDisplay
   onVoteOnPoll?: (optionId: number) => Promise<void>; // Required by PollDisplay
+  
+  // DAO proposal prop
+  is_dao_proposal?: boolean; // Hide default content for DAO proposals
 }
 
 export const PostContent: React.FC<PostContentProps> = ({
@@ -50,6 +53,7 @@ export const PostContent: React.FC<PostContentProps> = ({
   poll_data = null,
   postCode,
   onVoteOnPoll,
+  is_dao_proposal = false
 }) => {
   // If it's a poll, render PollDisplay and return early.
   // The poll question itself comes from the main `content` prop.
@@ -65,6 +69,11 @@ export const PostContent: React.FC<PostContentProps> = ({
         />
       </CardContent>
     );
+  }
+
+  // If it's a DAO proposal, don't render default content - the DAO component handles everything
+  if (is_dao_proposal) {
+    return null;
   }
 
   // --- STATE FOR URL PREVIEW/EMBED (for non-mirrored content or mirror quote) ---

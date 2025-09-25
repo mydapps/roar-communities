@@ -198,6 +198,7 @@ export const UserPosts: React.FC<UserPostsProps> = ({ handle }) => {
             username={post.author.handle}
             avatar={post.author.avatar || ''}
             community={post.community || undefined}
+            ticker={post.ticker}
             timeAgo={post.time_ago}
             content={post.body} // Using body instead of title as requested
             roarCount={roarCount}

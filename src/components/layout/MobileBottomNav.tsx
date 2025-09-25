@@ -39,6 +39,7 @@ const MobileBottomNav = () => {
   const isCommunityTokensPage = location.pathname === '/community-tokens' || location.pathname === '/community_tokens';
   const isPaidConversationPage = /^\/messages\/paid\/[\w-]+$/.test(location.pathname);
   const isWalletPage = location.pathname === '/wallet';
+  const isCommunitiesPage = location.pathname === '/communities';
   
   // Only on the feed page, we want to hide/show the bottom nav based on scroll
   const isScrollSensitive = location.pathname === '/feed';
@@ -76,8 +77,8 @@ const MobileBottomNav = () => {
     };
   }, [lastScrollY, isScrollSensitive]);
   
-  // Don't render the bottom nav on post detail pages, roar farming page, community tokens page, wallet page, or paid conversation page
-  if (isPostDetailPage || isRoarFarmingPage || isCommunityTokensPage || isPaidConversationPage || isWalletPage) {
+  // Don't render the bottom nav on post detail pages, roar farming page, community tokens page, wallet page, communities page, or paid conversation page
+  if (isPostDetailPage || isRoarFarmingPage || isCommunityTokensPage || isPaidConversationPage || isWalletPage || isCommunitiesPage) {
     return null;
   }
 

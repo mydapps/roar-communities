@@ -37,6 +37,7 @@ const CommunityPostsFeed: React.FC<CommunityPostsFeedProps> = ({
               key={`post-${post.code || index}-${index}`}
               username={post.handle || ''}
               community={post.community || ''}
+              ticker={post.ticker}
               timeAgo={post.timeAgo || ''}
               content={post.is_mirror === 1 ? (post.mirror_quote || '') : (post.body || '')}
               roarCount={post.upvotes || 0}
@@ -69,7 +70,8 @@ const CommunityPostsFeed: React.FC<CommunityPostsFeedProps> = ({
               onPostUpdated={onPostUpdated}
               is_poll={post.is_poll}
               poll_data={post.poll_data}
-
+              is_dao_proposal={post.is_dao_proposal || false}
+              dao_proposal_data={post.dao_proposal_data || null}
             />
           ))}
           

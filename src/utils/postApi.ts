@@ -3,11 +3,58 @@ import { createAuthHeaders, setupEventListener } from './apiBase';
 import { POST_MIRRORED_EVENT } from '@/components/feed/post/MirrorButton';
 
 /**
+ * DAO Proposal Data Interface
+ */
+export interface DaoProposalData {
+  proposal_id: number;
+  ticker: string;
+  proposal_title: string;
+  purpose: string;
+  quantity: number;
+  currency: string;
+  to_address: string;
+  voting_period_days: number;
+  proposal_created_on: string;
+  voting_ends_on: string;
+  proposal_status: 'active' | 'passed' | 'failed' | 'expired' | 'cancelled';
+  voting_results: {
+    votes_for: number;
+    votes_against: number;
+    total_votes_cast: number;
+    total_voters: number;
+    total_eligible_votes: number;
+    turnout_percentage: number;
+    for_percentage: number;
+    against_percentage: number;
+    quorum_percentage: number;
+    pass_threshold_percentage: number;
+    quorum_met: boolean;
+    threshold_met: boolean;
+    seconds_remaining: number;
+  };
+  sending_status: string | null;
+  user_voting_data: {
+    is_eligible: boolean;
+    voting_power: number;
+    has_voted: boolean;
+    vote_choice: 'for' | 'against' | 'abstain' | null;
+    vote_weight: number;
+    voted_at: string | null;
+  };
+  is_active: boolean;
+  is_passed: boolean;
+  is_failed: boolean;
+  is_expired: boolean;
+  is_cancelled: boolean;
+}
+
+/**
  * Interface for API post responses
  */
 export interface Post {
   code: string;
   community: string;
+  ticker?: string | null; // Community ticker symbol (e.g., "BUILD", "ROAR") - NEW FIELD
   avatar: string;
   handle: string;
   timeAgo: string;
@@ -42,6 +89,8 @@ export interface Post {
   original_images?: string[];
   is_poll: boolean; // True if the post is a poll
   poll_data: PollData | null; // Null if not a poll or data not available
+  is_dao_proposal: boolean; // True if the post is a DAO proposal
+  dao_proposal_data: DaoProposalData | null; // Null if not a DAO proposal or data not available
 }
 
 /**
@@ -787,3 +836,60 @@ export interface PollData {
   options: PollDataOption[];
 }
 // --- END NEW POLL DATA INTERFACES ---
+
+/**
+ * DAO Voting API Functions
+ */
+
+export interface VoteRequest {
+  proposal_id: number;
+  vote_choice: 'for' | 'against' | 'abstain';
+  vote_reason?: string;
+}
+
+export interface VoteResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    vote_choice: string;
+    voting_power: number;
+    proposal_id: number;
+  };
+  error?: string;
+}
+
+/**
+ * Cast a vote on a DAO proposal
+ */
+export const castDaoVote = async (voteData: VoteRequest): Promise<VoteResponse> => {
+  try {
+    const response = await fetch('/api/dao/vote', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...createAuthHeaders(false),
+      },
+      credentials: 'include',
+      body: JSON.stringify(voteData),
+    });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      return {
+        success: false,
+        message: result.message || `HTTP ${response.status}`,
+        error: result.error
+      };
+    }
+
+    return result;
+  } catch (error) {
+    console.error('Error casting DAO vote:', error);
+    return {
+      success: false,
+      message: 'Failed to cast vote',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+};

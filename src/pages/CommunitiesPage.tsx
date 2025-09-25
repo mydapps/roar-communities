@@ -345,7 +345,7 @@ const CommunitiesPage = () => {
       const result = await buySharesConfirm(communityName, quantity);
       
       if (result && result.status === 'SUCCESS') {
-         toast.success(`Successfully bought ${quantity} shares in ${communityName}!`);
+         // No toast notification - let animation handle all feedback
          handleTradeSuccess();
           setTradeDialogOpen(false);
       } else {
@@ -366,7 +366,7 @@ const CommunitiesPage = () => {
       const result = await sellSharesConfirm(communityName, quantity);
       
       if (result && result.status === 'SUCCESS') {
-         toast.success(`Successfully sold ${quantity} shares in ${communityName}!`);
+         // No toast notification - let animation handle all feedback
          handleTradeSuccess();
           setTradeDialogOpen(false);
       } else {

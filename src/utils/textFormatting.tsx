@@ -276,19 +276,22 @@ const processTextPart = (text: string, key: number): React.ReactNode => {
   const communityRegex = /\/c\/([a-zA-Z0-9-]+)/g;
   const urlRegex = /(https?:\/\/[^\s]+)/g;
   const emojiRegex = /:([a-zA-Z0-9_]+?):/g;
+  const tickerRegex = /\$([A-Z0-9]{2,10})\b/g;
   
   // Find all matches for each pattern
   const mentionMatches: RegExpMatchArray[] = Array.from(text.matchAll(mentionRegex));
   const communityMatches: RegExpMatchArray[] = Array.from(text.matchAll(communityRegex));
   const urlMatches: RegExpMatchArray[] = Array.from(text.matchAll(urlRegex));
   const emojiMatches: RegExpMatchArray[] = Array.from(text.matchAll(emojiRegex));
+  const tickerMatches: RegExpMatchArray[] = Array.from(text.matchAll(tickerRegex));
   
   // If no matches, return the text as is
   if (
     mentionMatches.length === 0 && 
     communityMatches.length === 0 && 
     urlMatches.length === 0 &&
-    emojiMatches.length === 0
+    emojiMatches.length === 0 &&
+    tickerMatches.length === 0
   ) {
     return <span key={key}>{text}</span>;
   }
@@ -299,6 +302,7 @@ const processTextPart = (text: string, key: number): React.ReactNode => {
     ...communityMatches.map(match => ({ type: 'community' as const, match })),
     ...urlMatches.map(match => ({ type: 'url' as const, match })),
     ...emojiMatches.map(match => ({ type: 'emoji' as const, match })),
+    ...tickerMatches.map(match => ({ type: 'ticker' as const, match })),
   ];
   
   // Sort by the start index of the match
@@ -366,6 +370,18 @@ const processTextPart = (text: string, key: number): React.ReactNode => {
           href={`/c/${community}`}
           onClick={(e) => e.stopPropagation()}
           className="text-primary hover:underline"
+        >
+          {matchText}
+        </a>
+      );
+    } else if (type === 'ticker') {
+      const ticker = match[1];
+      result.push(
+        <a 
+          key={`${key}-${matchIndex}`}
+          href={`/c/${ticker}`}
+          onClick={(e) => e.stopPropagation()}
+          className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/30 dark:text-blue-300 dark:border-blue-800/50 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors cursor-pointer no-underline"
         >
           {matchText}
         </a>

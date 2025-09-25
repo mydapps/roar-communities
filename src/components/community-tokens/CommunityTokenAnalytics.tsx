@@ -98,11 +98,51 @@ const CommunityTokenAnalytics: React.FC<CommunityTokenAnalyticsProps> = ({
   const [priceChanges, setPriceChanges] = useState<PriceChangeResponse['data'] | null>(null);
   const [priceChangesLoading, setPriceChangesLoading] = useState(false);
 
-  const formatPrice = (price: number) => {
-    if (price < 0.000001) {
-      return price.toExponential(2);
+  // Helper function to format very small prices with proper subscript notation
+  const formatSmallPrice = (price: number): { formatted: string; hasSubscript: boolean; subscriptCount: number; mainDigits: string; jsx?: React.ReactNode } => {
+    if (price === 0) return { formatted: '0.00', hasSubscript: false, subscriptCount: 0, mainDigits: '0.00' };
+    
+    const priceStr = price.toFixed(20); // Get enough decimal places
+    const match = priceStr.match(/^0\.0*([1-9]\d*)/);
+    
+    if (!match) return { formatted: price.toFixed(4), hasSubscript: false, subscriptCount: 0, mainDigits: price.toFixed(4) };
+    
+    const decimalPart = priceStr.split('.')[1];
+    const leadingZeros = decimalPart.match(/^0*/)?.[0].length || 0;
+    
+    // Only use subscript notation if there are 4 or more leading zeros
+    if (leadingZeros >= 4) {
+      const significantDigits = match[1].substring(0, 3); // Take first 3 significant digits
+      
+      // Convert number to subscript characters
+      const subscriptMap: { [key: string]: string } = {
+        '0': '₀', '1': '₁', '2': '₂', '3': '₃', '4': '₄',
+        '5': '₅', '6': '₆', '7': '₇', '8': '₈', '9': '₉'
+      };
+      const subscriptNumber = leadingZeros.toString().split('').map(digit => subscriptMap[digit]).join('');
+      
+      return {
+        formatted: `0.0${subscriptNumber}${significantDigits}`,
+        hasSubscript: true,
+        subscriptCount: leadingZeros,
+        mainDigits: significantDigits,
+        jsx: (
+          <span>
+            0.0<span className="font-bold text-sm align-sub">{subscriptNumber}</span>{significantDigits}
+          </span>
+        )
+      };
     }
-    return price.toFixed(8);
+    
+    return { formatted: price.toFixed(6), hasSubscript: false, subscriptCount: 0, mainDigits: price.toFixed(6) };
+  };
+
+  const formatPrice = (price: number) => {
+    if (price == null || isNaN(price)) {
+      return '0.00';
+    }
+    const result = formatSmallPrice(price);
+    return result.jsx || result.formatted;
   };
 
   const formatVolume = (volume: number) => {
@@ -351,46 +391,62 @@ const CommunityTokenAnalytics: React.FC<CommunityTokenAnalyticsProps> = ({
               </div>
             ) : recentTrades.length > 0 ? (
               <div className="space-y-3 max-h-80 overflow-y-auto">
-                {recentTrades.slice(0, 10).map((trade) => (
-                  <div key={trade.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <Badge 
-                        variant={trade.action === 'buy' ? 'default' : 'secondary'}
-                        className={trade.action === 'buy' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'}
-                      >
-                        {(trade.action || '').toUpperCase()}
-                      </Badge>
-                      <div className="flex items-center gap-2">
-                        <Avatar className="w-6 h-6">
-                          <AvatarImage src={trade.user_avatar} />
-                          <AvatarFallback className="text-xs">
-                            {(trade.user_handle || '').slice(0, 2).toUpperCase() || 'U'}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="text-sm font-medium">@{trade.user_handle}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {(() => {
-                              try {
-                                const date = new Date(trade.timestamp || Date.now());
-                                if (isNaN(date.getTime())) {
+                {recentTrades.slice(0, 10).map((trade, index) => {
+                  const isBuy = trade.trade_type?.includes('buy') || trade.trade_type === 'token_creation';
+                  const tradeTypeDisplay = trade.trade_type === 'token_creation' ? 'CREATE' : 
+                                         trade.trade_type === 'flat_buy' ? 'BUY' :
+                                         trade.trade_type === 'flat_sell' ? 'SELL' :
+                                         trade.trade_type === 'amm_buy' ? 'BUY' :
+                                         trade.trade_type === 'amm_sell' ? 'SELL' : 'TRADE';
+                  
+                  return (
+                    <div key={`${trade.tx_hash || trade.user_handle}-${index}`} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 bg-muted/50 rounded-lg gap-3">
+                      <div className="flex items-center gap-3">
+                        <Badge 
+                          variant={isBuy ? 'default' : 'secondary'}
+                          className={isBuy ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'}
+                        >
+                          {tradeTypeDisplay}
+                        </Badge>
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <Avatar className="w-6 h-6 flex-shrink-0">
+                            <AvatarImage src={trade.token_image} />
+                            <AvatarFallback className="text-xs">
+                              {(trade.user_handle || '').slice(0, 2).toUpperCase() || 'U'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium truncate">@{trade.user_handle}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {(() => {
+                                try {
+                                  const date = new Date(trade.trade_time || Date.now());
+                                  if (isNaN(date.getTime())) {
+                                    return 'Recently';
+                                  }
+                                  return formatDistanceToNow(date, { addSuffix: true });
+                                } catch (e) {
                                   return 'Recently';
                                 }
-                                return formatDistanceToNow(date, { addSuffix: true });
-                              } catch (e) {
-                                return 'Recently';
-                              }
-                            })()}
-                          </p>
+                              })()}
+                            </p>
+                          </div>
                         </div>
                       </div>
+                      <div className="text-right sm:text-right text-left flex-shrink-0">
+                        <p className="text-sm font-medium">
+                          {formatAmount(Number(trade.token_amount) || 0)} ${tokenData.symbol}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {Number(trade.eth_amount || 0).toFixed(4)} ETH
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          ${Number(trade.eth_amount_usd || 0).toFixed(2)}
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-medium">{formatAmount(trade.token_amount || 0)} ${tokenData.symbol}</p>
-                      <p className="text-xs text-muted-foreground">${(trade.usd_amount || 0).toFixed(2)}</p>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-8 text-muted-foreground">

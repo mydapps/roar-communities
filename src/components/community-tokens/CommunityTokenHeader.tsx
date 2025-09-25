@@ -75,14 +75,51 @@ const CommunityTokenHeader: React.FC<CommunityTokenHeaderProps> = ({
   ethToUsd,
   isMobile
 }) => {
+  // Helper function to format very small prices with proper subscript notation
+  const formatSmallPrice = (price: number): { formatted: string; hasSubscript: boolean; subscriptCount: number; mainDigits: string; jsx?: React.ReactNode } => {
+    if (price === 0) return { formatted: '0.00', hasSubscript: false, subscriptCount: 0, mainDigits: '0.00' };
+    
+    const priceStr = price.toFixed(20); // Get enough decimal places
+    const match = priceStr.match(/^0\.0*([1-9]\d*)/);
+    
+    if (!match) return { formatted: price.toFixed(4), hasSubscript: false, subscriptCount: 0, mainDigits: price.toFixed(4) };
+    
+    const decimalPart = priceStr.split('.')[1];
+    const leadingZeros = decimalPart.match(/^0*/)?.[0].length || 0;
+    
+    // Only use subscript notation if there are 4 or more leading zeros
+    if (leadingZeros >= 4) {
+      const significantDigits = match[1].substring(0, 3); // Take first 3 significant digits
+      
+      // Convert number to subscript characters
+      const subscriptMap: { [key: string]: string } = {
+        '0': '₀', '1': '₁', '2': '₂', '3': '₃', '4': '₄',
+        '5': '₅', '6': '₆', '7': '₇', '8': '₈', '9': '₉'
+      };
+      const subscriptNumber = leadingZeros.toString().split('').map(digit => subscriptMap[digit]).join('');
+      
+      return {
+        formatted: `0.0${subscriptNumber}${significantDigits}`,
+        hasSubscript: true,
+        subscriptCount: leadingZeros,
+        mainDigits: significantDigits,
+        jsx: (
+          <span>
+            0.0<span className="font-bold text-lg align-sub">{subscriptNumber}</span>{significantDigits}
+          </span>
+        )
+      };
+    }
+    
+    return { formatted: price.toFixed(6), hasSubscript: false, subscriptCount: 0, mainDigits: price.toFixed(6) };
+  };
+
   const formatPrice = (price: number) => {
     if (price == null || isNaN(price)) {
       return '0.00';
     }
-    if (price < 0.000001) {
-      return price.toExponential(2);
-    }
-    return price.toFixed(8);
+    const result = formatSmallPrice(price);
+    return result.jsx || result.formatted;
   };
 
   const formatMarketCap = (value: number) => {
@@ -188,7 +225,9 @@ const CommunityTokenHeader: React.FC<CommunityTokenHeaderProps> = ({
           <div className="space-y-1">
             <p className={`${isMobile ? 'text-xs' : 'text-sm'} text-muted-foreground`}>Current Price</p>
             <div className={`flex ${isMobile ? 'flex-col' : 'items-center'} gap-1`}>
-              <p className={`${isMobile ? 'text-base' : 'text-lg'} font-bold`}>${formatPrice(tokenData.currentPriceUsd)}</p>
+              <p className={`${isMobile ? 'text-base' : 'text-lg'} font-bold`}>
+                ${formatPrice(tokenData.currentPriceUsd)}
+              </p>
               <div className={`flex items-center gap-1 ${isMobile ? 'text-xs' : 'text-sm'} ${priceChangePositive ? 'text-green-600' : 'text-red-600'}`}>
                 {priceChangePositive ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
                 {Math.abs(tokenData.priceChange24h || 0).toFixed(2)}%

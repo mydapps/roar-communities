@@ -184,6 +184,7 @@ export interface UserPost {
   id: number;
   code: string;
   community: string | null;
+  ticker?: string | null; // Community ticker for proper linking
   title: string;
   body: string;
   body_preview: string;

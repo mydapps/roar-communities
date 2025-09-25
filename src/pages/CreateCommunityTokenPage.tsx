@@ -380,8 +380,14 @@ const CreateCommunityTokenPage: React.FC = () => {
 
   const handleSuccessComplete = () => {
     setShowSuccess(false);
-    // Redirect to community tokens page
-    window.location.href = '/community_tokens';
+    // Redirect to the created community token page
+    const ticker = createdTokenData?.ticker || formData.ticker;
+    if (ticker) {
+      window.location.href = `/c/${ticker}`;
+    } else {
+      // Fallback to community tokens page if no ticker available
+      window.location.href = '/community_tokens';
+    }
   };
 
   const benefits = [

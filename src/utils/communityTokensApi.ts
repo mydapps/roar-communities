@@ -73,6 +73,8 @@ export interface TokenStatus {
   isEthCapReached: boolean;
   canGraduate: boolean;
   currentRate: number;
+  currentPriceEth: number;
+  currentPriceUsd: number;
   marketCap: number;
   volume24h: number;
   contractAddresses: {
@@ -513,6 +515,7 @@ export interface UserHolding {
   avgPurchasePrice: number;
   currentRate: number;
   currentValueEth: number;
+  currentValueUsd: number; // Added USD value from API
   profitLossEth: number;
   profitLossPercent: number;
   graduated: boolean;
@@ -604,6 +607,43 @@ export const getUserHoldings = async (params?: {
     return responseData;
   } catch (error) {
     console.error('Error fetching user holdings:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+};
+
+// Get user balance for a specific token
+export interface UserTokenBalanceResponse {
+  success: boolean;
+  data?: {
+    ticker: string;
+    balance: number;
+  };
+  error?: string;
+}
+
+export const getUserTokenBalance = async (ticker: string): Promise<UserTokenBalanceResponse> => {
+  try {
+    const response = await fetch(`/api/community_tokens/user_balance/${ticker}`, {
+      method: 'GET',
+      credentials: 'include',
+      headers: createAuthHeaders(false),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      return {
+        success: false,
+        error: errorData.error || `HTTP ${response.status}`
+      };
+    }
+
+    const responseData = await response.json();
+    return responseData;
+  } catch (error) {
+    console.error('Error fetching user token balance:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -1711,7 +1751,7 @@ export const getRecentTrades = async (ticker: string, page: number = 1, limit: n
     queryParams.append('page', page.toString());
     queryParams.append('limit', limit.toString());
 
-    const url = `/api/community_tokens/token_trades/${ticker}?${queryParams.toString()}`;
+    const url = `/api/community_tokens/recent_trades/${ticker}?${queryParams.toString()}`;
     const response = await fetch(url, {
       method: 'GET',
       credentials: 'include',

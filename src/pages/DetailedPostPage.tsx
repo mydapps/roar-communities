@@ -38,6 +38,24 @@ const getPlainText = (htmlString: string | undefined | null): string => {
 const DetailedPostPage = () => {
   usePreventZoom();
   
+  // Helper function to determine if community name is a ticker
+  const isTicker = (communityName: string): boolean => {
+    // Check if it's all uppercase and 2-10 characters (typical ticker format)
+    return /^[A-Z0-9]{2,10}$/.test(communityName);
+  };
+
+  // Helper function to get community URL path using ticker if available
+  const getCommunityPath = (communityName: string, ticker?: string | null): string => {
+    if (ticker) {
+      // Use ticker for token-based communities
+      return ticker;
+    } else if (communityName) {
+      // Fallback to community name for legacy communities
+      return communityName.toLowerCase().replace(/\s+/g, '-');
+    }
+    return '';
+  };
+  
   const { communityId, postId, handle } = useParams<{ communityId?: string; postId: string; handle?: string }>();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -616,7 +634,7 @@ const DetailedPostPage = () => {
                   <BreadcrumbSeparator />
                   <BreadcrumbItem>
                     <BreadcrumbLink asChild>
-                      <Link to={`/c/${post.community}`}>{post.community}</Link>
+                      <Link to={`/c/${getCommunityPath(post.community, post.ticker)}`}>{post.community}</Link>
                     </BreadcrumbLink>
                   </BreadcrumbItem>
                 </>
@@ -646,6 +664,7 @@ const DetailedPostPage = () => {
         <Post
           username={post.author?.handle || post.handle || 'Unknown'}
           community={post.community}
+          ticker={post.ticker}
           timeAgo={post.timeAgo}
           content={post.body}
           roarCount={post.upvotes || 0}
@@ -670,6 +689,8 @@ const DetailedPostPage = () => {
           onTriggerMobileCommentInput={triggerMobileCommentInput}
           onTipSuccess={handleTipSuccess}
           hasUserTipped={post.has_tipped === 1}
+          is_dao_proposal={post.is_dao_proposal}
+          dao_proposal_data={post.dao_proposal_data}
         />
       </div>
       

@@ -194,19 +194,32 @@ const AssetCard = ({
     change: string;
     icon?: string;
     color?: string;
+    type?: "eth" | "token";
+    token?: UserHolding;
   };
   hideBalance: boolean;
   onTradeClick: (action: 'buy' | 'sell') => void;
   onSendClick: () => void;
 }) => {
+  const navigate = useNavigate();
   const isPositive = asset.change.startsWith('+');
+  const isCommunityToken = asset.type === 'token' && asset.token?.ticker;
+  
+  const handleCommunityClick = () => {
+    if (isCommunityToken && asset.token?.ticker) {
+      navigate(`/c/${asset.token.ticker}`);
+    }
+  };
   
   return (
     <Card className="border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-background to-muted/20">
       <CardContent className="p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${asset.color || 'bg-gradient-to-br from-blue-500 to-purple-600'}`}>
+            <div 
+              className={`w-12 h-12 rounded-2xl flex items-center justify-center ${asset.color || 'bg-gradient-to-br from-blue-500 to-purple-600'} ${isCommunityToken ? 'cursor-pointer hover:scale-105 transition-transform' : ''}`}
+              onClick={isCommunityToken ? handleCommunityClick : undefined}
+            >
               {asset.icon ? (
                 <img src={asset.icon} alt={asset.symbol} className="w-8 h-8 rounded-full" />
               ) : (
@@ -215,7 +228,12 @@ const AssetCard = ({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-bold text-lg">{asset.name}</h3>
+                <h3 
+                  className={`font-bold text-lg ${isCommunityToken ? 'cursor-pointer hover:text-primary transition-colors' : ''}`}
+                  onClick={isCommunityToken ? handleCommunityClick : undefined}
+                >
+                  {asset.name}
+                </h3>
                 <span className="px-2 py-0.5 bg-muted rounded-md text-xs font-medium text-muted-foreground">
                   {asset.symbol}
                 </span>
@@ -473,18 +491,18 @@ const WalletPage = () => {
       type: "eth"
     },
     ...holdings.map(token => {
-      const priceChange = priceChanges[token.ticker] || 0;
-      const changeText = priceChange === 0 
+      // Use profitLossPercent from API instead of calculated value
+      const changeText = token.profitLossPercent === 0 
         ? "0.0%" 
-        : priceChange > 0 
-          ? `+${priceChange.toFixed(1)}%` 
-          : `${priceChange.toFixed(1)}%`;
+        : token.profitLossPercent > 0 
+          ? `+${token.profitLossPercent.toFixed(1)}%` 
+          : `${token.profitLossPercent.toFixed(1)}%`;
       
       return {
         name: token.givenName || token.name,
         symbol: token.ticker,
         balance: `${token.balance.toLocaleString()} ${token.ticker}`,
-        value: `$${(token.currentValueEth * 2500).toFixed(2)}`,
+        value: `$${token.currentValueUsd.toFixed(2)}`, // Use currentValueUsd from API
         change: changeText,
         color: "bg-gradient-to-br from-purple-500 to-pink-600",
         type: "token" as const,
@@ -578,12 +596,24 @@ const WalletPage = () => {
                         setTradingModal({
                           isOpen: true,
                           token: {
+                            id: parseInt(asset.token.ticker.replace(/[^0-9]/g, '') || '0'),
                             name: asset.token.givenName || asset.token.name,
                             symbol: asset.token.ticker,
+                            ticker: asset.token.ticker,
+                            description: `${asset.token.givenName || asset.token.name} community token`,
+                            avatar: asset.token.image || asset.token.ticker.charAt(0),
                             image: asset.token.image,
-                            currentPrice: asset.token.currentRate,
-                            id: asset.token.ticker,
+                            status: asset.token.graduated ? 'graduated' : 'incubation',
                             graduated: asset.token.graduated,
+                            price: asset.token.currentRate,
+                            currentPrice: asset.token.currentRate,
+                            marketCap: asset.token.marketCap,
+                            holders: asset.token.totalHolders,
+                            volume24h: asset.token.volume24h,
+                            priceChange24h: asset.token.profitLossPercent,
+                            rewardPool: 0, // Not available in holdings API
+                            timeLeft: 0, // Not applicable for wallet trades
+                            totalSupply: 1000000000, // 1 billion standard
                             userHoldings: asset.token.balance
                           },
                           mode: action
@@ -673,6 +703,7 @@ const WalletPage = () => {
         mode={tradingModal.mode}
         userEthBalance={userEthBalance}
         onTradeComplete={() => {
+          // Refresh holdings and close modal - this will be called after user dismisses animation
           refreshHoldings();
           setTradingModal({ isOpen: false, token: null, mode: 'buy' });
         }}

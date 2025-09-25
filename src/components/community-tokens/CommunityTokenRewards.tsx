@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Card, 
   CardContent, 
@@ -26,6 +26,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
+import CreateProposalSheet from '@/components/dao/CreateProposalSheet';
+import ProposalsList from '@/components/dao/ProposalsList';
 
 interface TokenData {
   symbol: string;
@@ -58,6 +60,8 @@ const CommunityTokenRewards: React.FC<CommunityTokenRewardsProps> = ({
   ethToUsd
 }) => {
   const { rewardPool } = tokenData;
+  const [createProposalOpen, setCreateProposalOpen] = useState(false);
+  const [proposalsKey, setProposalsKey] = useState(0); // For refreshing proposals list
 
   const copyAddress = () => {
     navigator.clipboard.writeText(rewardPool.address);
@@ -93,6 +97,14 @@ const CommunityTokenRewards: React.FC<CommunityTokenRewardsProps> = ({
   const daysUntilUnlock = Math.ceil((rewardPool.unlockDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
   const isUnlocked = !rewardPool.isLocked || daysUntilUnlock <= 0;
 
+  const handleCreateProposal = () => {
+    setCreateProposalOpen(true);
+  };
+
+  const handleProposalCreated = () => {
+    setProposalsKey(prev => prev + 1); // Refresh proposals list
+  };
+
   return (
     <div className="space-y-6">
       {/* Reward Pool Overview */}
@@ -127,8 +139,9 @@ const CommunityTokenRewards: React.FC<CommunityTokenRewardsProps> = ({
                 </Button>
               </div>
             </div>
-            <p className="font-mono text-sm bg-muted/50 p-2 rounded border">
-              {rewardPool.address}
+            <p className="font-mono text-sm bg-muted/50 p-2 rounded border break-all">
+              <span className="hidden sm:inline">{rewardPool.address}</span>
+              <span className="sm:hidden">{formatAddress(rewardPool.address)}</span>
             </p>
           </div>
 
@@ -193,8 +206,8 @@ const CommunityTokenRewards: React.FC<CommunityTokenRewardsProps> = ({
                 </p>
                 <p className={`text-sm ${isUnlocked ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}`}>
                   {isUnlocked 
-                    ? 'Community can now vote on fund utilization'
-                    : `Funds will unlock in ${daysUntilUnlock} days (${formatDistanceToNow(rewardPool.unlockDate, { addSuffix: true })})`
+                    ? 'Community members can now create proposals on utilization of funds'
+                    : `Reward pool is locked for 2 days from launch of community. Unlocks in ${daysUntilUnlock} days (${formatDistanceToNow(rewardPool.unlockDate, { addSuffix: true })}), post which community members would be able to create proposal on utilization of funds.`
                   }
                 </p>
               </div>
@@ -203,7 +216,7 @@ const CommunityTokenRewards: React.FC<CommunityTokenRewardsProps> = ({
 
           {/* Utilization Button */}
           <Button
-            onClick={onUtilize}
+            onClick={handleCreateProposal}
             className="w-full h-12 text-lg"
             variant={isUnlocked ? "default" : "secondary"}
             disabled={!isUnlocked}
@@ -211,19 +224,19 @@ const CommunityTokenRewards: React.FC<CommunityTokenRewardsProps> = ({
             {isUnlocked ? (
               <>
                 <Vote className="w-5 h-5 mr-2" />
-                Propose Fund Usage
+                Create Proposal
               </>
             ) : (
               <>
                 <Clock className="w-5 h-5 mr-2" />
-                Funds Locked ({daysUntilUnlock} days left)
+                Locked for {daysUntilUnlock} days
               </>
             )}
           </Button>
 
           {isUnlocked && (
             <p className="text-sm text-muted-foreground text-center">
-              Create proposals for community voting on reward pool utilization
+              Create proposals for community voting on fund utilization
             </p>
           )}
         </CardContent>
@@ -285,6 +298,34 @@ const CommunityTokenRewards: React.FC<CommunityTokenRewardsProps> = ({
         </CardContent>
       </Card>
 
+      {/* DAO Proposals Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Vote className="w-5 h-5" />
+            DAO Proposals
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ProposalsList 
+            key={proposalsKey}
+            ticker={tokenData.symbol}
+            limit={5}
+            showViewAll={false}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Create Proposal Sheet */}
+      <CreateProposalSheet
+        open={createProposalOpen}
+        onOpenChange={setCreateProposalOpen}
+        ticker={tokenData.symbol}
+        communityName={community.name}
+        rewardPoolBalance={rewardPool.ethBalance}
+        rewardPoolAddress={rewardPool.address}
+        onProposalCreated={handleProposalCreated}
+      />
     </div>
   );
 };

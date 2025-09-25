@@ -18,6 +18,7 @@ import { MoreHorizontal, EyeOff, AlertTriangle, Loader2, Pin, PinOff, ShieldAler
 interface PostHeaderProps {
   username: string;
   community?: string;
+  ticker?: string | null; // Community ticker for proper linking
   timeAgo: string;
   avatar?: string;
   ipfsHash?: string;
@@ -38,6 +39,7 @@ interface PostHeaderProps {
 export const PostHeader: React.FC<PostHeaderProps> = ({
   username,
   community,
+  ticker,
   timeAgo,
   avatar,
   ipfsHash,
@@ -61,10 +63,22 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
     navigate(`/u/${username.split('.')[0]}`);
   };
 
+  // Helper function to get community URL path using ticker if available
+  const getCommunityPath = (): string => {
+    if (ticker) {
+      // Use ticker for token-based communities
+      return ticker;
+    } else if (community) {
+      // Fallback to community name for legacy communities
+      return community.toLowerCase().replace(/\s+/g, '-');
+    }
+    return '';
+  };
+
   const handleCommunityClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (community) {
-      navigate(`/c/${community.toLowerCase().replace(/\s+/g, '-')}`);
+      navigate(`/c/${getCommunityPath()}`);
     }
   };
 
@@ -74,7 +88,7 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
     if (!postCode) return;
     
     if (community) {
-      navigate(`/c/${community.toLowerCase().replace(/\s+/g, '-')}/${postCode}`);
+      navigate(`/c/${getCommunityPath()}/${postCode}`);
     } else {
       navigate(`/${username.split('.')[0]}/${postCode}`);
     }

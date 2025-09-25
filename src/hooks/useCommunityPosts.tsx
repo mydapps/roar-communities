@@ -14,6 +14,7 @@ export interface PollOptionDisplay {
 export interface CommunityPost {
   code: string;
   community: string;
+  ticker?: string | null; // Community ticker for proper linking
   avatar: string;
   handle: string;
   timeAgo: string;
@@ -49,6 +50,8 @@ export interface CommunityPost {
   original_title?: string;
   is_poll?: boolean;
   poll_data?: PollData | null;
+  is_dao_proposal?: boolean;
+  dao_proposal_data?: import('@/utils/postApi').DaoProposalData | null;
 }
 
 export const useCommunityPosts = (communityName: string | undefined) => {
@@ -77,6 +80,7 @@ export const useCommunityPosts = (communityName: string | undefined) => {
     
     try {
       const url = `/api/fetch_posts?c=${encodeURIComponent(communityName)}&page=${pageToFetch}&limit=${limit}`;
+      console.log("🔍 useCommunityPosts - Making API call:", { url, communityName, pageToFetch, limit });
       const response = await fetch(url, {
           method: 'GET',
           credentials: 'include'
@@ -93,7 +97,11 @@ export const useCommunityPosts = (communityName: string | undefined) => {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
       const data = await response.json();
+      console.log("🔍 Raw API response:", data);
+      console.log("🔍 Is array?", Array.isArray(data));
       const fetchedPosts = Array.isArray(data) ? data : (data.posts || []); 
+      console.log("🔍 Processed posts:", fetchedPosts);
+      console.log("🔍 Posts count:", fetchedPosts.length);
       
       setPosts(prev => pageToFetch === 1 ? fetchedPosts : [...prev, ...fetchedPosts]);
       setHasMore(fetchedPosts.length === limit);
