@@ -176,6 +176,11 @@ const MySharesPage = () => {
         refreshPortfolio();
         fetchWalletBalance(true); // Force refresh balance
         
+        // Dispatch trade completed event for real-time updates
+        window.dispatchEvent(new CustomEvent('tradeCompleted', { 
+          detail: { action: 'buy', community: communityName, quantity } 
+        }));
+        
         // IMPORTANT FIX: Set loading to false AFTER a slight delay
         // This allows the success screen to display properly
         setTimeout(() => {
@@ -211,6 +216,11 @@ const MySharesPage = () => {
         toast.success('Successfully sold shares!');
         refreshPortfolio();
         fetchWalletBalance(true); // Force refresh balance
+        
+        // Dispatch trade completed event for real-time updates
+        window.dispatchEvent(new CustomEvent('tradeCompleted', { 
+          detail: { action: 'sell', community: communityName, quantity } 
+        }));
         
         // IMPORTANT FIX: Set loading to false AFTER a slight delay
         // This allows the success screen to display properly

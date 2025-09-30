@@ -43,7 +43,8 @@ import {
   ExternalLink,
   Settings,
   Bell,
-  Gift
+  Gift,
+  Search
 } from 'lucide-react';
 import { toast } from "sonner";
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -64,6 +65,7 @@ import { useCommunityTokenHoldings } from '@/hooks/useCommunityTokenHoldings';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import confetti from 'canvas-confetti';
 import TradingInterface from '@/components/community-tokens/TradingInterface';
+import MissingTokensSync from '@/components/wallet/MissingTokensSync';
 
 // Modern Hero Section Component
 const WalletHero = ({ 
@@ -72,6 +74,7 @@ const WalletHero = ({
   isLoading, 
   hideBalance, 
   setHideBalance,
+  onMissingTokensClick,
   onDepositClick,
   onSendClick,
   onImportTokenClick
@@ -84,6 +87,7 @@ const WalletHero = ({
   onDepositClick: () => void;
   onSendClick: () => void;
   onImportTokenClick: () => void;
+  onMissingTokensClick: () => void;
 }) => {
   const isMobile = useIsMobile();
 
@@ -129,6 +133,10 @@ const WalletHero = ({
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem onClick={onMissingTokensClick}>
+                    <Search className="w-4 h-4 mr-2" />
+                    Missing Tokens?
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={onImportTokenClick}>
                     <Import className="w-4 h-4 mr-2" />
                     Import Token
@@ -318,6 +326,7 @@ const WalletPage = () => {
   const [isLoadingBalance, setIsLoadingBalance] = useState(true);
   const [hideBalance, setHideBalance] = useState(false);
   const [importTokenOpen, setImportTokenOpen] = useState(false);
+  const [missingTokensOpen, setMissingTokensOpen] = useState(false);
   const [priceChanges, setPriceChanges] = useState<Record<string, number>>({});
 
   const isMobile = useIsMobile();
@@ -529,6 +538,7 @@ const WalletPage = () => {
           onDepositClick={() => setDepositOpen(true)}
           onSendClick={() => setSendOpen(true)}
           onImportTokenClick={() => setImportTokenOpen(true)}
+          onMissingTokensClick={() => setMissingTokensOpen(true)}
         />
 
         {/* ETH Migration Alert */}
@@ -763,6 +773,18 @@ const WalletPage = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Missing Tokens Sync Dialog */}
+      <MissingTokensSync
+        open={missingTokensOpen}
+        onOpenChange={setMissingTokensOpen}
+        onSyncComplete={() => {
+          // Refresh holdings after sync
+          refreshHoldings();
+          toast.success("Portfolio updated! Check your new tokens.", {
+            description: "Your wallet has been synchronized with the blockchain."
+          });
+        }}
+      />
 
     </div>
   );

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Navbar from './Navbar';
 import Sidebar from './Sidebar';
 import MobileBottomNav from './MobileBottomNav';
+import CountdownBanner from '@/components/feed/CountdownBanner';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { PullToRefresh } from '@/components/ui/pull-to-refresh';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -117,6 +118,11 @@ const MainLayout = () => {
     )}>
       <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
       
+      {/* Countdown Banner - only show on authenticated pages */}
+      {isLoggedIn && !isPublicPage && (
+            <CountdownBanner />
+      )}
+      
       {/* This div now manages the main content row (sidebar + scrollable area) */}
       {/* It takes remaining space (flex-1) and hides overflow for its children */}
       <div className="flex flex-1 overflow-hidden"> 
@@ -136,7 +142,9 @@ const MainLayout = () => {
           >
             <main className={cn(
               mainContentClass, 
-              isMobileAppUser ? "pt-16" : "" // Keep mobile app top padding
+              isMobileAppUser ? "pt-16" : "",
+              // Add padding for countdown banner when logged in and not on public pages
+              isLoggedIn && !isPublicPage ? "pt-12" : "" // Account for countdown banner height (~48px)
             )}>
               <div className={cn(
                 "py-6 px-4 sm:px-6 animate-fade-in",
@@ -163,7 +171,9 @@ const MainLayout = () => {
           >
             <main className={cn(
               mainContentClass, 
-              isMobileAppUser ? "pt-16" : "" // Keep mobile app top padding
+              isMobileAppUser ? "pt-16" : "",
+              // Add padding for countdown banner when logged in and not on public pages
+              isLoggedIn && !isPublicPage ? "pt-12" : "" // Account for countdown banner height (~48px)
             )}>
               <div className={cn(
                 "py-6 px-4 sm:px-6 animate-fade-in",

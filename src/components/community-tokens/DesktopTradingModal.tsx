@@ -414,6 +414,11 @@ const DesktopTradingModal: React.FC<DesktopTradingModalProps> = ({
           tokenAvatar: token.image
         });
         
+        // Dispatch trade completed event for real-time updates
+        window.dispatchEvent(new CustomEvent('tradeCompleted', { 
+          detail: { action: mode, community: token.ticker || token.symbol, quantity: parseFloat(amount) } 
+        }));
+        
         // Show animation IMMEDIATELY - force synchronous state update
         flushSync(() => {
           setShowSuccess(true);

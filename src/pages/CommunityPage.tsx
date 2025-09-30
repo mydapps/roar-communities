@@ -303,6 +303,11 @@ const CommunityPage = () => {
         // This ensures proper state sequence for the success screen
         setTradeSuccess(true);
         
+        // Dispatch trade completed event for real-time updates
+        window.dispatchEvent(new CustomEvent('tradeCompleted', { 
+          detail: { action: 'buy', community: communityName, quantity } 
+        }));
+        
         setTimeout(() => {
           setTradeLoading(false);
         }, 300);
@@ -346,6 +351,11 @@ const CommunityPage = () => {
         // IMPORTANT FIX: First set success to true, then set loading to false after delay
         // This ensures proper state sequence for the success screen
         setTradeSuccess(true);
+        
+        // Dispatch trade completed event for real-time updates
+        window.dispatchEvent(new CustomEvent('tradeCompleted', { 
+          detail: { action: 'sell', community: communityName, quantity } 
+        }));
         
         setTimeout(() => {
           setTradeLoading(false);

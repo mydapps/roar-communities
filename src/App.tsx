@@ -63,6 +63,9 @@ import { SharedTipSheet } from '@/components/tip/SharedTipSheet';
 // Lazy loaded components
 const LazyMySharesPage = lazy(() => import('@/pages/MySharesPage'));
 const LazyReferralPage = lazy(() => import('@/pages/ReferralPage'));
+const LazyClaimRewardPage = lazy(() => import('@/pages/ClaimRewardPage'));
+const LazyClaimWelcomeRewardsPage = lazy(() => import('@/pages/ClaimWelcomeRewardsPage'));
+const LazyWelcomeOfferPage = lazy(() => import('@/pages/WelcomeOfferPage'));
 const LazySettingsPage = lazy(() => import('@/pages/SettingsPage'));
 
 // Invalid auth event handler
@@ -169,6 +172,27 @@ function App() {
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>}>
                   <LazyReferralPage />
+                </Suspense>
+            } />
+            <Route path="claim-reward" element={
+                <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>}>
+                  <LazyClaimRewardPage />
+                </Suspense>
+            } />
+            <Route path="claim-welcome-rewards" element={
+                <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>}>
+                  <LazyClaimWelcomeRewardsPage />
+                </Suspense>
+            } />
+            <Route path="welcome-offer" element={
+                <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>}>
+                  <LazyWelcomeOfferPage />
                 </Suspense>
             } />
             <Route path="notifications" element={<NotificationsPage />} />

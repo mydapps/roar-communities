@@ -346,6 +346,12 @@ const CommunitiesPage = () => {
       
       if (result && result.status === 'SUCCESS') {
          // No toast notification - let animation handle all feedback
+         
+         // Dispatch trade completed event for real-time updates
+         window.dispatchEvent(new CustomEvent('tradeCompleted', { 
+           detail: { action: 'buy', community: communityName, quantity } 
+         }));
+         
          handleTradeSuccess();
           setTradeDialogOpen(false);
       } else {
@@ -367,6 +373,12 @@ const CommunitiesPage = () => {
       
       if (result && result.status === 'SUCCESS') {
          // No toast notification - let animation handle all feedback
+         
+         // Dispatch trade completed event for real-time updates
+         window.dispatchEvent(new CustomEvent('tradeCompleted', { 
+           detail: { action: 'sell', community: communityName, quantity } 
+         }));
+         
          handleTradeSuccess();
           setTradeDialogOpen(false);
       } else {

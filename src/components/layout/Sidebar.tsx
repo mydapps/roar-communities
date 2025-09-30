@@ -15,6 +15,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -29,6 +30,8 @@ interface SidebarProps {
 
 interface Community {
   name: string;
+  display_name: string;
+  ticker: string | null;
   image: string;
   membersCount: number;
 }
@@ -291,7 +294,9 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                         {communities.map((community) => (
                           <CommunityItem 
                             key={community.name} 
-                            name={community.name} 
+                            name={community.name}
+                            display_name={community.display_name}
+                            ticker={community.ticker}
                             img={community.image} 
                           />
                         ))}
@@ -391,13 +396,30 @@ const NavItem = ({ to, icon, label, className, badgeCount }: NavItemProps) => {
 
 interface CommunityItemProps {
   name: string;
+  display_name: string;
+  ticker: string | null;
   img: string;
 }
 
-const CommunityItem = ({ name, img }: CommunityItemProps) => {
+const CommunityItem = ({ name, display_name, ticker, img }: CommunityItemProps) => {
+  // Use ticker for routing if available, otherwise fall back to name
+  const linkTo = ticker ? `/c/${ticker}` : `/c/${name}`;
+  
+  // Generate initials from display_name or name
+  const getInitials = (text: string) => {
+    return text
+      .split(' ')
+      .map(word => word.charAt(0))
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  const initials = getInitials(display_name || name);
+
   return (
     <NavLink
-      to={`/c/${name}`}
+      to={linkTo}
       className={({ isActive }) => cn(
         "flex items-center gap-2 px-2 py-1.5 rounded-md text-sm",
         isActive 
@@ -405,12 +427,13 @@ const CommunityItem = ({ name, img }: CommunityItemProps) => {
           : "text-muted-foreground hover:bg-muted hover:text-foreground"
       )}
     >
-      <img 
-        src={img || '/images/placeholder.png'} 
-        alt={name} 
-        className="h-6 w-6 rounded-full object-cover" 
-      />
-      <span className="truncate">{name}</span>
+      <Avatar className="h-6 w-6">
+        <AvatarImage src={img} alt={display_name || name} />
+        <AvatarFallback className="text-xs font-medium">
+          {initials}
+        </AvatarFallback>
+      </Avatar>
+      <span className="truncate">{display_name || name}</span>
     </NavLink>
   );
 };

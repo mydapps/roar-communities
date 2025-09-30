@@ -251,6 +251,12 @@ export const TradeSheet = ({
             setTransactionHash(result.transactionHash || null);
             triggerSuccessAnimation();
             toast.success(`Successfully purchased ${formatNumber(shareQuantity, shareQuantity < 1 ? 3 : shareQuantity < 10 ? 2 : 0)} shares!`);
+            
+            // Dispatch trade completed event for real-time updates
+            window.dispatchEvent(new CustomEvent('tradeCompleted', { 
+              detail: { action: 'buy', community: community.community, quantity: shareQuantity } 
+            }));
+            
             setTimeout(() => onOpenChange(false), 3000);
           } else {
             throw new Error(result?.message || 'Transaction failed');
@@ -276,6 +282,12 @@ export const TradeSheet = ({
             setTransactionHash(result.transactionHash || null);
             triggerSuccessAnimation();
             toast.success(`Successfully sold ${formatNumber(shareQuantity, shareQuantity < 1 ? 3 : shareQuantity < 10 ? 2 : 0)} shares!`);
+            
+            // Dispatch trade completed event for real-time updates
+            window.dispatchEvent(new CustomEvent('tradeCompleted', { 
+              detail: { action: 'sell', community: community.community, quantity: shareQuantity } 
+            }));
+            
             setTimeout(() => onOpenChange(false), 3000);
           } else {
             throw new Error(result?.message || 'Transaction failed');

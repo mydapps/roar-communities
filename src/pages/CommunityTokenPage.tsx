@@ -227,26 +227,38 @@ const CommunityTokenPage = () => {
     setTokenError(null);
     
     try {
-      // Get community name from ticker
-      const nameResponse = await getCommunityNameFromTicker(ticker);
+      // Make all API calls in parallel for better performance
+      const [
+        nameResponse,
+        statusResponse,
+        priceChangeResponse,
+        rewardPoolResponse,
+        holdingsResponse,
+        volumeAnalysisResponse
+      ] = await Promise.all([
+        getCommunityNameFromTicker(ticker),
+        getTokenStatus(ticker),
+        getPriceChange(ticker),
+        getRewardPool(ticker),
+        isLoggedIn ? getUserHoldings({ search: ticker }) : Promise.resolve({ success: false }),
+        getVolumeAnalysis(ticker, '24h')
+      ]);
+
+      // Process community name
       if (nameResponse.success && nameResponse.data) {
         setCommunityName(nameResponse.data.name);
       }
       
-      // Get token status
-      const statusResponse = await getTokenStatus(ticker);
+      // Process token status
       if (!statusResponse.success || !statusResponse.data) {
         throw new Error(statusResponse.error || 'Failed to fetch token status');
       }
-      
       const tokenStatus = statusResponse.data;
       
-      // Get price change data
-      const priceChangeResponse = await getPriceChange(ticker);
+      // Process price change data
       let priceChange24h = 0;
       console.log('🔍 Price change response for', ticker, ':', priceChangeResponse);
       if (priceChangeResponse.success && priceChangeResponse.data?.price_changes?.['24h']) {
-        // Get the best price change from USD or ETH
         const change24h = priceChangeResponse.data.price_changes['24h'];
         console.log('📊 24h price change data:', change24h);
         priceChange24h = Math.abs(change24h.change_percent_usd || 0) > Math.abs(change24h.change_percent_eth || 0) 
@@ -257,8 +269,7 @@ const CommunityTokenPage = () => {
         console.log('❌ No price change data available for', ticker);
       }
       
-      // Get reward pool data
-      const rewardPoolResponse = await getRewardPool(ticker);
+      // Process reward pool data
       let rewardPoolData = {
         address: '',
         ethBalance: 0,
@@ -280,18 +291,14 @@ const CommunityTokenPage = () => {
         };
       }
       
-      // Get user holdings if logged in
+      // Process user holdings
       let userBalance = 0;
-      if (isLoggedIn) {
-        const holdingsResponse = await getUserHoldings({ search: ticker });
-        if (holdingsResponse.success && holdingsResponse.data?.holdings) {
-          const holding = holdingsResponse.data.holdings.find(h => h.ticker === ticker);
-          userBalance = holding?.balance || 0;
-        }
+      if (isLoggedIn && holdingsResponse.success && holdingsResponse.data?.holdings) {
+        const holding = holdingsResponse.data.holdings.find(h => h.ticker === ticker);
+        userBalance = holding?.balance || 0;
       }
       
-      // Get volume analysis for buy pressure
-      const volumeAnalysisResponse = await getVolumeAnalysis(ticker, '24h');
+      // Process volume analysis
       let buyPressure = 50; // Default 50% if no data
       let volumeAnalysisData = null;
       if (volumeAnalysisResponse.success && volumeAnalysisResponse.data) {
@@ -786,7 +793,9 @@ const CommunityTokenPage = () => {
         userEthBalance={userEthBalance}
         onTradeComplete={() => {
           // Refresh token data after trade
-          fetchTokenData();
+          if (id) {
+            fetchTokenData(id);
+          }
         }}
       />
     </div>
