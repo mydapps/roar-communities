@@ -8,6 +8,17 @@ import { Shield, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
+// Utility function to format numbers in K/M format
+const formatTokenAmount = (amount: number): string => {
+  if (amount >= 1000000) {
+    return (amount / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+  }
+  if (amount >= 1000) {
+    return (amount / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+  }
+  return amount.toFixed(3);
+};
+
 interface UserCommunitiesProps {
   communities: UserCommunity[];
 }
@@ -71,7 +82,7 @@ const UserCommunities: React.FC<UserCommunitiesProps> = ({ communities }) => {
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {community.shares.toFixed(3)} {community.shares === 1 ? 'share' : 'shares'}
+                    {formatTokenAmount(community.shares)} {community.shares === 1 ? 'token' : 'tokens'}
                   </p>
                 </div>
               </Link>

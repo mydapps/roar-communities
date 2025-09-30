@@ -266,7 +266,10 @@ const InviteMessage = ({ referrerHandle, referrerAvatar }: {
             </p>
             <div className="flex items-center gap-2 mt-2">
               <div className="flex items-center gap-1 bg-amber-100 dark:bg-amber-900/30 px-2 py-1 rounded-lg">
-                <span className="text-xs font-medium text-amber-700 dark:text-amber-400">500 🦁 bonus</span>
+                <span className="text-xs font-medium text-amber-700 dark:text-amber-400">500 🦁</span>
+              </div>
+              <div className="flex items-center gap-1 bg-purple-100 dark:bg-purple-900/30 px-2 py-1 rounded-lg">
+                <span className="text-xs font-medium text-purple-700 dark:text-purple-400">community tokens airdrop</span>
               </div>
               <div className="flex items-center gap-1 bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded-lg">
                 <span className="text-xs font-medium text-green-700 dark:text-green-400">Skip waitlist</span>

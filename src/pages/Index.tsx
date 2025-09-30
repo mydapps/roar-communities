@@ -262,7 +262,7 @@ const Index = () => {
       ? `Join ${referrerHandle} on dapps.co - decentralized community network` 
       : 'dapps.co - decentralized community network';
     const pageDescription = isInviteRoute && referrerHandle
-      ? `${referrerHandle} invited you to join dapps.co. Invest in communities like stocks, earn from your content, speak without fear. The social platform where users capture the value they create.`
+      ? `${referrerHandle} invited you to join dapps.co. Get 500 ROAR plus community tokens airdrop. Invest in communities like stocks, earn from your content, speak without fear.`
       : 'Invest in communities like stocks, earn from your content, speak without fear. The social platform where users capture the value they create.';
 
     return (
@@ -324,7 +324,7 @@ const Index = () => {
       ? `Join ${referrerHandle} on dapps.co - decentralized community network` 
       : 'dapps.co - decentralized community network';
     const pageDescription = isInviteRoute && referrerHandle
-      ? `${referrerHandle} invited you to join dapps.co. Invest in communities like stocks, earn from your content, speak without fear. The social platform where users capture the value they create.`
+      ? `${referrerHandle} invited you to join dapps.co. Get 500 ROAR plus community tokens airdrop. Invest in communities like stocks, earn from your content, speak without fear.`
       : 'Invest in communities like stocks, earn from your content, speak without fear. The social platform where users capture the value they create.';
 
     return (
@@ -422,7 +422,7 @@ const Index = () => {
                     <span className="text-[#31bcc3] font-bold">@{referrerHandle}</span> invited you to join Dapps.co
                   </p>
                   <p className="text-sm md:text-base text-muted-foreground mt-1">
-                    Skip the waitlist and get <span className="font-semibold text-[#31bcc3]">500 🦁</span> plus a free community share!
+                    Skip the waitlist and get <span className="font-semibold text-[#31bcc3]">500 🦁</span> plus community tokens airdrop!
                   </p>
                   <div className="mt-2 flex">
                     <Badge variant="outline" className="bg-[#31bcc3]/10 hover:bg-[#31bcc3]/20 text-[#31bcc3] border-[#31bcc3]/30">

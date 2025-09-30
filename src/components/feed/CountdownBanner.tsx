@@ -186,12 +186,12 @@ const CountdownBanner: React.FC = () => {
         initial={{ opacity: 0, height: 0 }}
         animate={{ opacity: 1, height: 'auto' }}
         exit={{ opacity: 0, height: 0 }}
-        className="fixed top-16 left-0 right-0 w-full bg-gradient-to-r from-orange-50 via-red-50 to-pink-50 dark:from-orange-950/20 dark:via-red-950/20 dark:to-pink-950/20 border-b border-orange-200/50 dark:border-orange-800/50 z-40"
+        className="fixed top-16 left-0 right-0 w-full bg-gradient-to-r from-orange-50 via-red-50 to-pink-50 dark:from-orange-950/20 dark:via-red-950/20 dark:to-pink-950/20 border-b border-orange-200/50 dark:border-orange-800/50 z-10"
       >
-        <div className="max-w-7xl mx-auto px-3 py-2">
-          <div className="flex items-center justify-between gap-2 sm:gap-4">
-            {/* Left side - Message with icon */}
-            <div className="flex items-center gap-2 flex-1 min-w-0">
+        <div className="max-w-7xl mx-auto px-3 py-1.5">
+          <div className="flex items-center justify-center gap-1 sm:gap-2">
+            {/* Message with icon - centered */}
+            <div className="flex items-center gap-2 min-w-0">
               {(() => {
                 const tierInfo = getCurrentTierInfo();
                 const IconComponent = tierInfo?.icon || Gift;

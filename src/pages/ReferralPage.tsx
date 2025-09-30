@@ -301,13 +301,13 @@ const ReferralPage: React.FC = () => {
               <Rocket className="w-10 h-10 text-white" />
             </motion.div>
             
-            <h1 className="text-5xl md:text-6xl font-black mb-4">
+            <h1 className="text-3xl sm:text-4xl md:text-6xl font-black mb-3 sm:mb-4">
               <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
                 Invite & Earn
               </span>
             </h1>
             
-            <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 mb-8 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-base sm:text-lg md:text-2xl text-gray-600 dark:text-gray-300 mb-6 sm:mb-8 max-w-3xl mx-auto leading-relaxed">
               Share the future of community-owned social media and earn 
               <span className="font-bold text-indigo-600 dark:text-indigo-400"> exclusive token rewards</span> together
             </p>
@@ -337,7 +337,7 @@ const ReferralPage: React.FC = () => {
             className="max-w-4xl mx-auto mb-16"
           >
             <Card className="border-0 shadow-2xl bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl">
-              <CardContent className="p-8 md:p-12">
+              <CardContent className="p-4 sm:p-6 md:p-12">
                 <div className="text-center mb-8">
                   <div className="inline-flex items-center gap-3 mb-4">
                     <div className="w-12 h-12 rounded-full bg-gradient-to-r from-green-400 to-blue-500 flex items-center justify-center">
@@ -352,17 +352,17 @@ const ReferralPage: React.FC = () => {
                 
                 <div className="space-y-6">
                   {/* Link Input */}
-                  <div className="flex gap-3">
+                  <div className="flex flex-col sm:flex-row gap-3">
                     <Input
                       value={referralLink}
                       readOnly
-                      className="font-mono text-sm bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 h-14 text-center"
+                      className="font-mono text-xs sm:text-sm bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 h-12 sm:h-14 text-center flex-1"
                     />
                     <Button
                       onClick={copyReferralLink}
                       size="lg"
                       className={cn(
-                        "min-w-[120px] h-14 font-semibold transition-all duration-300",
+                        "min-w-[120px] h-12 sm:h-14 font-semibold transition-all duration-300",
                         copiedLink 
                           ? "bg-green-500 hover:bg-green-600 text-white" 
                           : "bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white shadow-lg hover:shadow-xl"
