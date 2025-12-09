@@ -1,35 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Card, 
-  CardContent, 
-  CardHeader, 
-  CardTitle 
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  ArrowUp, 
-  ArrowDown,
+import {
+  TrendingUp,
+  TrendingDown,
   Activity,
   Users,
-  DollarSign,
-  Clock,
-  Target,
   Zap,
-  BarChart3,
-  LineChart,
-  PieChart,
-  RefreshCw,
+  ArrowUpRight,
+  ArrowDownRight,
+  Clock,
   Loader2
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import SimplePriceChart from './SimplePriceChart';
-import { getRecentTrades, RecentTradesResponse, getPriceChange, PriceChangeResponse } from '@/utils/communityTokensApi';
+import RechartsPriceChart from './RechartsPriceChart';
+import { getRecentTrades, getPriceChange, getPriceHistory, PriceChangeResponse } from '@/utils/communityTokensApi';
 
 interface TokenData {
   symbol: string;
@@ -91,503 +83,275 @@ const CommunityTokenAnalytics: React.FC<CommunityTokenAnalyticsProps> = ({
   community,
   onTrade
 }) => {
-  const [activeChart, setActiveChart] = useState<'price' | 'volume'>('price');
   const [recentTrades, setRecentTrades] = useState<any[]>([]);
   const [tradesLoading, setTradesLoading] = useState(false);
-  const [timeframe, setTimeframe] = useState<'1h' | '24h' | '7d' | '30d'>('24h');
   const [priceChanges, setPriceChanges] = useState<PriceChangeResponse['data'] | null>(null);
-  const [priceChangesLoading, setPriceChangesLoading] = useState(false);
+  const [priceHistory, setPriceHistory] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
-  // Helper function to format very small prices with proper subscript notation
-  const formatSmallPrice = (price: number): { formatted: string; hasSubscript: boolean; subscriptCount: number; mainDigits: string; jsx?: React.ReactNode } => {
-    if (price === 0) return { formatted: '0.00', hasSubscript: false, subscriptCount: 0, mainDigits: '0.00' };
-    
-    const priceStr = price.toFixed(20); // Get enough decimal places
-    const match = priceStr.match(/^0\.0*([1-9]\d*)/);
-    
-    if (!match) return { formatted: price.toFixed(4), hasSubscript: false, subscriptCount: 0, mainDigits: price.toFixed(4) };
-    
-    const decimalPart = priceStr.split('.')[1];
-    const leadingZeros = decimalPart.match(/^0*/)?.[0].length || 0;
-    
-    // Only use subscript notation if there are 4 or more leading zeros
-    if (leadingZeros >= 4) {
-      const significantDigits = match[1].substring(0, 3); // Take first 3 significant digits
-      
-      // Convert number to subscript characters
-      const subscriptMap: { [key: string]: string } = {
-        '0': '₀', '1': '₁', '2': '₂', '3': '₃', '4': '₄',
-        '5': '₅', '6': '₆', '7': '₇', '8': '₈', '9': '₉'
-      };
-      const subscriptNumber = leadingZeros.toString().split('').map(digit => subscriptMap[digit]).join('');
-      
-      return {
-        formatted: `0.0${subscriptNumber}${significantDigits}`,
-        hasSubscript: true,
-        subscriptCount: leadingZeros,
-        mainDigits: significantDigits,
-        jsx: (
-          <span>
-            0.0<span className="font-bold text-sm align-sub">{subscriptNumber}</span>{significantDigits}
-          </span>
-        )
-      };
+  // STRICT Price Formatting: NO Scientific Notation
+  const formatTokenPrice = (price: number | undefined | null) => {
+    if (price === undefined || price === null || isNaN(price)) return '$0.00';
+
+    if (price === 0) return '$0.00';
+
+    // For very small prices (e.g., 0.00001234)
+    if (price < 0.01) {
+      // Use 8 decimal places to show value, avoiding scientific notation
+      return `$${price.toFixed(8)}`;
     }
-    
-    return { formatted: price.toFixed(6), hasSubscript: false, subscriptCount: 0, mainDigits: price.toFixed(6) };
+
+    // For small prices (e.g., 0.50)
+    if (price < 1) {
+      return `$${price.toFixed(4)}`;
+    }
+
+    // For normal prices (e.g., 1.23)
+    return `$${price.toFixed(2)}`;
   };
 
-  const formatPrice = (price: number) => {
-    if (price == null || isNaN(price)) {
-      return '0.00';
-    }
-    const result = formatSmallPrice(price);
-    return result.jsx || result.formatted;
+  const formatCurrency = (value: number | undefined | null) => {
+    const val = Number(value) || 0;
+    if (val >= 1000000) return `$${(val / 1000000).toFixed(2)}M`;
+    if (val >= 1000) return `$${(val / 1000).toFixed(2)}K`;
+    return `$${val.toFixed(2)}`;
   };
 
-  const formatVolume = (volume: number) => {
-    if (volume >= 1000000) {
-      return `$${(volume / 1000000).toFixed(2)}M`;
-    } else if (volume >= 1000) {
-      return `$${(volume / 1000).toFixed(2)}K`;
-    }
-    return `$${volume.toFixed(2)}`;
+  const formatNumber = (value: number | undefined | null) => {
+    const val = Number(value) || 0;
+    if (val >= 1000000) return `${(val / 1000000).toFixed(2)}M`;
+    if (val >= 1000) return `${(val / 1000).toFixed(1)}K`;
+    return val.toString();
   };
 
-  const formatAmount = (amount: number) => {
-    if (amount >= 1000000) {
-      return `${(amount / 1000000).toFixed(2)}M`;
-    } else if (amount >= 1000) {
-      return `${(amount / 1000).toFixed(1)}K`;
-    }
-    return amount.toString();
-  };
-
-  // Calculate some analytics
+  // Calculate analytics
   const buyTrades = tokenData.recentTrades.filter(t => t.action === 'buy');
   const sellTrades = tokenData.recentTrades.filter(t => t.action === 'sell');
   const buyVolume = buyTrades.reduce((sum, t) => sum + (t.amount * t.price), 0);
   const sellVolume = sellTrades.reduce((sum, t) => sum + (t.amount * t.price), 0);
-  // Use real buy pressure from API if available, otherwise calculate from trades
-  const buyPressure = tokenData.volumeAnalysis?.buyPercentage !== undefined ? 
+
+  const buyPressure = tokenData.volumeAnalysis?.buyPercentage !== undefined ?
     tokenData.volumeAnalysis.buyPercentage :
-    (tokenData.buyPressure !== undefined ? tokenData.buyPressure : 
+    (tokenData.buyPressure !== undefined ? tokenData.buyPressure :
       (buyVolume + sellVolume > 0 ? (buyVolume / (buyVolume + sellVolume) * 100) : 50));
 
-  // Fetch recent trades
+  // Fetch data
   useEffect(() => {
-    const fetchTrades = async () => {
+    const fetchData = async () => {
       if (!tokenData.symbol) return;
-      
-      // Ensure ticker is a string
-      const ticker = typeof tokenData.symbol === 'string' ? tokenData.symbol : String(tokenData.symbol);
-      if (!ticker || ticker === 'undefined' || ticker === '[object Object]') {
-        console.error('Invalid ticker for recent trades:', tokenData.symbol);
-        return;
-      }
-      
+      const ticker = String(tokenData.symbol);
+
       setTradesLoading(true);
+      setHistoryLoading(true);
       try {
-        const response = await getRecentTrades(ticker, 1, 10);
-        if (response.success && response.data?.trades) {
-          setRecentTrades(response.data.trades);
+        const [tradesRes, priceRes, historyRes] = await Promise.all([
+          getRecentTrades(ticker, 1, 20),
+          getPriceChange(ticker),
+          getPriceHistory(ticker, '24h')
+        ]);
+
+        if (tradesRes.success && tradesRes.data?.trades) {
+          setRecentTrades(tradesRes.data.trades);
+        }
+        if (priceRes.success && priceRes.data) {
+          setPriceChanges(priceRes.data);
+        }
+        if (historyRes.success && historyRes.data?.price_history) {
+          setPriceHistory(historyRes.data.price_history);
         }
       } catch (error) {
-        console.error('Error fetching recent trades:', error);
+        console.error('Error fetching analytics data:', error);
       } finally {
         setTradesLoading(false);
+        setHistoryLoading(false);
       }
     };
 
-    fetchTrades();
+    fetchData();
   }, [tokenData.symbol]);
 
-  // Fetch price changes when component mounts or ticker changes
-  useEffect(() => {
-    const fetchPriceChanges = async () => {
-      if (!tokenData.symbol) return;
-      
-      // Ensure ticker is a string
-      const ticker = typeof tokenData.symbol === 'string' ? tokenData.symbol : String(tokenData.symbol);
-      if (!ticker || ticker === 'undefined' || ticker === '[object Object]') {
-        console.error('Invalid ticker for price changes:', tokenData.symbol);
-        return;
-      }
-      
-      setPriceChangesLoading(true);
-      try {
-        const response = await getPriceChange(ticker);
-        if (response.success && response.data) {
-          setPriceChanges(response.data);
-        }
-      } catch (error) {
-        console.error('Error fetching price changes:', error);
-      } finally {
-        setPriceChangesLoading(false);
-      }
-    };
+  // Prepare chart data
+  // Use fetched history if available, otherwise fallback to tokenData.priceHistory
+  const rawHistory = priceHistory.length > 0 ? priceHistory : tokenData.priceHistory;
 
-    fetchPriceChanges();
-  }, [tokenData.symbol]);
-
-  // Mock chart data (in a real app, this would come from an API)
-  const chartData = tokenData.priceHistory.slice(-24); // Last 24 hours
+  const chartData = rawHistory.map(h => ({
+    time: new Date(h.time),
+    price: typeof h.close_usd !== 'undefined' ? parseFloat(h.close_usd) : (h.price || 0),
+    volume: typeof h.volume_usd !== 'undefined' ? parseFloat(h.volume_usd) : (h.volume || 0)
+  })).sort((a, b) => a.time.getTime() - b.time.getTime());
 
   return (
-    <div className="space-y-6">
-      {/* Price Change Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {/* 15m Price Change */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">15m</p>
-                {priceChangesLoading ? (
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <p className="text-lg font-bold">--</p>
-                  </div>
-                ) : (
-                  <p className={`text-lg font-bold ${
-                    (priceChanges?.price_changes['15m']?.change_percent_usd || 0) >= 0 ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    {priceChanges?.price_changes['15m']?.change_percent_usd !== null 
-                      ? `${(priceChanges?.price_changes['15m']?.change_percent_usd || 0).toFixed(2)}%`
-                      : 'N/A'
-                    }
-                  </p>
-                )}
-              </div>
-              <div className={`flex items-center gap-1 text-sm ${
-                (priceChanges?.price_changes['15m']?.change_percent_usd || 0) >= 0 ? 'text-green-600' : 'text-red-600'
-              }`}>
-                {(priceChanges?.price_changes['15m']?.change_percent_usd || 0) >= 0 ? 
-                  <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
-                }
-              </div>
+    <div className="space-y-8 pb-10">
+      {/* 1. Hero Section */}
+      <div className="flex flex-col items-center text-center space-y-4 py-6">
+        <div className="flex items-center gap-4">
+          <div className="text-center w-full">
+            <h2 className="text-4xl font-extrabold tracking-tight flex items-center justify-center gap-2">
+              {formatTokenPrice(tokenData.currentPrice)}
+            </h2>
+            <div className={`flex items-center justify-center gap-1 text-base font-semibold ${tokenData.priceChange24h >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+              {tokenData.priceChange24h >= 0 ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
+              {Math.abs(tokenData.priceChange24h).toFixed(2)}% (24h)
             </div>
-          </CardContent>
-        </Card>
-
-        {/* 1h Price Change */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">1h</p>
-                {priceChangesLoading ? (
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <p className="text-lg font-bold">--</p>
-                  </div>
-                ) : (
-                  <p className={`text-lg font-bold ${
-                    (priceChanges?.price_changes['1h']?.change_percent_usd || 0) >= 0 ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    {priceChanges?.price_changes['1h']?.change_percent_usd !== null 
-                      ? `${(priceChanges?.price_changes['1h']?.change_percent_usd || 0).toFixed(2)}%`
-                      : 'N/A'
-                    }
-                  </p>
-                )}
-              </div>
-              <div className={`flex items-center gap-1 text-sm ${
-                (priceChanges?.price_changes['1h']?.change_percent_usd || 0) >= 0 ? 'text-green-600' : 'text-red-600'
-              }`}>
-                {(priceChanges?.price_changes['1h']?.change_percent_usd || 0) >= 0 ? 
-                  <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
-                }
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* 4h Price Change */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">4h</p>
-                {priceChangesLoading ? (
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <p className="text-lg font-bold">--</p>
-                  </div>
-                ) : (
-                  <p className={`text-lg font-bold ${
-                    (priceChanges?.price_changes['4h']?.change_percent_usd || 0) >= 0 ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    {priceChanges?.price_changes['4h']?.change_percent_usd !== null 
-                      ? `${(priceChanges?.price_changes['4h']?.change_percent_usd || 0).toFixed(2)}%`
-                      : 'N/A'
-                    }
-                  </p>
-                )}
-              </div>
-              <div className={`flex items-center gap-1 text-sm ${
-                (priceChanges?.price_changes['4h']?.change_percent_usd || 0) >= 0 ? 'text-green-600' : 'text-red-600'
-              }`}>
-                {(priceChanges?.price_changes['4h']?.change_percent_usd || 0) >= 0 ? 
-                  <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
-                }
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* 1d Price Change */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">1d</p>
-                {priceChangesLoading ? (
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <p className="text-lg font-bold">--</p>
-                  </div>
-                ) : (
-                  <p className={`text-lg font-bold ${
-                    (priceChanges?.price_changes['1d']?.change_percent_usd || 0) >= 0 ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    {priceChanges?.price_changes['1d']?.change_percent_usd !== null 
-                      ? `${(priceChanges?.price_changes['1d']?.change_percent_usd || 0).toFixed(2)}%`
-                      : 'N/A'
-                    }
-                  </p>
-                )}
-              </div>
-              <div className={`flex items-center gap-1 text-sm ${
-                (priceChanges?.price_changes['1d']?.change_percent_usd || 0) >= 0 ? 'text-green-600' : 'text-red-600'
-              }`}>
-                {(priceChanges?.price_changes['1d']?.change_percent_usd || 0) >= 0 ? 
-                  <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
-                }
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
-      {/* Price Chart */}
-      <SimplePriceChart ticker={tokenData.symbol} />
-
-      {/* Trading Activity */}
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Recent Trades */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Activity className="w-5 h-5" />
-              Recent Trades
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {tradesLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-6 h-6 animate-spin" />
-                <span className="ml-2 text-sm text-muted-foreground">Loading trades...</span>
-              </div>
-            ) : recentTrades.length > 0 ? (
-              <div className="space-y-3 max-h-80 overflow-y-auto">
-                {recentTrades.slice(0, 10).map((trade, index) => {
-                  const isBuy = trade.trade_type?.includes('buy') || trade.trade_type === 'token_creation';
-                  const tradeTypeDisplay = trade.trade_type === 'token_creation' ? 'CREATE' : 
-                                         trade.trade_type === 'flat_buy' ? 'BUY' :
-                                         trade.trade_type === 'flat_sell' ? 'SELL' :
-                                         trade.trade_type === 'amm_buy' ? 'BUY' :
-                                         trade.trade_type === 'amm_sell' ? 'SELL' : 'TRADE';
-                  
-                  return (
-                    <div key={`${trade.tx_hash || trade.user_handle}-${index}`} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 bg-muted/50 rounded-lg gap-3">
-                      <div className="flex items-center gap-3">
-                        <Badge 
-                          variant={isBuy ? 'default' : 'secondary'}
-                          className={isBuy ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'}
-                        >
-                          {tradeTypeDisplay}
-                        </Badge>
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <Avatar className="w-6 h-6 flex-shrink-0">
-                            <AvatarImage src={trade.token_image} />
-                            <AvatarFallback className="text-xs">
-                              {(trade.user_handle || '').slice(0, 2).toUpperCase() || 'U'}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium truncate">@{trade.user_handle}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {(() => {
-                                try {
-                                  const date = new Date(trade.trade_time || Date.now());
-                                  if (isNaN(date.getTime())) {
-                                    return 'Recently';
-                                  }
-                                  return formatDistanceToNow(date, { addSuffix: true });
-                                } catch (e) {
-                                  return 'Recently';
-                                }
-                              })()}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right sm:text-right text-left flex-shrink-0">
-                        <p className="text-sm font-medium">
-                          {formatAmount(Number(trade.token_amount) || 0)} ${tokenData.symbol}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {Number(trade.eth_amount || 0).toFixed(4)} ETH
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          ${Number(trade.eth_amount_usd || 0).toFixed(2)}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <Activity className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No recent trades</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Trading Stats */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <PieChart className="w-5 h-5" />
-              Trading Stats
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Buy vs Sell Volume */}
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span>Buy Volume</span>
-                <span className="text-green-600">
-                  {tokenData.volumeAnalysis ? 
-                    formatVolume(tokenData.volumeAnalysis.buyVolumeUsd) : 
-                    formatVolume(buyVolume)
-                  }
-                </span>
-              </div>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-3">
-                <div 
-                  className="bg-green-600 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${isNaN(buyPressure) ? 50 : Math.max(0, Math.min(100, buyPressure))}%` }}
-                />
-              </div>
-              <div className="flex justify-between text-sm">
-                <span>Sell Volume</span>
-                <span className="text-red-600">
-                  {tokenData.volumeAnalysis ? 
-                    formatVolume(tokenData.volumeAnalysis.sellVolumeUsd) : 
-                    formatVolume(sellVolume)
-                  }
-                </span>
-              </div>
+      {/* 2. Main Chart (Recharts) */}
+      <Card className="border-none shadow-none bg-transparent p-0 overflow-hidden">
+        <CardContent className="p-0 h-[300px]">
+          {historyLoading ? (
+            <div className="h-full flex items-center justify-center">
+              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
             </div>
+          ) : (
+            <RechartsPriceChart
+              data={chartData}
+              height={300}
+              showTooltip={true}
+            />
+          )}
+        </CardContent>
+      </Card>
 
-            <Separator />
-
-            {/* Trade Count */}
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Total Trades (24h)</span>
-              <span className="font-medium">
-                {tokenData.volumeAnalysis ? 
-                  tokenData.volumeAnalysis.totalTrades : 
-                  tokenData.recentTrades.length
-                }
-              </span>
-            </div>
-
-            {/* Buy vs Sell Count */}
-            {tokenData.volumeAnalysis && (
-              <>
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Buy Orders</span>
-                  <span className="font-medium text-green-600">{tokenData.volumeAnalysis.buyCount}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Sell Orders</span>
-                  <span className="font-medium text-red-600">{tokenData.volumeAnalysis.sellCount}</span>
-                </div>
-              </>
-            )}
-
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Token Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Zap className="w-5 h-5" />
-            Token Information
+      {/* 3. Market Sentiment (FOMO Gauge) */}
+      <Card className="overflow-hidden border-none shadow-sm bg-card/50 backdrop-blur-sm">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+            <Activity className="w-4 h-4" />
+            Market Sentiment
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Token Name</span>
-                <span className="font-medium">{tokenData.name}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Symbol</span>
-                <span className="font-medium">${tokenData.symbol}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Total Supply</span>
-                <span className="font-medium">1 billion</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Status</span>
-                <span className="font-medium">{tokenData.status === 'graduated' ? 'Trading on Uniswap' : 'Incubating'}</span>
-              </div>
-              {tokenData.tokenAddress && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Contract Address</span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 px-2 text-xs"
-                      onClick={() => navigator.clipboard.writeText(tokenData.tokenAddress)}
-                    >
-                      Copy
-                    </Button>
-                  </div>
-                  <div className="font-mono text-xs bg-muted/30 p-2 rounded border break-all text-muted-foreground">
-                    {tokenData.tokenAddress}
-                  </div>
-                </div>
-              )}
+          <div className="space-y-3">
+            <div className="flex justify-between items-end">
+              <span className="text-2xl font-bold text-green-500">
+                {Math.round(buyPressure)}%
+                <span className="text-sm font-normal text-muted-foreground ml-2">Buy Pressure</span>
+              </span>
+              <span className="text-sm font-medium text-muted-foreground">
+                24h Volume: {formatCurrency(tokenData.volume24h)}
+              </span>
             </div>
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Created On</span>
-                <span className="font-medium">{new Date().toLocaleDateString()}</span>
+
+            {/* Custom Gauge Bar */}
+            <div className="h-3 w-full bg-red-500/20 rounded-full overflow-hidden flex">
+              <div
+                className="h-full bg-green-500 transition-all duration-500 ease-out relative shadow-[0_0_10px_rgba(34,197,94,0.5)]"
+                style={{ width: `${Math.min(100, Math.max(0, buyPressure))}%` }}
+              >
+                <div className="absolute right-0 top-0 bottom-0 w-0.5 bg-white/80" />
               </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Network</span>
-                <span className="font-medium">Base</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Type</span>
-                <span className="font-medium">Community Token</span>
-              </div>
+              <div className="h-full bg-red-500 flex-1" />
+            </div>
+
+            <div className="flex justify-between text-xs text-muted-foreground font-medium">
+              <span>More Buyers</span>
+              <span>More Sellers</span>
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* 4. Key Stats Grid */}
+      <div className="grid grid-cols-2 gap-4">
+        <Card className="bg-card/50 backdrop-blur-sm border-none shadow-sm">
+          <CardContent className="p-4 flex flex-col items-center text-center space-y-1">
+            <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Market Cap</span>
+            <span className="text-lg font-bold">{formatCurrency(tokenData.marketCap)}</span>
+          </CardContent>
+        </Card>
+        <Card className="bg-card/50 backdrop-blur-sm border-none shadow-sm">
+          <CardContent className="p-4 flex flex-col items-center text-center space-y-1">
+            <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Holders</span>
+            <span className="text-lg font-bold flex items-center gap-1">
+              <Users className="w-4 h-4 text-primary" />
+              {formatNumber(tokenData.holders)}
+            </span>
+          </CardContent>
+        </Card>
+        <Card className="bg-card/50 backdrop-blur-sm border-none shadow-sm">
+          <CardContent className="p-4 flex flex-col items-center text-center space-y-1">
+            <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Total Supply</span>
+            <span className="text-lg font-bold">{formatNumber(tokenData.totalSupply)}</span>
+          </CardContent>
+        </Card>
+        <Card className="bg-card/50 backdrop-blur-sm border-none shadow-sm">
+          <CardContent className="p-4 flex flex-col items-center text-center space-y-1">
+            <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Created</span>
+            <span className="text-lg font-bold flex items-center gap-1">
+              <Clock className="w-4 h-4 text-muted-foreground" />
+              {formatDistanceToNow(new Date(tokenData.recentTrades[tokenData.recentTrades.length - 1]?.timestamp || Date.now()), { addSuffix: true }).replace('about ', '')}
+            </span>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 5. Live Activity Feed */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between px-1">
+          <h3 className="font-semibold flex items-center gap-2">
+            <Zap className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+            Live Activity
+          </h3>
+          <Badge variant="outline" className="text-xs font-normal bg-background/50">
+            Real-time
+          </Badge>
+        </div>
+
+        <div className="space-y-3">
+          {tradesLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : recentTrades.length > 0 ? (
+            recentTrades.slice(0, 10).map((trade, i) => {
+              const isBuy = trade.trade_type?.includes('buy') || trade.trade_type === 'token_creation';
+              return (
+                <div key={i} className="flex items-center justify-between p-3 bg-card/50 backdrop-blur-sm rounded-lg border-none shadow-sm hover:bg-card/80 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-full ${isBuy ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
+                      {isBuy ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1">
+                        <span className="font-medium text-sm">
+                          {isBuy ? 'Bought' : 'Sold'} {formatNumber(Number(trade.token_amount))} {tokenData.symbol}
+                        </span>
+                      </div>
+                      <div className="text-xs text-muted-foreground flex items-center gap-1">
+                        @{trade.user_handle} • {formatDistanceToNow(new Date(trade.trade_time || Date.now()), { addSuffix: true })}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold text-sm">
+                      ${Number(trade.eth_amount_usd || 0).toFixed(2)}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {Number(trade.eth_amount || 0).toFixed(4)} ETH
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="text-center py-8 text-muted-foreground text-sm">
+              No recent activity
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 6. Call to Action */}
+      <div className="pt-4 pb-8">
+        <Button
+          className="w-full h-14 text-lg font-bold bg-primary hover:bg-primary/90 shadow-xl rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98]"
+          onClick={() => onTrade('buy')}
+        >
+          Trade ${tokenData.symbol}
+        </Button>
+      </div>
     </div>
   );
 };

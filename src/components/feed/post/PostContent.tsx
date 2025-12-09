@@ -36,7 +36,7 @@ interface PostContentProps {
   poll_data?: PollData | null;
   postCode?: string; // Required by PollDisplay
   onVoteOnPoll?: (optionId: number) => Promise<void>; // Required by PollDisplay
-  
+
   // DAO proposal prop
   is_dao_proposal?: boolean; // Hide default content for DAO proposals
 }
@@ -60,8 +60,8 @@ export const PostContent: React.FC<PostContentProps> = ({
   if (is_poll && poll_data && postCode && onVoteOnPoll) {
     return (
       <CardContent className="pb-3">
-        <PollDisplay 
-          pollQuestion={content} 
+        <PollDisplay
+          pollQuestion={content}
           pollData={poll_data}
           postCode={postCode}
           onVote={onVoteOnPoll}
@@ -148,7 +148,7 @@ export const PostContent: React.FC<PostContentProps> = ({
           }
           throw new Error(errorData?.error || `Failed to fetch preview. Status: ${response.status}`);
         }
-        
+
         const data: LinkPreviewData | { success: false; error: string } = await response.json();
         console.log('[PostContent] Data from API:', data);
 
@@ -177,12 +177,12 @@ export const PostContent: React.FC<PostContentProps> = ({
     <CardContent className="pb-3">
       {/* Render the processed quote (mirror's own body) or regular post body */}
       {processedHtmlBody && (
-        <div 
+        <div
           className="text-sm mt-2 break-words prose prose-sm max-w-none dark:prose-invert prose-p:my-2 prose-strong:font-semibold prose-em:italic"
           dangerouslySetInnerHTML={{ __html: processedHtmlBody }}
         />
       )}
-      
+
       {/* URL Preview and YouTube Embed Section for the quote/main content */}
       {!isMirror && (
         <div className="mt-3">
@@ -205,25 +205,25 @@ export const PostContent: React.FC<PostContentProps> = ({
           )}
         </div>
       )}
-      
+
       {/* Render the actual mirrored post content (original author, body, media etc.) */}
       {isMirror && mirrorData && (
-        <MirrorPostContent 
+        <MirrorPostContent
           mirrorData={{
             ...mirrorData,
             originalImages: mirrorData.originalImages || [], // Ensure originalImages is an array
             originalBody: mirrorData.originalBody || '' // Ensure originalBody is a string
-          }} 
+          }}
           onImageClick={onImageClick}
         />
       )}
-      
+
       {/* Media Carousel for non-mirrored posts (mirrored post media is handled by MirrorPostContent) */}
       {!isMirror && hasMedia && allMedia && (
         <div className="mt-3">
-          <MediaCarousel 
-            media={allMedia} 
-            onImageClick={onImageClick} 
+          <MediaCarousel
+            media={allMedia}
+            onImageClick={onImageClick}
           />
         </div>
       )}

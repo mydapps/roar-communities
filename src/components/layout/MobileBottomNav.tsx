@@ -13,7 +13,7 @@ const MobileBottomNav = () => {
   const [visible, setVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
-  
+
   // Fetch unread count on mount and every 30 seconds
   useEffect(() => {
     const loadUnreadCount = async () => {
@@ -28,32 +28,32 @@ const MobileBottomNav = () => {
 
     return () => clearInterval(interval);
   }, []);
-  
+
   // Check if we're on a post detail page or roar farming page
-  const isPostDetailPage = 
+  const isPostDetailPage =
     /^\/c\/[\w-]+\/[\w-]+$/.test(location.pathname) || // community post: /c/communityId/postId
     /^\/[\w-]+\/[\w-]+$/.test(location.pathname) ||    // user post: /handle/postId
     /^\/post\/[\w-]+$/.test(location.pathname);        // generic post: /post/postId
-  
+
   const isRoarFarmingPage = location.pathname === '/roar-farming';
   const isCommunityTokensPage = location.pathname === '/community-tokens' || location.pathname === '/community_tokens';
   const isPaidConversationPage = /^\/messages\/paid\/[\w-]+$/.test(location.pathname);
   const isWalletPage = location.pathname === '/wallet';
   const isCommunitiesPage = location.pathname === '/communities';
-  
+
   // Only on the feed page, we want to hide/show the bottom nav based on scroll
   const isScrollSensitive = location.pathname === '/feed';
-  
+
   // Handle scroll event to show/hide the bottom nav based on scroll direction
   useEffect(() => {
     if (!isScrollSensitive) {
       setVisible(true);
       return;
     }
-    
+
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
-      
+
       // Simple scroll direction detection with threshold
       // Show when scrolling up, hide when scrolling down
       if (currentScrollY < 50) {
@@ -66,17 +66,17 @@ const MobileBottomNav = () => {
         // Scrolling down - hide after 10px of downward movement
         setVisible(false);
       }
-      
+
       setLastScrollY(currentScrollY);
     };
-    
+
     window.addEventListener('scroll', handleScroll, { passive: true });
-    
+
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
   }, [lastScrollY, isScrollSensitive]);
-  
+
   // Don't render the bottom nav on post detail pages, roar farming page, community tokens page, wallet page, communities page, or paid conversation page
   if (isPostDetailPage || isRoarFarmingPage || isCommunityTokensPage || isPaidConversationPage || isWalletPage || isCommunitiesPage) {
     return null;
@@ -97,10 +97,10 @@ const MobileBottomNav = () => {
         <NavItem to="/search" icon={<Search className="h-5 w-5" />} label="Search" />
         <NavItem to="/communities" icon={<Users className="h-5 w-5" />} label="Communities" />
         <NavItem to="/wallet" icon={<Wallet className="h-5 w-5" />} label="Wallet" />
-        <NavItem 
-          to="/messages" 
-          icon={<MessageCircle className="h-5 w-5" />} 
-          label="Messages" 
+        <NavItem
+          to="/messages"
+          icon={<MessageCircle className="h-5 w-5" />}
+          label="Messages"
           badgeCount={unreadCount}
         />
       </div>
@@ -117,7 +117,7 @@ interface NavItemProps {
 
 const NavItem = ({ to, icon, label, badgeCount }: NavItemProps) => {
   const location = useLocation();
-  
+
   const handleClick = (e: React.MouseEvent) => {
     // If we're clicking on the Feed button and we're already on the feed page
     if (to === '/feed' && location.pathname === '/feed') {
@@ -152,7 +152,7 @@ const NavItem = ({ to, icon, label, badgeCount }: NavItemProps) => {
             isActive ? "after:absolute after:-bottom-1 after:h-1 after:w-1 after:rounded-full after:bg-primary" : ""
           )}>
             {icon}
-            
+
             {/* Unread Badge */}
             <AnimatePresence>
               {badgeCount && badgeCount > 0 && (

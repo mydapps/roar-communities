@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface SpecialEffectsProps {
-  effect: 'buzz' | 'eth' | 'btc' | 'base' | 'sol' | 'dapps' | 'heart' | 'roar' | 'yoga' | 'magic' | 'gm' | null;
+  effect: 'buzz' | 'eth' | 'btc' | 'base' | 'sol' | 'dapps' | 'heart' | 'roar' | 'yoga' | 'magic' | 'gm' | 'dussehra' | 'halloween' | null;
   onComplete: () => void;
 }
 
@@ -26,7 +26,7 @@ const SpecialEffects: React.FC<SpecialEffectsProps> = ({ effect, onComplete }) =
       }, 1000);
     } else {
       // For other effects, complete after animation duration
-      const duration = effect === 'dapps' ? 5000 : effect === 'roar' ? 4000 : effect === 'yoga' ? 6000 : effect === 'magic' ? 7000 : effect === 'gm' ? 4000 : 3000; // DAPPS gets 5s, ROAR gets 4s, YOGA gets 6s, MAGIC gets 7s, GM gets 4s
+      const duration = effect === 'dapps' ? 5000 : effect === 'roar' ? 4000 : effect === 'yoga' ? 6000 : effect === 'magic' ? 7000 : effect === 'gm' ? 4000 : effect === 'dussehra' ? 5000 : effect === 'halloween' ? 6000 : 3000; // DAPPS gets 5s, ROAR gets 4s, YOGA gets 6s, MAGIC gets 7s, GM gets 4s, DUSSEHRA gets 5s, HALLOWEEN gets 6s
       timeout = setTimeout(() => {
         onComplete();
       }, duration);
@@ -1682,6 +1682,758 @@ const SpecialEffects: React.FC<SpecialEffectsProps> = ({ effect, onComplete }) =
                   </motion.div>
                 );
               })}
+            </motion.div>
+
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* DUSSEHRA Effect - The Burning of Ravana: Good Triumphs Over Evil */}
+      <AnimatePresence>
+        {effect === 'dussehra' && (
+          <motion.div className="absolute inset-0">
+            
+            {/* Stage 1: Festival Evening Sky (0-5s) */}
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-b from-purple-900/90 via-indigo-800/70 to-orange-600/50"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 1, 0.8, 0] }}
+              transition={{ duration: 5, times: [0, 0.3, 0.9, 1] }}
+            />
+
+            {/* Stage 2: Towering Ravana Effigy (0-2s) */}
+            <motion.div
+              className="absolute bottom-1/4 left-1/2 transform -translate-x-1/2"
+              initial={{ scale: 0, y: 100, opacity: 0 }}
+              animate={{ 
+                scale: [0, 1.8, 1.5],
+                y: [100, 0, 0],
+                opacity: [0, 1, 1]
+              }}
+              transition={{ duration: 2, ease: "backOut" }}
+            >
+              {/* Massive Ravana effigy */}
+              <div className="relative flex flex-col items-center">
+                {/* Ravana's 10 heads stacked */}
+                <div className="relative mb-2">
+                  <div 
+                    className="text-7xl sm:text-8xl"
+                    style={{
+                      filter: 'drop-shadow(0 0 30px rgba(220, 38, 38, 0.9))',
+                    }}
+                  >
+                    👹
+                  </div>
+                  {/* Additional heads around main head */}
+                  {Array.from({ length: 4 }, (_, i) => (
+                    <motion.div
+                      key={`ravana-head-${i}`}
+                      className="absolute text-3xl"
+                      style={{
+                        left: `${[-40, 40, -60, 60][i]}px`,
+                        top: `${[10, 10, -20, -20][i]}px`,
+                        filter: 'drop-shadow(0 0 15px rgba(220, 38, 38, 0.7))',
+                      }}
+                      animate={{
+                        rotate: [0, 10, -10, 0],
+                        scale: [1, 1.1, 1]
+                      }}
+                      transition={{
+                        duration: 2,
+                        repeat: Infinity,
+                        delay: i * 0.2
+                      }}
+                    >
+                      👹
+                    </motion.div>
+                  ))}
+                </div>
+                
+                {/* Ravana's body */}
+                <div 
+                  className="text-6xl"
+                  style={{
+                    filter: 'drop-shadow(0 0 25px rgba(220, 38, 38, 0.8))',
+                  }}
+                >
+                  🧙‍♂️
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Stage 3: Rama's Flaming Arrow (1.5-2.5s) */}
+            <motion.div
+              className="absolute top-1/3 left-0"
+              initial={{ x: -150, opacity: 0 }}
+              animate={{ 
+                x: [0, window.innerWidth * 0.6],
+                opacity: [0, 1, 1],
+                rotate: [0, 720]
+              }}
+              transition={{ 
+                duration: 1, 
+                delay: 1.5,
+                ease: "easeInOut"
+              }}
+            >
+              <div className="relative">
+                <div 
+                  className="text-5xl"
+                  style={{
+                    filter: 'drop-shadow(0 0 30px rgba(34, 197, 94, 1))',
+                  }}
+                >
+                  🏹
+                </div>
+                {/* Fire trail behind arrow */}
+                <motion.div
+                  className="absolute -right-8 top-1/2 transform -translate-y-1/2 text-3xl"
+                  animate={{
+                    scale: [0.8, 1.2, 0.8],
+                    opacity: [0.6, 1, 0.6]
+                  }}
+                  transition={{
+                    duration: 0.3,
+                    repeat: Infinity
+                  }}
+                >
+                  🔥
+                </motion.div>
+              </div>
+            </motion.div>
+
+            {/* Stage 4: SPECTACULAR BURNING SEQUENCE (2.5-4.5s) */}
+            <motion.div
+              className="absolute bottom-1/4 left-1/2 transform -translate-x-1/2"
+              initial={{ scale: 1 }}
+              animate={{ 
+                scale: [1, 1.1, 0.9, 0.7, 0.3],
+                opacity: [1, 1, 0.8, 0.4, 0]
+              }}
+              transition={{ 
+                duration: 2, 
+                delay: 2.5,
+                ease: "easeOut"
+              }}
+            >
+              {/* Ravana burning and shrinking */}
+              <div className="relative">
+                <div 
+                  className="text-7xl sm:text-8xl"
+                  style={{
+                    filter: 'drop-shadow(0 0 40px rgba(249, 115, 22, 1))',
+                  }}
+                >
+                  👹
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Stage 5: MASSIVE FIRE EXPLOSION (2.5-4s) */}
+            <motion.div
+              className="absolute bottom-1/4 left-1/2 transform -translate-x-1/2"
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ 
+                scale: [0, 6, 4, 2],
+                opacity: [0, 1, 0.8, 0.3]
+              }}
+              transition={{ 
+                duration: 1.5, 
+                delay: 2.5,
+                ease: "easeOut"
+              }}
+            >
+              <div 
+                className="text-9xl"
+                style={{
+                  filter: 'drop-shadow(0 0 60px rgba(249, 115, 22, 1))',
+                }}
+              >
+                🔥
+              </div>
+            </motion.div>
+
+            {/* Stage 6: Multiple Fire Bursts (2.8-4.2s) */}
+            {Array.from({ length: 8 }, (_, i) => {
+              const positions = [
+                { x: 30, y: 60 }, { x: 70, y: 60 }, { x: 40, y: 50 }, { x: 60, y: 50 },
+                { x: 25, y: 70 }, { x: 75, y: 70 }, { x: 50, y: 40 }, { x: 50, y: 75 }
+              ];
+              return (
+                <motion.div
+                  key={`fire-burst-${i}`}
+                  className="absolute transform -translate-x-1/2 -translate-y-1/2"
+                  style={{ left: `${positions[i].x}%`, top: `${positions[i].y}%` }}
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ 
+                    scale: [0, 2.5, 1.5, 0],
+                    opacity: [0, 1, 0.7, 0],
+                    rotate: [0, 180, 360]
+                  }}
+                  transition={{ 
+                    duration: 1.4,
+                    delay: 2.8 + i * 0.1,
+                    ease: "easeOut"
+                  }}
+                >
+                  <div 
+                    className="text-5xl"
+                    style={{
+                      filter: 'drop-shadow(0 0 30px rgba(249, 115, 22, 0.9))',
+                    }}
+                  >
+                    🔥
+                  </div>
+                </motion.div>
+              );
+            })}
+
+            {/* Stage 7: Victory Celebration - Festival Joy (3.5-5s) */}
+            {['🎆', '🎇', '✨', '🌟', '🎉', '🪔'].map((symbol, i) => {
+              const positions = [
+                { x: 20, y: 20 }, { x: 80, y: 25 }, { x: 15, y: 80 },
+                { x: 85, y: 75 }, { x: 50, y: 10 }, { x: 50, y: 90 }
+              ];
+              return (
+                <motion.div
+                  key={`celebration-${i}`}
+                  className="absolute transform -translate-x-1/2 -translate-y-1/2"
+                  style={{ left: `${positions[i].x}%`, top: `${positions[i].y}%` }}
+                  initial={{ scale: 0, y: 30, opacity: 0 }}
+                  animate={{ 
+                    scale: [0, 1.4, 1.1],
+                    y: [30, 0, -5],
+                    opacity: [0, 1, 0.9],
+                    rotate: [0, 360]
+                  }}
+                  transition={{ 
+                    duration: 1.2,
+                    delay: 3.5 + i * 0.2,
+                    ease: "backOut"
+                  }}
+                >
+                  <div 
+                    className="text-4xl"
+                    style={{
+                      filter: 'drop-shadow(0 0 25px rgba(251, 191, 36, 0.9))',
+                    }}
+                  >
+                    {symbol}
+                  </div>
+                </motion.div>
+              );
+            })}
+
+            {/* Stage 8: Victory Message (4-5s) */}
+            <motion.div
+              className="absolute bottom-1/6 left-1/2 transform -translate-x-1/2"
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ 
+                scale: [0, 1.3, 1],
+                opacity: [0, 1, 0.95]
+              }}
+              transition={{ 
+                duration: 1,
+                delay: 4,
+                ease: "backOut"
+              }}
+            >
+              <div 
+                className="text-xl sm:text-2xl font-bold text-center px-6 py-3 rounded-2xl"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.95), rgba(251, 191, 36, 0.95))',
+                  backdropFilter: 'blur(25px)',
+                  border: '2px solid rgba(251, 191, 36, 0.7)',
+                  textShadow: '0 0 20px rgba(0, 0, 0, 0.9)',
+                  color: 'white',
+                  boxShadow: '0 0 40px rgba(249, 115, 22, 0.6)'
+                }}
+              >
+                🏹 Evil Burns, Good Prevails! 🔥
+              </div>
+            </motion.div>
+
+            {/* Stage 9: Sparkling Ash Particles (4.5-5s) */}
+            {Array.from({ length: 25 }, (_, i) => (
+              <motion.div
+                key={`ash-particle-${i}`}
+                className="absolute w-1.5 h-1.5 bg-orange-300 rounded-full"
+                style={{
+                  left: `${Math.random() * 100}%`,
+                  filter: 'drop-shadow(0 0 6px rgba(251, 146, 60, 0.8))',
+                }}
+                initial={{ y: window.innerHeight * 0.7, opacity: 0 }}
+                animate={{ 
+                  y: [0, -window.innerHeight * 0.3],
+                  x: [0, (Math.random() - 0.5) * 100],
+                  opacity: [0, 1, 0.7, 0],
+                  scale: [0.3, 1, 0.5]
+                }}
+                transition={{ 
+                  duration: 1.5,
+                  delay: 4.5 + Math.random() * 0.3,
+                  ease: "easeOut"
+                }}
+              />
+            ))}
+
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* HALLOWEEN Effect - Spooky & Fun Haunted House Experience */}
+      <AnimatePresence>
+        {effect === 'halloween' && (
+          <motion.div className="absolute inset-0">
+            
+            {/* Stage 1: Spooky Night Sky (0-6s) */}
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-b from-purple-950/90 via-indigo-950/80 to-orange-900/50"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 1, 0.9, 0] }}
+              transition={{ duration: 6, times: [0, 0.2, 0.9, 1] }}
+            />
+
+            {/* Stage 2: Lightning Flash (0.5s) */}
+            <motion.div
+              className="absolute inset-0 bg-white"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 0.9, 0, 0.7, 0] }}
+              transition={{ 
+                duration: 0.8,
+                times: [0, 0.1, 0.2, 0.3, 0.4],
+                delay: 0.5
+              }}
+            />
+
+            {/* Stage 3: Haunted Moon Rising (0-2s) */}
+            <motion.div
+              className="absolute top-[15%] right-[20%]"
+              initial={{ scale: 0, y: 100, opacity: 0 }}
+              animate={{ 
+                scale: [0, 1.5, 1.2],
+                y: [100, 0, 0],
+                opacity: [0, 1, 0.95]
+              }}
+              transition={{ duration: 2, ease: "backOut" }}
+            >
+              <div 
+                className="text-7xl sm:text-9xl"
+                style={{
+                  filter: 'drop-shadow(0 0 40px rgba(251, 191, 36, 0.8))',
+                }}
+              >
+                🌕
+              </div>
+              {/* Spooky bats flying across moon */}
+              {[...Array(5)].map((_, i) => (
+                <motion.div
+                  key={`bat-moon-${i}`}
+                  className="absolute text-2xl sm:text-3xl"
+                  initial={{ x: -100, y: 0, opacity: 0 }}
+                  animate={{ 
+                    x: [0, 150, 300],
+                    y: [0, -20, 0],
+                    opacity: [0, 1, 0],
+                  }}
+                  transition={{ 
+                    duration: 2,
+                    delay: 1 + i * 0.3,
+                    ease: "linear"
+                  }}
+                >
+                  🦇
+                </motion.div>
+              ))}
+            </motion.div>
+
+            {/* Stage 4: Giant Jack-o'-Lantern Center Stage (1-3s) */}
+            <motion.div
+              className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
+              initial={{ scale: 0, rotate: 0, opacity: 0 }}
+              animate={{ 
+                scale: [0, window.innerWidth < 640 ? 2.5 : 3.5, window.innerWidth < 640 ? 2 : 3],
+                rotate: [0, -15, 15, -10, 0],
+                opacity: [0, 1, 1]
+              }}
+              transition={{ 
+                duration: 2,
+                delay: 1,
+                ease: "backOut"
+              }}
+            >
+              <div 
+                className="text-8xl sm:text-9xl"
+                style={{
+                  filter: 'drop-shadow(0 0 50px rgba(249, 115, 22, 1))',
+                }}
+              >
+                🎃
+              </div>
+              {/* Pulsing glow effect */}
+              <motion.div
+                className="absolute inset-0 rounded-full"
+                style={{
+                  background: 'radial-gradient(circle, rgba(249, 115, 22, 0.4) 0%, transparent 70%)',
+                  filter: 'blur(40px)',
+                }}
+                animate={{
+                  scale: [1, 1.3, 1],
+                  opacity: [0.6, 1, 0.6]
+                }}
+                transition={{
+                  duration: 1.5,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+              />
+            </motion.div>
+
+            {/* Stage 5: Spooky Ghost Army (1.5-3.5s) */}
+            {[...Array(8)].map((_, i) => {
+              const positions = [
+                { x: 15, y: 20, delay: 1.5 },
+                { x: 85, y: 25, delay: 1.7 },
+                { x: 10, y: 70, delay: 1.9 },
+                { x: 90, y: 75, delay: 2.1 },
+                { x: 25, y: 40, delay: 2.3 },
+                { x: 75, y: 45, delay: 2.5 },
+                { x: 40, y: 15, delay: 2.7 },
+                { x: 60, y: 85, delay: 2.9 },
+              ];
+              return (
+                <motion.div
+                  key={`ghost-${i}`}
+                  className="absolute transform -translate-x-1/2 -translate-y-1/2"
+                  style={{ left: `${positions[i].x}%`, top: `${positions[i].y}%` }}
+                  initial={{ scale: 0, x: -50, y: 50, opacity: 0 }}
+                  animate={{ 
+                    scale: [0, 1.3, 1.1],
+                    x: [-50, 0, 10, 0],
+                    y: [50, 0, -10, 0],
+                    opacity: [0, 1, 0.9],
+                    rotate: [0, 360]
+                  }}
+                  transition={{ 
+                    duration: 1.5,
+                    delay: positions[i].delay,
+                    ease: "backOut"
+                  }}
+                >
+                  <div 
+                    className="text-4xl sm:text-6xl"
+                    style={{
+                      filter: 'drop-shadow(0 0 25px rgba(139, 92, 246, 0.8))',
+                    }}
+                  >
+                    👻
+                  </div>
+                  {/* Floating animation */}
+                  <motion.div
+                    className="absolute inset-0"
+                    animate={{
+                      y: [0, -15, 0],
+                    }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                      delay: Math.random() * 1
+                    }}
+                  />
+                </motion.div>
+              );
+            })}
+
+            {/* Stage 6: Witch Flying Across (2-3.5s) */}
+            <motion.div
+              className="absolute top-[30%]"
+              initial={{ x: -200, opacity: 0, rotate: -20 }}
+              animate={{ 
+                x: [0, window.innerWidth + 200],
+                opacity: [0, 1, 1, 0],
+                rotate: [-20, 0, -10]
+              }}
+              transition={{ 
+                duration: 2.5,
+                delay: 2,
+                ease: "easeInOut"
+              }}
+            >
+              <div 
+                className="text-6xl sm:text-8xl"
+                style={{
+                  filter: 'drop-shadow(0 0 30px rgba(124, 58, 237, 0.8))',
+                }}
+              >
+                🧙‍♀️
+              </div>
+            </motion.div>
+
+            {/* Stage 7: Zombie Hands Rising from Bottom (2.5-4s) */}
+            {[...Array(6)].map((_, i) => (
+              <motion.div
+                key={`zombie-${i}`}
+                className="absolute bottom-0 text-5xl sm:text-7xl"
+                style={{
+                  left: `${15 + i * 15}%`,
+                }}
+                initial={{ y: 150, opacity: 0, rotate: 0 }}
+                animate={{ 
+                  y: [150, 20, 0, 20],
+                  opacity: [0, 1, 1, 0.8],
+                  rotate: [0, -15, 15, 0]
+                }}
+                transition={{ 
+                  duration: 1.5,
+                  delay: 2.5 + i * 0.15,
+                  ease: "easeOut"
+                }}
+              >
+                <div 
+                  style={{
+                    filter: 'drop-shadow(0 0 20px rgba(34, 197, 94, 0.7))',
+                  }}
+                >
+                  🧟
+                </div>
+              </motion.div>
+            ))}
+
+            {/* Stage 8: Swirling Candy & Treats (3-5s) */}
+            {['🍬', '🍭', '🍫', '🍩', '🍪', '🧁'].map((candy, i) => {
+              const angle = (i / 6) * 2 * Math.PI;
+              const radius = window.innerWidth < 640 ? 150 : 250;
+              const x = Math.cos(angle) * radius;
+              const y = Math.sin(angle) * radius;
+              
+              return (
+                <motion.div
+                  key={`candy-${i}`}
+                  className="absolute top-1/2 left-1/2 text-3xl sm:text-5xl"
+                  initial={{ scale: 0, x: 0, y: 0, opacity: 0, rotate: 0 }}
+                  animate={{
+                    scale: [0, 1.3, 1.1],
+                    x: [0, x * 0.5, x],
+                    y: [0, y * 0.5, y],
+                    opacity: [0, 1, 0.9],
+                    rotate: [0, 360, 720],
+                  }}
+                  transition={{
+                    duration: 2,
+                    delay: 3 + i * 0.15,
+                    ease: "backOut"
+                  }}
+                >
+                  {candy}
+                </motion.div>
+              );
+            })}
+
+            {/* Stage 9: Spooky Eyes Appearing in Darkness (3.5-5.5s) */}
+            {[...Array(12)].map((_, i) => (
+              <motion.div
+                key={`eyes-${i}`}
+                className="absolute text-2xl sm:text-3xl"
+                style={{
+                  left: `${10 + Math.random() * 80}%`,
+                  top: `${10 + Math.random() * 80}%`,
+                }}
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ 
+                  scale: [0, 1.2, 1, 1.1, 1],
+                  opacity: [0, 1, 0.8, 1, 0.7],
+                }}
+                transition={{ 
+                  duration: 2,
+                  delay: 3.5 + i * 0.1,
+                  ease: "easeInOut"
+                }}
+              >
+                <motion.div
+                  animate={{
+                    opacity: [1, 0.3, 1],
+                  }}
+                  transition={{
+                    duration: 1.5,
+                    repeat: Infinity,
+                    delay: Math.random() * 2
+                  }}
+                >
+                  👀
+                </motion.div>
+              </motion.div>
+            ))}
+
+            {/* Stage 10: Epic Halloween Message (4-6s) */}
+            <motion.div
+              className="absolute left-0 right-0 flex items-center justify-center"
+              style={{ 
+                top: '50%',
+                transform: 'translateY(-50%)',
+                marginTop: window.innerWidth < 640 ? '100px' : '180px',
+                paddingLeft: '1rem',
+                paddingRight: '1rem',
+              }}
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ 
+                scale: window.innerWidth < 640 
+                  ? [0, 1, 1, 1, 1]  // No scale animation on mobile - just appear
+                  : [0, 1.3, 1.1, 1.2, 1],     // Original scale on desktop
+                opacity: [0, 1, 1, 1, 0.9],
+              }}
+              transition={{ 
+                duration: 2,
+                delay: 4,
+                ease: "backOut"
+              }}
+            >
+              <div className="w-full max-w-[90vw] sm:max-w-none">
+                <div 
+                  className="text-base xs:text-lg sm:text-5xl md:text-6xl font-bold text-center px-2 py-2 sm:px-6 sm:py-4 rounded-xl sm:rounded-2xl mx-auto"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.9), rgba(249, 115, 22, 0.9))',
+                    backdropFilter: 'blur(20px)',
+                    border: window.innerWidth < 640 ? '2px solid rgba(249, 115, 22, 0.8)' : '3px solid rgba(249, 115, 22, 0.8)',
+                    textShadow: '0 0 30px rgba(0, 0, 0, 0.9), 0 0 60px rgba(249, 115, 22, 0.5)',
+                    color: 'white',
+                    boxShadow: '0 0 50px rgba(249, 115, 22, 0.6)',
+                    fontFamily: 'system-ui, -apple-system, sans-serif',
+                    lineHeight: window.innerWidth < 640 ? '1.4' : '1.2',
+                    fontSize: window.innerWidth < 640 ? 'clamp(0.875rem, 4vw, 1.125rem)' : undefined,
+                  }}
+                >
+                  🎃 HAPPY HALLOWEEN! 👻
+                </div>
+                <motion.div
+                  className="text-xs xs:text-sm sm:text-xl md:text-2xl text-orange-200 text-center mt-2 sm:mt-3 font-semibold px-2"
+                  style={{
+                    textShadow: '0 0 15px rgba(0, 0, 0, 0.8)',
+                    lineHeight: '1.4',
+                    fontSize: window.innerWidth < 640 ? 'clamp(0.75rem, 3.5vw, 0.875rem)' : undefined,
+                  }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ 
+                    opacity: [0, 1],
+                    y: [20, 0],
+                  }}
+                  transition={{ 
+                    duration: 0.8,
+                    delay: 4.5,
+                    ease: "easeOut"
+                  }}
+                >
+                  Trick or Treat! 🍬🍭
+                </motion.div>
+              </div>
+            </motion.div>
+
+            {/* Stage 11: Floating Jack-o'-Lanterns Circle (4.5-6s) */}
+            {[...Array(8)].map((_, i) => {
+              const angle = (i / 8) * 2 * Math.PI;
+              const radius = window.innerWidth < 640 ? 180 : 280;
+              const x = Math.cos(angle) * radius;
+              const y = Math.sin(angle) * radius;
+              
+              return (
+                <motion.div
+                  key={`pumpkin-circle-${i}`}
+                  className="absolute top-1/2 left-1/2"
+                  initial={{ scale: 0, x: 0, y: 0, rotate: 0, opacity: 0 }}
+                  animate={{
+                    scale: [0, 1.2, 1],
+                    x: x,
+                    y: y,
+                    rotate: [0, 360],
+                    opacity: [0, 1, 0.9],
+                  }}
+                  transition={{
+                    duration: 1.5,
+                    delay: 4.5 + i * 0.08,
+                    ease: "backOut"
+                  }}
+                >
+                  <div 
+                    className="text-3xl sm:text-5xl"
+                    style={{
+                      filter: 'drop-shadow(0 0 20px rgba(249, 115, 22, 0.8))',
+                    }}
+                  >
+                    🎃
+                  </div>
+                  {/* Bob animation */}
+                  <motion.div
+                    className="absolute inset-0"
+                    animate={{
+                      y: [0, -12, 0],
+                    }}
+                    transition={{
+                      duration: 1.8,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                      delay: i * 0.2
+                    }}
+                  />
+                </motion.div>
+              );
+            })}
+
+            {/* Stage 12: Purple Magic Sparkles Everywhere (5-6s) */}
+            {Array.from({ length: 40 }).map((_, i) => (
+              <motion.div
+                key={`sparkle-halloween-${i}`}
+                className="absolute w-2 h-2 bg-purple-400 rounded-full"
+                style={{
+                  top: `${10 + Math.random() * 80}%`,
+                  left: `${10 + Math.random() * 80}%`,
+                  boxShadow: '0 0 15px rgba(167, 139, 250, 0.9)',
+                }}
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ 
+                  scale: [0, 2, 1.5, 0], 
+                  opacity: [0, 1, 0.8, 0],
+                }}
+                transition={{
+                  delay: 5 + Math.random() * 0.8,
+                  duration: 1,
+                  ease: "easeOut"
+                }}
+              />
+            ))}
+
+            {/* Stage 13: Final Spider Web Decoration (5.5-6s) */}
+            <motion.div
+              className="absolute top-[5%] right-[5%]"
+              initial={{ scale: 0, opacity: 0, rotate: 0 }}
+              animate={{ 
+                scale: [0, 1.5, 1.2],
+                opacity: [0, 0.9, 0.8],
+                rotate: [0, 360]
+              }}
+              transition={{ 
+                duration: 1,
+                delay: 5.5,
+                ease: "backOut"
+              }}
+            >
+              <div className="text-4xl sm:text-6xl">
+                🕸️
+              </div>
+              {/* Dangling spider */}
+              <motion.div
+                className="absolute -bottom-12 left-1/2 transform -translate-x-1/2 text-3xl"
+                animate={{
+                  y: [0, 20, 0],
+                  rotate: [0, 10, -10, 0]
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+              >
+                🕷️
+              </motion.div>
             </motion.div>
 
           </motion.div>

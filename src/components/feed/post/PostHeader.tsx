@@ -44,9 +44,9 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
   avatar,
   ipfsHash,
   postCode,
-  onVerifyIpfs = () => {},
+  onVerifyIpfs = () => { },
   ipfsSheetOpen = false,
-  setIpfsSheetOpen = () => {},
+  setIpfsSheetOpen = () => { },
   onHidePost,
   onReportPost,
   isOwner = false,
@@ -84,9 +84,9 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
 
   const handleTimeClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    
+
     if (!postCode) return;
-    
+
     if (community) {
       navigate(`/c/${getCommunityPath()}/${postCode}`);
     } else {
@@ -110,7 +110,7 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
     <CardHeader className="pb-2">
       <div className="flex justify-between items-start">
         <div className="flex items-center gap-3">
-          <Avatar 
+          <Avatar
             className="h-12 w-12 border-2 border-primary/20 hover:border-primary/50 transition-colors cursor-pointer"
             onClick={handleUserProfileClick}
           >
@@ -119,14 +119,14 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
           </Avatar>
           <div className="flex flex-col">
             <div className="flex items-center gap-1">
-              <span 
+              <span
                 className="font-medium text-foreground cursor-pointer hover:underline"
                 onClick={handleUserProfileClick}
               >
                 {formatUsername(username)}
               </span>
               <span className="text-muted-foreground text-sm mx-1">·</span>
-              <span 
+              <span
                 className="text-muted-foreground text-sm cursor-pointer hover:text-muted-foreground/80"
                 onClick={handleTimeClick}
               >
@@ -134,8 +134,8 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
               </span>
             </div>
             {community && (
-              <Badge 
-                variant="outline" 
+              <Badge
+                variant="outline"
                 className="mt-1 w-fit bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer"
                 onClick={handleCommunityClick}
               >
@@ -144,23 +144,23 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
             )}
           </div>
         </div>
-        
+
         <div className="flex items-center gap-1">
           {ipfsHash && onVerifyIpfs && typeof ipfsSheetOpen !== 'undefined' && setIpfsSheetOpen && (
-            <IpfsButton 
+            <IpfsButton
               ipfsHash={ipfsHash}
               postCode={postCode}
               onVerify={onVerifyIpfs}
-              open={ipfsSheetOpen} 
-              onOpenChange={setIpfsSheetOpen} 
+              open={ipfsSheetOpen}
+              onOpenChange={setIpfsSheetOpen}
             />
           )}
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <Button
+                variant="ghost"
+                size="icon"
                 className="h-8 w-8 rounded-full text-muted-foreground hover:bg-muted/50"
                 onClick={(e) => e.stopPropagation()}
               >
@@ -169,7 +169,7 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 onSelect={handleShareClick}
                 className="cursor-pointer"
               >
@@ -178,7 +178,7 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
               </DropdownMenuItem>
               {(isOwner && onHidePost) || (isAdmin && onTogglePin) || (isAdmin && !isOwner && onAdminHideWarn) || onReportPost ? <DropdownMenuSeparator /> : null}
               {isOwner && onHidePost && (
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   onSelect={onHidePost}
                   className="cursor-pointer"
                 >
@@ -189,7 +189,7 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
               {isAdmin && onTogglePin && (
                 <>
                   {isOwner && onHidePost && <DropdownMenuSeparator />}
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     onSelect={onTogglePin}
                     className="cursor-pointer"
                   >
@@ -201,8 +201,8 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
               {isAdmin && !isOwner && onAdminHideWarn && (
                 <>
                   {((isOwner && onHidePost) || (isAdmin && onTogglePin)) && <DropdownMenuSeparator />}
-                  <DropdownMenuItem 
-                    onSelect={onAdminHideWarn} 
+                  <DropdownMenuItem
+                    onSelect={onAdminHideWarn}
                     className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
                   >
                     <ShieldAlert className="mr-2 h-4 w-4" />
@@ -210,7 +210,7 @@ export const PostHeader: React.FC<PostHeaderProps> = ({
                   </DropdownMenuItem>
                 </>
               )}
-              {( (isOwner && onHidePost) || (isAdmin && onTogglePin) || (isAdmin && !isOwner && onAdminHideWarn) ) && onReportPost && <DropdownMenuSeparator />}
+              {((isOwner && onHidePost) || (isAdmin && onTogglePin) || (isAdmin && !isOwner && onAdminHideWarn)) && onReportPost && <DropdownMenuSeparator />}
               {onReportPost && (
                 <DropdownMenuItem onSelect={onReportPost} className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10">
                   <AlertTriangle className="mr-2 h-4 w-4" />

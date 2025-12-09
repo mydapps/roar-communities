@@ -6,13 +6,28 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Users, Search as SearchIcon, Sparkles, Filter, ArrowUp, ArrowDown, Loader2, Lock, MessageCircle, Cat, Zap, User } from 'lucide-react';
+import { Users, Search as SearchIcon, Sparkles, Filter, ArrowUp, ArrowDown, Loader2, Lock, MessageCircle, Cat, Zap, User, TrendingUp, Clock, Hash, UserPlus } from 'lucide-react';
 import { Post } from '@/components/feed/Post';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePreventZoom } from '@/hooks/usePreventZoom';
 import { searchAll, searchUsers, searchCommunities, searchPosts, SearchUserItem, SearchCommunityItem, SearchPostItem, Pagination } from '@/utils/searchApi';
+import DOMPurify from 'dompurify';
+
+// Utility function to safely render HTML content
+const renderSafeHTML = (htmlContent: string) => {
+  const allowedTags = ['p', 'br', 'b', 'i', 'strong', 'em'];
+  const allowedAttributes = {};
+  
+  const cleanHTML = DOMPurify.sanitize(htmlContent, {
+    ALLOWED_TAGS: allowedTags,
+    ALLOWED_ATTR: allowedAttributes,
+    KEEP_CONTENT: true
+  });
+  
+  return { __html: cleanHTML };
+};
 
 const SearchPage = () => {
   usePreventZoom();
@@ -188,96 +203,132 @@ const SearchPage = () => {
   };
 
   return (
-    <div className="space-y-6 pb-20">
-      <motion.div 
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        className="flex items-center justify-between"
-      >
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <motion.div
-            whileHover={{ scale: 1.1, rotate: 10 }}
-            className="text-primary"
-          >
-            <SearchIcon className="h-6 w-6" />
-          </motion.div>
-          Discover Content
-        </h1>
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+      {/* Modern Header */}
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-purple-500/5 to-emerald-500/5" />
+        <div className="absolute inset-0 bg-dot-pattern opacity-30" style={{
+          backgroundImage: `radial-gradient(circle at 1px 1px, rgba(0,0,0,0.15) 1px, transparent 0)`,
+          backgroundSize: '20px 20px'
+        }} />
         
-        <AnimatePresence>
-          {isSearching && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              className="bg-primary/10 text-primary text-sm px-3 py-1 rounded-full flex items-center gap-1"
+        <div className="relative px-4 py-8 md:py-12">
+          <div className="max-w-4xl mx-auto text-center">
+            <motion.div 
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="flex items-center justify-center gap-3 mb-6"
             >
-              <Loader2 className="h-3 w-3 animate-spin" />
-              <span>Searching...</span>
+              <motion.div
+                whileHover={{ scale: 1.1, rotate: 10 }}
+                className="p-3 bg-primary/10 rounded-full"
+              >
+                <SearchIcon className="h-8 w-8 text-primary" />
+              </motion.div>
+              <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
+                Discover
+              </h1>
             </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
-      
-      <motion.form 
-        onSubmit={handleSearch}
-        className="relative z-10"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: 0.1 }}
-      >
-        <div className="relative flex gap-2">
-          <div className="relative flex-1 group">
-            <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-primary/20 to-purple-500/20 opacity-0 group-focus-within:opacity-100 -z-10 blur-md transition-opacity duration-300"></div>
-        <div className="relative flex-1">
-              <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-          <Input
-            ref={searchInputRef}
-            type="text"
-            placeholder="Search for users, communities, posts..."
-            className="pl-10 pr-4 py-6 border-2 border-muted rounded-full text-foreground focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:border-primary/70 focus-visible:ring-offset-0 transition-colors"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-          />
-            </div>
+            
+            <motion.p 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="text-muted-foreground text-lg md:text-xl mb-8 max-w-2xl mx-auto"
+            >
+              Find amazing people, vibrant communities, and engaging conversations.
+            </motion.p>
+          </div>
         </div>
-          <Button 
-            type="submit" 
-            variant="default" 
-            size="icon"
-            className="absolute right-3 top-1/2 transform -translate-y-1/2 rounded-full"
-            disabled={isSearching || !searchQuery.trim()}
-          >
-            {isSearching ? 
-              <Loader2 className="h-5 w-5 animate-spin" /> : 
-              <SearchIcon className="h-4 w-4" />
-            }
-        </Button>
       </div>
       
-        {searchQuery.trim().length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="absolute right-0 top-full mt-1"
+      {/* Enhanced Search Form */}
+      <div className="max-w-4xl mx-auto px-4 -mt-8 relative z-10">
+        <motion.form 
+          onSubmit={handleSearch}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+        >
+          <div className="relative group">
+            {/* Glow effect */}
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-primary/20 via-purple-500/20 to-emerald-500/20 opacity-0 group-focus-within:opacity-100 blur-xl transition-opacity duration-500"></div>
+            
+            {/* Search input container */}
+            <div className="relative bg-background/80 backdrop-blur-sm border border-border/50 rounded-2xl shadow-lg group-focus-within:border-primary/50 transition-all duration-300">
+              <div className="flex items-center">
+                <div className="pl-6 pr-3 py-4">
+                  <SearchIcon className="h-6 w-6 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                </div>
+                
+                <Input
+                  ref={searchInputRef}
+                  type="text"
+                  placeholder="Search for users, communities, posts..."
+                  className="flex-1 border-0 bg-transparent text-lg placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 py-4"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                />
+                
+                <div className="pr-3">
+                  <Button 
+                    type="submit" 
+                    size="lg"
+                    className="rounded-xl bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg hover:shadow-xl transition-all duration-200"
+                    disabled={isSearching || !searchQuery.trim()}
+                  >
+                    {isSearching ? (
+                      <>
+                        <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                        Searching...
+                      </>
+                    ) : (
+                      <>
+                        <SearchIcon className="h-5 w-5 mr-2" />
+                        Search
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.form>
+        
+        {/* Quick search suggestions */}
+        {!hasSearched && (
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            className="mt-6 text-center"
           >
-            <Button 
-              type="button" 
-              variant="ghost" 
-              size="sm"
-              className="text-xs" 
-              onClick={() => {
-                setSearchQuery('');
-                searchInputRef.current?.focus();
-              }}
-            >
-              Clear Search
-            </Button>
+            <p className="text-sm text-muted-foreground mb-3">Popular searches:</p>
+            <div className="flex flex-wrap justify-center gap-2">
+              {['developers', 'crypto', 'art', 'gaming', 'defi'].map((term, index) => (
+                <motion.button
+                  key={term}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.5 + index * 0.1 }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => {
+                    setSearchQuery(term);
+                    performSearch(term);
+                  }}
+                  className="px-4 py-2 bg-muted/50 hover:bg-muted rounded-full text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <Hash className="h-3 w-3 inline mr-1" />
+                  {term}
+                </motion.button>
+              ))}
+            </div>
           </motion.div>
         )}
-      </motion.form>
+      </div>
       
       {!hasSearched ? (
         <motion.div
@@ -330,45 +381,105 @@ const SearchPage = () => {
         </Card>
         </motion.div>
       ) : (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.3 }}
-        >
-          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-              className="relative overflow-x-auto pb-2 no-scrollbar"
-            >
-              <TabsList className="inline-flex w-auto min-w-full md:min-w-0 justify-start mb-6 max-w-md bg-background border border-border/40 p-1 whitespace-nowrap">
-                <TabsTrigger 
-                  value="all"
-                  className="flex-shrink-0 data-[state=active]:bg-primary/15 data-[state=active]:text-primary relative overflow-hidden transition-all"
-                >
-                  <span className="relative z-10">All Results</span>
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="communities"
-                  className="flex-shrink-0 data-[state=active]:bg-primary/15 data-[state=active]:text-primary relative overflow-hidden transition-all"
-                >
-                  <span className="relative z-10">Communities</span>
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="posts"
-                  className="flex-shrink-0 data-[state=active]:bg-primary/15 data-[state=active]:text-primary relative overflow-hidden transition-all"
-                >
-                  <span className="relative z-10">Posts</span>
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="users"
-                  className="flex-shrink-0 data-[state=active]:bg-primary/15 data-[state=active]:text-primary relative overflow-hidden transition-all"
-                >
-                  <span className="relative z-10">Users</span>
-                </TabsTrigger>
-          </TabsList>
-            </motion.div>
+        <div className="max-w-6xl mx-auto px-4 py-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            {/* Search Results Header */}
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h2 className="text-2xl font-bold mb-2">
+                  Search Results for "{searchQuery}"
+                </h2>
+                <p className="text-muted-foreground">
+                  {isSearching ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Searching...
+                    </span>
+                  ) : (
+                    `Found ${userResults.length + communityResults.length + postResults.length} results`
+                  )}
+                </p>
+              </div>
+              
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setSearchQuery('');
+                  setHasSearched(false);
+                  searchInputRef.current?.focus();
+                }}
+                className="gap-2"
+              >
+                <SearchIcon className="h-4 w-4" />
+                New Search
+              </Button>
+            </div>
+
+            {/* Modern Tabs */}
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+              <div className="relative mb-8">
+                <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-flex bg-muted/30 p-1 rounded-xl">
+                  <TabsTrigger 
+                    value="all"
+                    className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4" />
+                      <span className="hidden sm:inline">All Results</span>
+                      <span className="sm:hidden">All</span>
+                    </div>
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="communities"
+                    className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      <span className="hidden sm:inline">Communities</span>
+                      <span className="sm:hidden">Groups</span>
+                      {communityResults.length > 0 && (
+                        <Badge variant="secondary" className="ml-1 text-xs">
+                          {communityResults.length}
+                        </Badge>
+                      )}
+                    </div>
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="posts"
+                    className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all"
+                  >
+                    <div className="flex items-center gap-2">
+                      <MessageCircle className="h-4 w-4" />
+                      <span className="hidden sm:inline">Posts</span>
+                      <span className="sm:hidden">Posts</span>
+                      {postResults.length > 0 && (
+                        <Badge variant="secondary" className="ml-1 text-xs">
+                          {postResults.length}
+                        </Badge>
+                      )}
+                    </div>
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="users"
+                    className="data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm transition-all"
+                  >
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      <span className="hidden sm:inline">People</span>
+                      <span className="sm:hidden">Users</span>
+                      {userResults.length > 0 && (
+                        <Badge variant="secondary" className="ml-1 text-xs">
+                          {userResults.length}
+                        </Badge>
+                      )}
+                    </div>
+                  </TabsTrigger>
+                </TabsList>
+              </div>
             
             <AnimatePresence mode="wait">
               <motion.div
@@ -392,7 +503,7 @@ const SearchPage = () => {
                           icon: <Users className="h-5 w-5 text-primary" />,
                           title: "Communities",
                           content: communityResults.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {communityResults.map((community, index) => (
                               <motion.div
                                 key={community.name}
@@ -445,7 +556,7 @@ const SearchPage = () => {
                           icon: <User className="h-5 w-5 text-primary" />,
                           title: "Users",
                           content: userResults.length > 0 ? (
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                               {userResults.map((user, index) => (
                                 <motion.div
                                   key={user.id}
@@ -511,7 +622,7 @@ const SearchPage = () => {
             </div>
                   ) : communityResults.length > 0 ? (
                     <div className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {communityResults.map((community, index) => (
                           <motion.div
                             key={community.name}
@@ -604,7 +715,7 @@ const SearchPage = () => {
             </div>
                   ) : userResults.length > 0 ? (
                     <div className="space-y-4">
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
               {userResults.map((user, index) => (
                           <motion.div
                             key={user.id}
@@ -641,8 +752,9 @@ const SearchPage = () => {
           </TabsContent>
               </motion.div>
             </AnimatePresence>
-        </Tabs>
-        </motion.div>
+            </Tabs>
+          </motion.div>
+        </div>
       )}
     </div>
   );
@@ -660,8 +772,8 @@ const CommunityResult = ({ community }: CommunityResultProps) => {
       to={communityUrl}
       className="block group cursor-pointer"
     >
-      <Card className="overflow-hidden hover:shadow-md transition-all duration-300 animate-scale-in relative border-primary/20 group-hover:border-primary/30">
-        <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+      <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 border border-border/50 group-hover:border-primary/50 bg-background/50 backdrop-blur-sm">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
         
         {community.encrypted && (
           <Badge className="absolute right-2 top-2 bg-foreground/10 gap-1 z-10">
@@ -669,37 +781,33 @@ const CommunityResult = ({ community }: CommunityResultProps) => {
             Private
             </Badge>
           )}
-        <CardHeader className="pb-2">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <motion.div
-                whileHover={{ scale: 1.1 }}
-                className="relative z-10"
-              >
-                <Avatar className="h-10 w-10 border border-border/50 group-hover:border-primary/30 transition-colors">
-                  <AvatarImage src={community.image} />
-                  <AvatarFallback className="bg-primary/10 text-primary">{community.name[0].toUpperCase()}</AvatarFallback>
-                </Avatar>
-              </motion.div>
-              <motion.div
-                className="absolute inset-0 rounded-full bg-primary/20 opacity-0 group-hover:opacity-50 -z-0 blur-md"
-                animate={{ scale: [1, 1.2, 1] }}
-                transition={{ duration: 3, repeat: Infinity, repeatType: "reverse" }}
-              ></motion.div>
+        <CardContent className="p-6">
+          <div className="flex items-start gap-4 mb-4">
+            <div className="relative flex-shrink-0">
+              <Avatar className="h-12 w-12 border-2 border-border/50 group-hover:border-primary/50 transition-colors">
+                <AvatarImage src={community.image} />
+                <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                  {community.name[0].toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div className="absolute inset-0 rounded-full bg-primary/20 opacity-0 group-hover:opacity-30 blur-md transition-opacity duration-300"></div>
             </div>
-            <span className="text-lg font-bold group-hover:text-primary transition-colors">
-              {community.name}
-            </span>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{community.description}</p>
-        
-          <div className="flex items-center">
-            <Users className="h-4 w-4 mr-1 text-muted-foreground" />
-            <span className="text-sm">{community.members_count.toLocaleString()} members</span>
-        </div>
-      </CardContent>
+            
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-lg mb-2 group-hover:text-primary transition-colors">
+                {community.name}
+              </h3>
+              <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed mb-3">
+                {community.description}
+              </p>
+              
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Users className="h-4 w-4" />
+                <span>{community.members_count.toLocaleString()} members</span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
     </Card>
     </Link>
   );
@@ -711,29 +819,32 @@ interface UserResultProps {
 
 const UserResult = ({ user }: UserResultProps) => {
   return (
-    <Card className="hover:shadow-md transition-all duration-300 animate-scale-in border-primary/20 group">
-      <CardContent className="pt-6">
+    <Card className="hover:shadow-lg transition-all duration-300 border border-border/50 group hover:border-primary/50 bg-background/50 backdrop-blur-sm">
+      <CardContent className="p-6">
         <div className="flex flex-col items-center text-center">
-          <div className="relative mb-3">
-            <motion.div
-              whileHover={{ scale: 1.1 }}
-              className="relative z-10"
-            >
-              <Avatar className="h-16 w-16 border-2 border-border/30 group-hover:border-primary/30 transition-colors">
-                <AvatarImage src={user.avatar_url} />
-                                        <AvatarFallback className="bg-primary/10 text-primary">{user.handle?.[0]?.toUpperCase() || 'U'}</AvatarFallback>
-          </Avatar>
-            </motion.div>
-            <motion.div
-              className="absolute inset-0 rounded-full bg-primary/20 opacity-0 group-hover:opacity-50 -z-0 blur-md"
-              animate={{ scale: [1, 1.2, 1] }}
-              transition={{ duration: 3, repeat: Infinity, repeatType: "reverse" }}
-            ></motion.div>
+          <div className="relative mb-4">
+            <Avatar className="h-16 w-16 border-2 border-border/50 group-hover:border-primary/50 transition-colors">
+              <AvatarImage src={user.avatar_url} />
+              <AvatarFallback className="bg-primary/10 text-primary font-semibold text-lg">
+                {user.handle?.[0]?.toUpperCase() || 'U'}
+              </AvatarFallback>
+            </Avatar>
+            <div className="absolute inset-0 rounded-full bg-primary/20 opacity-0 group-hover:opacity-30 blur-md transition-opacity duration-300"></div>
           </div>
-          <h3 className="font-medium text-lg">@{user.handle}</h3>
           
-          <Button className="mt-4 w-full group-hover:bg-primary transition-colors shadow-sm group-hover:shadow-md" size="sm" asChild>
-            <Link to={`/u/${user.handle.split('.')[0]}`}>View Profile</Link>
+          <h3 className="font-semibold text-lg mb-4 group-hover:text-primary transition-colors">
+            @{user.handle}
+          </h3>
+          
+          <Button 
+            className="w-full bg-primary/10 hover:bg-primary text-primary hover:text-primary-foreground transition-all duration-200 border border-primary/20 hover:border-primary" 
+            size="sm" 
+            asChild
+          >
+            <Link to={`/u/${user.handle.split('.')[0]}`}>
+              <UserPlus className="h-4 w-4 mr-2" />
+              View Profile
+            </Link>
           </Button>
         </div>
       </CardContent>
@@ -749,9 +860,9 @@ interface PostSearchResultProps {
 
 const PostSearchResult = ({ post, onClick }: PostSearchResultProps) => {
   return (
-    <div onClick={onClick}>
-      <Card className="hover:shadow-md transition-all duration-300 animate-scale-in overflow-hidden border-primary/20 group">
-        <CardContent className="pt-6">
+    <div onClick={onClick} className="cursor-pointer">
+      <Card className="hover:shadow-lg transition-all duration-300 border border-border/50 group hover:border-primary/50 bg-background/50 backdrop-blur-sm">
+        <CardContent className="p-6">
           <div className="flex items-start gap-3 mb-3">
             <div className="relative">
               <motion.div
@@ -784,7 +895,10 @@ const PostSearchResult = ({ post, onClick }: PostSearchResultProps) => {
             </div>
           </div>
           
-          <p className="text-sm mb-4 line-clamp-3 group-hover:text-foreground/90 transition-colors">{post.content}</p>
+          <div 
+            className="text-sm mb-4 line-clamp-3 group-hover:text-foreground/90 transition-colors prose prose-sm max-w-none"
+            dangerouslySetInnerHTML={renderSafeHTML(post.content)}
+          />
           
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-1.5">
@@ -823,7 +937,7 @@ const SearchLoadingState = () => {
     <div className="space-y-10 animate-pulse">
       <div className="space-y-3">
         <div className="h-7 w-40 bg-primary/10 rounded-lg"></div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 gap-4">
           {[1, 2].map(i => (
             <div key={i} className="rounded-lg border border-border/50 overflow-hidden bg-muted/5">
               <div className="h-28 p-4">
@@ -864,7 +978,7 @@ const SearchLoadingState = () => {
       
       <div className="space-y-3">
         <div className="h-7 w-24 bg-primary/10 rounded-lg"></div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
           {[1, 2, 3, 4].map(i => (
             <div key={i} className="rounded-lg border border-border/50 overflow-hidden bg-muted/5 p-4">
               <div className="flex flex-col items-center justify-center text-center">

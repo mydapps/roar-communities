@@ -55,6 +55,7 @@ import DIP1Page from '@/pages/DIP1Page';
 import CommunityTokensPage from '@/pages/CommunityTokensPage';
 import CreateCommunityTokenPage from '@/pages/CreateCommunityTokenPage';
 import CommunityTokenPage from '@/pages/CommunityTokenPage';
+import CommunityTokenPageV2 from '@/pages/CommunityTokenPageV2';
 
 import { TipProvider } from '@/contexts/TipContext';
 import { SharedTipSheet } from '@/components/tip/SharedTipSheet';
@@ -108,174 +109,176 @@ function App() {
     <HelmetProvider>
       <ZoomDisabledHelmet />
       <DeviceProvider>
-      <PrivyAuthProvider>
-        <ThemeProvider>
-        <ImageViewerProvider>
-          <TipProvider>
-          <PageViewTracker />
+        <PrivyAuthProvider>
+          <ThemeProvider>
+            <ImageViewerProvider>
+              <TipProvider>
+                <PageViewTracker />
 
-          <ErrorBoundary>
-        <Routes>
-          {/* Public routes - accessible outside MainLayout */}
-          <Route path="/" element={<Index3 />} />
-          <Route path="/index" element={<Index3 />} />
-          <Route path="/index-old" element={<Index />} />
-          <Route path="/index2" element={<Index2 />} />
-          <Route path="/index3" element={<Index3 />} />
-          <Route path="/invite/:code" element={<Index3 />} />
-          <Route path="/index3/invite/:code" element={<Index3 />} />
-          <Route path="request-invite" element={<RequestInvitePage />} />
-          <Route path="avatar-handle" element={<AvatarHandlePage />} />
-          <Route path="login" element={<LoginPage />} />
-          <Route path="/auth-test" element={<AuthTestPage />} />
-            <Route path="/terms" element={<TermsOfServicePage />} />
-            <Route path="/privacy" element={<PrivacyPolicyPage />} />
-          <Route path="/account-inactive" element={<AccountInactivePage />} />
-          
-          {/* Mixed access routes with MainLayout */}
-          <Route element={<MainLayout />}>
-            {/* Public routes within MainLayout */}
-            <Route path="c/:communityId/:postId" element={<DetailedPostPage />} />
-            <Route path=":handle/:postId" element={<DetailedPostPage />} />
-            <Route path="post/:postId" element={<DetailedPostPage />} />
-            
-            {/* Protected routes - require authentication */}
-            <Route path="feed" element={
-              <ProtectedRoute>
-                <FeedPage />
-              </ProtectedRoute>
-            } />
-            <Route path="roared-posts" element={
-              <ProtectedRoute>
-                <RoaredPostsPage />
-              </ProtectedRoute>
-            } />
-            <Route path="communities" element={<CommunityTokensPage />} />
-            <Route path="communities-old" element={<CommunitiesPageOld />} />
-            <Route path="c/:id" element={<CommunityTokenPage />} />
-            <Route path="legacy-c/:id" element={<CommunityPage />} />
-            <Route path="create-community" element={<CreateCommunityPage />} />
-            <Route path="u/:handle" element={<UserProfilePage />} />
-            <Route path="edit-profile" element={<EditProfilePage />} />
-            <Route path="wallet" element={<WalletPage />} />
-            <Route path="my-shares" element={
-                <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>}>
-                  <LazyMySharesPage />
-                </Suspense>
-            } />
-            <Route path="account" element={<AccountPage />} />
-            <Route path="search" element={<SearchPage />} />
-            <Route path="referral" element={
-                <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>}>
-                  <LazyReferralPage />
-                </Suspense>
-            } />
-            <Route path="claim-reward" element={
-                <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>}>
-                  <LazyClaimRewardPage />
-                </Suspense>
-            } />
-            <Route path="claim-welcome-rewards" element={
-                <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>}>
-                  <LazyClaimWelcomeRewardsPage />
-                </Suspense>
-            } />
-            <Route path="welcome-offer" element={
-                <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>}>
-                  <LazyWelcomeOfferPage />
-                </Suspense>
-            } />
-            <Route path="notifications" element={<NotificationsPage />} />
-            <Route path="roar-farming" element={<RoarFarmingPage />} />
-            <Route path="roar-leaderboard" element={<RoarLeaderboardPage />} />
-            <Route path="dip/1" element={<DIP1Page />} />
-                            <Route path="community-tokens" element={<CommunityTokensPage />} />
-                <Route path="community_tokens" element={<CommunityTokensPage />} />
-                <Route path="community_token_new" element={<CreateCommunityTokenPage />} />
-            <Route path="roars/:username" element={<RoarsPage />} />
-            <Route path="boosters" element={<BoosterPage />} />
-            <Route path="successful-onboarding" element={
-              localStorage.getItem('dapps_show_onboarding') === '1' ? (
-                  <SuccessfulOnboarding />
-                ) : (
-                  <Navigate to="/feed" replace />
-              )
-            } />
-            <Route path="follow-suggestions" element={<FollowSuggestionsPage />} />
-            
-            {/* Add Transaction History Route */}
-            <Route path="transactions" element={
-              <ProtectedRoute>
-                <TransactionHistoryPage />
-              </ProtectedRoute>
-            } />
+                <ErrorBoundary>
+                  <Routes>
+                    {/* Public routes - accessible outside MainLayout */}
+                    <Route path="/" element={<Index3 />} />
+                    <Route path="/index" element={<Index3 />} />
+                    <Route path="/index-old" element={<Index />} />
+                    <Route path="/index2" element={<Index2 />} />
+                    <Route path="/index3" element={<Index3 />} />
+                    <Route path="/invite/:code" element={<Index3 />} />
+                    <Route path="/index3/invite/:code" element={<Index3 />} />
+                    <Route path="request-invite" element={<RequestInvitePage />} />
+                    <Route path="avatar-handle" element={<AvatarHandlePage />} />
+                    <Route path="login" element={<LoginPage />} />
+                    <Route path="/auth-test" element={<AuthTestPage />} />
+                    <Route path="/terms" element={<TermsOfServicePage />} />
+                    <Route path="/privacy" element={<PrivacyPolicyPage />} />
+                    <Route path="/account-inactive" element={<AccountInactivePage />} />
 
-            {/* Add Settings Page Route */}
-            <Route path="settings" element={
-              <ProtectedRoute>
-                <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>}>
-                  <LazySettingsPage />
-                </Suspense>
-              </ProtectedRoute>
-            } />
+                    {/* Mixed access routes with MainLayout */}
+                    <Route element={<MainLayout />}>
+                      {/* Public routes within MainLayout */}
+                      <Route path="c/:communityId/:postId" element={<DetailedPostPage />} />
+                      <Route path=":handle/:postId" element={<DetailedPostPage />} />
+                      <Route path="post/:postId" element={<DetailedPostPage />} />
 
-            {/* Add Post Warning Route */}
-            <Route path="/c/:communityName/warning/:postCode" element={
-              <ProtectedRoute>
-                <PostWarningPage />
-              </ProtectedRoute>
-            } />
+                      {/* Protected routes - require authentication */}
+                      <Route path="feed" element={
+                        <ProtectedRoute>
+                          <FeedPage />
+                        </ProtectedRoute>
+                      } />
+                      <Route path="roared-posts" element={
+                        <ProtectedRoute>
+                          <RoaredPostsPage />
+                        </ProtectedRoute>
+                      } />
+                      <Route path="communities" element={<CommunityTokensPage />} />
+                      <Route path="communities-old" element={<CommunitiesPageOld />} />
+                      <Route path="c/:id" element={<CommunityTokenPageV2 />} />
+                      <Route path="c-v1/:id" element={<CommunityTokenPage />} />
+                      <Route path="legacy-c/:id" element={<CommunityPage />} />
+                      <Route path="create-community" element={<CreateCommunityPage />} />
+                      <Route path="u/:handle" element={<UserProfilePage />} />
+                      <Route path="edit-profile" element={<EditProfilePage />} />
+                      <Route path="wallet" element={<WalletPage />} />
+                      <Route path="my-shares" element={
+                        <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+                          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        </div>}>
+                          <LazyMySharesPage />
+                        </Suspense>
+                      } />
+                      <Route path="account" element={<AccountPage />} />
+                      <Route path="search" element={<SearchPage />} />
+                      <Route path="referral" element={
+                        <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+                          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        </div>}>
+                          <LazyReferralPage />
+                        </Suspense>
+                      } />
+                      <Route path="claim-reward" element={
+                        <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+                          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        </div>}>
+                          <LazyClaimRewardPage />
+                        </Suspense>
+                      } />
+                      <Route path="claim-welcome-rewards" element={
+                        <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+                          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        </div>}>
+                          <LazyClaimWelcomeRewardsPage />
+                        </Suspense>
+                      } />
+                      <Route path="welcome-offer" element={
+                        <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+                          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        </div>}>
+                          <LazyWelcomeOfferPage />
+                        </Suspense>
+                      } />
+                      <Route path="notifications" element={<NotificationsPage />} />
+                      <Route path="roar-farming" element={<RoarFarmingPage />} />
+                      <Route path="roar-leaderboard" element={<RoarLeaderboardPage />} />
+                      <Route path="dip/1" element={<DIP1Page />} />
+                      <Route path="community-tokens" element={<CommunityTokensPage />} />
+                      <Route path="community_tokens" element={<CommunityTokensPage />} />
+                      <Route path="community_token_new" element={<CreateCommunityTokenPage />} />
 
-            {/* Messages Routes */}
-            <Route path="messages" element={
-              <ProtectedRoute>
-                <MessagesPage />
-              </ProtectedRoute>
-            } />
-            <Route path="messages/:conversationId" element={
-              <ProtectedRoute>
-                <ConversationPage />
-              </ProtectedRoute>
-            } />
-            <Route path="messages/paid/:handle" element={
-              <ProtectedRoute>
-                <PaidConversationPage />
-              </ProtectedRoute>
-            } />
+                      <Route path="roars/:username" element={<RoarsPage />} />
+                      <Route path="boosters" element={<BoosterPage />} />
+                      <Route path="successful-onboarding" element={
+                        localStorage.getItem('dapps_show_onboarding') === '1' ? (
+                          <SuccessfulOnboarding />
+                        ) : (
+                          <Navigate to="/feed" replace />
+                        )
+                      } />
+                      <Route path="follow-suggestions" element={<FollowSuggestionsPage />} />
 
-            {/* Admin Marketing Notifications Route (UID 1, 2, 3 only) */}
-            <Route path="admin/marketing-notifications" element={
-              <ProtectedRoute>
-                <MarketingNotificationsPage />
-              </ProtectedRoute>
-            } />
+                      {/* Add Transaction History Route */}
+                      <Route path="transactions" element={
+                        <ProtectedRoute>
+                          <TransactionHistoryPage />
+                        </ProtectedRoute>
+                      } />
 
-              
-            
-            {/* 404 route */}
-            <Route path="*" element={<NotFound />} />
-          </Route>
-        </Routes>
-        <Toaster position="top-right" />
-        {/* Global Shared TipSheet */}
-        <SharedTipSheet />
-        </ErrorBoundary>
-        </TipProvider>
-        </ImageViewerProvider>
-        </ThemeProvider>
-      </PrivyAuthProvider>
+                      {/* Add Settings Page Route */}
+                      <Route path="settings" element={
+                        <ProtectedRoute>
+                          <Suspense fallback={<div className="flex items-center justify-center min-h-screen">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                          </div>}>
+                            <LazySettingsPage />
+                          </Suspense>
+                        </ProtectedRoute>
+                      } />
+
+                      {/* Add Post Warning Route */}
+                      <Route path="/c/:communityName/warning/:postCode" element={
+                        <ProtectedRoute>
+                          <PostWarningPage />
+                        </ProtectedRoute>
+                      } />
+
+                      {/* Messages Routes */}
+                      <Route path="messages" element={
+                        <ProtectedRoute>
+                          <MessagesPage />
+                        </ProtectedRoute>
+                      } />
+                      <Route path="messages/:conversationId" element={
+                        <ProtectedRoute>
+                          <ConversationPage />
+                        </ProtectedRoute>
+                      } />
+                      <Route path="messages/paid/:handle" element={
+                        <ProtectedRoute>
+                          <PaidConversationPage />
+                        </ProtectedRoute>
+                      } />
+
+                      {/* Admin Marketing Notifications Route (UID 1, 2, 3 only) */}
+                      <Route path="admin/marketing-notifications" element={
+                        <ProtectedRoute>
+                          <MarketingNotificationsPage />
+                        </ProtectedRoute>
+                      } />
+
+
+
+                      {/* 404 route */}
+                      <Route path="*" element={<NotFound />} />
+                    </Route>
+                  </Routes>
+                  <Toaster position="top-right" />
+                  {/* Global Shared TipSheet */}
+                  <SharedTipSheet />
+                </ErrorBoundary>
+              </TipProvider>
+            </ImageViewerProvider>
+          </ThemeProvider>
+        </PrivyAuthProvider>
       </DeviceProvider>
     </HelmetProvider>
   );

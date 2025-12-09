@@ -206,6 +206,81 @@ const SpecialCommandBubble: React.FC<SpecialCommandBubbleProps> = ({
         </>
       )}
 
+      {/* Victory-themed animated effects for DUSSEHRA commands */}
+      {(command === 'happydussera' || command === 'happydushera') && (
+        <>
+          {/* Fiery victory border with orange-red gradient */}
+          <motion.div
+            className="absolute inset-0 rounded-2xl border-2 border-orange-500"
+            animate={{
+              opacity: [0.6, 1, 0.6],
+              boxShadow: [
+                '0 0 15px rgba(249, 115, 22, 0.6)',
+                '0 0 30px rgba(239, 68, 68, 0.8)',
+                '0 0 15px rgba(249, 115, 22, 0.6)'
+              ]
+            }}
+            transition={{
+              duration: 1.8,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          />
+          
+          {/* Bow and arrow victory symbol */}
+          <motion.div
+            className="absolute -top-2 -right-2 text-2xl"
+            animate={{
+              scale: [1, 1.4, 1],
+              rotate: [0, 15, -15, 0],
+            }}
+            transition={{
+              duration: 2.2,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          >
+            🏹
+          </motion.div>
+          
+          {/* Victory flame */}
+          <motion.div
+            className="absolute -top-1 -left-1 text-lg"
+            animate={{
+              scale: [1, 1.3, 1],
+              rotate: [0, 10, -10, 0],
+              opacity: [0.7, 1, 0.7]
+            }}
+            transition={{
+              duration: 1.5,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: 0.3
+            }}
+          >
+            🔥
+          </motion.div>
+
+          {/* Victory crown */}
+          <motion.div
+            className="absolute -bottom-1 -right-1 text-sm"
+            animate={{
+              scale: [0.8, 1.2, 0.8],
+              y: [0, -3, 0],
+              opacity: [0.6, 1, 0.6]
+            }}
+            transition={{
+              duration: 2.5,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: 0.8
+            }}
+          >
+            👑
+          </motion.div>
+        </>
+      )}
+
 
       </motion.div>
     </div>

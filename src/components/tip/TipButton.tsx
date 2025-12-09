@@ -64,13 +64,13 @@ export const TipButton: React.FC<TipButtonProps> = ({
               <motion.div
                 className="absolute inset-0 opacity-0 group-hover:opacity-100"
                 initial={{ opacity: 0 }}
-                animate={{ 
+                animate={{
                   opacity: isHovered ? 1 : 0,
                   background: isHovered ? "radial-gradient(circle at center, rgba(168, 85, 247, 0.1) 0%, transparent 70%)" : "transparent"
                 }}
                 transition={{ duration: 0.3 }}
               />
-              
+
               {/* Enhanced tip icon with better tipped state feedback */}
               <motion.div
                 className="relative"
@@ -78,7 +78,7 @@ export const TipButton: React.FC<TipButtonProps> = ({
                   rotate: isPressed ? [0, -10, 10, 0] : 0,
                   scale: hasUserTipped ? [1, 1.1, 1] : 1
                 }}
-                transition={{ 
+                transition={{
                   duration: 0.4,
                   ease: "easeInOut"
                 }}
@@ -86,11 +86,11 @@ export const TipButton: React.FC<TipButtonProps> = ({
                 {hasUserTipped ? (
                   <motion.div
                     initial={{ scale: 1 }}
-                    animate={{ 
+                    animate={{
                       scale: [1, 1.05, 1],
                       filter: ["brightness(1)", "brightness(1.2)", "brightness(1)"]
                     }}
-                    transition={{ 
+                    transition={{
                       duration: 2,
                       repeat: Infinity,
                       ease: "easeInOut"
@@ -129,18 +129,18 @@ export const TipButton: React.FC<TipButtonProps> = ({
                     <motion.div
                       key={i}
                       className="absolute text-primary/60"
-                      initial={{ 
-                        opacity: 0, 
-                        y: 0, 
+                      initial={{
+                        opacity: 0,
+                        y: 0,
                         x: Math.random() * 20 - 10,
                         scale: 0.5
                       }}
-                      animate={{ 
-                        opacity: [0, 1, 0], 
-                        y: -20, 
+                      animate={{
+                        opacity: [0, 1, 0],
+                        y: -20,
                         scale: [0.5, 1, 0.3]
                       }}
-                      transition={{ 
+                      transition={{
                         duration: 1.5,
                         delay: i * 0.2,
                         ease: "easeOut"

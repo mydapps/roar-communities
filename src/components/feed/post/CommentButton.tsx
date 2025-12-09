@@ -11,16 +11,16 @@ interface CommentButtonProps {
 
 export const CommentButton = ({ count, onClick, hidden = false }: CommentButtonProps) => {
   if (hidden) return null;
-  
+
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent Post component's click handler from firing
     onClick(e);
   };
-  
+
   return (
-    <Button 
-      variant="ghost" 
-      size="sm" 
+    <Button
+      variant="ghost"
+      size="sm"
       onClick={handleClick}
       className="gap-2 hover:text-blue-500 hover:bg-blue-500/10"
     >

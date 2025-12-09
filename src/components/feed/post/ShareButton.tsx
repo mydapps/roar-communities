@@ -35,7 +35,7 @@ export const ShareButton = ({
   avatar
 }: ShareButtonProps) => {
   const mobile = useIsMobile();
-  
+
   const handleClick = (e: React.MouseEvent) => {
     console.log('[ShareButton] Share button clicked');
     e.stopPropagation(); // Prevent post navigation
@@ -43,17 +43,17 @@ export const ShareButton = ({
     console.log('[ShareButton] Calling onOpenChange(true)');
     onOpenChange(true);
   };
-  
+
   const handleClose = () => {
     onOpenChange(false);
   };
-  
+
   if (mobile) {
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
         <DrawerTrigger asChild>
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             size="sm"
             className="px-2 hover:text-green-500 hover:bg-green-500/10"
             onClick={handleClick}
@@ -65,8 +65,8 @@ export const ShareButton = ({
           <DrawerHeader>
             <DrawerTitle>Share Post</DrawerTitle>
           </DrawerHeader>
-          
-          <ShareContent 
+
+          <ShareContent
             username={username}
             timeAgo={timeAgo}
             content={content}
@@ -82,12 +82,12 @@ export const ShareButton = ({
       </Drawer>
     );
   }
-  
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetTrigger asChild>
-        <Button 
-          variant="ghost" 
+        <Button
+          variant="ghost"
           size="sm"
           className="px-2 hover:text-green-500 hover:bg-green-500/10"
           onClick={handleClick}
@@ -99,8 +99,8 @@ export const ShareButton = ({
         <SheetHeader>
           <SheetTitle>Share Post</SheetTitle>
         </SheetHeader>
-        
-        <ShareContent 
+
+        <ShareContent
           username={username}
           timeAgo={timeAgo}
           content={content}

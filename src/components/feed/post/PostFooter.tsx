@@ -84,15 +84,15 @@ export const PostFooter: React.FC<PostFooterProps> = ({
   onTipSuccess
 }) => {
   const location = useLocation();
-  
+
   // Check if this is a detailed post page
-  const isDetailedPostPage = location.pathname.includes('/post/') || 
-                            location.pathname.match(/^\/c\/[^\/]+\/[^\/]+$/) || 
-                            (location.pathname.match(/^\/[^\/]+\/[^\/]+$/) && !location.pathname.startsWith('/c/') && !location.pathname.startsWith('/u/'));
-  
+  const isDetailedPostPage = location.pathname.includes('/post/') ||
+    location.pathname.match(/^\/c\/[^\/]+\/[^\/]+$/) ||
+    (location.pathname.match(/^\/[^\/]+\/[^\/]+$/) && !location.pathname.startsWith('/c/') && !location.pathname.startsWith('/u/'));
 
 
-  
+
+
   // Function to trigger mobile comment input
   const handleCommentClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent Post component's click handler from firing
@@ -100,25 +100,25 @@ export const PostFooter: React.FC<PostFooterProps> = ({
       onTriggerMobileCommentInput();
     }
   };
-  
+
   return (
     <CardFooter className="pt-0 flex justify-between flex-col">
       <div className="flex justify-between w-full mb-3">
         <div className="flex items-center gap-1.5">
-          <RoarButton 
-            count={localRoarCount} 
-            active={localRoared} 
+          <RoarButton
+            count={localRoarCount}
+            active={localRoared}
             onClick={handleRoar}
             postCode={postCode}
             isLoggedIn={isLoggedIn}
-            handleApiCall={false} 
+            handleApiCall={false}
           />
-          
+
           {/* Show comment button between roar and mirror on mobile detailed post page */}
           {isMobile() && isDetailedPostPage && (
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={handleCommentClick}
               className="gap-2 hover:text-blue-500 hover:bg-blue-500/10 px-3 rounded-full transition-colors"
             >
@@ -126,18 +126,18 @@ export const PostFooter: React.FC<PostFooterProps> = ({
               <span>{commentCount}</span>
             </Button>
           )}
-          
+
           {/* Show comment button except when explicitly hidden or on detailed post page */}
           {!hideComments && !isDetailedPostPage && (
-            <CommentButton 
-              count={commentCount} 
+            <CommentButton
+              count={commentCount}
               onClick={onToggleComments}
             />
           )}
-          
-          <MirrorButton 
-            open={mirrorSheetOpen} 
-            onOpenChange={setMirrorSheetOpen} 
+
+          <MirrorButton
+            open={mirrorSheetOpen}
+            onOpenChange={setMirrorSheetOpen}
             username={username}
             timeAgo={timeAgo}
             content={content}
@@ -158,10 +158,10 @@ export const PostFooter: React.FC<PostFooterProps> = ({
             />
           )}
         </div>
-        
-        <ShareButton 
-          open={shareSheetOpen} 
-          onOpenChange={setShareSheetOpen} 
+
+        <ShareButton
+          open={shareSheetOpen}
+          onOpenChange={setShareSheetOpen}
           username={username}
           timeAgo={timeAgo}
           content={content}
@@ -173,7 +173,7 @@ export const PostFooter: React.FC<PostFooterProps> = ({
           avatar={avatar}
         />
       </div>
-      
+
       {children}
     </CardFooter>
   );

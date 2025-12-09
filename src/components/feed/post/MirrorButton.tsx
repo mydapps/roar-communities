@@ -27,13 +27,13 @@ interface MirrorButtonProps {
   community?: string;
 }
 
-export const MirrorButton = ({ 
-  open, 
-  onOpenChange, 
-  username, 
-  timeAgo, 
-  content, 
-  images, 
+export const MirrorButton = ({
+  open,
+  onOpenChange,
+  username,
+  timeAgo,
+  content,
+  images,
   video,
   postCode,
   community
@@ -48,7 +48,7 @@ export const MirrorButton = ({
   const [communityNameForSheet, setCommunityNameForSheet] = useState("");
   const [userCommunities, setUserCommunities] = useState<Community[] | null>(null);
   const [loadingUserCommunities, setLoadingUserCommunities] = useState(false);
-  
+
   // Fetch user communities when the modal opens
   useEffect(() => {
     if (open && userCommunities === null && mobile) {
@@ -59,7 +59,7 @@ export const MirrorButton = ({
           setUserCommunities(communities);
         } catch (error) {
           console.error("Failed to fetch user communities for mirror:", error);
-          setUserCommunities([]); 
+          setUserCommunities([]);
           toast.error("Could not load your communities. Mirroring to communities might be affected.");
         } finally {
           setLoadingUserCommunities(false);
@@ -68,14 +68,14 @@ export const MirrorButton = ({
       loadUserCommunities();
     }
     if (!open && !notInCommunitySheetOpen) {
-       // Reset when closed only if not showing the other sheet
-       // No, MobileMirrorSheet handles its own internal reset. 
-       // This component should only reset userCommunities if they are context-specific to this modal instance,
-       // but they are fetched for the mobile sheet so clearing here might be too aggressive if desktop uses them too.
-       // For now, let MobileMirrorSheet handle its reset. If desktop version uses userCommunities, then they should persist while open.
+      // Reset when closed only if not showing the other sheet
+      // No, MobileMirrorSheet handles its own internal reset. 
+      // This component should only reset userCommunities if they are context-specific to this modal instance,
+      // but they are fetched for the mobile sheet so clearing here might be too aggressive if desktop uses them too.
+      // For now, let MobileMirrorSheet handle its reset. If desktop version uses userCommunities, then they should persist while open.
     }
   }, [open, notInCommunitySheetOpen, mobile]);
-  
+
   // Effect to cleanup scroll locks when drawer/sheet closes
   useEffect(() => {
     if (!open && mobile) {
@@ -83,11 +83,11 @@ export const MirrorButton = ({
       const timer = setTimeout(() => {
         restoreBodyScrolling();
       }, 300);
-      
+
       return () => clearTimeout(timer);
     }
   }, [open, mobile]);
-  
+
   // Ensure scrolling is restored when component unmounts
   useEffect(() => {
     return () => {
@@ -96,21 +96,21 @@ export const MirrorButton = ({
       }
     };
   }, [mobile]);
-  
+
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent post navigation
     onOpenChange(true);
   };
-  
+
   const handleCommunitySelect = (community: string | null) => {
     console.log("Community selected in MirrorButton:", community);
     setSelectedCommunity(community);
   };
-  
+
   const handleQuoteChange = (quote: string) => {
     setQuoteText(quote);
   };
-  
+
   // Custom handler for closing the drawer/sheet
   const handleCloseModal = () => {
     onOpenChange(false);
@@ -119,11 +119,11 @@ export const MirrorButton = ({
       setTimeout(restoreBodyScrolling, 100);
     }
   };
-  
+
   const handleMobileMirrorSubmit = async (communityTo: string, quoteTextVal: string, postCodeVal: string): Promise<boolean> => {
     // communityTo is the community NAME or empty string for personal feed
     // postCodeVal is passed from MobileMirrorSheet's postData
-    
+
     if (!postCodeVal) {
       console.error("Missing postCode in mobile mirror submit");
       toast.error("Unable to mirror this post: missing post identifier");
@@ -157,16 +157,16 @@ export const MirrorButton = ({
         communityTo: communityTo, // Already correctly formatted by MobileMirrorSheet
         quoteText: quoteTextVal.trim() || undefined
       };
-      
+
       console.log("Sending mirror request (from MobileMirrorSheet) with params:", mirrorParams);
       const success = await mirrorPost(mirrorParams);
-      
+
       if (success) {
-        const destination = communityTo === "" 
-          ? "your personal feed" 
+        const destination = communityTo === ""
+          ? "your personal feed"
           : communityTo;
         toast.success(`Post mirrored to ${destination}!`);
-        
+
         const mirroredEvent = new CustomEvent(POST_MIRRORED_EVENT, {
           detail: {
             originalPostCode: postCodeVal,
@@ -193,7 +193,7 @@ export const MirrorButton = ({
   const handleMirrorDesktop = async (e: React.MouseEvent, currentSelectedCommunity: string | null, currentQuoteText: string) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (!currentSelectedCommunity) {
       uiToast({
         title: "Error",
@@ -219,7 +219,7 @@ export const MirrorButton = ({
       uiToast({ title: "Error", description: "Unable to mirror post: missing ID", variant: "destructive" });
       return;
     }
-    
+
     setMirroring(true);
     try {
       const userId = localStorage.getItem('dapps_user_id');
@@ -228,7 +228,7 @@ export const MirrorButton = ({
         setMirroring(false); return;
       }
       const mirrorParams = {
-        postCode: postCode, 
+        postCode: postCode,
         communityTo: currentSelectedCommunity === PERSONAL_FEED ? "" : currentSelectedCommunity,
         quoteText: currentQuoteText.trim() || undefined
       };
@@ -246,45 +246,45 @@ export const MirrorButton = ({
       setMirroring(false);
     }
   };
-  
+
   // State for desktop version (if kept separate)
   const [desktopSelectedCommunity, setDesktopSelectedCommunity] = useState<string | null>(null);
   const [desktopQuoteText, setDesktopQuoteText] = useState('');
 
   if (mobile) {
     const mobilePostData = {
-        username,
-        timeAgo,
-        content,
-        images,
-        video,
-        postCode,
-        community, // Source community name
-        // avatarUrl: pass author's avatar if available, otherwise MobileMirrorSheet will use a fallback
+      username,
+      timeAgo,
+      content,
+      images,
+      video,
+      postCode,
+      community, // Source community name
+      // avatarUrl: pass author's avatar if available, otherwise MobileMirrorSheet will use a fallback
     };
     return (
       <>
         {/* Trigger Button - can be outside or handled by parent like a feed item */}
         {/* For this example, assuming MirrorButton itself is the trigger for its own state */}
-          <Button 
-            variant="ghost" 
-            size="sm"
-            className="gap-2 hover:text-purple-500 hover:bg-purple-500/10"
-            onClick={handleClick} // This sets `open` to true
-          >
-            <Repeat2 className="h-4 w-4" />
-            <span>Mirror</span>
-          </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="gap-2 hover:text-purple-500 hover:bg-purple-500/10"
+          onClick={handleClick} // This sets `open` to true
+        >
+          <Repeat2 className="h-4 w-4" />
+          <span>Mirror</span>
+        </Button>
 
-        <MobileMirrorSheet 
-            open={open} 
-            onOpenChange={onOpenChange} 
-            postData={mobilePostData}
-            userCommunities={userCommunities}
-            loadingUserCommunities={loadingUserCommunities}
-            onMirrorSubmit={handleMobileMirrorSubmit}        
+        <MobileMirrorSheet
+          open={open}
+          onOpenChange={onOpenChange}
+          postData={mobilePostData}
+          userCommunities={userCommunities}
+          loadingUserCommunities={loadingUserCommunities}
+          onMirrorSubmit={handleMobileMirrorSubmit}
         />
-        <NotInCommunitySheet 
+        <NotInCommunitySheet
           open={notInCommunitySheetOpen}
           onOpenChange={setNotInCommunitySheetOpen}
           communityName={communityNameForSheet}
@@ -292,80 +292,80 @@ export const MirrorButton = ({
       </>
     );
   }
-  
+
   // Desktop version using Sheet and MirrorContent
   return (
     <>
-    <Sheet open={open} onOpenChange={(isOpen) => {
+      <Sheet open={open} onOpenChange={(isOpen) => {
         onOpenChange(isOpen);
         if (!isOpen) { // Reset desktop-specific state on close
-            setDesktopSelectedCommunity(null);
-            setDesktopQuoteText('');
+          setDesktopSelectedCommunity(null);
+          setDesktopQuoteText('');
         }
-    }}>
-      <SheetTrigger asChild>
-        <Button 
-          variant="ghost" 
-          size="sm"
-          className="gap-2 hover:text-purple-500 hover:bg-purple-500/10"
-          onClick={handleClick}
-        >
-          <Repeat2 className="h-4 w-4" />
-          <span>Mirror</span>
-        </Button>
-      </SheetTrigger>
-      <SheetContent side="right" className="sm:max-w-md" onClick={(e) => e.stopPropagation()}>
-        <SheetHeader>
-          <SheetTitle>Mirror Post</SheetTitle>
-          <SheetDescription>
-            Share this post to your feed or other communities
-          </SheetDescription>
-        </SheetHeader>
-        
-        <MirrorContent 
-          username={username} 
-          timeAgo={timeAgo} 
-          content={content} 
-          images={images} 
-          video={video}
-          onCommunitySelect={setDesktopSelectedCommunity} // Use desktop state setter
-          onQuoteChange={setDesktopQuoteText} // Use desktop state setter
-          selectedCommunity={desktopSelectedCommunity} // Pass desktop state
-          quoteText={desktopQuoteText} // Pass desktop state
-          sourceCommunity={community}
-        />
-        
-        <SheetFooter className="flex-row justify-between gap-2 p-4 border-t bg-background sticky bottom-0 left-0 right-0 z-10">
-          <SheetClose asChild>
-            <Button variant="outline" onClick={(e) => e.stopPropagation()}>Cancel</Button>
-          </SheetClose>
-          <Button 
-            onClick={(e) => handleMirrorDesktop(e, desktopSelectedCommunity, desktopQuoteText)}
-            disabled={!desktopSelectedCommunity || mirroring || loadingUserCommunities}
-            className="gap-1.5"
+      }}>
+        <SheetTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-2 hover:text-purple-500 hover:bg-purple-500/10"
+            onClick={handleClick}
           >
-            {mirroring ? (
-              <>
-                <span className="animate-spin">↻</span>
-                Mirroring...
-              </>
+            <Repeat2 className="h-4 w-4" />
+            <span>Mirror</span>
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="right" className="sm:max-w-md" onClick={(e) => e.stopPropagation()}>
+          <SheetHeader>
+            <SheetTitle>Mirror Post</SheetTitle>
+            <SheetDescription>
+              Share this post to your feed or other communities
+            </SheetDescription>
+          </SheetHeader>
+
+          <MirrorContent
+            username={username}
+            timeAgo={timeAgo}
+            content={content}
+            images={images}
+            video={video}
+            onCommunitySelect={setDesktopSelectedCommunity} // Use desktop state setter
+            onQuoteChange={setDesktopQuoteText} // Use desktop state setter
+            selectedCommunity={desktopSelectedCommunity} // Pass desktop state
+            quoteText={desktopQuoteText} // Pass desktop state
+            sourceCommunity={community}
+          />
+
+          <SheetFooter className="flex-row justify-between gap-2 p-4 border-t bg-background sticky bottom-0 left-0 right-0 z-10">
+            <SheetClose asChild>
+              <Button variant="outline" onClick={(e) => e.stopPropagation()}>Cancel</Button>
+            </SheetClose>
+            <Button
+              onClick={(e) => handleMirrorDesktop(e, desktopSelectedCommunity, desktopQuoteText)}
+              disabled={!desktopSelectedCommunity || mirroring || loadingUserCommunities}
+              className="gap-1.5"
+            >
+              {mirroring ? (
+                <>
+                  <span className="animate-spin">↻</span>
+                  Mirroring...
+                </>
               ) : loadingUserCommunities ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
                   Checking...
                 </>
-            ) : (
-              <>
-                <Repeat2 className="h-4 w-4" />
-                Mirror Post
-              </>
-            )}
-          </Button>
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+              ) : (
+                <>
+                  <Repeat2 className="h-4 w-4" />
+                  Mirror Post
+                </>
+              )}
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
 
-      <NotInCommunitySheet 
+      <NotInCommunitySheet
         open={notInCommunitySheetOpen}
         onOpenChange={setNotInCommunitySheetOpen}
         communityName={communityNameForSheet}

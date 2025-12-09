@@ -212,7 +212,7 @@ export const setupMirrorListener = (callback: () => void) => {
 export const fetchPosts = async (options: FetchPostsOptions): Promise<Post[]> => {
   try {
     const { page, personal, trending, global, limit } = options;
-    
+
     // Construct API URL based on options
     let url = `/api/fetch_posts?page=${page}`;
     if (personal) {
@@ -227,24 +227,24 @@ export const fetchPosts = async (options: FetchPostsOptions): Promise<Post[]> =>
     if (limit && limit > 0) {
       url += `&limit=${limit}`;
     }
-    
+
     console.log(`Fetching posts from: ${url}`);
-    
+
     // Make the API request
     const response = await fetch(url, {
       method: 'GET',
       headers: createAuthHeaders(),
       credentials: 'include'
     });
-    
+
     console.log(`API response status: ${response.status}`);
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`Failed response body: ${errorText}`);
       throw new Error(`Failed to fetch posts: ${errorText}`);
     }
-    
+
     const data = await response.json();
     console.log(`Fetched ${data.length} posts successfully`);
     if (data.length > 0) {
@@ -252,7 +252,7 @@ export const fetchPosts = async (options: FetchPostsOptions): Promise<Post[]> =>
     } else {
       console.log('No posts returned from API');
     }
-    
+
     return data;
   } catch (error) {
     console.error('Error fetching posts:', error);
@@ -276,18 +276,18 @@ export const fetchPost = async (postCode: string): Promise<{
       headers: createAuthHeaders(),
       credentials: 'include'
     });
-    
+
     console.log(`Post API response status: ${response.status}`);
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`Failed response body: ${errorText}`);
       throw new Error(`Failed to fetch post: ${errorText}`);
     }
-    
+
     const data = await response.json();
     console.log(`Post API response:`, data);
-    
+
     return data;
   } catch (error) {
     console.error('Error fetching post:', error);
@@ -306,9 +306,9 @@ export const fetchUserUpvotedPosts = async (page: number = 1): Promise<Post[]> =
       headers: createAuthHeaders(),
       credentials: 'include'
     });
-    
+
     console.log(`User upvoted posts API response status: ${response.status}`);
-    
+
     if (!response.ok) {
       if (response.status === 401) {
         throw new Error('Authentication required to view your upvoted posts');
@@ -317,10 +317,10 @@ export const fetchUserUpvotedPosts = async (page: number = 1): Promise<Post[]> =
       console.error(`Failed response body: ${errorText}`);
       throw new Error(`Failed to fetch upvoted posts: ${errorText}`);
     }
-    
+
     const data: Post[] = await response.json();
     console.log(`User upvoted posts API response:`, data);
-    
+
     return data;
   } catch (error) {
     console.error('Error fetching user upvoted posts:', error);
@@ -332,7 +332,18 @@ export const fetchUserUpvotedPosts = async (page: number = 1): Promise<Post[]> =
 /**
  * Toggle roar (upvote) status for a post
  */
-export const toggleRoar = async (postCode: string): Promise<boolean | { status: string; errCode: string; message: string; community: string }> => {
+/**
+ * Toggle roar (upvote) status for a post
+ */
+export const toggleRoar = async (postCode: string): Promise<{
+  success: boolean;
+  user_has_roared?: number;
+  roar_count?: number;
+  status?: string;
+  errCode?: string;
+  message?: string;
+  community?: string
+}> => {
   try {
     const response = await fetch(`/api/roar_post`, {
       method: 'POST',
@@ -340,37 +351,42 @@ export const toggleRoar = async (postCode: string): Promise<boolean | { status: 
       body: JSON.stringify({ postCode }),
       credentials: 'include'
     });
-    
+
     console.log(`Roar toggle API response status: ${response.status}`);
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`Failed roar toggle response: ${errorText}`);
-      
+
       // Check if this is a 403 error for not being part of the community
       if (response.status === 403) {
         try {
           const errorData = JSON.parse(errorText);
           if (errorData.errCode === "004" && errorData.community) {
             // Return the parsed error object with community information
-            return errorData;
+            return { success: false, ...errorData };
           }
         } catch (parseError) {
           // If we can't parse the JSON, just continue with the normal error handling
           console.error("Error parsing 403 response:", parseError);
         }
       }
-      
+
       throw new Error(`Failed to toggle roar: ${errorText}`);
     }
-    
+
     const result = await response.json();
     console.log('Roar toggle result:', result);
-    return result.status === "SUCCESS";
+    return {
+      success: result.status === "SUCCESS",
+      user_has_roared: result.user_has_roared,
+      roar_count: result.roar_count,
+      ...result
+    };
   } catch (error) {
     console.error('Error toggling roar:', error);
     toast.error('Failed to update interaction. Please try again.');
-    return false;
+    return { success: false };
   }
 };
 
@@ -389,23 +405,23 @@ export const mirrorPost = async (params: {
       console.error('Missing required parameters for mirroring post');
       throw new Error('Post code is required');
     }
-    
+
     // communityTo can now be an empty string when mirroring to personal feed
-    
+
     const response = await fetch(`/api/mirror_post`, {
       method: 'POST',
       headers: createAuthHeaders(),
       body: JSON.stringify(params),
       credentials: 'include'
     });
-    
+
     console.log(`Response status: ${response.status}`);
     console.log(`Response content-type: ${response.headers.get("content-type")}`);
-    
+
     if (!response.ok) {
       const contentType = response.headers.get("content-type");
       let errorMessage = `Error ${response.status}: ${response.statusText}`;
-      
+
       if (contentType && contentType.indexOf("application/json") !== -1) {
         const errorData = await response.json();
         console.error('Mirror API error response (JSON):', errorData);
@@ -414,13 +430,13 @@ export const mirrorPost = async (params: {
         const errorText = await response.text();
         console.error('Mirror API error response (text):', errorText);
       }
-      
+
       throw new Error(errorMessage);
     }
-    
+
     const data = await response.json();
     console.log('Mirror API response:', data);
-    
+
     return data.status === "SUCCESS" || data.success === true;
   } catch (error) {
     console.error('Error mirroring post:', error);
@@ -451,17 +467,17 @@ interface CreatePostServiceParams {
 export const createPost = async (params: CreatePostServiceParams): Promise<CreatePostResponse> => {
   try {
     const { body, community, media, is_poll, poll_options } = params;
-    
+
     console.log('Creating post with params:', params);
-    
+
     const requestBody: any = {
       body: body.trim()
     };
-    
+
     if (community) {
       requestBody.community = community;
     }
-    
+
     if (media && media.length > 0) {
       requestBody.media = media.map(m => ({
         url: m.url,
@@ -478,62 +494,62 @@ export const createPost = async (params: CreatePostServiceParams): Promise<Creat
         imageUrl: opt.imageUrl
       }));
     }
-    
+
     console.log('Constructed request payload for /api/create_post:', JSON.stringify(requestBody));
-    
+
     const response = await fetch(`/api/create_post`, {
       method: 'POST',
       headers: createAuthHeaders(),
       body: JSON.stringify(requestBody),
       credentials: 'include'
     });
-    
+
     console.log(`Response status: ${response.status}`);
-    
+
     const contentType = response.headers.get("content-type");
     let data;
     if (contentType && contentType.indexOf("application/json") !== -1) {
       data = await response.json();
     } else {
-        const textResponse = await response.text();
-        console.error('Non-JSON response from create_post:', textResponse);
-        // Try to parse as JSON anyway, or handle as plain text error
-        try {
-            data = JSON.parse(textResponse); 
-        } catch (e) {
-            // If it's not JSON and not a 2xx, it's an error
-      if (!response.ok) {
-                toast.error(`Failed to create post: ${textResponse || response.statusText}`);
-                return {
-                    status: 'ERROR',
-                    message: `Error ${response.status}: ${textResponse || response.statusText}`,
-                    communityName: '',
-                    postCode: ''
-                };
-            }
-            // If it's a 2xx but not JSON, this is unexpected for create_post
-            console.error('Successful HTTP response from create_post was not JSON:', textResponse);
-            toast.error('Unexpected response from server.');
-            return {
-                status: 'ERROR',
-                message: 'Unexpected response format from server.',
-                communityName: '',
-                postCode: ''
-            };
+      const textResponse = await response.text();
+      console.error('Non-JSON response from create_post:', textResponse);
+      // Try to parse as JSON anyway, or handle as plain text error
+      try {
+        data = JSON.parse(textResponse);
+      } catch (e) {
+        // If it's not JSON and not a 2xx, it's an error
+        if (!response.ok) {
+          toast.error(`Failed to create post: ${textResponse || response.statusText}`);
+          return {
+            status: 'ERROR',
+            message: `Error ${response.status}: ${textResponse || response.statusText}`,
+            communityName: '',
+            postCode: ''
+          };
         }
+        // If it's a 2xx but not JSON, this is unexpected for create_post
+        console.error('Successful HTTP response from create_post was not JSON:', textResponse);
+        toast.error('Unexpected response from server.');
+        return {
+          status: 'ERROR',
+          message: 'Unexpected response format from server.',
+          communityName: '',
+          postCode: ''
+        };
+      }
     }
-    
+
     console.log('Create post API response data:', data);
 
     if (response.ok) {
       // Assuming 'data' is now the parsed JSON object
-      if (data.status === "SUCCESS" || data.success === true) { 
+      if (data.status === "SUCCESS" || data.success === true) {
         return {
           status: "SUCCESS",
-          postCode: data.postCode, 
-          communityName: data.communityName || '', 
-          message: data.message, 
-          created_poll_options: data.created_poll_options 
+          postCode: data.postCode,
+          communityName: data.communityName || '',
+          message: data.message,
+          created_poll_options: data.created_poll_options
         };
       } else {
         console.warn('Post creation HTTP 2xx but API indicated failure:', data);
@@ -542,19 +558,19 @@ export const createPost = async (params: CreatePostServiceParams): Promise<Creat
           status: data.status || "ERROR",
           message: data.message || 'Post creation failed.',
           communityName: data.communityName || '',
-          postCode: data.postCode || '' 
+          postCode: data.postCode || ''
         };
       }
     } else {
       const errorText = data.message || JSON.stringify(data) || response.statusText;
       console.error('Failed to create post (HTTP error):', errorText);
       toast.error(`Failed to create post: ${errorText}`);
-        return {
-          status: 'ERROR',
+      return {
+        status: 'ERROR',
         message: `Error ${response.status}: ${errorText}`,
-        communityName: '', 
-        postCode: '' 
-        };
+        communityName: '',
+        postCode: ''
+      };
     }
   } catch (error) {
     console.error('Error creating post (catch block):', error);
@@ -575,16 +591,16 @@ export const createPost = async (params: CreatePostServiceParams): Promise<Creat
  * @returns Promise resolving to HidePostResponse.
  */
 export const hidePost = async (
-  postCode: string, 
+  postCode: string,
   action: 'hide' | 'unhide'
 ): Promise<HidePostResponse> => {
   if (!postCode) {
     // Return a predictable error format
     return { success: false, message: "postCode is required to hide or unhide a post." };
   }
-  
+
   console.log(`API Call: Hiding/Unhiding post ${postCode} with action: ${action}`);
-  
+
   try {
     const headers = createAuthHeaders(); // Get headers with content-type
     const response = await fetch('/api/hide_post', { // Use relative path for proxy
@@ -674,7 +690,7 @@ export const fetchFlagTypes = async (): Promise<FetchFlagTypesResponse> => {
       const errorMessage = responseData?.message || `HTTP error! status: ${response.status}`;
       console.error("Fetch Flag Types API Error:", errorMessage, responseData);
       // Return a standard error format
-      return { success: false, flagTypes: [] }; 
+      return { success: false, flagTypes: [] };
     }
 
     return responseData as FetchFlagTypesResponse;
@@ -686,7 +702,7 @@ export const fetchFlagTypes = async (): Promise<FetchFlagTypesResponse> => {
       message = error.message;
     }
     // Return a standard error format
-    return { success: false, flagTypes: [] }; 
+    return { success: false, flagTypes: [] };
   }
 };
 
@@ -708,13 +724,13 @@ export const flagPost = async (payload: FlagPostPayload): Promise<FlagPostRespon
     console.log('API Response (flagPost):', responseData);
 
     if (!response.ok) {
-       // Use the message and potentially errorCode from the API response
-       const errorMessage = responseData?.message || `HTTP error! status: ${response.status}`;
-       const errorCode = responseData?.errorCode;
-       console.error("Flag Post API Error:", errorMessage, responseData);
-       return { success: false, message: errorMessage, errorCode: errorCode };
+      // Use the message and potentially errorCode from the API response
+      const errorMessage = responseData?.message || `HTTP error! status: ${response.status}`;
+      const errorCode = responseData?.errorCode;
+      console.error("Flag Post API Error:", errorMessage, responseData);
+      return { success: false, message: errorMessage, errorCode: errorCode };
     }
-    
+
     // Also check the success boolean in the response body
     if (!responseData.success) {
       console.error("Flag Post API returned success: false", responseData);
@@ -761,7 +777,7 @@ export const pinCommunityPost = async (params: {
       // Use error message from API if available, otherwise a default
       throw new Error(data.message || `API error: ${response.status}`);
     }
-    
+
     // Assuming data contains { success: boolean, message: string, pinned?: 0 | 1, errorCode?: string }
     return data;
 
@@ -783,9 +799,9 @@ export const hidePostFromUser = async (postCode: string): Promise<HidePostRespon
     // Return a predictable error format
     return { success: false, message: "postCode is required to hide a post." };
   }
-  
+
   console.log(`API Call: Hiding post ${postCode} from user's feed`);
-  
+
   try {
     const headers = createAuthHeaders(); // Get headers with content-type
     const response = await fetch('/api/hide_post_from_user', { // Use relative path for proxy
@@ -874,7 +890,7 @@ export const castDaoVote = async (voteData: VoteRequest): Promise<VoteResponse> 
     });
 
     const result = await response.json();
-    
+
     if (!response.ok) {
       return {
         success: false,

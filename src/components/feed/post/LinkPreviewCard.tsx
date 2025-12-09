@@ -31,8 +31,8 @@ export const LinkPreviewCard: React.FC<LinkPreviewCardProps> = ({ preview }) => 
       return urlObj.toString();
     } catch (e) {
       // Fallback if URL parsing fails (though unlikely for valid preview URLs)
-      return baseUrl.includes('?') 
-        ? `${baseUrl}&loadIn=defaultBrowser` 
+      return baseUrl.includes('?')
+        ? `${baseUrl}&loadIn=defaultBrowser`
         : `${baseUrl}?loadIn=defaultBrowser`;
     }
   };
@@ -40,10 +40,10 @@ export const LinkPreviewCard: React.FC<LinkPreviewCardProps> = ({ preview }) => 
   const finalUrl = getFinalUrl(url);
 
   return (
-    <a 
+    <a
       href={finalUrl}
       target="_blank"
-      rel="noopener noreferrer ugc" 
+      rel="noopener noreferrer ugc"
       className={cn(
         "block border rounded-lg overflow-hidden bg-card hover:border-primary/30 transition-colors duration-200 no-underline group",
         !image && "p-3" // Add padding if there is no image
@@ -53,7 +53,7 @@ export const LinkPreviewCard: React.FC<LinkPreviewCardProps> = ({ preview }) => 
       <div className={cn("flex", image ? "flex-col sm:flex-row" : "flex-col")}>
         {image && (
           <div className="sm:w-1/3 flex-shrink-0 overflow-hidden bg-muted">
-            <img 
+            <img
               src={image}
               alt={title || 'Link preview image'}
               className="w-full h-32 sm:h-full object-cover transition-transform duration-300 group-hover:scale-105"

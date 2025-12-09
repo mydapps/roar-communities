@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dapps.co - The Community Economy</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #030303;
+            --accent-primary: #6366f1;
+            /* Indigo */
+            --accent-secondary: #a855f7;
+            /* Purple */
+            --accent-tertiary: #ec4899;
+            /* Pink */
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: #ffffff;
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4,
+        .font-display {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        /* Scroll Snapping */
+        .deck-container {
+            height: 100vh;
+            width: 100vw;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+            scroll-behavior: smooth;
+        }
+
+        .slide {
+            height: 100vh;
+            width: 100vw;
+            scroll-snap-align: start;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+            padding: 2rem;
+        }
+
+        /* Animations */
+        @keyframes float {
+            0% {
+                transform: translateY(0px);
+            }
+
+            50% {
+                transform: translateY(-20px);
+            }
+
+            100% {
+                transform: translateY(0px);
+            }
+        }
+
+        @keyframes pulse-glow {
+            0% {
+                box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
+            }
+
+            50% {
+                box-shadow: 0 0 40px rgba(99, 102, 241, 0.5);
+            }
+
+            100% {
+                box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
+            }
+        }
+
+        @keyframes gradient-x {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        .animate-float {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .animate-pulse-glow {
+            animation: pulse-glow 3s infinite;
+        }
+
+        .gradient-text {
+            background: linear-gradient(to right, #818cf8, #c084fc, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-size: 200% auto;
+            animation: gradient-x 5s ease infinite;
+        }
+
+        /* Glassmorphism */
+        .glass {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 24px;
+        }
+
+        .glass-card {
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 24px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .glass-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 40px -10px rgba(99, 102, 241, 0.3);
+            border-color: rgba(99, 102, 241, 0.3);
+        }
+
+        /* Background Effects */
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(100px);
+            z-index: -1;
+            opacity: 0.4;
+        }
+
+        /* Typography Utilities */
+        .text-balance {
+            text-wrap: balance;
+        }
+
+        /* Navigation Dots */
+        .nav-dots {
+            position: fixed;
+            right: 2rem;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            z-index: 50;
+        }
+
+        .nav-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .nav-dot.active {
+            background: #fff;
+            transform: scale(1.5);
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        /* Hide scrollbar */
+        .deck-container::-webkit-scrollbar {
+            display: none;
+        }
+
+        .deck-container {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="deck-container" id="deck">
+
+        <!-- Navigation Dots -->
+        <div class="nav-dots" id="nav-dots">
+            <!-- Populated by JS -->
+        </div>
+
+        <!-- Slide 1: The Hook -->
+        <section class="slide" id="slide-1">
+            <div class="orb w-[600px] h-[600px] bg-indigo-600 top-[-20%] left-[-10%]"></div>
+            <div class="orb w-[500px] h-[500px] bg-purple-600 bottom-[-10%] right-[-10%]"></div>
+
+            <div class="text-center max-w-5xl z-10">
+                <div class="mb-8 inline-flex items-center px-4 py-2 rounded-full glass border border-white/10">
+                    <span class="w-2 h-2 rounded-full bg-green-400 mr-2 animate-pulse"></span>
+                    <span class="text-sm font-medium tracking-wide text-gray-300">Seed Round 2025</span>
+                </div>
+                <h1 class="text-7xl md:text-9xl font-bold mb-8 leading-tight tracking-tight font-display">
+                    The internet was built for <span class="gradient-text">connection</span>.
+                </h1>
+                <p class="text-2xl md:text-3xl text-gray-400 font-light max-w-3xl mx-auto text-balance">
+                    Somewhere along the way, we became the product.
+                </p>
+            </div>
+
+            <div class="absolute bottom-12 animate-bounce">
+                <svg class="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+                </svg>
+            </div>
+        </section>
+
+        <!-- Slide 2: The Villain -->
+        <section class="slide" id="slide-2">
+            <div
+                class="orb w-[800px] h-[800px] bg-red-900/30 top-[50%] left-[50%] transform -translate-x-1/2 -translate-y-1/2">
+            </div>
+
+            <div class="max-w-6xl w-full z-10 grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
+                <div>
+                    <h2 class="text-5xl md:text-7xl font-bold mb-6 font-display">The <span
+                            class="text-red-500">Extraction</span> Economy</h2>
+                    <p class="text-xl text-gray-400 mb-8 leading-relaxed">
+                        Social media giants harvest your attention, sell your data, and keep 100% of the profit.
+                    </p>
+                    <div class="space-y-6">
+                        <div class="flex items-center space-x-4 opacity-50 hover:opacity-100 transition-opacity">
+                            <div
+                                class="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center text-red-400 text-xl">
+                                💸</div>
+                            <div>
+                                <h4 class="text-lg font-bold">You Create. They Profit.</h4>
+                                <p class="text-sm text-gray-500">100% Take Rate</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-4 opacity-50 hover:opacity-100 transition-opacity">
+                            <div
+                                class="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center text-red-400 text-xl">
+                                🚫</div>
+                            <div>
+                                <h4 class="text-lg font-bold">You Build. They Ban.</h4>
+                                <p class="text-sm text-gray-500">Zero Ownership</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-4 opacity-50 hover:opacity-100 transition-opacity">
+                            <div
+                                class="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center text-red-400 text-xl">
+                                🤖</div>
+                            <div>
+                                <h4 class="text-lg font-bold">You Connect. They Spam.</h4>
+                                <p class="text-sm text-gray-500">The "AI Slop" Crisis</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="relative">
+                    <!-- Glitch Effect Visual -->
+                    <div class="glass-card p-8 rotate-3 hover:rotate-0 transition-transform duration-500">
+                        <div class="flex items-center justify-between mb-6 border-b border-white/5 pb-4">
+                            <div class="h-4 w-24 bg-gray-700 rounded animate-pulse"></div>
+                            <div class="h-8 w-8 bg-gray-700 rounded-full"></div>
+                        </div>
+                        <div class="space-y-4">
+                            <div
+                                class="h-32 bg-gray-800/50 rounded w-full flex items-center justify-center text-gray-600">
+                                ADVERTISEMENT</div>
+                            <div class="h-4 bg-gray-700 rounded w-3/4"></div>
+                            <div class="h-4 bg-gray-700 rounded w-1/2"></div>
+                        </div>
+                    </div>
+                    <div class="absolute -top-10 -right-10 glass-card p-4 -rotate-6 z-[-1] opacity-50">
+                        <div class="text-red-500 font-mono text-sm">ERROR: USER_NOT_FOUND</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 3: The Shift -->
+        <section class="slide" id="slide-3">
+            <div class="orb w-[600px] h-[600px] bg-blue-900/40 bottom-0 left-0"></div>
+
+            <div class="text-center max-w-5xl z-10">
+                <h2 class="text-2xl md:text-3xl font-light text-gray-400 mb-8 uppercase tracking-[0.2em]">The Paradigm
+                    Shift</h2>
+
+                <div class="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16">
+                    <div class="text-center opacity-50 scale-90">
+                        <h3 class="text-4xl font-bold mb-2">Creator Economy</h3>
+                        <p class="text-gray-500">One-to-Many</p>
+                    </div>
+
+                    <div class="text-4xl text-indigo-500 animate-pulse">→</div>
+
+                    <div class="text-center scale-110">
+                        <h3 class="text-5xl md:text-6xl font-bold mb-2 gradient-text">Community Economy</h3>
+                        <p class="text-indigo-300 font-medium">Many-to-Many</p>
+                    </div>
+                </div>
+
+                <p class="mt-16 text-2xl text-gray-300 italic font-light">
+                    "It's no longer about following.<br>It's about <span
+                        class="text-white font-semibold">belonging</span>."
+                </p>
+            </div>
+        </section>
+
+        <!-- Slide 4: The Solution -->
+        <section class="slide" id="slide-4">
+            <div class="orb w-[900px] h-[900px] bg-indigo-900/20 top-0 right-0"></div>
+
+            <div class="z-10 text-center">
+                <div class="mb-8 inline-block">
+                    <div
+                        class="w-24 h-24 md:w-32 md:h-32 bg-gradient-to-br from-indigo-500 to-pink-500 rounded-3xl flex items-center justify-center text-6xl md:text-7xl shadow-[0_0_60px_rgba(99,102,241,0.5)] animate-float">
+                        🦁
+                    </div>
+                </div>
+                <h1 class="text-8xl md:text-[10rem] font-bold mb-4 font-display tracking-tighter leading-none">
+                    dapps<span class="text-indigo-500">.co</span>
+                </h1>
+                <h2 class="text-2xl md:text-4xl font-light text-gray-300 mb-12">
+                    The Financial Layer for Human Connection
+                </h2>
+
+                <div class="flex flex-wrap justify-center gap-4 md:gap-8">
+                    <div
+                        class="px-6 py-3 glass rounded-full text-sm md:text-base font-medium text-white border-indigo-500/30">
+                        Speak Freely</div>
+                    <div
+                        class="px-6 py-3 glass rounded-full text-sm md:text-base font-medium text-white border-purple-500/30">
+                        Own Your Tribe</div>
+                    <div
+                        class="px-6 py-3 glass rounded-full text-sm md:text-base font-medium text-white border-pink-500/30">
+                        Earn Real Value</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 5: The Secret Sauce (Bento) -->
+        <section class="slide" id="slide-5">
+            <div class="max-w-7xl w-full z-10">
+                <h2 class="text-4xl md:text-5xl font-bold mb-12 font-display">The <span class="gradient-text">Secret
+                        Sauce</span></h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 h-auto md:h-[500px]">
+                    <!-- Card 1: Ownership -->
+                    <div class="glass-card p-8 md:col-span-2 relative overflow-hidden group">
+                        <div
+                            class="absolute top-0 right-0 p-8 opacity-10 text-9xl font-bold group-hover:scale-110 transition-transform">
+                            💎</div>
+                        <h3 class="text-3xl font-bold mb-4">Bonding Curves</h3>
+                        <p class="text-gray-400 text-lg max-w-md">
+                            Algorithmic pricing provides <span class="text-white">instant liquidity</span>. Users can
+                            buy or sell their stake at any time without needing a counterparty.
+                        </p>
+                        <div
+                            class="mt-8 h-32 bg-gradient-to-t from-indigo-500/20 to-transparent rounded-xl border-b border-indigo-500/50">
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Identity -->
+                    <div class="glass-card p-8 flex flex-col justify-between group">
+                        <div>
+                            <div
+                                class="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center text-2xl mb-4">
+                                🆔</div>
+                            <h3 class="text-2xl font-bold mb-2">"No Slop" Engine</h3>
+                            <p class="text-gray-400 text-sm">Multi-layered identity proofs. A sanctuary for real people.
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-2 mt-4">
+                            <span class="px-2 py-1 bg-green-500/20 text-green-400 text-xs rounded">Verified Human</span>
+                        </div>
+                    </div>
+
+                    <!-- Card 3: Privacy -->
+                    <div class="glass-card p-8 md:col-span-3 flex items-center justify-between group">
+                        <div>
+                            <h3 class="text-2xl font-bold mb-2">Encrypted Channels</h3>
+                            <p class="text-gray-400">Token-gated access. True privacy for high-value conversations.</p>
+                        </div>
+                        <div class="text-4xl opacity-50 group-hover:opacity-100 transition-opacity">🔒</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 6: The Engine -->
+        <section class="slide" id="slide-6">
+            <div
+                class="orb w-[700px] h-[700px] bg-green-900/20 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+            </div>
+
+            <div class="max-w-5xl w-full z-10 text-center">
+                <h2 class="text-5xl md:text-7xl font-bold mb-16 font-display">Aligned <span
+                        class="text-green-400">Incentives</span></h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div class="glass-card p-10 hover:bg-green-900/10 transition-colors">
+                        <div class="text-5xl mb-6">⚡</div>
+                        <h3 class="text-2xl font-bold mb-4">Transaction Fees</h3>
+                        <p class="text-gray-400">We earn a small % when the community trades.</p>
+                    </div>
+
+                    <div
+                        class="glass-card p-10 hover:bg-green-900/10 transition-colors scale-110 border-green-500/30 shadow-[0_0_30px_rgba(34,197,94,0.1)]">
+                        <div class="text-5xl mb-6">🏦</div>
+                        <h3 class="text-2xl font-bold mb-4">Treasury Yield</h3>
+                        <p class="text-gray-400">Community treasuries earn DeFi yield. We take a management cut.</p>
+                    </div>
+
+                    <div class="glass-card p-10 hover:bg-green-900/10 transition-colors">
+                        <div class="text-5xl mb-6">📈</div>
+                        <h3 class="text-2xl font-bold mb-4">Growth</h3>
+                        <p class="text-gray-400">We only win when our communities win.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 7: Traction -->
+        <section class="slide" id="slide-7">
+            <div class="max-w-6xl w-full z-10">
+                <h2 class="text-4xl font-light text-gray-400 mb-16 uppercase tracking-widest text-center">Validated &
+                    Growing</h2>
+
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
+                    <div class="glass-card p-8 text-center">
+                        <div class="text-5xl md:text-7xl font-bold gradient-text mb-2">25k+</div>
+                        <div class="text-gray-400 font-medium uppercase tracking-wide text-sm">Active Users</div>
+                    </div>
+                    <div class="glass-card p-8 text-center">
+                        <div class="text-5xl md:text-7xl font-bold gradient-text mb-2">92k+</div>
+                        <div class="text-gray-400 font-medium uppercase tracking-wide text-sm">Waitlist</div>
+                    </div>
+                    <div class="glass-card p-8 text-center">
+                        <div class="text-5xl md:text-7xl font-bold gradient-text mb-2">60+</div>
+                        <div class="text-gray-400 font-medium uppercase tracking-wide text-sm">Communities</div>
+                    </div>
+                    <div class="glass-card p-8 text-center">
+                        <div class="text-5xl md:text-7xl font-bold text-white mb-2">$0</div>
+                        <div class="text-gray-400 font-medium uppercase tracking-wide text-sm">Ad Spend</div>
+                    </div>
+                </div>
+
+                <div class="mt-12 text-center">
+                    <span class="px-4 py-2 bg-white/5 rounded-full text-sm text-gray-400 border border-white/10">Since
+                        April Launch • 100% Organic</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 8: The Team -->
+        <section class="slide" id="slide-8">
+            <div class="max-w-5xl w-full z-10">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+                    <div>
+                        <h2 class="text-6xl font-bold mb-6 font-display">14 Years.<br>One Mission.</h2>
+                        <p class="text-xl text-gray-400 mb-8">
+                            Builders of India's first ETH exchange ($120M Vol). Angel Investors in 70+ startups.
+                        </p>
+                        <div class="space-y-4">
+                            <div class="flex items-center gap-4">
+                                <div
+                                    class="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center text-2xl">
+                                    👨‍💻</div>
+                                <div>
+                                    <h3 class="text-xl font-bold">Mohit Madan</h3>
+                                    <p class="text-indigo-400">CEO & Co-Founder</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <div
+                                    class="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center text-2xl">
+                                    👩‍💻</div>
+                                <div>
+                                    <h3 class="text-xl font-bold">Tarusha Mittal</h3>
+                                    <p class="text-purple-400">COO & Co-Founder</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="glass-card p-8">
+                        <h3 class="text-lg font-bold text-gray-500 uppercase tracking-widest mb-6">Backed By</h3>
+                        <div class="flex flex-wrap gap-3">
+                            <span class="px-4 py-2 bg-white/5 rounded-lg border border-white/10">WazirX</span>
+                            <span class="px-4 py-2 bg-white/5 rounded-lg border border-white/10">Holochain</span>
+                            <span class="px-4 py-2 bg-white/5 rounded-lg border border-white/10">Polygon (Ex-CFO)</span>
+                            <span class="px-4 py-2 bg-white/5 rounded-lg border border-white/10">Celo Foundation</span>
+                            <span class="px-4 py-2 bg-white/5 rounded-lg border border-white/10">Pivot</span>
+                            <span class="px-4 py-2 bg-white/5 rounded-lg border border-white/10">Reflexical</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 9: The Vision -->
+        <section class="slide" id="slide-9">
+            <div
+                class="orb w-[1000px] h-[1000px] bg-indigo-900/10 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse-glow">
+            </div>
+
+            <div class="text-center max-w-4xl z-10">
+                <h2 class="text-5xl md:text-7xl font-bold mb-8 font-display">The Future is <span
+                        class="gradient-text">User-Owned</span>.</h2>
+                <p class="text-2xl text-gray-400 font-light leading-relaxed">
+                    We are building the infrastructure for the next generation of digital nations.
+                </p>
+            </div>
+        </section>
+
+        <!-- Slide 10: The Ask -->
+        <section class="slide" id="slide-10">
+            <div class="max-w-4xl w-full z-10 text-center">
+                <h2 class="text-2xl text-gray-500 uppercase tracking-[0.5em] mb-8">Join the Movement</h2>
+
+                <div
+                    class="inline-block p-12 glass-card border-indigo-500/50 shadow-[0_0_100px_rgba(99,102,241,0.2)] mb-12">
+                    <h1 class="text-8xl md:text-9xl font-bold text-white mb-4 tracking-tighter">$1.5M</h1>
+                    <p class="text-2xl text-indigo-400 font-medium">Seed Round • SAFE + Token Warrant</p>
+                </div>
+
+                <div class="flex justify-center gap-8 text-gray-400">
+                    <div class="text-center">
+                        <div class="text-white font-bold text-xl mb-1">40%</div>
+                        <div class="text-sm">Product</div>
+                    </div>
+                    <div class="w-px bg-gray-800"></div>
+                    <div class="text-center">
+                        <div class="text-white font-bold text-xl mb-1">30%</div>
+                        <div class="text-sm">Growth</div>
+                    </div>
+                    <div class="w-px bg-gray-800"></div>
+                    <div class="text-center">
+                        <div class="text-white font-bold text-xl mb-1">30%</div>
+                        <div class="text-sm">Ops</div>
+                    </div>
+                </div>
+
+                <div class="mt-16">
+                    <a href="mailto:mohit@dapps.co"
+                        class="px-8 py-4 bg-white text-black rounded-full font-bold text-lg hover:scale-105 transition-transform inline-block">
+                        mohit@dapps.co
+                    </a>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        // Navigation Logic
+        const deck = document.getElementById('deck');
+        const slides = document.querySelectorAll('.slide');
+        const navDotsContainer = document.getElementById('nav-dots');
+
+        // Create Nav Dots
+        slides.forEach((_, index) => {
+            const dot = document.createElement('div');
+            dot.classList.add('nav-dot');
+            if (index === 0) dot.classList.add('active');
+            dot.addEventListener('click', () => {
+                slides[index].scrollIntoView({ behavior: 'smooth' });
+            });
+            navDotsContainer.appendChild(dot);
+        });
+
+        const dots = document.querySelectorAll('.nav-dot');
+
+        // Update active dot on scroll
+        deck.addEventListener('scroll', () => {
+            const scrollPos = deck.scrollTop;
+            const windowHeight = window.innerHeight;
+            const currentIndex = Math.round(scrollPos / windowHeight);
+
+            dots.forEach((dot, index) => {
+                if (index === currentIndex) {
+                    dot.classList.add('active');
+                } else {
+                    dot.classList.remove('active');
+                }
+            });
+        });
+
+        // Keyboard Navigation
+        document.addEventListener('keydown', (e) => {
+            const currentScroll = deck.scrollTop;
+            const windowHeight = window.innerHeight;
+
+            if (e.key === 'ArrowDown' || e.key === ' ') {
+                e.preventDefault();
+                deck.scrollBy({ top: windowHeight, behavior: 'smooth' });
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                deck.scrollBy({ top: -windowHeight, behavior: 'smooth' });
+            }
+        });
+    </script>
+</body>
+
+</html>

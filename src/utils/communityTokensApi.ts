@@ -880,28 +880,40 @@ export interface GraduationTokenItem {
   id: number;
   ticker: string;
   name: string;
+  givenName?: string;
   image?: string;
   description?: string;
   graduated: boolean;
   holders: number;
-  flat_sale_start_time: string;
-  flat_ether_sale_collection: number;
-  total_supply: number;
-  flat_sale_tokens_sold: number;
-  max_flat_sale_tokens: number;
-  flat_sale_rate: number;
+  flatEtherCollection: number;
+  currentRate: string;
+  currentRateUsd: string;
+  marketCap: string;
+  marketCapUsd: string;
+  volume24h: string;
+  recentTrades: number;
+  priceChange24h: number;
+  priceChange1h: number;
+  createdOn: string;
+  // Legacy snake_case fields for backward compatibility
+  flat_sale_start_time?: string;
+  flat_ether_sale_collection?: number;
+  total_supply?: number;
+  flat_sale_tokens_sold?: number;
+  max_flat_sale_tokens?: number;
+  flat_sale_rate?: number;
   token_address?: string;
   hook_address?: string;
-  created_on: string;
-  current_rate_eth: number;
-  current_rate_usd: number;
-  market_cap_eth: number;
-  market_cap_usd: number;
-  volume_24h: number;
-  graduation_time_remaining_seconds: number;
-  graduation_time_remaining_minutes: number;
-  sale_status: 'not_started' | 'active' | 'time_expired' | 'eth_cap_reached' | 'token_cap_reached' | 'graduated';
-  eth_to_usd_rate: number;
+  created_on?: string;
+  current_rate_eth?: number;
+  current_rate_usd?: number;
+  market_cap_eth?: number;
+  market_cap_usd?: number;
+  volume_24h?: number;
+  graduation_time_remaining_seconds?: number;
+  graduation_time_remaining_minutes?: number;
+  sale_status?: 'not_started' | 'active' | 'time_expired' | 'eth_cap_reached' | 'token_cap_reached' | 'graduated';
+  eth_to_usd_rate?: number;
 }
 
 export interface GraduationTokensResponse {
@@ -1563,7 +1575,7 @@ export const getTrendingTokens = async (params?: {
 };
 
 // Enhanced List with Sorting
-export type SortByOption = 'newest' | 'hottest' | 'top_gainers_24h' | 'top_gainers_1h' | 'market_cap' | 'volume';
+export type SortByOption = 'holders' | 'newest' | 'hottest' | 'top_gainers_24h' | 'top_gainers_1h' | 'market_cap' | 'volume';
 
 export interface EnhancedListResponse {
   success: boolean;

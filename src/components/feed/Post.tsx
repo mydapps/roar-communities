@@ -77,14 +77,14 @@ export interface PostProps {
   dao_proposal_data?: import('@/utils/postApi').DaoProposalData | null; // DAO proposal data
 }
 
-export const Post = ({ 
-  username, 
-  community, 
+export const Post = ({
+  username,
+  community,
   ticker,
-  timeAgo, 
-  content, 
-  roarCount, 
-  commentCount, 
+  timeAgo,
+  content,
+  roarCount,
+  commentCount,
   shareCount,
   images,
   video,
@@ -134,15 +134,16 @@ export const Post = ({
   const [tipSheetOpen, setTipSheetOpen] = useState(false);
   const [localTipCount, setLocalTipCount] = useState(tipCount);
   const [localHasUserTipped, setLocalHasUserTipped] = useState(hasUserTipped);
+  const [localCommentCount, setLocalCommentCount] = useState(commentCount);
   const isMobile = useIsMobile();
-  
+
   // Image viewer hook
   const { openImageViewer } = useImageViewer();
-  
+
   const [currentPollData, setCurrentPollData] = useState<PollData | null>(poll_data);
-  
+
   const { parsedContent, allMedia, allImages: normalImages, hasMedia } = usePostMedia(content, images, video);
-  
+
   const allImages = useMemo(() => {
     const combinedImages = new Set<string>();
 
@@ -161,22 +162,22 @@ export const Post = ({
         }
       });
     }
-    
+
     const uniqueImageList = Array.from(combinedImages);
     return uniqueImageList.length > 0 ? uniqueImageList : undefined;
 
   }, [normalImages, isMirror, mirrorData]);
-  
+
   const { toast } = useToast();
-  
-  const loggedInUserHandle = localStorage.getItem('dapps_user_handle'); 
+
+  const loggedInUserHandle = localStorage.getItem('dapps_user_handle');
   const isOwner = loggedInUserHandle === username;
-  
+
   const userIsLoggedIn = useMemo(() => {
-    return !!localStorage.getItem('dapps_user_id'); 
+    return !!localStorage.getItem('dapps_user_id');
   }, []);
-  
-  const ipfsHash = ipfs || postCode || `Qm${Array.from({length: 44}, () => Math.floor(Math.random() * 16).toString(16)).join('')}`;
+
+  const ipfsHash = ipfs || postCode || `Qm${Array.from({ length: 44 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`;
 
   useEffect(() => {
     setHasRoared(roared);
@@ -185,7 +186,8 @@ export const Post = ({
     setCurrentPollData(poll_data);
     setLocalTipCount(tipCount);
     setLocalHasUserTipped(hasUserTipped);
-  }, [roared, roarCount, isPinned, poll_data, tipCount, hasUserTipped]);
+    setLocalCommentCount(commentCount);
+  }, [roared, roarCount, isPinned, poll_data, tipCount, hasUserTipped, commentCount]);
 
   const handleRoar = async () => {
     if (!userIsLoggedIn) {
@@ -193,7 +195,7 @@ export const Post = ({
         title: "Login Required",
         description: "You need to login to roar at this post",
         variant: "destructive",
-        action: <button 
+        action: <button
           className="bg-primary text-white px-3 py-1 rounded text-xs"
           onClick={() => navigate('/index')}
         >
@@ -202,12 +204,12 @@ export const Post = ({
       });
       return;
     }
-    
+
     if (postCode) {
       const newRoaredState = !hasRoared;
       setHasRoared(newRoaredState);
       setLocalRoarCount(prev => newRoaredState ? prev + 1 : prev - 1);
-      
+
       if (onRoar) {
         onRoar();
       }
@@ -234,21 +236,21 @@ export const Post = ({
     if (!tipData.parentReplyId) {
       setLocalHasUserTipped(true);
       setLocalTipCount(prev => prev + 1);
-      
+
       // Show success toast with delightful feedback
-      const tipText = tipData.asset === 'roar' 
+      const tipText = tipData.asset === 'roar'
         ? `${tipData.amount} 🦁 ROAR`
         : `${tipData.amount} ETH${tipData.usdValue ? ` (~$${tipData.usdValue.toFixed(2)})` : ''}`;
-      
+
       console.log('🎉 Tip success - visual update applied:', { tipText, receiverHandle: tipData.receiverHandle });
-      
+
       // TODO: Fix toast.success import issue
       // toast.success(`Tip sent! ${tipText}`, {
       //   description: `@${tipData.receiverHandle} received your appreciation`,
       //   duration: 4000,
       // });
     }
-    
+
     // Pass through to parent onTipSuccess if provided
     if (onTipSuccess) {
       onTipSuccess(tipData);
@@ -284,7 +286,7 @@ export const Post = ({
   const handlePostClick = (e: React.MouseEvent) => {
     const targetElement = e.target as HTMLElement;
     const isClickInsideMirror = targetElement.closest('[data-mirror-content-area="true"]');
-    
+
     console.log("handlePostClick triggered");
     console.log("Clicked Element:", targetElement);
     console.log("Is click inside mirror area?", !!isClickInsideMirror);
@@ -318,18 +320,18 @@ export const Post = ({
       return;
     }
 
-    if (disableNavigation || 
-        targetElement.closest('button') || 
-        targetElement.closest('a') ||
-        targetElement.closest('[data-media-element="true"]') || 
-        targetElement.closest('form') ||
-        (targetElement.closest('[data-comment-section="true"]') && showComments) || 
-        showComments
-        ) {
+    if (disableNavigation ||
+      targetElement.closest('button') ||
+      targetElement.closest('a') ||
+      targetElement.closest('[data-media-element="true"]') ||
+      targetElement.closest('form') ||
+      (targetElement.closest('[data-comment-section="true"]') && showComments) ||
+      showComments
+    ) {
       console.log("-> Preventing navigation (disabled, button, link, media, form, or comments shown)");
       return;
     }
-    
+
     if (postCode) {
       console.log("-> Attempting to navigate to CURRENT post:", postCode);
       if (community) {
@@ -349,25 +351,25 @@ export const Post = ({
   const handleShareSuccess = (platform: string) => {
     console.log(`Post shared successfully on ${platform}`);
   };
-  
+
   const handleShare = () => {
     setShareSheetOpen(true);
   };
 
-  const postId = useRef(postCode || Array.from({length: 6}, () => 
+  const postId = useRef(postCode || Array.from({ length: 6 }, () =>
     Math.floor(Math.random() * 36).toString(36)).join('')
   ).current;
 
   const handleAddComment = (commentOrText: string | CommentReply) => {
     if (typeof commentOrText === 'string') {
       if (!commentOrText.trim()) return;
-      
+
       if (!userIsLoggedIn) {
         toast({
           title: "Login Required",
           description: "You need to login to comment on this post",
           variant: "destructive",
-          action: <button 
+          action: <button
             className="bg-primary text-white px-3 py-1 rounded text-xs"
             onClick={() => navigate('/index')}
           >
@@ -376,7 +378,7 @@ export const Post = ({
         });
         return;
       }
-      
+
       const newComment: CommentReply = {
         id: Date.now(),
         uid: 0,
@@ -389,10 +391,12 @@ export const Post = ({
         meow_count: 0,
         has_meowed: false
       };
-      
+
       setComments(prev => [...prev, newComment]);
+      setLocalCommentCount(prev => prev + 1);
     } else {
       setComments(prev => [...prev, commentOrText]);
+      setLocalCommentCount(prev => prev + 1);
     }
   };
 
@@ -402,7 +406,7 @@ export const Post = ({
         title: "Login Required",
         description: "You need to login to view comments",
         variant: "destructive",
-        action: <button 
+        action: <button
           className="bg-primary text-white px-3 py-1 rounded text-xs"
           onClick={() => navigate('/login')}
         >
@@ -411,19 +415,19 @@ export const Post = ({
       });
       return;
     }
-    
+
     setShowComments(!showComments);
-    
+
     if (onToggleComments) {
       onToggleComments();
     }
-    
+
     if (!showComments && !loadingComments && comments.length === 0 && postCode) {
       setLoadingComments(true);
-      
+
       try {
         const response = await fetchReplies(postCode, 3);
-        
+
         if (response.success) {
           setComments(response.replies);
         }
@@ -455,16 +459,16 @@ export const Post = ({
       const response = await hidePost(postCode, 'hide');
       if (response.success) {
         setShowHideConfirmation(false);
-        
+
         setTimeout(() => {
           setIsAnimatingHide(true);
           toast({ description: response.message || "Post hidden successfully." });
 
           setTimeout(() => {
-            setIsHidden(true); 
+            setIsHidden(true);
           }, 350);
         }, 50);
-        
+
       } else {
         toast({ description: response.message || "Failed to hide post.", variant: "destructive" });
         setIsHiding(false);
@@ -482,13 +486,13 @@ export const Post = ({
       toast({ description: "Cannot report post: Missing identifier.", variant: "destructive" });
       return;
     }
-    setShowReportSheet(true); 
+    setShowReportSheet(true);
   };
 
   const handleReportSuccess = () => {
     console.log(`Report submitted successfully for post ${postCode}`);
   };
-  
+
   const handleTogglePin = () => {
     if (isAdmin) {
       setIsPinModalOpen(true);
@@ -515,10 +519,10 @@ export const Post = ({
     } catch (error: any) {
       console.error(`Failed to ${action} post:`, error);
       toast({ description: error.message || `Failed to ${action} post. Please try again.`, variant: "destructive" });
-      throw error; 
+      throw error;
     }
   };
-  
+
   const handleOpenHideWarnModal = () => {
     if (!isAdmin || isOwner || !postCode || !community) return;
     console.log(`UI Action: Open hide/warn modal for post ${postCode} in ${community}`);
@@ -530,11 +534,11 @@ export const Post = ({
     setTimeout(() => {
       setIsAnimatingHide(true);
       setTimeout(() => {
-        setIsHidden(true); 
+        setIsHidden(true);
       }, 350);
-    }, 50); 
+    }, 50);
   };
-  
+
   const handleVoteOnPoll = async (optionId: number) => {
     if (!postCode || !currentPollData || !currentPollData.is_active) {
       console.warn("Voting not allowed: conditions not met (no postCode, no pollData, or poll inactive).");
@@ -575,7 +579,7 @@ export const Post = ({
             }
             return { ...opt, vote_count: newVoteCount };
           });
-          
+
           if (!previousVoteMade) {
             // If it's a brand new vote (user hadn't voted before)
             newTotalVotes = newTotalVotes + 1;
@@ -628,25 +632,25 @@ export const Post = ({
       }
     }
   };
-  
+
   if (isHidden && !isAnimatingHide) {
     return null;
   }
 
   return (
     <>
-      <Card 
+      <Card
         className={cn(
           "border border-border/40 shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden",
-          isAnimatingHide ? "animate-collapse-out" : "animate-scale-in" 
+          isAnimatingHide ? "animate-collapse-out" : "animate-scale-in"
         )}
         onClick={handlePostClick}
-        style={{ 
+        style={{
           cursor: disableNavigation ? 'default' : 'pointer',
-          animationFillMode: isAnimatingHide ? 'forwards' : 'none' 
+          animationFillMode: isAnimatingHide ? 'forwards' : 'none'
         }}
       >
-        <PostHeader 
+        <PostHeader
           username={username}
           community={community}
           ticker={ticker}
@@ -666,8 +670,8 @@ export const Post = ({
           onAdminHideWarn={isAdmin && !isOwner ? handleOpenHideWarnModal : undefined}
           onShare={handleShare}
         />
-        
-        <PostContent 
+
+        <PostContent
           content={parsedContent}
           isMirror={isMirror}
           mirrorData={mirrorData}
@@ -680,7 +684,7 @@ export const Post = ({
           onVoteOnPoll={handleVoteOnPoll}
           is_dao_proposal={is_dao_proposal}
         />
-        
+
         {/* DAO Proposal Voting */}
         {is_dao_proposal && dao_proposal_data && (
           <div className="px-6 pb-4">
@@ -698,7 +702,7 @@ export const Post = ({
             />
           </div>
         )}
-        
+
         <PostFooter
           localRoared={hasRoared}
           localRoarCount={localRoarCount}
@@ -715,7 +719,7 @@ export const Post = ({
           setShareSheetOpen={setShareSheetOpen}
           community={community}
           onShareSuccess={handleShareSuccess}
-          commentCount={commentCount}
+          commentCount={localCommentCount}
           onToggleComments={handleToggleComments}
           isLoggedIn={userIsLoggedIn}
           hideComments={hideComments}
@@ -745,17 +749,17 @@ export const Post = ({
             </div>
           )}
         </PostFooter>
-        
+
 
       </Card>
-      
+
       <HidePostConfirmationSheet
         open={showHideConfirmation}
         onOpenChange={setShowHideConfirmation}
         onConfirm={confirmHidePost}
         isHiding={isHiding}
       />
-      
+
       {postCode && (
         <ReportPostSheet
           open={showReportSheet}
@@ -772,7 +776,7 @@ export const Post = ({
           isCurrentlyPinned={currentIsPinned}
           communityName={community}
           onConfirmPinUnpin={handleConfirmPinUnpin}
-          onSuccess={() => {}}
+          onSuccess={() => { }}
         />
       )}
 
@@ -786,7 +790,7 @@ export const Post = ({
         />
       )}
 
-      <NotInCommunitySheet 
+      <NotInCommunitySheet
         open={notInCommunitySheetOpen}
         onOpenChange={setNotInCommunitySheetOpen}
         communityName={sheetCommunityName}

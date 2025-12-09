@@ -3,13 +3,13 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Menu, Search, User, Gift, Sparkles, LogOut, ArrowLeft, Home, Moon, Sun, Heart } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuLabel, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePrivy } from '@privy-io/react-auth';
@@ -39,42 +39,42 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
   const [userHandle, setUserHandle] = useState('');
   const [roarBalance, setRoarBalance] = useState('0');
   const { theme, toggleTheme, isTransitioning } = useTheme();
-  
+
   const isFeedPage = location.pathname === '/feed';
   const isHomePage = location.pathname === '/' || location.pathname === '/index';
-  
+
   // Use the safe area CSS classes instead of hard-coded padding
   const safeAreaTopClass = isMobileApp ? 'safe-area-top' : '';
-  
+
   useEffect(() => {
     // Check for user ID instead of API key
     const userId = localStorage.getItem('dapps_user_id');
     const handle = localStorage.getItem('dapps_user_handle');
     setIsLoggedIn(!!userId); // Use userId to determine login status
     setUserHandle(handle || '');
-    
+
     const avatar = localStorage.getItem('dapps_user_avatar');
     if (avatar) {
       setUserAvatar(avatar);
     }
-    
+
     // Fetch user roar balance if logged in (using handle)
     if (handle) { // Use handle existence, which implies login
       fetchUserRoarBalance(handle);
     }
-    
+
     // Listen for auth invalidation events
     const handleAuthInvalidated = () => {
       const currentPath = location.pathname;
-      if (currentPath.startsWith('/feed') || 
-          currentPath.startsWith('/my-shares') || 
-          currentPath.startsWith('/account') ||
-          currentPath.startsWith('/communities') ||
-          currentPath === '/edit-profile') {
+      if (currentPath.startsWith('/feed') ||
+        currentPath.startsWith('/my-shares') ||
+        currentPath.startsWith('/account') ||
+        currentPath.startsWith('/communities') ||
+        currentPath === '/edit-profile') {
         navigate('/');
       }
     };
-    
+
     // Listen for avatar updates from other components
     const handleAvatarUpdated = (event: CustomEvent) => {
       const { avatarCode } = event.detail;
@@ -82,16 +82,16 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
         setUserAvatar(avatarCode);
       }
     };
-    
+
     document.addEventListener('dapps_auth_invalidated', handleAuthInvalidated);
     window.addEventListener('avatar_updated', handleAvatarUpdated as EventListener);
-    
+
     return () => {
       document.removeEventListener('dapps_auth_invalidated', handleAuthInvalidated);
       window.removeEventListener('avatar_updated', handleAvatarUpdated as EventListener);
     };
   }, [location.pathname, navigate]);
-  
+
   // Function to fetch user roar balance
   const fetchUserRoarBalance = async (handle: string) => {
     try {
@@ -103,20 +103,20 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
       console.error('Error fetching roar balance:', error);
     }
   };
-  
+
   const handleLogout = async () => {
     try {
       console.log('Logging out user...');
-      
+
       await apiBase.logoutCurrentDevice();
       console.log('Logged out from current device, key invalidated');
-      
+
       await logout();
       console.log('Logged out from Privy');
-      
+
       console.log('Redirecting to homepage...');
       navigate('/');
-      
+
       toast.success('Successfully logged out');
       setIsLoggedIn(false);
     } catch (error) {
@@ -124,11 +124,11 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
       toast.error('Error logging out. Please try again.');
     }
   };
-  
+
   const handleBackClick = () => {
     navigate(-1);
   };
-  
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
@@ -137,13 +137,13 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
       setSearchFocused(false);
     }
   };
-  
+
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       handleSearchSubmit(e);
     }
   };
-  
+
   return (
     <header className={cn(
       "fixed left-0 right-0 z-50 w-full border-b bg-background/95 backdrop-blur-xl shadow-sm top-0",
@@ -167,7 +167,7 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
               <span className="sr-only">Toggle menu</span>
             </Button>
           )}
-          
+
           {!isHomePage && !isFeedPage && (
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               <Button
@@ -181,17 +181,17 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
               </Button>
             </motion.div>
           )}
-          
+
           <Link to="/" className="flex items-center gap-2">
-            <motion.div 
-              whileHover={{ scale: 1.05 }} 
+            <motion.div
+              whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               className="relative"
             >
               <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 to-primary/5 rounded-full blur-sm opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              <img 
-                src="/images/logo1.png" 
-                alt="Dapps.co Logo" 
+              <img
+                src="/images/logo1.png"
+                alt="Dapps.co Logo"
                 className="h-8 w-auto relative"
               />
             </motion.div>
@@ -203,11 +203,11 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
           <div className="hidden md:flex items-center space-x-1 flex-1 justify-center max-w-md mx-auto">
             <form onSubmit={handleSearchSubmit} className="relative w-full">
               <div className={cn(
-                "relative transition-all duration-300 group", 
+                "relative transition-all duration-300 group",
                 searchFocused ? "w-full" : "w-[90%] mx-auto"
               )}>
                 <div className={cn(
-                  "absolute inset-0 bg-gradient-to-r from-primary/5 to-primary/10 rounded-full blur-md transition-opacity", 
+                  "absolute inset-0 bg-gradient-to-r from-primary/5 to-primary/10 rounded-full blur-md transition-opacity",
                   searchFocused ? "opacity-100" : "opacity-0"
                 )}></div>
                 <Search className={cn(
@@ -219,8 +219,8 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
                   placeholder="Search communities, posts, users..."
                   className={cn(
                     "peer w-full rounded-full bg-muted pl-10 pr-4 py-2 text-sm border transition-all",
-                    searchFocused 
-                      ? "border-primary/30 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/30" 
+                    searchFocused
+                      ? "border-primary/30 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                       : "border-transparent"
                   )}
                   value={searchQuery}
@@ -248,24 +248,24 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
                   </Button>
                 </motion.div>
               )}
-              
+
               {/* Restore notification icon for all platforms including mobile app */}
-              <motion.div 
-                whileHover={{ scale: 1.05 }} 
+              <motion.div
+                whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 className="relative"
               >
                 <NotificationIcon />
               </motion.div>
-              
-              <motion.div 
-                whileHover={{ scale: 1.05 }} 
+
+              <motion.div
+                whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 className="relative"
               >
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+                <Button
+                  variant="ghost"
+                  size="sm"
                   className="flex items-center gap-1 py-1.5 px-2 rounded-full bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 hover:text-amber-700"
                   asChild
                 >
@@ -275,7 +275,7 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
                   </Link>
                 </Button>
               </motion.div>
-              
+
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="rounded-full relative">
@@ -320,7 +320,7 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
                       <span>Edit Profile</span>
                     </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     onClick={toggleTheme}
                     className="cursor-pointer flex items-center gap-2 relative overflow-hidden group"
                     disabled={isTransitioning}
@@ -328,13 +328,13 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
                     <motion.div
                       whileTap={{ scale: 0.85 }}
                       whileHover={{ scale: 1.1 }}
-                      animate={{ 
+                      animate={{
                         rotate: theme === 'dark' ? 360 : 0,
                         scale: isTransitioning ? [1, 1.3, 0.9, 1] : 1,
                         y: isTransitioning ? [0, -4, 0] : 0
                       }}
-                      transition={{ 
-                        duration: isTransitioning ? 0.8 : 0.5, 
+                      transition={{
+                        duration: isTransitioning ? 0.8 : 0.5,
                         ease: "easeInOut",
                         times: isTransitioning ? [0, 0.3, 0.7, 1] : undefined
                       }}
@@ -357,12 +357,12 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
                         >
                           <Sun className="h-4 w-4 text-yellow-500 drop-shadow-lg" />
                           <motion.div
-                            animate={{ 
+                            animate={{
                               scale: [1, 1.4, 1],
                               opacity: [0.3, 0.8, 0.3]
                             }}
-                            transition={{ 
-                              duration: 2.5, 
+                            transition={{
+                              duration: 2.5,
                               repeat: Infinity,
                               ease: "easeInOut"
                             }}
@@ -370,7 +370,7 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
                           />
                         </motion.div>
                       )}
-                      
+
                       {/* Magical sparkles around the icon */}
                       {isTransitioning && (
                         <>
@@ -378,12 +378,12 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
                             <motion.div
                               key={i}
                               initial={{ scale: 0, x: 0, y: 0 }}
-                              animate={{ 
+                              animate={{
                                 scale: [0, 1.5, 0],
                                 x: [0, (Math.cos(i * 45 * Math.PI / 180) * 25)],
                                 y: [0, (Math.sin(i * 45 * Math.PI / 180) * 25)]
                               }}
-                              transition={{ 
+                              transition={{
                                 duration: 1,
                                 delay: i * 0.08,
                                 ease: "easeOut"
@@ -397,11 +397,11 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
                         </>
                       )}
                     </motion.div>
-                    
-                    <motion.span 
+
+                    <motion.span
                       className="flex items-center gap-1 font-medium"
                       animate={{
-                        color: isTransitioning 
+                        color: isTransitioning
                           ? ["currentColor", "#3b82f6", "#8b5cf6", "currentColor"]
                           : "currentColor"
                       }}
@@ -410,11 +410,11 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
                       {theme === 'light' ? 'Dark Mode' : 'Light Mode'}
                       {isTransitioning && (
                         <motion.div
-                          animate={{ 
+                          animate={{
                             rotate: 360,
                             scale: [1, 1.3, 1]
                           }}
-                          transition={{ 
+                          transition={{
                             rotate: { duration: 1.2, repeat: Infinity, ease: "linear" },
                             scale: { duration: 0.8, repeat: Infinity, ease: "easeInOut" }
                           }}
@@ -422,15 +422,15 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
                         />
                       )}
                     </motion.span>
-                    
+
                     {/* Background glow effect */}
                     <motion.div
                       initial={{ opacity: 0, scale: 0 }}
-                      whileHover={{ 
-                        opacity: 0.1, 
+                      whileHover={{
+                        opacity: 0.1,
                         scale: 1,
-                        background: theme === 'dark' 
-                          ? 'linear-gradient(45deg, #3b82f6, #8b5cf6)' 
+                        background: theme === 'dark'
+                          ? 'linear-gradient(45deg, #3b82f6, #8b5cf6)'
                           : 'linear-gradient(45deg, #f59e0b, #3b82f6)'
                       }}
                       className="absolute inset-0 rounded-md"
@@ -450,7 +450,7 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     onClick={handleLogout}
                     className="cursor-pointer text-red-500 hover:text-red-600 hover:bg-red-50"
                   >
@@ -462,8 +462,8 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
             </>
           ) : (
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button 
-                variant="default" 
+              <Button
+                variant="default"
                 onClick={() => navigate('/index')}
                 className="font-medium relative overflow-hidden group"
               >

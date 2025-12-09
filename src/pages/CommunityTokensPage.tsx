@@ -147,6 +147,8 @@ const CommunityTokensPage: React.FC = () => {
   const navigate = useNavigate();
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
   const [recentTrades, setRecentTrades] = useState<RecentTrade[]>([]);
+  const [lastTradeHash, setLastTradeHash] = useState<string | null>(null);
+  const [hasNewTrades, setHasNewTrades] = useState(false);
   const [topGainers, setTopGainers] = useState<TopGainer[]>([]);
   const [lastMinuteRush, setLastMinuteRush] = useState<GraduationTokenItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -176,7 +178,7 @@ const CommunityTokensPage: React.FC = () => {
   const [platformStats, setPlatformStats] = useState<PlatformStatsResponse['data'] | null>(null);
   const [incubationTokens, setIncubationTokens] = useState<IncubationToken[]>([]);
   const [trendingTokens, setTrendingTokens] = useState<TrendingToken[]>([]);
-  const [sortBy, setSortBy] = useState<SortByOption>('newest');
+  const [sortBy, setSortBy] = useState<SortByOption>('holders');
   const [isLoadingPlatformStats, setIsLoadingPlatformStats] = useState(false);
   const [isLoadingIncubation, setIsLoadingIncubation] = useState(false);
   const [isLoadingTrending, setIsLoadingTrending] = useState(false);
@@ -199,23 +201,42 @@ const CommunityTokensPage: React.FC = () => {
     return numValue.toFixed(decimals);
   };
 
-  // Fetch real community tokens using tokens_list API
+  // Fetch real community tokens using enhanced API with sorting
   const fetchRealTokens = useCallback(async () => {
     setIsLoadingRealTokens(true);
     try {
-      const response = await getTokensList({
+      const response = await getEnhancedTokensList({
         page: 1,
-        limit: 50
+        limit: 50,
+        sortBy: sortBy
       });
       
       if (response.success && response.data) {
-        console.log('DEBUG: API response tokens:', response.data.tokens.slice(0, 2));
-        setRealTokens(response.data.tokens);
-        setDisplayedTokens(response.data.tokens);
+        // Convert GraduationTokenItem to TokensListItem format
+        const convertedTokens = response.data.tokens.map(token => ({
+          id: token.id,
+          ticker: token.ticker,
+          name: token.name,
+          image: token.image,
+          description: token.description,
+          graduated: token.graduated,
+          holders: token.holders,
+          flatEtherCollection: token.flatEtherCollection || token.flat_ether_sale_collection,
+          currentRate: parseFloat(token.currentRate) || token.current_rate_eth,
+          currentRateUsd: parseFloat(token.currentRateUsd) || token.current_rate_usd,
+          marketCap: parseFloat(token.marketCap) || token.market_cap_eth,
+          marketCapUsd: parseFloat(token.marketCapUsd) || token.market_cap_usd,
+          volume24h: parseFloat(token.volume24h) || token.volume_24h || 0,
+          createdOn: token.createdOn || token.created_on
+        }));
+        
+        console.log('DEBUG: Fetched tokens with sortBy:', sortBy, 'Count:', convertedTokens.length);
+        setRealTokens(convertedTokens);
+        setDisplayedTokens(convertedTokens);
         
         // Fetch reward pools and price changes for the loaded tokens
-        fetchRewardPools(response.data.tokens);
-        fetchDetailedPriceChanges(response.data.tokens);
+        fetchRewardPools(convertedTokens);
+        fetchDetailedPriceChanges(convertedTokens);
       } else {
         console.error('Failed to fetch real tokens:', response.error);
         toast.error('Failed to load community tokens');
@@ -287,15 +308,22 @@ const CommunityTokensPage: React.FC = () => {
     }
   }, []);
 
-  // Fetch tokens with sorting
+  // Fetch tokens with sorting (called when dropdown changes)
   const fetchSortedTokens = useCallback(async (sortOption: SortByOption) => {
     try {
       setIsLoadingRealTokens(true);
+      // Clear existing data immediately to avoid showing stale data with loader
+      setRealTokens([]);
+      setDisplayedTokens([]);
+      
+      console.log('DEBUG: Fetching tokens with new sortBy:', sortOption);
+      
       const response = await getEnhancedTokensList({
         page: 1,
         limit: 50,
         sortBy: sortOption
       });
+      
       if (response.success && response.data) {
         // Convert GraduationTokenItem to TokensListItem format
         const convertedTokens = response.data.tokens.map(token => ({
@@ -306,19 +334,29 @@ const CommunityTokensPage: React.FC = () => {
           description: token.description,
           graduated: token.graduated,
           holders: token.holders,
-          flatEtherCollection: token.flat_ether_sale_collection,
-          currentRate: token.current_rate_eth,
-          currentRateUsd: token.current_rate_usd,
-          marketCap: token.market_cap_eth,
-          marketCapUsd: token.market_cap_usd,
-          volume24h: 0, // Not available in GraduationTokenItem
-          createdOn: token.created_on
+          flatEtherCollection: token.flatEtherCollection || token.flat_ether_sale_collection,
+          currentRate: parseFloat(token.currentRate) || token.current_rate_eth,
+          currentRateUsd: parseFloat(token.currentRateUsd) || token.current_rate_usd,
+          marketCap: parseFloat(token.marketCap) || token.market_cap_eth,
+          marketCapUsd: parseFloat(token.marketCapUsd) || token.market_cap_usd,
+          volume24h: parseFloat(token.volume24h) || token.volume_24h || 0,
+          createdOn: token.createdOn || token.created_on
         }));
+        
+        console.log('DEBUG: Successfully loaded', convertedTokens.length, 'tokens with sortBy:', sortOption);
         setRealTokens(convertedTokens);
         setDisplayedTokens(convertedTokens);
+        
+        // Fetch additional data for the loaded tokens
+        fetchRewardPools(convertedTokens);
+        fetchDetailedPriceChanges(convertedTokens);
+      } else {
+        console.error('Failed to fetch sorted tokens:', response.error);
+        toast.error(`Failed to load tokens sorted by ${sortOption}`);
       }
     } catch (error) {
       console.error('Failed to fetch sorted tokens:', error);
+      toast.error(`Failed to load tokens sorted by ${sortOption}`);
     } finally {
       setIsLoadingRealTokens(false);
     }
@@ -406,7 +444,7 @@ const CommunityTokensPage: React.FC = () => {
     [sortBy]
   );
 
-  // Fetch recent trades
+  // Initial fetch of recent trades (with loading state)
   const fetchRecentTrades = useCallback(async () => {
     setIsLoadingTrades(true);
     try {
@@ -414,6 +452,10 @@ const CommunityTokensPage: React.FC = () => {
       
       if (response.success && response.data) {
         setRecentTrades(response.data.trades);
+        // Set the latest trade hash for future comparisons
+        if (response.data.trades.length > 0) {
+          setLastTradeHash(response.data.trades[0].tx_hash);
+        }
       } else {
         console.error('Failed to fetch recent trades:', response.error);
       }
@@ -424,19 +466,61 @@ const CommunityTokensPage: React.FC = () => {
     }
   }, []);
 
+  // Smart polling function that only updates when new trades are detected
+  const checkForNewTrades = useCallback(async () => {
+    try {
+      // Don't show loading state for background checks
+      const response = await getAllRecentTrades({ limit: 10 });
+      
+      if (response.success && response.data && response.data.trades.length > 0) {
+        const latestTradeHash = response.data.trades[0].tx_hash;
+        
+        // Only update if we have a new trade (different hash from the last known trade)
+        if (lastTradeHash && latestTradeHash !== lastTradeHash) {
+          console.log('🔄 New trades detected, updating Live Trades section');
+          setRecentTrades(response.data.trades);
+          setLastTradeHash(latestTradeHash);
+          // Show brief "new trades" indicator
+          setHasNewTrades(true);
+          setTimeout(() => setHasNewTrades(false), 2000); // Hide after 2 seconds
+        } else if (!lastTradeHash) {
+          // First time setting up, no comparison needed
+          setRecentTrades(response.data.trades);
+          setLastTradeHash(latestTradeHash);
+        }
+        // If hashes match, no new trades - do nothing (no UI update)
+      } else {
+        console.error('Failed to check for new trades:', response.error);
+      }
+    } catch (error) {
+      console.error('Error checking for new trades:', error);
+    }
+  }, [lastTradeHash]);
+
   // Fetch top gainers
   const fetchTopGainers = useCallback(async () => {
     setIsLoadingGainers(true);
     try {
-      const response = await getTopGainers({ period: '24h', limit: 6 });
+      // First try 24h period
+      const response24h = await getTopGainers({ period: '24h', limit: 6 });
       
-      if (response.success && response.data) {
-        setTopGainers(response.data.gainers);
+      if (response24h.success && response24h.data && response24h.data.gainers.length > 0) {
+        setTopGainers(response24h.data.gainers);
       } else {
-        console.error('Failed to fetch top gainers:', response.error);
+        // If 24h returns 0 results, fallback to 7d period
+        console.log('No gainers found for 24h period, trying 7d period...');
+        const response7d = await getTopGainers({ period: '7d', limit: 6 });
+        
+        if (response7d.success && response7d.data) {
+          setTopGainers(response7d.data.gainers);
+        } else {
+          console.error('Failed to fetch top gainers for both 24h and 7d periods:', response7d.error);
+          setTopGainers([]);
+        }
       }
     } catch (error) {
       console.error('Error fetching top gainers:', error);
+      setTopGainers([]);
     } finally {
       setIsLoadingGainers(false);
     }
@@ -522,14 +606,14 @@ const CommunityTokensPage: React.FC = () => {
     fetchTrendingTokens();
   }, [fetchRealTokens, fetchRecentTrades, fetchTopGainers, fetchLastMinuteRush, fetchWalletBalance, fetchPlatformStats, fetchIncubationTokens, fetchTrendingTokens]);
 
-  // Refresh recent trades every 5 seconds
+  // Smart polling: Check for new trades every 5 seconds (only updates UI when new trades found)
   useEffect(() => {
     const tradesInterval = setInterval(() => {
-      fetchRecentTrades();
+      checkForNewTrades();
     }, 5000); // 5 seconds
 
     return () => clearInterval(tradesInterval);
-  }, [fetchRecentTrades]);
+  }, [checkForNewTrades]);
 
   // Trigger search when searchQuery changes
   useEffect(() => {
@@ -906,9 +990,6 @@ const CommunityTokensPage: React.FC = () => {
                       >
                         <Icon className={`w-4 h-4 ${urgent ? 'text-orange-500' : ''}`} />
                         <span>{label}</span>
-                        <span className="text-xs bg-background/50 px-1.5 py-0.5 rounded-full">
-                          {count}
-                        </span>
                       </button>
                     ))}
                   </div>
@@ -933,15 +1014,6 @@ const CommunityTokensPage: React.FC = () => {
                     >
                       <Icon className={`w-4 h-4 ${urgent ? 'text-orange-500' : ''}`} />
                       <span>{label}</span>
-                      <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                        selectedFilter === key 
-                          ? 'bg-primary/20 text-primary' 
-                          : urgent 
-                            ? 'bg-orange-100 text-orange-600' 
-                            : 'bg-muted text-muted-foreground'
-                      }`}>
-                        {count}
-                      </span>
                     </button>
                   ))}
                 </div>
@@ -955,6 +1027,7 @@ const CommunityTokensPage: React.FC = () => {
                   }}
                   className="px-3 py-2 border rounded-lg text-sm bg-background min-w-[140px]"
                 >
+                  <option value="holders">👥 Most Holders</option>
                   <option value="newest">✨ Newest</option>
                   <option value="hottest">🔥 Hottest</option>
                   <option value="top_gainers_24h">📈 Top Gainers 24h</option>
@@ -986,22 +1059,41 @@ const CommunityTokensPage: React.FC = () => {
                 </div>
               )}
 
+              {/* Searching State */}
+              {isSearching && searchQuery.trim() && (
+                <div className="col-span-full flex flex-col items-center justify-center py-12">
+                  <div className="text-center">
+                    <Loader2 className="w-12 h-12 text-primary mx-auto mb-4 animate-spin" />
+                    <h3 className="text-lg font-semibold mb-2">Searching...</h3>
+                    <p className="text-muted-foreground">
+                      Looking for community tokens matching "{searchQuery}"
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Empty State */}
-              {!isLoadingRealTokens && sortedTokens.length === 0 && (
+              {!isLoadingRealTokens && !isSearching && sortedTokens.length === 0 && (
                 <div className="col-span-full flex flex-col items-center justify-center py-12">
                   <div className="text-center">
                     <Rocket className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">No Community Tokens Found</h3>
+                    <h3 className="text-lg font-semibold mb-2">
+                      {searchQuery.trim() ? 'No Community Tokens Found' : 'No Community Tokens Available'}
+                    </h3>
                     <p className="text-muted-foreground mb-4">
-                      {selectedFilter === 'all' 
-                        ? 'No community tokens available yet. Be the first to create one!'
-                        : `No tokens found for "${selectedFilter}" filter. Try a different filter.`
+                      {searchQuery.trim() 
+                        ? `No tokens found matching "${searchQuery}". Try different keywords or browse all tokens.`
+                        : selectedFilter === 'all' 
+                          ? 'No community tokens available yet. Be the first to create one!'
+                          : `No tokens found for "${selectedFilter}" filter. Try a different filter.`
                       }
                     </p>
-                    <Button onClick={() => navigate('/community_token_new')} className="gap-2">
-                      <Plus className="w-4 h-4" />
-                      Create First Token
-                    </Button>
+                    {!searchQuery.trim() && (
+                      <Button onClick={() => navigate('/community_token_new')} className="gap-2">
+                        <Plus className="w-4 h-4" />
+                        Create First Token
+                      </Button>
+                    )}
                   </div>
                 </div>
               )}
@@ -1332,8 +1424,13 @@ const CommunityTokensPage: React.FC = () => {
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-2 mb-3">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                  <div className={`w-2 h-2 rounded-full ${hasNewTrades ? 'bg-orange-500 animate-bounce' : 'bg-green-500 animate-pulse'}`} />
                   <h3 className="font-semibold text-sm">Live Trades</h3>
+                  {hasNewTrades && (
+                    <span className="text-xs text-orange-600 font-medium animate-pulse">
+                      New!
+                    </span>
+                  )}
                 </div>
                 
                 <div className="space-y-1 max-h-80 overflow-hidden">
